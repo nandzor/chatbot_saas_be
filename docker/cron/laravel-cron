@@ -1,0 +1,11 @@
+# Laravel Scheduler
+* * * * * www-data cd /app && php artisan schedule:run >> /app/storage/logs/cron.log 2>&1
+
+# Log rotation every day at midnight
+0 0 * * * www-data find /app/storage/logs -name "*.log" -mtime +30 -delete
+
+# Clean up old queue jobs every hour
+0 * * * * www-data cd /app && php artisan queue:prune-failed --hours=48 >> /app/storage/logs/queue-cleanup.log 2>&1
+
+# System health check every 5 minutes
+*/5 * * * * www-data cd /app && php artisan health:check >> /app/storage/logs/health.log 2>&1

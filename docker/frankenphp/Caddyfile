@@ -1,0 +1,72 @@
+{
+    # Global options
+    frankenphp {
+        num_threads 1000
+    }
+
+    # Security headers
+    header {
+        # Enable HSTS
+        Strict-Transport-Security max-age=31536000;
+        # Prevent clickjacking
+        X-Frame-Options DENY
+        # Prevent MIME sniffing
+        X-Content-Type-Options nosniff
+        # XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Referrer policy
+        Referrer-Policy strict-origin-when-cross-origin
+        # Content Security Policy
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; media-src 'self'; object-src 'none'; child-src 'none'; frame-src 'none'; worker-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+        # Remove server information
+        -Server
+    }
+}
+
+# Main application
+:80 {
+    # Set document root
+    root * /app/public
+
+    # Enable compression
+    encode gzip
+
+    # Health check endpoint
+    respond /health 200
+
+    # API rate limiting
+    rate_limit {
+        zone api {
+            key {remote_host}
+            events 100
+            window 1m
+        }
+    }
+
+    # Enable FrankenPHP
+    php_server
+
+    # Handle Laravel routes
+    try_files {path} {path}/ /index.php?{query}
+
+    # Security: Deny access to sensitive files
+    @forbidden {
+        path /.env*
+        path /.git/*
+        path /storage/*
+        path /vendor/*
+        path /node_modules/*
+        path /*.md
+        path /composer.*
+        path /package.*
+        path /artisan
+        path /*.log
+    }
+    respond @forbidden 403
+
+    # Log requests
+    log {
+        output file /app/storage/logs/access.log
+        format json
+    }
+}
