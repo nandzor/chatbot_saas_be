@@ -126,7 +126,9 @@ abstract class BaseService
      */
     public function createMany(array $data): Collection
     {
-        return $this->model->newQuery()->create($data);
+        return collect($data)->map(function ($item) {
+            return $this->model->create($item);
+        });
     }
 
     /**

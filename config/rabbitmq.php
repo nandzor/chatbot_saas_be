@@ -31,7 +31,7 @@ return [
         'rabbitmq' => [
             'driver' => 'rabbitmq',
             'queue' => env('RABBITMQ_QUEUE', 'default'),
-            'connection' => PhpAmqpLib\Connection\AMQPLazyConnection::class,
+            'connection' => PhpAmqpLib\Connection\AMQPStreamConnection::class,
 
             'hosts' => [
                 [
@@ -60,11 +60,6 @@ return [
              * Set to "horizon" if you wish to use Laravel Horizon.
              */
             'worker' => env('RABBITMQ_WORKER', 'default'),
-
-            /*
-             * The name of the default queue.
-             */
-            'queue' => env('RABBITMQ_QUEUE', 'default'),
 
             /*
              * Queue exchange configuration.
@@ -118,7 +113,6 @@ return [
             'sleep' => env('RABBITMQ_SLEEP', 3),
             'balance' => env('RABBITMQ_BALANCE', 'simple'),
             'nice' => env('RABBITMQ_NICE', 0),
-            'timeout' => env('RABBITMQ_TIMEOUT', 60),
             'memory' => env('RABBITMQ_MEMORY', 128),
 
             /*
