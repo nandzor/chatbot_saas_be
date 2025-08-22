@@ -16,20 +16,21 @@ return new class extends Migration
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
             $table->date('date');
             $table->enum('quota_type', ['messages', 'api_calls', 'storage', 'agents', 'channels', 'knowledge_articles', 'ai_requests']);
-            
+
             // Usage Data
             $table->integer('used_amount')->default(0);
             $table->integer('quota_limit')->default(0);
             $table->integer('overage_amount')->default(0);
-            
+
             // Billing
             $table->decimal('unit_cost', 10, 4)->default(0);
             $table->decimal('total_cost', 10, 2)->default(0);
-            
+
             // System fields
             $table->timestamp('created_at')->useCurrent();
-            
-            $table->unique(['organization_id', 'date', 'quota_type']);
+
+            // Unique constraints for business logic
+            $table->unique(['organization_id', 'date', 'quota_type'], 'usage_tracking_org_date_quota_unique');
         });
     }
 

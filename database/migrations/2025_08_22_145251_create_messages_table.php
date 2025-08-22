@@ -68,7 +68,9 @@ return new class extends Migration
             $table->json('metadata')->default('{}');
             $table->timestamp('created_at')->useCurrent();
 
+            // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
+            $table->unique(['session_id', 'created_at'], 'messages_session_created_unique');
             $table->check('sender_type IN (\'customer\', \'bot\', \'agent\', \'system\')');
         });
     }

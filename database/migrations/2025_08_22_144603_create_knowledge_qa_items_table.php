@@ -57,6 +57,8 @@ return new class extends Migration
             $table->json('metadata')->default('{}');
             $table->timestamps();
 
+            // Unique constraints for business logic
+            $table->unique(['knowledge_item_id', 'question'], 'knowledge_qa_items_item_question_unique');
             $table->check('confidence_level IN (\'low\', \'medium\', \'high\')');
         });
     }

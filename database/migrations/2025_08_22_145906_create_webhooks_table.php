@@ -16,12 +16,12 @@ return new class extends Migration
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
             $table->string('name', 255);
             $table->string('url', 500);
-            
+
             // Configuration
             $table->json('events')->notNull();
             $table->string('secret', 255)->nullable();
             $table->json('headers')->default('{}');
-            
+
             // Status & Health
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_triggered_at')->nullable();
@@ -29,10 +29,14 @@ return new class extends Migration
             $table->timestamp('last_failure_at')->nullable();
             $table->integer('failure_count')->default(0);
             $table->integer('max_retries')->default(3);
-            
+
             // System fields
             $table->enum('status', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->timestamps();
+
+            // Unique constraints for business logic
+            $table->unique(['organization_id', 'name'], 'webhooks_org_name_unique');
+            $table->unique(['organization_id', 'url'], 'webhooks_org_url_unique');
         });
     }
 

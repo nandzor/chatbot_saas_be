@@ -15,29 +15,33 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
             $table->string('name', 255);
-            $table->string('key_hash', 255)->unique();
+            $table->string('key_hash', 255);
             $table->string('key_prefix', 20);
-            
+
             // Permissions & Scope
             $table->json('scopes')->default('["read"]');
             $table->json('permissions')->default('{}');
             $table->integer('rate_limit_per_minute')->default(60);
             $table->integer('rate_limit_per_hour')->default(1000);
             $table->integer('rate_limit_per_day')->default(10000);
-            
+
             // Usage Tracking
             $table->timestamp('last_used_at')->nullable();
             $table->integer('total_requests')->default(0);
-            
+
             // Expiration & Security
             $table->timestamp('expires_at')->nullable();
             $table->json('allowed_ips')->nullable();
             $table->json('user_agent_restrictions')->nullable();
-            
+
             // System fields
             $table->enum('status', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->foreignUuid('created_by')->nullable()->constrained('users');
             $table->timestamps();
+
+            // Unique constraints for business logic
+            $table->unique('key_hash', 'api_keys_key_hash_unique');
+            $table->unique(['organization_id', 'name'], 'api_keys_org_name_unique');
         });
     }
 

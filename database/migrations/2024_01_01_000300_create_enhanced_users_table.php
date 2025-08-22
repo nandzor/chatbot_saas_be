@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('enhanced_users', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('organization_id');
-            $table->string('email', 255)->unique();
+            $table->string('email', 255);
             $table->string('username', 100);
             $table->string('password_hash', 255);
             $table->string('full_name', 255);
@@ -71,6 +71,10 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
+
+            // Unique constraints for business logic
+            $table->unique(['organization_id', 'email'], 'enhanced_users_org_email_unique');
+            $table->unique(['organization_id', 'username'], 'enhanced_users_org_username_unique');
         });
     }
 

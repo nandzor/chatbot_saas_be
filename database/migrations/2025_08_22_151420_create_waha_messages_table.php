@@ -15,15 +15,15 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('session_id')->constrained('waha_sessions')->onDelete('cascade');
-            
+
             // Message Identity
-            $table->string('message_id', 255)->unique();
+            $table->string('message_id', 255);
             $table->string('chat_id', 255);
             $table->string('from_me', 10)->default('false');
             $table->string('from', 20);
             $table->string('to', 20);
             $table->string('chat_type', 20)->default('individual');
-            
+
             // Message Content
             $table->text('text')->nullable();
             $table->string('type', 50)->default('text');
@@ -45,7 +45,7 @@ return new class extends Migration
             $table->json('payment_data')->nullable();
             $table->json('system_data')->nullable();
             $table->json('unknown_data')->nullable();
-            
+
             // Message Status
             $table->string('status', 50)->default('sent');
             $table->timestamp('timestamp')->nullable();
@@ -54,7 +54,7 @@ return new class extends Migration
             $table->timestamp('played_at')->nullable();
             $table->timestamp('failed_at')->nullable();
             $table->text('failure_reason')->nullable();
-            
+
             // Message Properties
             $table->boolean('is_forwarded')->default(false);
             $table->boolean('is_reply')->default(false);
@@ -66,7 +66,7 @@ return new class extends Migration
             $table->boolean('is_community')->default(false);
             $table->boolean('is_ephemeral')->default(false);
             $table->integer('ephemeral_timer')->nullable();
-            
+
             // Group Message Properties
             $table->string('group_id', 255)->nullable();
             $table->string('group_name', 255)->nullable();
@@ -82,7 +82,7 @@ return new class extends Migration
             $table->integer('group_ephemeral_timer')->nullable();
             $table->timestamp('group_created_at')->nullable();
             $table->timestamp('group_updated_at')->nullable();
-            
+
             // Business Message Properties
             $table->string('business_phone_number', 20)->nullable();
             $table->string('business_name', 255)->nullable();
@@ -103,11 +103,15 @@ return new class extends Migration
             $table->boolean('business_shopping_enabled')->default(false);
             $table->boolean('business_payment_enabled')->default(false);
             $table->boolean('business_cart_enabled')->default(false);
-            
+
             // Metadata
             $table->json('metadata')->default('{}');
             $table->enum('status_type', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->timestamps();
+
+            // Unique constraints for business logic
+            $table->unique(['organization_id', 'message_id'], 'waha_messages_org_message_id_unique');
+            $table->unique(['session_id', 'message_id'], 'waha_messages_session_message_id_unique');
         });
     }
 

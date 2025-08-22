@@ -14,30 +14,32 @@ return new class extends Migration
         Schema::create('webhook_deliveries', function (Blueprint $table) {
             $table->uuid('id');
             $table->foreignUuid('webhook_id')->constrained()->onDelete('cascade');
-            
+
             // Delivery Details
             $table->string('event_type', 100);
             $table->json('payload');
-            
+
             // HTTP Details
             $table->integer('http_status')->nullable();
             $table->text('response_body')->nullable();
             $table->json('response_headers')->nullable();
-            
+
             // Timing
             $table->timestamp('delivered_at')->default(now());
             $table->integer('response_time_ms')->nullable();
-            
+
             // Retry Logic
             $table->integer('attempt_number')->default(1);
             $table->boolean('is_success')->default(false);
             $table->text('error_message')->nullable();
             $table->timestamp('next_retry_at')->nullable();
-            
+
             // System fields
             $table->timestamp('created_at')->useCurrent();
-            
+
+            // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
+            $table->unique(['webhook_id', 'event_type', 'created_at'], 'webhook_deliveries_webhook_event_time_unique');
         });
     }
 

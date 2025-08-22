@@ -16,30 +16,32 @@ return new class extends Migration
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('session_id')->nullable()->constrained('chat_sessions');
             $table->foreignUuid('message_id')->nullable()->constrained('messages');
-            
+
             // AI Request Details
             $table->foreignUuid('ai_model_id')->nullable()->constrained('ai_models');
             $table->text('prompt');
             $table->text('response')->nullable();
-            
+
             // Performance Metrics
             $table->integer('response_time_ms')->nullable();
             $table->integer('token_count_input')->nullable();
             $table->integer('token_count_output')->nullable();
             $table->decimal('cost_usd', 10, 6)->nullable();
-            
+
             // Quality Metrics
             $table->decimal('confidence_score', 3, 2)->nullable();
             $table->integer('user_feedback')->nullable();
-            
+
             // Error Handling
             $table->text('error_message')->nullable();
             $table->integer('retry_count')->default(0);
-            
+
             // System fields
             $table->timestamp('created_at')->useCurrent();
-            
+
+            // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
+            $table->unique(['organization_id', 'session_id', 'message_id', 'created_at'], 'ai_conversations_log_org_session_message_time_unique');
             $table->check('user_feedback >= -1 AND user_feedback <= 1');
         });
     }

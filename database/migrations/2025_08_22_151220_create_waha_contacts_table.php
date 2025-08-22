@@ -15,14 +15,14 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('session_id')->constrained('waha_sessions')->onDelete('cascade');
-            
+
             // Contact Identity
-            $table->string('contact_id', 255)->unique();
+            $table->string('contact_id', 255);
             $table->string('phone_number', 20);
             $table->string('name', 255)->nullable();
             $table->string('push_name', 255)->nullable();
             $table->string('short_name', 100)->nullable();
-            
+
             // Profile Information
             $table->string('profile_picture_url', 500)->nullable();
             $table->text('status_message')->nullable();
@@ -30,7 +30,7 @@ return new class extends Migration
             $table->boolean('is_contact')->default(false);
             $table->boolean('is_business')->default(false);
             $table->boolean('is_verified')->default(false);
-            
+
             // Business Information
             $table->string('business_name', 255)->nullable();
             $table->string('business_category', 100)->nullable();
@@ -50,7 +50,7 @@ return new class extends Migration
             $table->boolean('shopping_enabled')->default(false);
             $table->boolean('payment_enabled')->default(false);
             $table->boolean('cart_enabled')->default(false);
-            
+
             // Interaction History
             $table->timestamp('last_seen')->nullable();
             $table->timestamp('last_message_at')->nullable();
@@ -58,13 +58,16 @@ return new class extends Migration
             $table->integer('total_messages_received')->default(0);
             $table->integer('total_media_sent')->default(0);
             $table->integer('total_media_received')->default(0);
-            
+
             // Metadata
             $table->json('metadata')->default('{}');
             $table->enum('status_type', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->timestamps();
-            
-            $table->unique(['organization_id', 'session_id', 'phone_number']);
+
+            // Unique constraints for business logic
+            $table->unique(['organization_id', 'session_id', 'phone_number'], 'waha_contacts_org_session_phone_unique');
+            $table->unique(['organization_id', 'contact_id'], 'waha_contacts_org_contact_id_unique');
+            $table->unique(['session_id', 'contact_id'], 'waha_contacts_session_contact_id_unique');
         });
     }
 

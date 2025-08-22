@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
-            $table->string('email', 255)->unique();
+            $table->string('email', 255);
             $table->string('username', 100);
             $table->string('password_hash', 255);
             $table->string('full_name', 255);
@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('phone', 20)->nullable();
             $table->string('avatar_url', 500)->nullable();
             $table->enum('role', ['super_admin', 'org_admin', 'agent', 'customer', 'viewer', 'moderator', 'developer'])->default('customer');
-            
+
             // Authentication & Security
             $table->boolean('is_email_verified')->default(false);
             $table->boolean('is_phone_verified')->default(false);
@@ -36,16 +36,16 @@ return new class extends Migration
             $table->integer('failed_login_attempts')->default(0);
             $table->timestamp('locked_until')->nullable();
             $table->timestamp('password_changed_at')->default(now());
-            
+
             // Session Management
             $table->json('active_sessions')->default('[]');
             $table->integer('max_concurrent_sessions')->default(3);
-            
+
             // UI/UX Preferences
             $table->json('ui_preferences')->default('{"theme": "light", "language": "id", "timezone": "Asia/Jakarta", "notifications": {"email": true, "push": true}}');
             $table->json('dashboard_config')->default('{}');
             $table->json('notification_preferences')->default('{}');
-            
+
             // Profile & Activity
             $table->text('bio')->nullable();
             $table->string('location', 255)->nullable();
@@ -53,16 +53,20 @@ return new class extends Migration
             $table->string('job_title', 100)->nullable();
             $table->json('skills')->nullable();
             $table->json('languages')->default('["indonesia"]');
-            
+
             // API Access
             $table->boolean('api_access_enabled')->default(false);
             $table->integer('api_rate_limit')->default(100);
-            
+
             // System fields
             $table->json('permissions')->default('{}');
             $table->enum('status', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->timestamps();
             $table->softDeletes();
+
+            // Unique constraints for business logic
+            $table->unique(['organization_id', 'email'], 'users_org_email_unique');
+            $table->unique(['organization_id', 'username'], 'users_org_username_unique');
         });
     }
 

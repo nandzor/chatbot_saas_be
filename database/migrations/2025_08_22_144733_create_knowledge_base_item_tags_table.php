@@ -15,14 +15,15 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('knowledge_item_id')->constrained('knowledge_base_items')->onDelete('cascade');
             $table->foreignUuid('tag_id')->constrained('knowledge_base_tags')->onDelete('cascade');
-            
+
             // Tag Assignment Details
             $table->foreignUuid('assigned_by')->nullable()->constrained('users');
             $table->timestamp('assigned_at')->default(now());
             $table->boolean('is_auto_assigned')->default(false);
             $table->decimal('confidence_score', 3, 2)->nullable();
-            
-            $table->unique(['knowledge_item_id', 'tag_id']);
+
+            // Unique constraints for business logic
+            $table->unique(['knowledge_item_id', 'tag_id'], 'knowledge_base_item_tags_item_tag_unique');
         });
     }
 

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('organizations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('org_code', 50)->unique();
+            $table->string('org_code', 50);
             $table->string('name', 255);
             $table->string('display_name', 255)->nullable();
             $table->string('email', 255);
@@ -78,6 +78,10 @@ return new class extends Migration
             $table->enum('status', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->timestamps();
             $table->softDeletes();
+
+            // Unique constraints for business logic
+            $table->unique('org_code', 'organizations_org_code_unique');
+            $table->unique('email', 'organizations_email_unique');
         });
     }
 

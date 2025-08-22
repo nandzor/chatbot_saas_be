@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('subscription_plans', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('name', 100);
+            $table->string('name', 100)->unique();
             $table->string('display_name', 255);
             $table->text('description')->nullable();
             $table->enum('tier', ['trial', 'starter', 'professional', 'enterprise', 'custom']);

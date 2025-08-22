@@ -15,32 +15,34 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('session_id')->constrained('waha_sessions')->onDelete('cascade');
-            
+
             // Rate Limit Identity
             $table->string('rate_limit_type', 50);
             $table->string('window_type', 50)->default('sliding');
             $table->timestamp('window_start')->default(now());
             $table->timestamp('window_end')->nullable();
-            
+
             // Limits & Counters
             $table->integer('limit_threshold');
             $table->integer('current_count')->default(0);
             $table->integer('remaining_count')->nullable();
             $table->decimal('usage_percentage', 5, 2)->nullable();
-            
+
             // Rate Limit Status
             $table->boolean('is_active')->default(true);
             $table->boolean('is_exceeded')->default(false);
             $table->timestamp('exceeded_at')->nullable();
             $table->timestamp('reset_at')->nullable();
-            
+
             // Configuration
             $table->json('config')->default('{}');
             $table->json('metadata')->default('{}');
             $table->enum('status_type', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->timestamps();
-            
-            $table->unique(['session_id', 'rate_limit_type', 'window_start']);
+
+            // Unique constraints for business logic
+            $table->unique(['session_id', 'rate_limit_type', 'window_start'], 'waha_rate_limits_session_type_window_unique');
+            $table->unique(['organization_id', 'session_id', 'rate_limit_type'], 'waha_rate_limits_org_session_type_unique');
         });
     }
 

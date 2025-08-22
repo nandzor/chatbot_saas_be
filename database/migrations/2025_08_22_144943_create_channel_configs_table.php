@@ -59,7 +59,9 @@ return new class extends Migration
             $table->enum('status', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->timestamps();
 
-            $table->unique(['organization_id', 'channel', 'channel_identifier']);
+            // Unique constraints for business logic
+            $table->unique(['organization_id', 'channel', 'channel_identifier'], 'channel_configs_org_channel_identifier_unique');
+            $table->unique(['organization_id', 'name'], 'channel_configs_org_name_unique');
             $table->check('health_status IN (\'unknown\', \'healthy\', \'warning\', \'critical\', \'offline\')');
         });
     }
