@@ -77,17 +77,30 @@ chmod -R 755 storage
 chmod -R 755 bootstrap/cache
 print_success "Permissions set"
 
+# Stop any existing containers
+print_status "Stopping existing containers..."
+docker compose down --remove-orphans
+
 # Build and start containers
 print_status "Building and starting Docker containers..."
 docker compose up -d --build
 
 # Wait for services to be ready
 print_status "Waiting for services to start..."
-sleep 10
+sleep 15
+
+# Check if app container is healthy
+print_status "Checking container health..."
+if ! docker compose ps | grep -q "healthy.*app"; then
+    print_warning "App container is not healthy yet. Checking logs..."
+    docker compose logs app --tail 20
+    print_status "Waiting additional time for services to stabilize..."
+    sleep 10
+fi
 
 # Install Composer dependencies
 print_status "Installing PHP dependencies..."
-docker compose exec -T app composer install --optimize-autoloader
+docker compose exec -T app composer install --optimize-autoloader --no-dev
 
 # Run database migrations
 print_status "Running database migrations..."
@@ -110,11 +123,12 @@ print_status "Skipping Spatie packages setup (not yet compatible with Laravel 12
 print_status "Checking service health..."
 sleep 5
 
-# Test API health endpoint
-if curl -f http://localhost/api/health > /dev/null 2>&1; then
+# Test API health endpoint (using correct port 9000)
+if curl -f http://localhost:9000/api/health > /dev/null 2>&1; then
     print_success "API health check passed"
 else
     print_warning "API health check failed - service might still be starting"
+    print_status "You can check the logs with: docker compose logs -f app"
 fi
 
 # Display service URLs
@@ -122,9 +136,10 @@ echo ""
 print_success "🎉 Setup completed successfully!"
 echo ""
 echo -e "${BLUE}Service URLs:${NC}"
-echo "  📡 API: http://localhost"
-echo "  🐰 RabbitMQ Management: http://localhost:15672 (admin/password)"
-echo "  🗄️  PostgreSQL: localhost:5432 (postgres/password)"
+echo "  📡 API: http://localhost:9000"
+echo "  🔒 API (HTTPS): https://localhost:8443"
+echo "  🐰 RabbitMQ Management: http://localhost:15672 (admin/kambin)"
+echo "  🗄️  PostgreSQL: localhost:5432 (postgres/kambin)"
 echo "  📦 Redis: localhost:6379"
 echo ""
 echo -e "${BLUE}Useful Commands:${NC}"
@@ -133,5 +148,10 @@ echo "  🔧 Run artisan: docker compose exec app php artisan <command>"
 echo "  🧪 Run tests: docker compose exec app php artisan test"
 echo "  📊 Queue monitoring: docker compose exec app php artisan horizon"
 echo "  🛑 Stop services: docker compose down"
+echo ""
+echo -e "${BLUE}Troubleshooting:${NC}"
+echo "  🔧 If containers are unhealthy: docker compose logs -f"
+echo "  🔄 Restart app: docker compose restart app"
+echo "  🗑️  Clean restart: docker compose down && docker compose up -d"
 echo ""
 echo -e "${GREEN}Happy coding! 🚀${NC}"
