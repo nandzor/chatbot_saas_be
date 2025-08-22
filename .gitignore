@@ -240,7 +240,7 @@ Homestead.yaml
 *.db
 
 # Database dumps
-*.sql
+
 *.dump
 
 # =======================
