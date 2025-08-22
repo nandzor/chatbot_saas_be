@@ -71,11 +71,19 @@ mkdir -p storage/framework/views
 mkdir -p bootstrap/cache
 print_success "Storage directories created"
 
-# Set proper permissions
+# Set proper permissions (with error handling)
 print_status "Setting proper permissions..."
-chmod -R 755 storage
-chmod -R 755 bootstrap/cache
-print_success "Permissions set"
+if [ -d "storage" ]; then
+    chmod -R 755 storage 2>/dev/null || print_warning "Some storage permissions could not be set"
+fi
+
+if [ -d "bootstrap/cache" ]; then
+    # Remove existing cache files that might cause permission issues
+    rm -f bootstrap/cache/*.php 2>/dev/null || true
+    chmod -R 755 bootstrap/cache 2>/dev/null || print_warning "Bootstrap cache permissions could not be set"
+fi
+
+print_success "Permissions set (with error handling)"
 
 # Stop any existing containers
 print_status "Stopping existing containers..."
