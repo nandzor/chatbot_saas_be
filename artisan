@@ -23,10 +23,6 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
 # Check if Docker is running
 if ! docker compose ps | grep -q "chatbot_saas_app"; then
     print_error "Docker containers are not running. Please start them first with: docker compose up -d"
