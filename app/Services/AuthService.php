@@ -200,7 +200,7 @@ class AuthService
     }
 
     /**
-     * Generate both JWT and Sanctum tokens.
+     * Generate unified tokens (JWT + Sanctum + Refresh).
      */
     protected function generateTokens(User $user, bool $remember = false): array
     {
@@ -209,21 +209,26 @@ class AuthService
         // Set custom TTL for JWT
         config(['jwt.ttl' => $ttl]);
 
-        // Generate JWT token
+        // Generate JWT token (1 hour)
         $jwtToken = JWTAuth::fromUser($user);
 
-        // Generate Sanctum token for additional security
+        // Generate Sanctum token (1 year)
         $sanctumToken = $user->createToken(
-            'auth-token-' . now()->timestamp,
+            'api-token',
             ['*'],
-            now()->addMinutes($ttl)
+            now()->addYear()
         );
+
+        // Generate Refresh token (7 days)
+        $refreshToken = $this->createRefreshToken($user);
 
         return [
             'access_token' => $jwtToken,
-            'token_type' => 'bearer',
+            'refresh_token' => $refreshToken,
+            'token_type' => 'Bearer',
             'sanctum_token' => $sanctumToken->plainTextToken,
             'expires_in' => $ttl * 60, // Convert to seconds
+            'refresh_expires_in' => 7 * 24 * 60 * 60, // 7 days in seconds
         ];
     }
 
@@ -541,5 +546,111 @@ class AuthService
 
         return $lastChanged &&
                $lastChanged->addDays($maxAge)->isPast();
+    }
+
+    /**
+     * Create refresh token for user.
+     */
+    protected function createRefreshToken(User $user): string
+    {
+        // Generate random refresh token
+        $refreshToken = \Illuminate\Support\Str::random(64);
+
+        // Store hashed token in database
+        \Illuminate\Support\Facades\DB::table('refresh_tokens')->insert([
+            'user_id' => $user->id,
+            'token' => hash('sha256', $refreshToken),
+            'expires_at' => now()->addDays(7),
+            'is_revoked' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $refreshToken;
+    }
+
+    /**
+     * Validate refresh token.
+     */
+    public function validateRefreshToken(string $refreshToken): ?object
+    {
+        $hashedToken = hash('sha256', $refreshToken);
+
+        $tokenRecord = \Illuminate\Support\Facades\DB::table('refresh_tokens')
+            ->where('token', $hashedToken)
+            ->where('expires_at', '>', now())
+            ->where('is_revoked', false)
+            ->first();
+
+        if (!$tokenRecord) {
+            return null;
+        }
+
+        return (object) $tokenRecord;
+    }
+
+    /**
+     * Rotate refresh token (for security).
+     */
+    public function rotateRefreshToken(object $tokenRecord): string
+    {
+        // Revoke old token
+        \Illuminate\Support\Facades\DB::table('refresh_tokens')
+            ->where('id', $tokenRecord->id)
+            ->update(['is_revoked' => true]);
+
+        // Create new refresh token
+        $user = User::find($tokenRecord->user_id);
+        return $this->createRefreshToken($user);
+    }
+
+    /**
+     * Revoke refresh token.
+     */
+    public function revokeRefreshToken(string $refreshToken): bool
+    {
+        $hashedToken = hash('sha256', $refreshToken);
+
+        $updated = \Illuminate\Support\Facades\DB::table('refresh_tokens')
+            ->where('token', $hashedToken)
+            ->update(['is_revoked' => true]);
+
+        return $updated > 0;
+    }
+
+    /**
+     * Refresh JWT token using refresh token.
+     */
+    public function refreshWithToken(string $refreshToken): array
+    {
+        // Validate refresh token
+        $tokenRecord = $this->validateRefreshToken($refreshToken);
+        if (!$tokenRecord) {
+            throw ValidationException::withMessages([
+                'refresh_token' => ['Invalid or expired refresh token'],
+            ]);
+        }
+
+        // Get user
+        $user = User::find($tokenRecord->user_id);
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'refresh_token' => ['User not found'],
+            ]);
+        }
+
+        // Generate new JWT token
+        $newJwtToken = JWTAuth::fromUser($user);
+
+        // Rotate refresh token for security
+        $newRefreshToken = $this->rotateRefreshToken($tokenRecord);
+
+        return [
+            'access_token' => $newJwtToken,
+            'refresh_token' => $newRefreshToken,
+            'token_type' => 'Bearer',
+            'expires_in' => self::DEFAULT_TTL * 60,
+            'refresh_expires_in' => 7 * 24 * 60 * 60,
+        ];
     }
 }

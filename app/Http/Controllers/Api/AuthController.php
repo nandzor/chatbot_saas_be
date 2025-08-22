@@ -88,16 +88,18 @@ class AuthController extends BaseApiController
     }
 
     /**
-     * Refresh JWT token.
+     * Refresh JWT token using refresh token.
      */
     public function refresh(RefreshTokenRequest $request): JsonResponse
     {
         try {
-            $authData = $this->authService->refresh($request);
+            $refreshToken = $request->validated()['refresh_token'];
+
+            $authData = $this->authService->refreshWithToken($refreshToken);
 
             return $this->successResponse(
                 'Token refreshed successfully',
-                new AuthResource($authData),
+                $authData,
                 200
             );
         } catch (ValidationException $e) {

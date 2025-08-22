@@ -5,35 +5,52 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Authentication Routes
+| Unified Authentication Routes (JWT + Sanctum + Refresh Token)
 |--------------------------------------------------------------------------
 |
-| These routes handle user authentication using JWT tokens.
-| All routes are prefixed with 'api/auth' and return JSON responses.
+| Sistem authentication yang menggabungkan JWT dan Sanctum untuk keamanan maksimal.
+| JWT untuk stateless API calls, Sanctum untuk additional security layer.
+| Refresh token untuk auto-renew JWT tanpa re-login.
+| Semua routes menggunakan prefix 'api/auth' dan return JSON responses.
 |
 */
 
 // Public authentication routes (no authentication required)
 Route::prefix('auth')->group(function () {
 
-    // Login endpoint
+    // Unified login endpoint - generates JWT + Sanctum + Refresh tokens
     Route::post('/login', [AuthController::class, 'login'])
          ->name('auth.login')
          ->middleware(['throttle:auth']);
 
-    // Token refresh endpoint
+    // Register endpoint
+    Route::post('/register', [AuthController::class, 'register'])
+         ->name('auth.register')
+         ->middleware(['throttle:auth']);
+
+    // Token refresh endpoint (using refresh token)
     Route::post('/refresh', [AuthController::class, 'refresh'])
          ->name('auth.refresh')
          ->middleware(['throttle:refresh']);
 
-    // Token validation endpoint (useful for frontend to check token validity)
+    // Token validation endpoint
     Route::post('/validate', [AuthController::class, 'validate'])
          ->name('auth.validate')
          ->middleware(['throttle:validation']);
+
+    // Forgot password endpoint
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+         ->name('auth.forgot-password')
+         ->middleware(['throttle:auth']);
+
+    // Reset password endpoint
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+         ->name('auth.reset-password')
+         ->middleware(['throttle:auth']);
 });
 
-// Protected authentication routes (require valid JWT token)
-Route::prefix('auth')->middleware(['jwt.auth'])->group(function () {
+// Protected authentication routes (accepts both JWT and Sanctum tokens)
+Route::prefix('auth')->middleware(['unified.auth'])->group(function () {
 
     // Get current user information
     Route::get('/me', [AuthController::class, 'me'])
@@ -55,10 +72,18 @@ Route::prefix('auth')->middleware(['jwt.auth'])->group(function () {
     Route::delete('/sessions/{sessionId}', [AuthController::class, 'revokeSession'])
          ->name('auth.sessions.revoke')
          ->where('sessionId', '[0-9a-f-]+');
+
+    // Update user profile
+    Route::put('/profile', [AuthController::class, 'updateProfile'])
+         ->name('auth.profile.update');
+
+    // Change password
+    Route::post('/change-password', [AuthController::class, 'changePassword'])
+         ->name('auth.change-password');
 });
 
 // Administrative routes (require admin permissions)
-Route::prefix('auth')->middleware(['jwt.auth', 'can:manage-users'])->group(function () {
+Route::prefix('auth')->middleware(['unified.auth', 'can:manage-users'])->group(function () {
 
     // Force logout user (admin only)
     Route::post('/force-logout/{userId}', [AuthController::class, 'forceLogout'])
