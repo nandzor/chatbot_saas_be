@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/auth.php'));
+            
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/admin.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -23,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth' => \App\Http\Middleware\JwtAuthMiddleware::class,
             'unified.auth' => \App\Http\Middleware\UnifiedAuthMiddleware::class,
             'api.response' => \App\Http\Middleware\ApiResponseMiddleware::class,
+            'can' => \App\Http\Middleware\AdminPermissionMiddleware::class,
         ]);
 
         // Register custom middleware for API guard
