@@ -131,6 +131,27 @@ else
     print_status "You can check the logs with: docker compose logs -f app"
 fi
 
+# Create simple artisan wrapper script
+print_status "Creating simple artisan wrapper..."
+cat > artisan << 'EOF'
+#!/bin/bash
+# Simple Artisan Command Wrapper
+# Usage: ./artisan <command>
+docker compose exec -T app php artisan "$@"
+EOF
+chmod +x artisan
+
+# Create simple container command executor
+print_status "Creating container command executor..."
+cat > d << 'EOF'
+#!/bin/bash
+# Simple Container Command Executor
+# Usage: ./d <command>
+# Examples: ./d bash, ./d composer install, ./d ls -la
+docker compose exec -T app "$@"
+EOF
+chmod +x d
+
 # Display service URLs
 echo ""
 print_success "🎉 Setup completed successfully!"
@@ -142,16 +163,32 @@ echo "  🐰 RabbitMQ Management: http://localhost:15672 (admin/kambin)"
 echo "  🗄️  PostgreSQL: localhost:5432 (postgres/kambin)"
 echo "  📦 Redis: localhost:6379"
 echo ""
-echo -e "${BLUE}Useful Commands:${NC}"
-echo "  🔍 View logs: docker compose logs -f"
-echo "  🔧 Run artisan: docker compose exec app php artisan <command>"
-echo "  🧪 Run tests: docker compose exec app php artisan test"
-echo "  📊 Queue monitoring: docker compose exec app php artisan horizon"
-echo "  🛑 Stop services: docker compose down"
+echo -e "${BLUE}🚀 Simple Commands (No Aliases Needed):${NC}"
+echo "  ./artisan migrate                    # Run migrations"
+echo "  ./artisan db:seed                    # Run seeders"
+echo "  ./artisan cache:clear                # Clear cache"
+echo "  ./artisan list                       # List all commands"
+echo "  ./d bash                             # Access container shell"
+echo "  ./d composer install                 # Install dependencies"
+echo "  ./d ls -la                           # List files in container"
+echo ""
+echo -e "${BLUE}🔧 Docker Commands:${NC}"
+echo "  docker compose up -d                 # Start services"
+echo "  docker compose down                  # Stop services"
+echo "  docker compose logs -f               # View logs"
+echo "  docker compose ps                    # Check status"
+echo ""
+echo -e "${BLUE}📚 Quick Examples:${NC}"
+echo "  ./artisan migrate:status             # Check migration status"
+echo "  ./artisan make:controller User       # Create controller"
+echo "  ./artisan test                       # Run tests"
+echo "  ./d php artisan tinker               # Start Tinker"
+echo "  ./d tail -f storage/logs/laravel.log # View logs"
 echo ""
 echo -e "${BLUE}Troubleshooting:${NC}"
 echo "  🔧 If containers are unhealthy: docker compose logs -f"
 echo "  🔄 Restart app: docker compose restart app"
 echo "  🗑️  Clean restart: docker compose down && docker compose up -d"
 echo ""
+echo -e "${GREEN}✨ No complex aliases needed! Just use ./artisan and ./d${NC}"
 echo -e "${GREEN}Happy coding! 🚀${NC}"

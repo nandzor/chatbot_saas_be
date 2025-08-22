@@ -29,9 +29,18 @@ services:
       - RABBITMQ_PASSWORD=kambin
       - RABBITMQ_VHOST=/
     volumes:
+      # Source code synchronization (development friendly)
+      - .:/app
+      - /app/vendor
+      - /app/node_modules
+      # Storage synchronization
       - ./storage/logs:/app/storage/logs
       - ./storage/app:/app/storage/app
+      - ./storage/framework:/app/storage/framework
+      # Environment file synchronization
       - ./.env:/app/.env
+      # Bootstrap cache synchronization
+      - ./bootstrap/cache:/app/bootstrap/cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -110,7 +119,7 @@ services:
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "status"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
 
   # Queue Worker
@@ -123,6 +132,7 @@ services:
     command: php artisan queue:work --verbose --tries=3 --timeout=90
     environment:
       - APP_ENV=production
+      - APP_DEBUG=false
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -138,8 +148,18 @@ services:
       - RABBITMQ_PASSWORD=kambin
       - RABBITMQ_VHOST=/
     volumes:
+      # Source code synchronization
+      - .:/app
+      - /app/vendor
+      - /app/node_modules
+      # Storage synchronization
       - ./storage/logs:/app/storage/logs
+      - ./storage/app:/app/storage/app
+      - ./storage/framework:/app/storage/framework
+      # Environment file synchronization
       - ./.env:/app/.env
+      # Bootstrap cache synchronization
+      - ./bootstrap/cache:/app/bootstrap/cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -160,6 +180,7 @@ services:
     command: php artisan schedule:work
     environment:
       - APP_ENV=production
+      - APP_DEBUG=false
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -169,8 +190,18 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     volumes:
+      # Source code synchronization
+      - .:/app
+      - /app/vendor
+      - /app/node_modules
+      # Storage synchronization
       - ./storage/logs:/app/storage/logs
+      - ./storage/app:/app/storage/app
+      - ./storage/framework:/app/storage/framework
+      # Environment file synchronization
       - ./.env:/app/.env
+      # Bootstrap cache synchronization
+      - ./bootstrap/cache:/app/bootstrap/cache
     depends_on:
       postgres:
         condition: service_healthy
