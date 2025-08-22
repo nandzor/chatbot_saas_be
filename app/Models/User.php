@@ -14,8 +14,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     use HasApiTokens;
     use HasFactory;
@@ -295,13 +296,7 @@ class User extends Authenticatable
         return $this->two_factor_enabled;
     }
 
-    /**
-     * Check if user is locked.
-     */
-    public function isLocked(): bool
-    {
-        return $this->locked_until && $this->locked_until->isFuture();
-    }
+
 
     /**
      * Check if user is an agent.
@@ -327,24 +322,7 @@ class User extends Authenticatable
         return $this->api_access_enabled;
     }
 
-    /**
-     * Check if user has a specific permission.
-     */
-    public function hasPermission(string $permission): bool
-    {
-        // Check direct permissions
-        if (isset($this->permissions[$permission]) && $this->permissions[$permission]) {
-            return true;
-        }
 
-        // Check role permissions
-        return $this->activeRoles()
-                    ->whereHas('permissions', function ($query) use ($permission) {
-                        $query->where('code', $permission)
-                              ->where('is_granted', true);
-                    })
-                    ->exists();
-    }
 
     /**
      * Check if user can access organization feature.
@@ -449,5 +427,198 @@ class User extends Authenticatable
     public function setPasswordAttribute(string $value): void
     {
         $this->attributes['password_hash'] = $value;
+    }
+
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     */
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     */
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            'user_id' => $this->id,
+            'email' => $this->email,
+            'organization_id' => $this->organization_id,
+            'role' => $this->role,
+            'status' => $this->status,
+            'email_verified' => $this->is_email_verified,
+            'two_factor_enabled' => $this->two_factor_enabled,
+            'iat' => now()->timestamp,
+            'iss' => config('app.name'),
+            'aud' => config('app.url'),
+        ];
+    }
+
+    /**
+     * Get all permissions for user through roles.
+     */
+    public function getAllPermissions()
+    {
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles.permissions');
+        }
+
+        return $this->roles->flatMap(function ($role) {
+            return $role->permissions;
+        })->unique('id');
+    }
+
+    /**
+     * Check if user has specific permission.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        return $this->getAllPermissions()
+                   ->contains('code', $permission);
+    }
+
+    /**
+     * Check if user has any of the given permissions.
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        $userPermissions = $this->getAllPermissions()->pluck('code')->toArray();
+
+        return !empty(array_intersect($permissions, $userPermissions));
+    }
+
+    /**
+     * Check if user has all of the given permissions.
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        $userPermissions = $this->getAllPermissions()->pluck('code')->toArray();
+
+        return empty(array_diff($permissions, $userPermissions));
+    }
+
+    /**
+     * Check if user has specific role.
+     */
+    public function hasRole(string $role): bool
+    {
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles');
+        }
+
+        return $this->roles->contains('code', $role);
+    }
+
+    /**
+     * Check if user has any of the given roles.
+     */
+    public function hasAnyRole(array $roles): bool
+    {
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles');
+        }
+
+        $userRoles = $this->roles->pluck('code')->toArray();
+
+        return !empty(array_intersect($roles, $userRoles));
+    }
+
+    /**
+     * Get user's primary role.
+     */
+    public function getPrimaryRole()
+    {
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles');
+        }
+
+        return $this->roles->where('pivot.is_primary', true)->first();
+    }
+
+    /**
+     * Check if user is organization admin.
+     */
+    public function isOrgAdmin(): bool
+    {
+        return in_array($this->role, ['super_admin', 'org_admin']);
+    }
+
+    /**
+     * Check if user is super admin.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    /**
+     * Check if user account is active.
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 'active' &&
+               $this->is_email_verified &&
+               is_null($this->deleted_at) &&
+               (is_null($this->locked_until) || $this->locked_until <= now());
+    }
+
+    /**
+     * Check if user is locked.
+     */
+    public function isLocked(): bool
+    {
+        return !is_null($this->locked_until) &&
+               $this->locked_until > now();
+    }
+
+    /**
+     * Check if user needs password change.
+     */
+    public function needsPasswordChange(): bool
+    {
+        if (!$this->password_changed_at) {
+            return false;
+        }
+
+        $maxAge = config('auth.password_max_age', 90); // days
+        return $this->password_changed_at->addDays($maxAge)->isPast();
+    }
+
+    /**
+     * Check if user can access API.
+     */
+    public function canAccessApi(): bool
+    {
+        return $this->api_access_enabled && $this->isActive();
+    }
+
+    /**
+     * Get user's active sessions.
+     */
+    public function getActiveSessionsAttribute()
+    {
+        return $this->userSessions()
+                   ->where('is_active', true)
+                   ->where('expires_at', '>', now())
+                   ->get();
+    }
+
+    /**
+     * Invalidate all user sessions.
+     */
+    public function invalidateAllSessions(): void
+    {
+        $this->userSessions()->update(['is_active' => false]);
+        $this->tokens()->delete();
+    }
+
+    /**
+     * Alias for userSessions relationship for compatibility.
+     */
+    public function sessions(): HasMany
+    {
+        return $this->userSessions();
     }
 }

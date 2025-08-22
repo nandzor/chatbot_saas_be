@@ -40,6 +40,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'api' => [
+            'driver' => 'jwt',
+            'provider' => 'users',
+        ],
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
     ],
 
     /*
@@ -111,5 +119,47 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Authentication Settings
+    |--------------------------------------------------------------------------
+    |
+    | Custom settings for JWT authentication and security features.
+    |
+    */
+
+    // Password security settings
+    'password_max_age' => env('AUTH_PASSWORD_MAX_AGE', 90), // days
+    'max_login_attempts' => env('AUTH_MAX_LOGIN_ATTEMPTS', 5),
+    'lockout_duration' => env('AUTH_LOCKOUT_DURATION', 30), // minutes
+
+    // Session management
+    'max_concurrent_sessions' => env('AUTH_MAX_CONCURRENT_SESSIONS', 3),
+    'session_timeout' => env('AUTH_SESSION_TIMEOUT', 3600), // seconds
+
+    // API access logging
+    'log_api_access' => env('AUTH_LOG_API_ACCESS', false),
+    'log_failed_attempts' => env('AUTH_LOG_FAILED_ATTEMPTS', true),
+
+    // Security features
+    'require_email_verification' => env('AUTH_REQUIRE_EMAIL_VERIFICATION', true),
+    'enforce_2fa_for_admins' => env('AUTH_ENFORCE_2FA_FOR_ADMINS', false),
+
+    // Rate limiting
+    'rate_limits' => [
+        'login' => [
+            'max_attempts' => env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+            'decay_minutes' => env('AUTH_LOGIN_DECAY_MINUTES', 1),
+        ],
+        'refresh' => [
+            'max_attempts' => env('AUTH_REFRESH_MAX_ATTEMPTS', 10),
+            'decay_minutes' => env('AUTH_REFRESH_DECAY_MINUTES', 1),
+        ],
+        'validation' => [
+            'max_attempts' => env('AUTH_VALIDATION_MAX_ATTEMPTS', 60),
+            'decay_minutes' => env('AUTH_VALIDATION_DECAY_MINUTES', 1),
+        ],
+    ],
 
 ];
