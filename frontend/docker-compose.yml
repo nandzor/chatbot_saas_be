@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  chatbot-saas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatbot-saas
+    ports:
+      - "8080:80"
+    volumes:
+      - ./dist:/usr/share/nginx/html/chatbot-saas
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    environment:
+      - NODE_ENV=production
+      - VITE_BASE_URL=/chatbot-saas/
+      - VITE_API_BASE_URL=http://100.81.120.54:9999
+    restart: unless-stopped
+    networks:
+      - chatbot-network
+
+  # Optional: Add a reverse proxy for SSL termination
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: chatbot-nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - chatbot-saas
+    restart: unless-stopped
+    networks:
+      - chatbot-network
+
+networks:
+  chatbot-network:
+    driver: bridge
+
+volumes:
+  chatbot-data:

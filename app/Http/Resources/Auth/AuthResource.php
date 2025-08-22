@@ -15,7 +15,11 @@ class AuthResource extends JsonResource
     {
         return [
             'access_token' => $this->resource['access_token'],
-            'token_type' => $this->resource['token_type'] ?? 'bearer',
+            'refresh_token' => $this->when(
+                isset($this->resource['refresh_token']),
+                $this->resource['refresh_token']
+            ),
+            'token_type' => $this->resource['token_type'] ?? 'Bearer',
             'expires_in' => $this->resource['expires_in'],
             'expires_at' => now()->addSeconds($this->resource['expires_in'])->toISOString(),
             'refresh_expires_in' => $this->when(

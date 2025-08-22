@@ -28,21 +28,11 @@ Route::get('/health', function () {
 // API V1 Routes
 Route::prefix('v1')->group(function () {
 
-    // Authentication routes (public)
-    Route::prefix('auth')->group(function () {
-        Route::post('/register', [UserController::class, 'store']);
-        Route::post('/login', function () {
-            // TODO: Implement authentication
-            return response()->json(['message' => 'Login endpoint - to be implemented']);
-        });
-        Route::post('/forgot-password', function () {
-            // TODO: Implement password reset
-            return response()->json(['message' => 'Forgot password endpoint - to be implemented']);
-        });
-    });
+    // Authentication routes are now handled in routes/auth.php
+    // This provides unified JWT + Sanctum + Refresh token authentication
 
-    // Protected routes
-    Route::middleware(['auth:sanctum'])->group(function () {
+    // Protected routes - using unified authentication (JWT OR Sanctum)
+    Route::middleware(['unified.auth'])->group(function () {
 
         // User management routes
         Route::prefix('users')->group(function () {

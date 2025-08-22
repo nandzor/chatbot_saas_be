@@ -1,0 +1,63 @@
+{
+  "name": "chatbot-saas",
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/chatbot-saas/(.*)",
+      "dest": "/chatbot-saas/index.html"
+    },
+    {
+      "src": "/chatbot-saas/assets/(.*)",
+      "dest": "/chatbot-saas/assets/$1"
+    },
+    {
+      "src": "/chatbot-saas/(.*)",
+      "dest": "/chatbot-saas/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/chatbot-saas/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/chatbot-saas/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "VITE_BASE_URL": "/chatbot-saas/",
+    "VITE_API_BASE_URL": "http://100.81.120.54:9999"
+  }
+}
