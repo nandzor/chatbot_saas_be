@@ -9,8 +9,8 @@ services:
     container_name: chatbot_saas_app
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "9000:80"
+      - "8443:443"
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
@@ -19,14 +19,14 @@ services:
       - DB_PORT=5432
       - DB_DATABASE=chatbot_saas
       - DB_USERNAME=postgres
-      - DB_PASSWORD=password
+      - DB_PASSWORD=kambin
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - QUEUE_CONNECTION=rabbitmq
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=admin
-      - RABBITMQ_PASSWORD=password
+      - RABBITMQ_PASSWORD=kambin
       - RABBITMQ_VHOST=/
     volumes:
       - ./storage/logs:/app/storage/logs
@@ -54,7 +54,7 @@ services:
     environment:
       POSTGRES_DB: chatbot_saas
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: kambin
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -79,7 +79,7 @@ services:
     volumes:
       - redis_data:/data
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
+    command: sh -c "mkdir -p /var/log/redis && redis-server /usr/local/etc/redis/redis.conf"
     networks:
       - chatbot_network
     healthcheck:
@@ -95,7 +95,7 @@ services:
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: password
+      RABBITMQ_DEFAULT_PASS: kambin
       RABBITMQ_DEFAULT_VHOST: /
     ports:
       - "5672:5672"
@@ -127,14 +127,14 @@ services:
       - DB_PORT=5432
       - DB_DATABASE=chatbot_saas
       - DB_USERNAME=postgres
-      - DB_PASSWORD=password
+      - DB_PASSWORD=kambin
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - QUEUE_CONNECTION=rabbitmq
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=admin
-      - RABBITMQ_PASSWORD=password
+      - RABBITMQ_PASSWORD=kambin
       - RABBITMQ_VHOST=/
     volumes:
       - ./storage/logs:/app/storage/logs
@@ -163,7 +163,7 @@ services:
       - DB_PORT=5432
       - DB_DATABASE=chatbot_saas
       - DB_USERNAME=postgres
-      - DB_PASSWORD=password
+      - DB_PASSWORD=kambin
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     volumes:
