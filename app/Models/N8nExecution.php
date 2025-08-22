@@ -298,7 +298,7 @@ class N8nExecution extends Model
     public function markAsSuccessful(array $outputData = [], array $executionData = []): void
     {
         $finishedAt = now();
-        $duration = $this->started_at ? $this->started_at->diffInMilliseconds($finishedAt) : 0;
+        $duration = $this->started_at ? $this->started_at->diffInRealMilliseconds($finishedAt) : 0;
 
         $this->update([
             'status' => 'success',
@@ -320,7 +320,7 @@ class N8nExecution extends Model
     public function markAsFailed(string $errorMessage = null, array $errorDetails = [], array $failedNodes = []): void
     {
         $finishedAt = now();
-        $duration = $this->started_at ? $this->started_at->diffInMilliseconds($finishedAt) : 0;
+        $duration = $this->started_at ? $this->started_at->diffInRealMilliseconds($finishedAt) : 0;
 
         $this->update([
             'status' => 'failed',
@@ -341,7 +341,7 @@ class N8nExecution extends Model
     public function cancel(): void
     {
         $finishedAt = now();
-        $duration = $this->started_at ? $this->started_at->diffInMilliseconds($finishedAt) : 0;
+        $duration = $this->started_at ? $this->started_at->diffInRealMilliseconds($finishedAt) : 0;
 
         $this->update([
             'status' => 'cancelled',

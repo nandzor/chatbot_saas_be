@@ -566,7 +566,7 @@ class ChatbotSaasSeeder extends Seeder
                             'mode' => fake()->randomElement(['trigger', 'manual', 'retry']),
                             'started_at' => $startedAt = fake()->dateTimeBetween('-30 days', 'now'),
                             'finished_at' => $finishedAt = fake()->dateTimeBetween($startedAt, 'now'),
-                            'duration_ms' => $startedAt->diffInMilliseconds($finishedAt),
+                            'duration_ms' => abs($finishedAt->getTimestamp() - $startedAt->getTimestamp()) * 1000,
                             'input_data' => ['test' => 'input'],
                             'output_data' => $isSuccessful ? ['test' => 'output'] : null,
                             'error_message' => $isSuccessful ? null : fake()->sentence(),
