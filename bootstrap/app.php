@@ -21,15 +21,22 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register JWT middleware alias
         $middleware->alias([
             'jwt.auth' => \App\Http\Middleware\JwtAuthMiddleware::class,
+            'api.response' => \App\Http\Middleware\ApiResponseMiddleware::class,
         ]);
 
         // Register custom middleware for API guard
         $middleware->appendToGroup('api', [
+            \App\Http\Middleware\ApiResponseMiddleware::class,
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Handle API exceptions with standardized responses
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            if (\App\Exceptions\ApiExceptionHandler::isApiRequest($request)) {
+                return \App\Exceptions\ApiExceptionHandler::handle($e, $request);
+            }
+        });
     })->create();

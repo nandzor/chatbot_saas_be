@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RefreshTokenRequest;
 use App\Http\Resources\Auth\AuthResource;
@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
-class AuthController extends Controller
+class AuthController extends BaseApiController
 {
     protected AuthService $authService;
 
@@ -352,34 +352,5 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Success response helper.
-     */
-    protected function successResponse(string $message, $data = null, int $status = 200): JsonResponse
-    {
-        $response = [
-            'success' => true,
-            'message' => $message,
-            'timestamp' => now()->toISOString(),
-        ];
 
-        if ($data !== null) {
-            $response['data'] = $data;
-        }
-
-        return response()->json($response, $status);
-    }
-
-    /**
-     * Error response helper.
-     */
-    protected function errorResponse(string $message, array $errors = [], int $status = 400): JsonResponse
-    {
-        return response()->json([
-            'success' => false,
-            'message' => $message,
-            'errors' => $errors,
-            'timestamp' => now()->toISOString(),
-        ], $status);
-    }
 }
