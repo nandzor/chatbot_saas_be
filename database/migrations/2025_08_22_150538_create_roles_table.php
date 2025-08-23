@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -13,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('roles', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('organization_id')->nullable()->constrained()->onDelete('cascade');
 
             // Role Identity
             $table->string('name', 100);
@@ -45,13 +46,18 @@ return new class extends Migration
             $table->enum('status', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('active');
             $table->timestamps();
 
-            $table->unique(['organization_id', 'code']);
+            // Composite unique constraint for organization roles and global roles
+            $table->index(['organization_id', 'code']);
         });
 
         // Add self-referencing foreign key constraint after table creation
         Schema::table('roles', function (Blueprint $table) {
             $table->foreign('parent_role_id')->references('id')->on('roles')->onDelete('cascade');
         });
+
+        // Add unique constraints using raw SQL for proper handling of nullable organization_id
+        DB::statement('CREATE UNIQUE INDEX roles_org_code_unique ON roles (organization_id, code) WHERE organization_id IS NOT NULL');
+        DB::statement('CREATE UNIQUE INDEX roles_global_code_unique ON roles (code) WHERE organization_id IS NULL');
     }
 
     /**
@@ -59,6 +65,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop unique indexes first
+        DB::statement('DROP INDEX IF EXISTS roles_org_code_unique');
+        DB::statement('DROP INDEX IF EXISTS roles_global_code_unique');
+
         // Drop foreign key constraint first
         Schema::table('roles', function (Blueprint $table) {
             $table->dropForeign(['parent_role_id']);

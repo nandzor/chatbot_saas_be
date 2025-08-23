@@ -30,7 +30,7 @@ return new class extends Migration
             $table->integer('max_knowledge_articles')->default(100);
             $table->integer('max_monthly_messages')->default(1000);
             $table->integer('max_monthly_ai_requests')->default(100);
-            $table->integer('max_storage_gb')->default(1);
+            $table->decimal('max_storage_gb', 5, 2)->default(1.00);
             $table->integer('max_api_calls_per_day')->default(1000);
 
             // Feature Flags

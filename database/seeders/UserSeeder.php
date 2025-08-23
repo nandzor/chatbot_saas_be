@@ -77,7 +77,7 @@ class UserSeeder extends Seeder
                 'last_name' => 'Administrator',
                 'phone' => '+6281234567891',
                 'avatar_url' => 'https://via.placeholder.com/200x200/EA580C/FFFFFF?text=SA',
-                'role' => 'system_admin',
+                'role' => 'super_admin',
                 'is_email_verified' => true,
                 'is_phone_verified' => true,
                 'two_factor_enabled' => true,
@@ -121,7 +121,7 @@ class UserSeeder extends Seeder
                 'last_name' => 'Team',
                 'phone' => '+6281234567892',
                 'avatar_url' => 'https://via.placeholder.com/200x200/059669/FFFFFF?text=ST',
-                'role' => 'support_team',
+                'role' => 'moderator',
                 'is_email_verified' => true,
                 'is_phone_verified' => true,
                 'two_factor_enabled' => false,
@@ -160,6 +160,7 @@ class UserSeeder extends Seeder
 
         // Create system users (no organization)
         foreach ($systemUsers as $user) {
+            $user['organization_id'] = null; // Explicitly set to null for system users
             User::create($user);
         }
 
@@ -221,7 +222,7 @@ class UserSeeder extends Seeder
                     'last_name' => 'Manager',
                     'phone' => str_replace('+62', '+62', $organization->phone) . '1',
                     'avatar_url' => "https://via.placeholder.com/200x200/7C3AED/FFFFFF?text={$organization->org_code}M",
-                    'role' => 'manager',
+                    'role' => 'org_admin',
                     'is_email_verified' => true,
                     'is_phone_verified' => true,
                     'two_factor_enabled' => false,
@@ -311,7 +312,7 @@ class UserSeeder extends Seeder
                     'last_name' => 'Content Creator',
                     'phone' => str_replace('+62', '+62', $organization->phone) . '3',
                     'avatar_url' => "https://via.placeholder.com/200x200/D97706/FFFFFF?text={$organization->org_code}C",
-                    'role' => 'content_creator',
+                    'role' => 'agent',
                     'is_email_verified' => true,
                     'is_phone_verified' => true,
                     'two_factor_enabled' => false,
@@ -356,7 +357,7 @@ class UserSeeder extends Seeder
                     'last_name' => 'Analyst',
                     'phone' => str_replace('+62', '+62', $organization->phone) . '4',
                     'avatar_url' => "https://via.placeholder.com/200x200/0891B2/FFFFFF?text={$organization->org_code}AN",
-                    'role' => 'analyst',
+                    'role' => 'viewer',
                     'is_email_verified' => true,
                     'is_phone_verified' => true,
                     'two_factor_enabled' => false,

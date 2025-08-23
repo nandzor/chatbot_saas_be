@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -13,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('organization_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('email', 255);
             $table->string('username', 100);
             $table->string('password_hash', 255);
@@ -64,10 +65,16 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            // Unique constraints for business logic
-            $table->unique(['organization_id', 'email'], 'users_org_email_unique');
-            $table->unique(['organization_id', 'username'], 'users_org_username_unique');
+            // Index for organization users
+            $table->index(['organization_id', 'email']);
+            $table->index(['organization_id', 'username']);
         });
+        
+        // Add unique constraints using raw SQL for proper handling of nullable organization_id
+        DB::statement('CREATE UNIQUE INDEX users_org_email_unique ON users (organization_id, email) WHERE organization_id IS NOT NULL');
+        DB::statement('CREATE UNIQUE INDEX users_org_username_unique ON users (organization_id, username) WHERE organization_id IS NOT NULL');
+        DB::statement('CREATE UNIQUE INDEX users_global_email_unique ON users (email) WHERE organization_id IS NULL');
+        DB::statement('CREATE UNIQUE INDEX users_global_username_unique ON users (username) WHERE organization_id IS NULL');
     }
 
     /**
@@ -75,6 +82,12 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop unique indexes first
+        DB::statement('DROP INDEX IF EXISTS users_org_email_unique');
+        DB::statement('DROP INDEX IF EXISTS users_org_username_unique');
+        DB::statement('DROP INDEX IF EXISTS users_global_email_unique');
+        DB::statement('DROP INDEX IF EXISTS users_global_username_unique');
+        
         Schema::dropIfExists('users');
     }
 };

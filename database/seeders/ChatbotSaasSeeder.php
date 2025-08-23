@@ -21,9 +21,17 @@ use App\Models\User;
 use App\Models\UserRole;
 use App\Models\Webhook;
 use Illuminate\Database\Seeder;
+use Faker\Generator as Faker;
 
 class ChatbotSaasSeeder extends Seeder
 {
+    protected $faker;
+
+    public function __construct(Faker $faker)
+    {
+        $this->faker = $faker;
+    }
+
     /**
      * Run the database seeds.
      */
@@ -504,15 +512,15 @@ class ChatbotSaasSeeder extends Seeder
                         $isSuccess = rand(1, 10) <= 8; // 80% success rate
 
                         $webhook->deliveries()->create([
-                            'event_type' => fake()->randomElement($webhook->events),
+                            'event_type' => $this->faker->randomElement($webhook->events),
                             'payload' => [
-                                'event_id' => fake()->uuid(),
+                                'event_id' => $this->faker->uuid(),
                                 'timestamp' => now()->toISOString(),
                                 'data' => ['test' => 'data'],
                             ],
                             'http_status' => $isSuccess ? 200 : rand(400, 500),
                             'is_success' => $isSuccess,
-                            'delivered_at' => fake()->dateTimeBetween('-30 days', 'now'),
+                            'delivered_at' => $this->faker->dateTimeBetween('-30 days', 'now'),
                             'response_time_ms' => rand(100, 2000),
                             'attempt_number' => $isSuccess ? 1 : rand(1, 3),
                         ]);
@@ -561,15 +569,15 @@ class ChatbotSaasSeeder extends Seeder
 
                         $workflow->executions()->create([
                             'organization_id' => $organization->id,
-                            'execution_id' => 'exec_' . fake()->uuid(),
+                            'execution_id' => 'exec_' . $this->faker->uuid(),
                             'status' => $isSuccessful ? 'success' : 'failed',
-                            'mode' => fake()->randomElement(['trigger', 'manual', 'retry']),
-                            'started_at' => $startedAt = fake()->dateTimeBetween('-30 days', 'now'),
-                            'finished_at' => $finishedAt = fake()->dateTimeBetween($startedAt, 'now'),
+                            'mode' => $this->faker->randomElement(['trigger', 'manual', 'retry']),
+                            'started_at' => $startedAt = $this->faker->dateTimeBetween('-30 days', 'now'),
+                            'finished_at' => $finishedAt = $this->faker->dateTimeBetween($startedAt, 'now'),
                             'duration_ms' => abs($finishedAt->getTimestamp() - $startedAt->getTimestamp()) * 1000,
                             'input_data' => ['test' => 'input'],
                             'output_data' => $isSuccessful ? ['test' => 'output'] : null,
-                            'error_message' => $isSuccessful ? null : fake()->sentence(),
+                            'error_message' => $isSuccessful ? null : $this->faker->sentence(),
                         ]);
                     }
                 }
@@ -601,7 +609,7 @@ class ChatbotSaasSeeder extends Seeder
                         RealtimeMetric::factory()->create([
                             'organization_id' => $organization->id,
                             'metric_name' => $metricName,
-                            'metric_type' => fake()->randomElement(['counter', 'gauge', 'histogram']),
+                            'metric_type' => $this->faker->randomElement(['counter', 'gauge', 'histogram']),
                             'value' => $this->generateMetricValue($metricName),
                             'timestamp' => $metricTimestamp,
                             'labels' => [
@@ -618,7 +626,7 @@ class ChatbotSaasSeeder extends Seeder
             for ($i = 0; $i < $logCount; $i++) {
                 SystemLog::factory()->create([
                     'organization_id' => $organization->id,
-                    'user_id' => fake()->optional(30)->randomElement(
+                    'user_id' => $this->faker->optional(0.3)->randomElement(
                         User::where('organization_id', $organization->id)->pluck('id')->toArray()
                     ),
                 ]);
