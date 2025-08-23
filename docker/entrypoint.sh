@@ -5,6 +5,13 @@ set -e
 
 echo "Starting Laravel application initialization..."
 
+# Check if .env file exists
+if [ ! -f "/app/.env" ]; then
+    echo "Error: .env file not found!"
+    echo "Please copy .env.example to .env and configure it properly."
+    exit 1
+fi
+
 # Wait for database to be ready
 echo "Waiting for PostgreSQL to be ready..."
 until php -r "
@@ -64,6 +71,13 @@ for i in {1..15}; do
     echo "Waiting for RabbitMQ... attempt $i/15"
     sleep 2
 done
+
+# Set proper permissions
+echo "Setting proper permissions..."
+chown -R www-data:www-data /app/storage
+chown -R www-data:www-data /app/bootstrap/cache
+chmod -R 755 /app/storage
+chmod -R 755 /app/bootstrap/cache
 
 # Run database migrations
 echo "Running database migrations..."
