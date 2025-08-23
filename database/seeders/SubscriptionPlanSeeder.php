@@ -152,7 +152,10 @@ class SubscriptionPlanSeeder extends Seeder
         ];
 
         foreach ($plans as $plan) {
-            SubscriptionPlan::create($plan);
+            SubscriptionPlan::updateOrCreate(
+                ['name' => $plan['name']], // Search by name
+                $plan // Update or create with all data
+            );
         }
     }
 }

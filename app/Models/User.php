@@ -253,7 +253,7 @@ class User extends Authenticatable implements JWTSubject
      */
     public function getFullNameAttribute(): string
     {
-        return $this->full_name ?: trim($this->first_name . ' ' . $this->last_name);
+        return $this->attributes['full_name'] ?: trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? ''));
     }
 
     /**
@@ -261,12 +261,14 @@ class User extends Authenticatable implements JWTSubject
      */
     public function getInitialsAttribute(): string
     {
-        $name = $this->full_name ?: trim($this->first_name . ' ' . $this->last_name);
-        $words = explode(' ', $name);
+        $name = $this->attributes['full_name'] ?: trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? ''));
+        $words = explode(' ', trim($name));
         $initials = '';
 
         foreach ($words as $word) {
-            $initials .= strtoupper(substr($word, 0, 1));
+            if (!empty($word)) {
+                $initials .= strtoupper(substr($word, 0, 1));
+            }
         }
 
         return $initials;

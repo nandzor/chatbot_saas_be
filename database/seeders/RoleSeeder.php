@@ -94,7 +94,10 @@ class RoleSeeder extends Seeder
         // Create system roles (no organization)
         foreach ($systemRoles as $role) {
             $role['organization_id'] = null; // Explicitly set to null for system roles
-            Role::create($role);
+            Role::updateOrCreate(
+                ['code' => $role['code']], // Search by code
+                $role // Update or create with all data
+            );
         }
 
         // Organization-specific roles
@@ -261,7 +264,10 @@ class RoleSeeder extends Seeder
 
             foreach ($orgRoles as $role) {
                 $role['organization_id'] = $organization->id;
-                Role::create($role);
+                Role::updateOrCreate(
+                    ['organization_id' => $organization->id, 'code' => $role['code']], // Search by organization_id and code
+                    $role // Update or create with all data
+                );
             }
         }
     }

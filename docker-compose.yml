@@ -11,8 +11,8 @@ services:
       - "9000:80"
       - "8443:443"
     environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
+      - APP_ENV=local
+      - APP_DEBUG=true
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
       - DB_PORT=5432

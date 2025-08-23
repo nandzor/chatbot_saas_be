@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\UserRole;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Log;
 
 class UserRoleSeeder extends Seeder
 {
@@ -199,12 +200,15 @@ class UserRoleSeeder extends Seeder
 
             // Create user roles
             foreach ($userRoles as $userRole) {
-                UserRole::create($userRole);
+                UserRole::updateOrCreate(
+                    ['user_id' => $userRole['user_id'], 'role_id' => $userRole['role_id'], 'scope' => $userRole['scope']], // Search by user_id, role_id, and scope
+                    $userRole // Update or create with all data
+                );
             }
 
             // Log warning if no matching role was found
             if (!$matchingRole) {
-                \Log::warning("No matching role found for user {$user->email} with role '{$user->role}' and organization_id: " . ($user->organization_id ?? 'null'));
+                Log::warning("No matching role found for user {$user->email} with role '{$user->role}' and organization_id: " . ($user->organization_id ?? 'null'));
             }
         }
     }

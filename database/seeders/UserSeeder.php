@@ -161,7 +161,10 @@ class UserSeeder extends Seeder
         // Create system users (no organization)
         foreach ($systemUsers as $user) {
             $user['organization_id'] = null; // Explicitly set to null for system users
-            User::create($user);
+            User::updateOrCreate(
+                ['email' => $user['email']], // Search by email
+                $user // Update or create with all data
+            );
         }
 
         // Organization-specific users
@@ -440,7 +443,10 @@ class UserSeeder extends Seeder
             ];
 
             foreach ($orgUsers as $user) {
-                User::create($user);
+                User::updateOrCreate(
+                    ['email' => $user['email']], // Search by email
+                    $user // Update or create with all data
+                );
             }
         }
     }

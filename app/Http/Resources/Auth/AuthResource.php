@@ -51,13 +51,16 @@ class AuthResource extends JsonResource
             ),
             'organization' => $this->when(
                 isset($this->resource['user']) && $this->resource['user']->organization,
-                [
-                    'id' => $this->resource['user']->organization->id,
-                    'name' => $this->resource['user']->organization->name,
-                    'org_code' => $this->resource['user']->organization->org_code,
-                    'subscription_status' => $this->resource['user']->organization->subscription_status,
-                    'features' => $this->getOrganizationFeatures($this->resource['user']->organization),
-                ]
+                function() {
+                    $org = $this->resource['user']->organization;
+                    return $org ? [
+                        'id' => $org->id,
+                        'name' => $org->name,
+                        'org_code' => $org->org_code,
+                        'subscription_status' => $org->subscription_status,
+                        'features' => $this->getOrganizationFeatures($org),
+                    ] : null;
+                }
             ),
             'security' => [
                 'two_factor_enabled' => $this->when(
@@ -104,11 +107,15 @@ class AuthResource extends JsonResource
      */
     protected function getOrganizationFeatures($organization): array
     {
-        if (!$organization || !$organization->subscriptionPlan) {
+        if (!$organization) {
             return [];
         }
 
-        return $organization->subscriptionPlan->features ?? [];
+        try {
+            return $organization->subscriptionPlan?->features ?? [];
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 
     /**

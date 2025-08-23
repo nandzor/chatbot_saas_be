@@ -299,7 +299,10 @@ class RolePermissionSeeder extends Seeder
 
             // Create role permissions
             foreach ($rolePermissions as $rolePermission) {
-                RolePermission::create($rolePermission);
+                RolePermission::updateOrCreate(
+                    ['role_id' => $rolePermission['role_id'], 'permission_id' => $rolePermission['permission_id']], // Search by role_id and permission_id
+                    $rolePermission // Update or create with all data
+                );
             }
         }
     }

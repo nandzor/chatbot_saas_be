@@ -197,6 +197,56 @@ trait ApiResponseTrait
     }
 
     /**
+     * Error response with exception details for debugging.
+     */
+    protected function errorResponseWithDebug(
+        string $message = 'Operation failed',
+        int $statusCode = 500,
+        mixed $errors = null,
+        ?\Exception $exception = null
+    ): JsonResponse {
+        $response = [
+            'success' => false,
+            'message' => $message,
+            'timestamp' => now()->toISOString(),
+            'request_id' => request()->header('X-Request-ID') ?? $this->generateRequestId(),
+        ];
+
+        // Add error code
+        $response['error_code'] = 'EXCEPTION_ERROR';
+
+        // Add detailed errors if provided
+        if ($errors !== null) {
+            if (is_string($errors)) {
+                $response['errors'] = [$errors];
+            } elseif (is_array($errors)) {
+                $response['errors'] = $errors;
+            } else {
+                $response['errors'] = ['details' => $errors];
+            }
+        }
+
+        // Add exception debug information in non-production
+        if (!app()->environment('production') && $exception) {
+            $response['debug'] = [
+                'exception_message' => $exception->getMessage(),
+                'exception_file' => $exception->getFile(),
+                'exception_line' => $exception->getLine(),
+                'exception_trace' => $exception->getTraceAsString(),
+                'trace_id' => uniqid('trace_'),
+            ];
+        }
+
+        // Add meta information
+        $response['meta'] = [
+            'api_version' => config('app.api_version', '1.0'),
+            'environment' => app()->environment(),
+        ];
+
+        return response()->json($response, $statusCode);
+    }
+
+    /**
      * Service unavailable response.
      */
     protected function serviceUnavailableResponse(

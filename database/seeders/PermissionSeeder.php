@@ -55,7 +55,10 @@ class PermissionSeeder extends Seeder
 
         // Create system permissions (no organization)
         foreach ($systemPermissions as $permission) {
-            Permission::create($permission);
+            Permission::updateOrCreate(
+                ['code' => $permission['code']], // Search by code
+                $permission // Update or create with all data
+            );
         }
 
         // Organization-specific permissions
@@ -141,7 +144,10 @@ class PermissionSeeder extends Seeder
 
             foreach ($orgPermissions as $permission) {
                 $permission['organization_id'] = $organization->id;
-                Permission::create($permission);
+                Permission::updateOrCreate(
+                    ['organization_id' => $organization->id, 'code' => $permission['code']], // Search by organization_id and code
+                    $permission // Update or create with all data
+                );
             }
         }
     }

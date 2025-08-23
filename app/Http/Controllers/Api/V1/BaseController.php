@@ -55,6 +55,37 @@ abstract class BaseController extends Controller
     }
 
     /**
+     * Return an error response with debug information.
+     */
+    protected function errorResponseWithDebug(
+        string $message = 'Error',
+        int $statusCode = Response::HTTP_BAD_REQUEST,
+        mixed $errors = null,
+        ?\Exception $exception = null
+    ): JsonResponse {
+        $response = [
+            'success' => false,
+            'message' => $message,
+        ];
+
+        if ($errors) {
+            $response['errors'] = $errors;
+        }
+
+        // Add debug information in development environment
+        if (config('app.debug') && $exception) {
+            $response['debug'] = [
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => $exception->getTraceAsString(),
+            ];
+        }
+
+        return response()->json($response, $statusCode);
+    }
+
+    /**
      * Return a paginated response.
      */
     protected function paginatedResponse(

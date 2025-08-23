@@ -27,7 +27,7 @@ return new class extends Migration
             $table->timestamp('last_activity_at')->default(now());
 
             // System fields
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamps();
             $table->timestamp('expires_at');
 
             // Unique constraints for business logic

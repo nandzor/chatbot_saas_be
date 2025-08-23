@@ -335,7 +335,10 @@ class OrganizationSeeder extends Seeder
         ];
 
         foreach ($organizations as $org) {
-            Organization::create($org);
+            Organization::updateOrCreate(
+                ['org_code' => $org['org_code']], // Search by org_code
+                $org // Update or create with all data
+            );
         }
     }
 }

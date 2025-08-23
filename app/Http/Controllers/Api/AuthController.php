@@ -11,6 +11,7 @@ use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends BaseApiController
@@ -49,10 +50,17 @@ class AuthController extends BaseApiController
                 401
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(
+            Log::error('Login error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
                 'Login failed',
+                500,
                 ['error' => 'An unexpected error occurred. Please try again.'],
-                500
+                $e
             );
         }
     }
@@ -79,10 +87,17 @@ class AuthController extends BaseApiController
                 500
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(
+            Log::error('Logout error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
                 'Logout failed',
+                500,
                 ['error' => 'An unexpected error occurred'],
-                500
+                $e
             );
         }
     }
@@ -109,10 +124,17 @@ class AuthController extends BaseApiController
                 401
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(
+            Log::error('Token refresh error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
                 'Token refresh failed',
+                500,
                 ['error' => 'Could not refresh token'],
-                500
+                $e
             );
         }
     }
@@ -149,10 +171,17 @@ class AuthController extends BaseApiController
                 200
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(
+            Log::error('Get user data error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
                 'Failed to retrieve user data',
+                500,
                 ['error' => 'Could not retrieve user information'],
-                500
+                $e
             );
         }
     }
@@ -189,10 +218,17 @@ class AuthController extends BaseApiController
                 500
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(
+            Log::error('Logout all devices error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
                 'Logout failed',
+                500,
                 ['error' => 'An unexpected error occurred'],
-                500
+                $e
             );
         }
     }
@@ -237,10 +273,17 @@ class AuthController extends BaseApiController
                 200
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(
+            Log::error('Get sessions error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
                 'Failed to retrieve sessions',
+                500,
                 ['error' => 'Could not retrieve session information'],
-                500
+                $e
             );
         }
     }
@@ -294,10 +337,17 @@ class AuthController extends BaseApiController
                 200
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(
+            Log::error('Revoke session error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
                 'Failed to revoke session',
+                500,
                 ['error' => 'Could not revoke session'],
-                500
+                $e
             );
         }
     }
@@ -328,10 +378,17 @@ class AuthController extends BaseApiController
                 200
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(
+            Log::error('Token validation error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
                 'Token validation failed',
+                500,
                 ['error' => 'Could not validate token'],
-                500
+                $e
             );
         }
     }
