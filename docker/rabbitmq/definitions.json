@@ -4,8 +4,7 @@
   "users": [
     {
       "name": "admin",
-      "password_hash": "password",
-      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "password": "password",
       "tags": "administrator"
     }
   ],

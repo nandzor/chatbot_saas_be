@@ -61,14 +61,15 @@ until php -r "
     sleep 2
 done
 
-# Wait for RabbitMQ to be ready (simplified)
+# Wait for RabbitMQ to be ready with TCP connection test
 echo "Waiting for RabbitMQ to be ready..."
-for i in {1..15}; do
+for i in {1..30}; do
     if timeout 5 bash -c "</dev/tcp/rabbitmq/5672" 2>/dev/null; then
-        echo "RabbitMQ is ready!"
+        echo "RabbitMQ TCP port is ready! Waiting additional time for AMQP service..."
+        sleep 5
         break
     fi
-    echo "Waiting for RabbitMQ... attempt $i/15"
+    echo "Waiting for RabbitMQ... attempt $i/30"
     sleep 2
 done
 

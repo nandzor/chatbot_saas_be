@@ -54,6 +54,18 @@ return [
                 'queue' => [
                     'job' => VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob::class,
                 ],
+                // Connection stability options
+                'heartbeat' => env('RABBITMQ_HEARTBEAT', 30),
+                'connection_timeout' => env('RABBITMQ_CONNECTION_TIMEOUT', 30),
+                'read_write_timeout' => env('RABBITMQ_READ_WRITE_TIMEOUT', 30),
+                'keepalive' => env('RABBITMQ_KEEPALIVE', true),
+                'channel_rpc_timeout' => env('RABBITMQ_CHANNEL_RPC_TIMEOUT', 30),
+
+                // Enhanced connection recovery options
+                'auto_recovery' => env('RABBITMQ_AUTO_RECOVERY', true),
+                'recovery_attempts' => env('RABBITMQ_RECOVERY_ATTEMPTS', 10),
+                'recovery_delay' => env('RABBITMQ_RECOVERY_DELAY', 2),
+                'network_recovery_interval' => env('RABBITMQ_NETWORK_RECOVERY_INTERVAL', 5),
             ],
 
             /*
@@ -96,6 +108,12 @@ return [
             'consumer_nowait' => env('RABBITMQ_CONSUMER_NOWAIT', false),
             'timeout' => 60,
             'persistent' => env('RABBITMQ_PERSISTENT', false),
+
+            /*
+             * Retry and error handling configuration.
+             */
+            'retry_delay' => env('RABBITMQ_CONSUMER_RETRY_DELAY', 3),
+            'max_retries' => env('RABBITMQ_MAX_RETRIES', 3),
 
             /*
              * QoS configuration.
