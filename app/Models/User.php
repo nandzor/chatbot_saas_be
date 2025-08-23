@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
@@ -232,6 +233,20 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Scope a query to only include active users (overrides HasStatus trait).
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active')
+                    ->where('is_email_verified', true)
+                    ->whereNull('deleted_at')
+                    ->where(function ($q) {
+                        $q->whereNull('locked_until')
+                          ->orWhere('locked_until', '<=', now());
+                    });
+    }
+
+    /**
      * Scope for users with 2FA enabled.
      */
     public function scopeWith2FA($query)
@@ -337,7 +352,7 @@ class User extends Authenticatable implements JWTSubject
     /**
      * Get user preference.
      */
-    public function getPreference(string $key, $default = null)
+    public function getPreference(string $key, mixed $default = null)
     {
         return data_get($this->ui_preferences, $key, $default);
     }
@@ -356,7 +371,7 @@ class User extends Authenticatable implements JWTSubject
     /**
      * Get dashboard configuration.
      */
-    public function getDashboardConfig(string $key = null, $default = null)
+    public function getDashboardConfig(?string $key = null, mixed $default = null)
     {
         if ($key) {
             return data_get($this->dashboard_config, $key, $default);
@@ -379,7 +394,7 @@ class User extends Authenticatable implements JWTSubject
     /**
      * Record user login.
      */
-    public function recordLogin(string $ipAddress = null): void
+    public function recordLogin(?string $ipAddress = null): void
     {
         $this->increment('login_count');
         $this->update([
@@ -394,12 +409,32 @@ class User extends Authenticatable implements JWTSubject
      */
     public function recordFailedLogin(): void
     {
-        $this->increment('failed_login_attempts');
+        try {
+            $this->increment('failed_login_attempts');
 
-        // Lock user after 5 failed attempts for 15 minutes
-        if ($this->failed_login_attempts >= 5) {
-            $this->update([
-                'locked_until' => now()->addMinutes(15),
+            $maxAttempts = $this->getValidNumericConfig('auth.max_login_attempts', 5);
+            $lockoutDuration = $this->getValidNumericConfig('auth.lockout_duration', 30);
+
+            // Lock user after max failed attempts
+            if ($this->failed_login_attempts >= $maxAttempts) {
+                $lockoutTime = now()->addMinutes($lockoutDuration);
+
+                $this->update([
+                    'locked_until' => $lockoutTime,
+                ]);
+
+                Log::warning('User account locked due to failed login attempts', [
+                    'user_id' => $this->id,
+                    'email' => $this->email,
+                    'failed_attempts' => $this->failed_login_attempts,
+                    'locked_until' => $lockoutTime->toISOString()
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error recording failed login attempt: ' . $e->getMessage(), [
+                'user_id' => $this->id,
+                'email' => $this->email,
+                'failed_attempts' => $this->failed_login_attempts
             ]);
         }
     }
@@ -555,15 +590,53 @@ class User extends Authenticatable implements JWTSubject
         return $this->role === 'super_admin';
     }
 
+
+
     /**
-     * Check if user account is active.
+     * Check if user needs password change.
+     */
+    public function needsPasswordChange(): bool
+    {
+        try {
+            $passwordChangedAt = $this->getCarbonAttribute('password_changed_at');
+            if (!$passwordChangedAt) {
+                return false;
+            }
+
+            $maxAge = $this->getValidNumericConfig('auth.password_max_age', 90);
+
+            // Create a copy of the Carbon instance to avoid modifying the original
+            $expiryDate = $passwordChangedAt->copy()->addDays($maxAge);
+            return $expiryDate->isPast();
+        } catch (\Exception $e) {
+            Log::warning('Error checking password change: ' . $e->getMessage(), [
+                'user_id' => $this->id,
+                'email' => $this->email,
+                'max_age' => $maxAge ?? 'undefined'
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Check if user account is active (overrides HasStatus trait).
      */
     public function isActive(): bool
     {
-        return $this->status === 'active' &&
-               $this->is_email_verified &&
-               is_null($this->deleted_at) &&
-               (is_null($this->locked_until) || $this->locked_until <= now());
+        try {
+            $lockedUntil = $this->getCarbonAttribute('locked_until');
+
+            return $this->status === 'active' &&
+                   $this->is_email_verified &&
+                   is_null($this->deleted_at) &&
+                   (is_null($lockedUntil) || $lockedUntil <= now());
+        } catch (\Exception $e) {
+            Log::warning('Error checking user active status: ' . $e->getMessage(), [
+                'user_id' => $this->id,
+                'email' => $this->email
+            ]);
+            return false;
+        }
     }
 
     /**
@@ -571,21 +644,91 @@ class User extends Authenticatable implements JWTSubject
      */
     public function isLocked(): bool
     {
-        return !is_null($this->locked_until) &&
-               $this->locked_until > now();
+        try {
+            $lockedUntil = $this->getCarbonAttribute('locked_until');
+
+            return !is_null($lockedUntil) && $lockedUntil > now();
+        } catch (\Exception $e) {
+            Log::warning('Error checking user locked status: ' . $e->getMessage(), [
+                'user_id' => $this->id,
+                'email' => $this->email
+            ]);
+            return false;
+        }
+    }
+
+        /**
+     * Safe Carbon attribute accessor with validation.
+     */
+    protected function getCarbonAttribute(string $attribute): ?\Carbon\Carbon
+    {
+        try {
+            $value = $this->getAttribute($attribute);
+
+            if (is_null($value)) {
+                return null;
+            }
+
+            if ($value instanceof \Carbon\Carbon) {
+                return $value;
+            }
+
+            if (is_string($value) && !empty(trim($value))) {
+                return \Carbon\Carbon::parse($value);
+            }
+
+            if ($value instanceof \DateTime) {
+                return \Carbon\Carbon::instance($value);
+            }
+
+            Log::warning("Unexpected type for {$attribute}: " . gettype($value), [
+                'user_id' => $this->id ?? 'unknown',
+                'attribute' => $attribute,
+                'type' => gettype($value),
+                'value' => is_scalar($value) ? $value : 'non-scalar'
+            ]);
+
+            return null;
+        } catch (\Exception $e) {
+            Log::warning("Error parsing Carbon attribute {$attribute}: " . $e->getMessage(), [
+                'user_id' => $this->id ?? 'unknown',
+                'attribute' => $attribute,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
 
     /**
-     * Check if user needs password change.
+     * Get validated numeric config value.
      */
-    public function needsPasswordChange(): bool
+    protected function getValidNumericConfig(string $key, int $default): int
     {
-        if (!$this->password_changed_at) {
-            return false;
-        }
+        try {
+            $value = config($key, $default);
 
-        $maxAge = config('auth.password_max_age', 90); // days
-        return $this->password_changed_at->addDays($maxAge)->isPast();
+            // Ensure it's numeric and convert to integer
+            if (is_numeric($value)) {
+                $intValue = (int) $value;
+                // Ensure positive value for time-related configs
+                return max(1, $intValue);
+            }
+
+            Log::warning("Invalid numeric config value for {$key}, using default", [
+                'key' => $key,
+                'value' => $value,
+                'type' => gettype($value),
+                'default' => $default
+            ]);
+
+            return $default;
+        } catch (\Exception $e) {
+            Log::error("Error getting config {$key}: " . $e->getMessage(), [
+                'key' => $key,
+                'default' => $default
+            ]);
+            return $default;
+        }
     }
 
     /**

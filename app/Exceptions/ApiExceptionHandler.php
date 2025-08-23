@@ -2,22 +2,23 @@
 
 namespace App\Exceptions;
 
-use App\Http\Responses\ApiResponse;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Database\QueryException;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use App\Http\Responses\ApiResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\QueryException;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Auth\Access\AuthorizationException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\Exceptions\TokenExpiredException;
-use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 class ApiExceptionHandler
 {
@@ -220,7 +221,7 @@ class ApiExceptionHandler
             'method' => $request->method(),
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'user_id' => auth()->user()?->id ?? null,
+            'user_id' => Auth::user()?->id ?? null,
             'request_id' => $request->header('X-Request-ID'),
         ];
 
