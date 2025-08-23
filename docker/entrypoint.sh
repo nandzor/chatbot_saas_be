@@ -5,6 +5,10 @@ set -e
 
 echo "Starting Laravel application initialization..."
 
+# Fix Git ownership issue for Docker environment
+echo "Configuring Git safe directory..."
+git config --global --add safe.directory /app
+
 # Check if .env file exists
 if [ ! -f "/app/.env" ]; then
     echo "Error: .env file not found!"
