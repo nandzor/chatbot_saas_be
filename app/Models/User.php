@@ -130,6 +130,14 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Get the user sessions for this user (alias for userSessions).
+     */
+    public function sessions(): HasMany
+    {
+        return $this->userSessions();
+    }
+
+    /**
      * Get the API keys created by this user.
      */
     public function createdApiKeys(): HasMany
@@ -759,11 +767,5 @@ class User extends Authenticatable implements JWTSubject
         $this->tokens()->delete();
     }
 
-    /**
-     * Alias for userSessions relationship for compatibility.
-     */
-    public function sessions(): HasMany
-    {
-        return $this->userSessions();
-    }
+
 }

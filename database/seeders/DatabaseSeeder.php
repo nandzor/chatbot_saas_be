@@ -15,6 +15,9 @@ class DatabaseSeeder extends Seeder
             // User, Role, Permission, and Organization Management
             UserRolePermissionManagementSeeder::class,
 
+            // Authentication Test Data (for development)
+            AuthTestDataSeeder::class,
+
             // Other seeders
             ChatbotSaasSeeder::class,
         ]);

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\UserSession;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -653,4 +654,343 @@ class AuthService
             'refresh_expires_in' => 7 * 24 * 60 * 60,
         ];
     }
+
+    /**
+     * Register new user.
+     */
+    public function register(array $userData): User
+    {
+        // Validate organization code
+        $organization = \App\Models\Organization::where('org_code', $userData['organization_code'])->first();
+        if (!$organization) {
+            throw ValidationException::withMessages([
+                'organization_code' => ['Invalid organization code'],
+            ]);
+        }
+
+        // Create user
+        $user = User::create([
+            'organization_id' => $organization->id,
+            'email' => $userData['email'],
+            'username' => $userData['username'] ?? $this->generateUsername($userData['email']),
+            'password_hash' => Hash::make($userData['password']),
+            'full_name' => $userData['first_name'] . ' ' . $userData['last_name'],
+            'first_name' => $userData['first_name'],
+            'last_name' => $userData['last_name'],
+            'role' => 'customer', // Default role
+            'status' => 'active',
+        ]);
+
+        // Assign default role
+        $this->assignDefaultRole($user, $organization);
+
+        // Send welcome email
+        $this->sendWelcomeEmail($user);
+
+        // Log registration
+        $this->logAuthEvent('user_registered', $user, request());
+
+        return $user;
+    }
+
+    /**
+     * Send password reset link.
+     */
+    public function sendPasswordResetLink(string $email): bool
+    {
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return false; // Don't reveal if user exists
+        }
+
+        // Generate reset token
+        $token = \Illuminate\Support\Str::random(64);
+
+        // Store reset token in database
+        \Illuminate\Support\Facades\DB::table('password_resets')->updateOrInsert(
+            ['email' => $email],
+            [
+                'email' => $email,
+                'token' => $token,
+                'created_at' => now()
+            ]
+        );
+
+        // Send email with reset link
+        $this->sendPasswordResetEmail($user, $token);
+
+        // Log password reset request
+        $this->logAuthEvent('password_reset_requested', $user, request());
+
+        return true;
+    }
+
+    /**
+     * Reset password using token.
+     */
+    public function resetPassword(string $email, string $token, string $newPassword): bool
+    {
+        // Find reset record
+        $resetRecord = \Illuminate\Support\Facades\DB::table('password_resets')
+            ->where('email', $email)
+            ->where('token', $token)
+            ->first();
+
+        if (!$resetRecord) {
+            throw ValidationException::withMessages([
+                'token' => ['Invalid password reset token'],
+            ]);
+        }
+
+        // Check if token is expired (24 hours)
+        $tokenAge = now()->diffInHours($resetRecord->created_at);
+        if ($tokenAge > 24) {
+            // Remove expired token
+            \Illuminate\Support\Facades\DB::table('password_resets')
+                ->where('email', $email)
+                ->delete();
+
+            throw ValidationException::withMessages([
+                'token' => ['Password reset token has expired. Please request a new one.'],
+            ]);
+        }
+
+        // Update user password
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => ['User not found'],
+            ]);
+        }
+
+        $user->update([
+            'password_hash' => Hash::make($newPassword),
+            'password_changed_at' => now(),
+            'failed_login_attempts' => 0, // Reset failed attempts
+            'locked_until' => null, // Unlock if was locked
+        ]);
+
+        // Remove used token
+        \Illuminate\Support\Facades\DB::table('password_resets')
+            ->where('email', $email)
+            ->delete();
+
+        // Log password reset
+        $this->logAuthEvent('password_reset_successful', $user, request());
+
+        return true;
+    }
+
+    /**
+     * Update user profile.
+     */
+    public function updateProfile(User $user, array $profileData): User
+    {
+        // Validate profile data
+        $validatedData = collect($profileData)->only([
+            'first_name', 'last_name', 'phone', 'timezone', 'language',
+            'bio', 'location', 'department', 'job_title'
+        ])->filter()->toArray();
+
+        // Update full_name if first_name or last_name changed
+        if (isset($validatedData['first_name']) || isset($validatedData['last_name'])) {
+            $firstName = $validatedData['first_name'] ?? $user->first_name;
+            $lastName = $validatedData['last_name'] ?? $user->last_name;
+            $validatedData['full_name'] = trim($firstName . ' ' . $lastName);
+        }
+
+        // Update user
+        $user->update($validatedData);
+
+        // Log profile update
+        $this->logAuthEvent('profile_updated', $user, request());
+
+        return $user->fresh();
+    }
+
+    /**
+     * Change user password.
+     */
+    public function changePassword(User $user, string $currentPassword, string $newPassword): bool
+    {
+        // Verify current password
+        if (!Hash::check($currentPassword, $user->password_hash)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Current password is incorrect'],
+            ]);
+        }
+
+        // Check if new password is different
+        if (Hash::check($newPassword, $user->password_hash)) {
+            throw ValidationException::withMessages([
+                'new_password' => ['New password must be different from current password'],
+            ]);
+        }
+
+        // Update password
+        $user->update([
+            'password_hash' => Hash::make($newPassword),
+            'password_changed_at' => now(),
+        ]);
+
+        // Log password change
+        $this->logAuthEvent('password_changed', $user, request());
+
+        return true;
+    }
+
+    /**
+     * Force logout user from all devices (admin only).
+     */
+    public function forceLogout(string $userId): bool
+    {
+        $user = User::findOrFail($userId);
+
+        // Invalidate all user sessions
+        UserSession::where('user_id', $user->id)
+                  ->update(['is_active' => false]);
+
+        // Revoke all Sanctum tokens
+        $user->tokens()->delete();
+
+        // Revoke all refresh tokens
+        \Illuminate\Support\Facades\DB::table('refresh_tokens')
+            ->where('user_id', $user->id)
+            ->update(['is_revoked' => true]);
+
+        // Log force logout
+        $this->logAuthEvent('force_logout', $user, request(), ['admin_action' => true]);
+
+        return true;
+    }
+
+    /**
+     * Lock user account (admin only).
+     */
+    public function lockUser(string $userId, ?string $reason = null, ?int $durationMinutes = 30): bool
+    {
+        $user = User::findOrFail($userId);
+
+        // Set lock duration
+        $lockUntil = now()->addMinutes($durationMinutes ?? 30);
+
+        // Update user
+        $user->update([
+            'locked_until' => $lockUntil,
+            'status' => 'locked',
+        ]);
+
+        // Invalidate all active sessions
+        UserSession::where('user_id', $user->id)
+                  ->update(['is_active' => false]);
+
+        // Revoke all tokens
+        $user->tokens()->delete();
+
+        // Log account lock
+        $this->logAuthEvent('account_locked', $user, request(), [
+            'admin_action' => true,
+            'reason' => $reason,
+            'locked_until' => $lockUntil->toISOString(),
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Unlock user account (admin only).
+     */
+    public function unlockUser(string $userId): bool
+    {
+        $user = User::findOrFail($userId);
+
+        // Update user
+        $user->update([
+            'locked_until' => null,
+            'status' => 'active',
+            'failed_login_attempts' => 0, // Reset failed attempts
+        ]);
+
+        // Log account unlock
+        $this->logAuthEvent('account_unlocked', $user, request(), [
+            'admin_action' => true,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Generate username from email.
+     */
+    protected function generateUsername(string $email): string
+    {
+        $baseUsername = strtolower(explode('@', $email)[0]);
+        $username = $baseUsername;
+        $counter = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $baseUsername . $counter;
+            $counter++;
+        }
+
+        return $username;
+    }
+
+    /**
+     * Assign default role to user.
+     */
+    protected function assignDefaultRole(User $user, \App\Models\Organization $organization): void
+    {
+        // Get default role for organization
+        $defaultRole = Role::where('organization_id', $organization->id)
+                          ->where('is_default', true)
+                          ->first();
+
+        if ($defaultRole) {
+            $user->roles()->attach($defaultRole->id, [
+                'is_active' => true,
+                'is_primary' => true,
+                'scope' => 'organization',
+                'scope_context' => $organization->id,
+                'effective_from' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Send welcome email to new user.
+     */
+    protected function sendWelcomeEmail(User $user): void
+    {
+        // TODO: Implement email sending logic
+        // This would typically involve:
+        // 1. Creating email template
+        // 2. Sending welcome email
+        // 3. Logging email sent
+
+        Log::info('Welcome email should be sent', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+    }
+
+    /**
+     * Send password reset email.
+     */
+    protected function sendPasswordResetEmail(User $user, string $token): void
+    {
+        // TODO: Implement email sending logic
+        // This would typically involve:
+        // 1. Creating email template
+        // 2. Sending reset email with link
+        // 3. Logging email sent
+
+        Log::info('Password reset email should be sent', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'token' => $token,
+        ]);
+    }
+
+
 }

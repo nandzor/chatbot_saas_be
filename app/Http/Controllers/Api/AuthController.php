@@ -5,6 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RefreshTokenRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\LockUserRequest;
 use App\Http\Resources\Auth\AuthResource;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
@@ -60,6 +66,42 @@ class AuthController extends BaseApiController
                 'Login failed',
                 500,
                 ['error' => 'An unexpected error occurred. Please try again.'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Register new user.
+     */
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        try {
+            $userData = $request->validated();
+            $user = $this->authService->register($userData);
+
+            return $this->successResponse(
+                'User registered successfully',
+                new UserResource($user),
+                201
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponse(
+                'Validation failed',
+                $e->errors(),
+                422
+            );
+        } catch (\Exception $e) {
+            Log::error('Registration error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to register user',
+                500,
+                ['error' => 'An unexpected error occurred'],
                 $e
             );
         }
@@ -134,6 +176,104 @@ class AuthController extends BaseApiController
                 'Token refresh failed',
                 500,
                 ['error' => 'Could not refresh token'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Send password reset link to user's email.
+     */
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        try {
+            $email = $request->validated()['email'];
+            $success = $this->authService->sendPasswordResetLink($email);
+
+            if ($success) {
+                return $this->successResponse(
+                    'Password reset link sent to your email',
+                    [
+                        'email' => $email,
+                        'message' => 'Check your email for password reset instructions'
+                    ],
+                    200
+                );
+            }
+
+            return $this->errorResponse(
+                'Failed to send password reset link',
+                ['error' => 'Could not process password reset request'],
+                500
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponse(
+                'Validation failed',
+                $e->errors(),
+                422
+            );
+        } catch (\Exception $e) {
+            Log::error('Forgot password error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to process password reset request',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Reset password using reset token.
+     */
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        try {
+            $data = $request->validated();
+            $email = $data['email'];
+            $token = $data['token'];
+            $password = $data['password'];
+
+            $success = $this->authService->resetPassword($email, $token, $password);
+
+            if ($success) {
+                return $this->successResponse(
+                    'Password reset successfully',
+                    [
+                        'email' => $email,
+                        'message' => 'Your password has been reset successfully. You can now login with your new password.'
+                    ],
+                    200
+                );
+            }
+
+            return $this->errorResponse(
+                'Failed to reset password',
+                ['error' => 'Could not reset password'],
+                500
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponse(
+                'Validation failed',
+                $e->errors(),
+                422
+            );
+        } catch (\Exception $e) {
+            Log::error('Reset password error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to reset password',
+                500,
+                ['error' => 'An unexpected error occurred'],
                 $e
             );
         }
@@ -408,6 +548,252 @@ class AuthController extends BaseApiController
             return $session->session_token === $currentTokenHash;
         } catch (\Exception $e) {
             return false;
+        }
+    }
+
+    /**
+     * Update user profile.
+     */
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->errorResponse(
+                    'User not found',
+                    ['error' => 'Authenticated user not found'],
+                    404
+                );
+            }
+
+            $profileData = $request->validated();
+            $updatedUser = $this->authService->updateProfile($user, $profileData);
+
+            return $this->successResponse(
+                'Profile updated successfully',
+                new UserResource($updatedUser),
+                200
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponse(
+                'Validation failed',
+                $e->errors(),
+                422
+            );
+        } catch (\Exception $e) {
+            Log::error('Profile update error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to update profile',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Change user password.
+     */
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->errorResponse(
+                    'User not found',
+                    ['error' => 'Authenticated user not found'],
+                    404
+                );
+            }
+
+            $data = $request->validated();
+            $currentPassword = $data['current_password'];
+            $newPassword = $data['new_password'];
+
+            $success = $this->authService->changePassword($user, $currentPassword, $newPassword);
+
+            if ($success) {
+                return $this->successResponse(
+                    'Password changed successfully',
+                    null,
+                    200
+                );
+            }
+
+            return $this->errorResponse(
+                'Failed to change password',
+                ['error' => 'Could not change password'],
+                500
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponse(
+                'Validation failed',
+                $e->errors(),
+                422
+            );
+        } catch (\Exception $e) {
+            Log::error('Password change error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to change password',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Force logout user from all devices (admin only).
+     */
+    public function forceLogout(string $userId): JsonResponse
+    {
+        try {
+            $success = $this->authService->forceLogout($userId);
+
+            if ($success) {
+                return $this->successResponse(
+                    'User force logged out successfully',
+                    ['user_id' => $userId],
+                    200
+                );
+            }
+
+            return $this->errorResponse(
+                'Failed to force logout user',
+                ['error' => 'Could not force logout user'],
+                500
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse(
+                'User not found',
+                ['error' => 'User not found'],
+                404
+            );
+        } catch (\Exception $e) {
+            Log::error('Force logout error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to force logout user',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Lock user account (admin only).
+     */
+    public function lockUser(LockUserRequest $request, string $userId): JsonResponse
+    {
+        try {
+            $data = $request->validated();
+            $reason = $data['reason'] ?? null;
+            $durationMinutes = $data['duration_minutes'] ?? 30;
+
+            $success = $this->authService->lockUser($userId, $reason, $durationMinutes);
+
+            if ($success) {
+                return $this->successResponse(
+                    'User account locked successfully',
+                    [
+                        'user_id' => $userId,
+                        'locked_until' => now()->addMinutes($durationMinutes)->toISOString(),
+                        'reason' => $reason
+                    ],
+                    200
+                );
+            }
+
+            return $this->errorResponse(
+                'Failed to lock user account',
+                ['error' => 'Could not lock user account'],
+                500
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse(
+                'User not found',
+                ['error' => 'User not found'],
+                404
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponse(
+                'Validation failed',
+                $e->errors(),
+                422
+            );
+        } catch (\Exception $e) {
+            Log::error('Lock user error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to lock user account',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Unlock user account (admin only).
+     */
+    public function unlockUser(string $userId): JsonResponse
+    {
+        try {
+            $success = $this->authService->unlockUser($userId);
+
+            if ($success) {
+                return $this->successResponse(
+                    'User account unlocked successfully',
+                    ['user_id' => $userId],
+                    200
+                );
+            }
+
+            return $this->errorResponse(
+                'Failed to unlock user account',
+                ['error' => 'Could not unlock user account'],
+                500
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse(
+                'User not found',
+                ['error' => 'User not found'],
+                404
+            );
+        } catch (\Exception $e) {
+            Log::error('Unlock user error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to unlock user account',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 

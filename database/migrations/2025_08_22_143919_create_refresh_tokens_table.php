@@ -14,9 +14,11 @@ return new class extends Migration
         Schema::create('refresh_tokens', function (Blueprint $table) {
             $table->id();
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->string('token', 255)->unique(); // Hashed token
+            $table->string('token', 64)->unique();
             $table->timestamp('expires_at');
             $table->boolean('is_revoked')->default(false);
+            $table->string('revoked_reason')->nullable();
+            $table->timestamp('revoked_at')->nullable();
             $table->timestamps();
 
             // Indexes for performance

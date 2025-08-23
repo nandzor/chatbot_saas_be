@@ -81,9 +81,9 @@ Creates roles with different permission levels:
 Creates users with different roles:
 
 #### System Users
-- **Super Administrator**: `superadmin@chatbot-saas.com` / `SuperAdmin123!`
-- **System Administrator**: `systemadmin@chatbot-saas.com` / `SystemAdmin123!`
-- **Support Team**: `support@chatbot-saas.com` / `Support123!`
+- **Super Administrator**: `superadmin@chatbot-saas.com` / `Admin123!`
+- **System Administrator**: `systemadmin@chatbot-saas.com` / `Admin123!`
+- **Support Team**: `support@chatbot-saas.com` / `Admin123!`
 
 #### Organization Users (per organization)
 - **Organization Administrator**: `admin@{org_code}.com` / `Admin123!`

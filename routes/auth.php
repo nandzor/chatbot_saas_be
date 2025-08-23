@@ -21,32 +21,32 @@ Route::prefix('auth')->group(function () {
     // Unified login endpoint - generates JWT + Sanctum + Refresh tokens
     Route::post('/login', [AuthController::class, 'login'])
          ->name('auth.login')
-         ->middleware(['throttle:auth']);
+         ->middleware(['throttle.auth']);
 
     // Register endpoint
     Route::post('/register', [AuthController::class, 'register'])
          ->name('auth.register')
-         ->middleware(['throttle:auth']);
+         ->middleware(['throttle.auth']);
 
     // Token refresh endpoint (using refresh token)
     Route::post('/refresh', [AuthController::class, 'refresh'])
          ->name('auth.refresh')
-         ->middleware(['throttle:refresh']);
+         ->middleware(['throttle.refresh']);
 
     // Token validation endpoint
     Route::post('/validate', [AuthController::class, 'validate'])
          ->name('auth.validate')
-         ->middleware(['throttle:validation']);
+         ->middleware(['throttle.validation']);
 
     // Forgot password endpoint
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
          ->name('auth.forgot-password')
-         ->middleware(['throttle:auth']);
+         ->middleware(['throttle.auth']);
 
     // Reset password endpoint
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])
          ->name('auth.reset-password')
-         ->middleware(['throttle:auth']);
+         ->middleware(['throttle.auth']);
 });
 
 // Protected authentication routes (accepts both JWT and Sanctum tokens)
@@ -83,7 +83,7 @@ Route::prefix('auth')->middleware(['unified.auth'])->group(function () {
 });
 
 // Administrative routes (require admin permissions)
-Route::prefix('auth')->middleware(['unified.auth', 'can:manage-users'])->group(function () {
+Route::prefix('auth')->middleware(['unified.auth', 'admin.only'])->group(function () {
 
     // Force logout user (admin only)
     Route::post('/force-logout/{userId}', [AuthController::class, 'forceLogout'])

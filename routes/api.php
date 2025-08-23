@@ -28,7 +28,7 @@ Route::get('/health', function () {
 // API V1 Routes
 Route::prefix('v1')->group(function () {
 
-    // Authentication routes are now handled in routes/auth.php
+        // Authentication routes are now handled in routes/auth.php
     // This provides unified JWT + Sanctum + Refresh token authentication
 
     // Protected routes - using unified authentication (JWT OR Sanctum)
