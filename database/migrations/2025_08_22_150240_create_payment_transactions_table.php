@@ -82,7 +82,6 @@ return new class extends Migration
             // Unique constraints for business logic
             $table->unique('transaction_id', 'payment_transactions_transaction_id_unique');
             $table->unique(['organization_id', 'external_transaction_id'], 'payment_transactions_org_external_unique')->where('external_transaction_id IS NOT NULL');
-            $table->check('payment_type IN (\'one_time\', \'recurring\', \'refund\')');
         });
     }
 

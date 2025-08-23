@@ -35,7 +35,7 @@ return new class extends Migration
 
             // Version Control
             $table->integer('version')->default(1);
-            $table->foreignUuid('previous_version_id')->nullable()->constrained('n8n_workflows');
+            $table->uuid('previous_version_id')->nullable(); // Will add foreign key constraint after table creation
             $table->boolean('is_latest_version')->default(true);
 
             // Status & Health
@@ -68,6 +68,11 @@ return new class extends Migration
             $table->unique('workflow_id', 'n8n_workflows_workflow_id_unique');
             $table->unique(['organization_id', 'name'], 'n8n_workflows_org_name_unique');
         });
+
+        // Add self-referencing foreign key constraint after table creation
+        Schema::table('n8n_workflows', function (Blueprint $table) {
+            $table->foreign('previous_version_id')->references('id')->on('n8n_workflows')->onDelete('set null');
+        });
     }
 
     /**
@@ -75,6 +80,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop foreign key constraint first
+        Schema::table('n8n_workflows', function (Blueprint $table) {
+            $table->dropForeign(['previous_version_id']);
+        });
+
         Schema::dropIfExists('n8n_workflows');
     }
 };

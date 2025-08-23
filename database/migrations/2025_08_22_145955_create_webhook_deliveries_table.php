@@ -40,6 +40,9 @@ return new class extends Migration
             // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
             $table->unique(['webhook_id', 'event_type', 'created_at'], 'webhook_deliveries_webhook_event_time_unique');
+
+            // Add unique constraint on id for foreign key references
+            $table->unique('id', 'webhook_deliveries_id_unique');
         });
     }
 

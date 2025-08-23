@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('knowledge_base_categories', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('parent_id')->nullable()->constrained('knowledge_base_categories')->onDelete('cascade');
+            $table->uuid('parent_id')->nullable(); // Will add foreign key constraint after table creation
 
             // Basic Information
             $table->string('name', 255);
@@ -64,6 +64,11 @@ return new class extends Migration
             $table->unique(['organization_id', 'slug'], 'knowledge_base_categories_org_slug_unique');
             $table->unique(['organization_id', 'name'], 'knowledge_base_categories_org_name_unique');
         });
+
+        // Add self-referencing foreign key constraint after table creation
+        Schema::table('knowledge_base_categories', function (Blueprint $table) {
+            $table->foreign('parent_id')->references('id')->on('knowledge_base_categories')->onDelete('cascade');
+        });
     }
 
     /**
@@ -71,6 +76,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop foreign key constraint first
+        Schema::table('knowledge_base_categories', function (Blueprint $table) {
+            $table->dropForeign(['parent_id']);
+        });
+
         Schema::dropIfExists('knowledge_base_categories');
     }
 };

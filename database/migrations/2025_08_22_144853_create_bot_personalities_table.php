@@ -72,7 +72,6 @@ return new class extends Migration
             // Unique constraints for business logic
             $table->unique(['organization_id', 'code'], 'bot_personalities_org_code_unique');
             $table->unique(['organization_id', 'name'], 'bot_personalities_org_name_unique');
-            $table->check('formality_level IN (\'formal\', \'informal\', \'casual\', \'professional\')');
         });
     }
 

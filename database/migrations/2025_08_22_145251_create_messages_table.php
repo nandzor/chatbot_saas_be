@@ -71,7 +71,9 @@ return new class extends Migration
             // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
             $table->unique(['session_id', 'created_at'], 'messages_session_created_unique');
-            $table->check('sender_type IN (\'customer\', \'bot\', \'agent\', \'system\')');
+
+            // Add unique constraint on id for foreign key references
+            $table->unique('id', 'messages_id_unique');
         });
     }
 

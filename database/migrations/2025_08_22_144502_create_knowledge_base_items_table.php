@@ -15,18 +15,18 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('category_id')->constrained('knowledge_base_categories')->onDelete('cascade');
-            
+
             // Basic Information
             $table->string('title', 500);
             $table->string('slug', 500);
             $table->text('description')->nullable();
             $table->string('content_type', 20)->default('article');
-            
+
             // Content (for article type)
             $table->text('content')->nullable();
             $table->text('summary')->nullable();
             $table->text('excerpt')->nullable();
-            
+
             // Content Management
             $table->json('tags')->nullable();
             $table->json('keywords')->nullable();
@@ -35,23 +35,23 @@ return new class extends Migration
             $table->string('priority', 20)->default('medium');
             $table->integer('estimated_read_time')->nullable();
             $table->integer('word_count')->default(0);
-            
+
             // SEO & Frontend
             $table->string('meta_title', 255)->nullable();
             $table->text('meta_description')->nullable();
             $table->string('featured_image_url', 500)->nullable();
-            
+
             // Publishing & Visibility
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_public')->default(true);
             $table->boolean('is_searchable')->default(true);
             $table->boolean('is_ai_trainable')->default(true);
             $table->boolean('requires_approval')->default(false);
-            
+
             // Workflow & Status
             $table->string('workflow_status', 20)->default('draft');
             $table->string('approval_status', 20)->default('pending');
-            
+
             // Author & Editorial
             $table->foreignUuid('author_id')->nullable()->constrained('users');
             $table->foreignUuid('reviewer_id')->nullable()->constrained('users');
@@ -59,7 +59,7 @@ return new class extends Migration
             $table->timestamp('published_at')->nullable();
             $table->timestamp('last_reviewed_at')->nullable();
             $table->timestamp('approved_at')->nullable();
-            
+
             // Analytics & Engagement
             $table->integer('view_count')->default(0);
             $table->integer('helpful_count')->default(0);
@@ -68,7 +68,7 @@ return new class extends Migration
             $table->integer('comment_count')->default(0);
             $table->integer('search_hit_count')->default(0);
             $table->integer('ai_usage_count')->default(0);
-            
+
             // AI & Search Enhancement
             $table->json('embeddings_data')->default('{}');
             $table->json('embeddings_vector')->default('{}');
@@ -76,29 +76,30 @@ return new class extends Migration
             $table->boolean('ai_generated')->default(false);
             $table->decimal('ai_confidence_score', 3, 2)->nullable();
             $table->timestamp('ai_last_processed_at')->nullable();
-            
+
             // Version Control & History
             $table->integer('version')->default(1);
-            $table->foreignUuid('previous_version_id')->nullable()->constrained('knowledge_base_items');
+            $table->uuid('previous_version_id')->nullable(); // Will add foreign key constraint after table creation
             $table->boolean('is_latest_version')->default(true);
             $table->text('change_summary')->nullable();
-            
+
             // Performance & Quality Metrics
             $table->decimal('quality_score', 3, 2)->nullable();
             $table->decimal('effectiveness_score', 3, 2)->nullable();
             $table->timestamp('last_effectiveness_update')->nullable();
-            
+
             // System fields
             $table->json('metadata')->default('{}');
             $table->json('configuration')->default('{}');
             $table->enum('status', ['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])->default('draft');
             $table->timestamps();
-            
+
             $table->unique(['organization_id', 'slug']);
-            $table->check('content_type IN (\'article\', \'qa_collection\', \'faq\', \'guide\', \'tutorial\')');
-            $table->check('priority IN (\'low\', \'medium\', \'high\', \'critical\')');
-            $table->check('workflow_status IN (\'draft\', \'review\', \'approved\', \'published\', \'archived\')');
-            $table->check('approval_status IN (\'pending\', \'approved\', \'rejected\', \'auto_approved\')');
+        });
+
+        // Add self-referencing foreign key constraint after table creation
+        Schema::table('knowledge_base_items', function (Blueprint $table) {
+            $table->foreign('previous_version_id')->references('id')->on('knowledge_base_items')->onDelete('set null');
         });
     }
 
@@ -107,6 +108,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop foreign key constraint first
+        Schema::table('knowledge_base_items', function (Blueprint $table) {
+            $table->dropForeign(['previous_version_id']);
+        });
+
         Schema::dropIfExists('knowledge_base_items');
     }
 };

@@ -60,7 +60,9 @@ return new class extends Migration
             $table->primary(['id', 'created_at']);
             $table->unique('execution_id', 'n8n_executions_execution_id_unique');
             $table->unique(['workflow_id', 'execution_id'], 'n8n_executions_workflow_execution_unique');
-            $table->check('mode IN (\'trigger\', \'manual\', \'retry\')');
+
+            // Add unique constraint on id for foreign key references
+            $table->unique('id', 'n8n_executions_id_unique');
         });
     }
 

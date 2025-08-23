@@ -24,7 +24,7 @@ return new class extends Migration
 
             // Tag Classification
             $table->string('tag_type', 20)->default('general');
-            $table->foreignUuid('parent_tag_id')->nullable()->constrained('knowledge_base_tags');
+            $table->uuid('parent_tag_id')->nullable(); // Will add foreign key constraint after table creation
 
             // Usage Statistics
             $table->integer('usage_count')->default(0);
@@ -42,7 +42,11 @@ return new class extends Migration
             // Unique constraints for business logic
             $table->unique(['organization_id', 'slug'], 'knowledge_base_tags_org_slug_unique');
             $table->unique(['organization_id', 'name'], 'knowledge_base_tags_org_name_unique');
-            $table->check('tag_type IN (\'general\', \'category\', \'topic\', \'skill\', \'department\', \'product\', \'service\')');
+        });
+
+        // Add self-referencing foreign key constraint after table creation
+        Schema::table('knowledge_base_tags', function (Blueprint $table) {
+            $table->foreign('parent_tag_id')->references('id')->on('knowledge_base_tags')->onDelete('cascade');
         });
     }
 
@@ -51,6 +55,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop foreign key constraint first
+        Schema::table('knowledge_base_tags', function (Blueprint $table) {
+            $table->dropForeign(['parent_tag_id']);
+        });
+
         Schema::dropIfExists('knowledge_base_tags');
     }
 };

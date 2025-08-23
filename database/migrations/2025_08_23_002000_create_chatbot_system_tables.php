@@ -15,18 +15,14 @@ return new class extends Migration
         Schema::create('chatbot_sessions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('session_id', 255)->unique();
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->uuid('organization_id')->nullable();
+            $table->foreignUuid('user_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignUuid('organization_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('channel', 100); // whatsapp, telegram, web, etc
             $table->string('platform', 100); // waha, native, etc
             $table->json('metadata')->default('{}');
             $table->timestamp('last_activity_at');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-
-            // Foreign keys
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
-            $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
 
             // Indexes for performance (optimized for 5000+ users)
             $table->index(['user_id', 'is_active'], 'chatbot_sessions_user_active_index');
@@ -39,16 +35,13 @@ return new class extends Migration
         // Chatbot performance metrics (optimized for high-volume data)
         Schema::create('chatbot_metrics', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('organization_id')->nullable();
+            $table->foreignUuid('organization_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('metric_type', 100); // response_time, message_count, error_rate, etc
             $table->string('metric_key', 255);
             $table->decimal('value', 20, 6);
             $table->json('tags')->default('{}'); // channel, bot_id, etc
             $table->timestamp('recorded_at');
             $table->timestamps();
-
-            // Foreign keys
-            $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
 
             // Indexes for metrics queries (optimized for time-series data)
             $table->index(['metric_type', 'recorded_at'], 'chatbot_metrics_type_time_index');
@@ -62,7 +55,7 @@ return new class extends Migration
         Schema::create('chatbot_response_cache', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('cache_key', 500)->unique();
-            $table->uuid('organization_id')->nullable();
+            $table->foreignUuid('organization_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('bot_type', 100); // ai, rule_based, hybrid
             $table->text('input_hash'); // hash of input for matching
             $table->longText('response_data');
@@ -71,9 +64,6 @@ return new class extends Migration
             $table->timestamp('expires_at');
             $table->timestamp('last_used_at');
             $table->timestamps();
-
-            // Foreign keys
-            $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
 
             // Indexes for fast cache lookups (optimized for cache performance)
             $table->index(['input_hash', 'expires_at'], 'chatbot_cache_hash_expires_index');

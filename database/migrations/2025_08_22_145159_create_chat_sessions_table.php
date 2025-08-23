@@ -77,9 +77,9 @@ return new class extends Migration
             $table->primary(['id', 'created_at']);
             $table->unique('session_token', 'chat_sessions_session_token_unique');
             $table->unique(['organization_id', 'customer_id', 'started_at'], 'chat_sessions_org_customer_started_unique');
-            $table->check('session_type IN (\'customer_initiated\', \'agent_initiated\', \'bot_initiated\', \'system_initiated\')');
-            $table->check('priority IN (\'low\', \'normal\', \'high\', \'urgent\')');
-            $table->check('satisfaction_rating >= 1 AND satisfaction_rating <= 5');
+
+            // Add unique constraint on id for foreign key references
+            $table->unique('id', 'chat_sessions_id_unique');
         });
     }
 

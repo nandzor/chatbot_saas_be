@@ -65,7 +65,6 @@ return new class extends Migration
 
             // Unique constraints for business logic
             $table->unique(['organization_id', 'agent_code'], 'agents_org_agent_code_unique');
-            $table->check('availability_status IN (\'offline\', \'online\', \'busy\', \'away\', \'break\')');
         });
     }
 

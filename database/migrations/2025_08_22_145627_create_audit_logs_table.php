@@ -43,7 +43,9 @@ return new class extends Migration
             // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
             $table->unique(['organization_id', 'resource_type', 'resource_id', 'created_at'], 'audit_logs_org_resource_time_unique');
-            $table->check('severity IN (\'info\', \'warning\', \'error\', \'critical\')');
+
+            // Add unique constraint on id for foreign key references
+            $table->unique('id', 'audit_logs_id_unique');
         });
     }
 

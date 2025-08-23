@@ -27,8 +27,6 @@ return new class extends Migration
             $table->boolean('is_community')->default(false);
             $table->boolean('is_ephemeral')->default(false);
             $table->integer('ephemeral_timer')->nullable();
-            $table->timestamp('created_at')->useCurrent();
-            $table->timestamp('updated_at')->useCurrent();
 
             // Member Information
             $table->integer('participant_count')->default(0);

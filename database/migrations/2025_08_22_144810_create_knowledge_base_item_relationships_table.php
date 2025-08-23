@@ -31,7 +31,6 @@ return new class extends Migration
 
             // Unique constraints for business logic
             $table->unique(['source_item_id', 'target_item_id', 'relationship_type'], 'knowledge_base_item_relationships_source_target_type_unique');
-            $table->check('relationship_type IN (\'related\', \'prerequisite\', \'followup\', \'alternative\', \'supersedes\', \'references\')');
         });
     }
 

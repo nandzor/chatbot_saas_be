@@ -42,7 +42,9 @@ return new class extends Migration
             // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
             $table->unique(['organization_id', 'session_id', 'message_id', 'created_at'], 'ai_conversations_log_org_session_message_time_unique');
-            $table->check('user_feedback >= -1 AND user_feedback <= 1');
+
+            // Add unique constraint on id for foreign key references
+            $table->unique('id', 'ai_conversations_log_id_unique');
         });
     }
 
