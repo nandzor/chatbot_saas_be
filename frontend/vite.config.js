@@ -29,14 +29,31 @@ export default defineConfig(({ command, mode }) => {
     server: {
       port: 3000,
       open: true,
+      host: true,
+      cors: true,
     },
     build: {
       outDir: 'dist',
-      sourcemap: true,
+      sourcemap: !isProduction,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            router: ['react-router-dom'],
+            ui: ['lucide-react', 'clsx', 'tailwind-merge'],
+          },
+        },
+      },
     },
     preview: {
       port: 4173,
       open: true,
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-router-dom'],
+    },
+    define: {
+      __DEV__: !isProduction,
     },
   };
 });

@@ -1,18 +1,20 @@
 import React from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { Outlet } from 'react-router-dom';
 
 const AuthLayout = () => {
-  const { isAuthenticated } = useAuth();
-
-  // If already authenticated, redirect to appropriate dashboard
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
+  console.log('AuthLayout rendering...');
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            ChatBot Pro
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Modern UI/UX Dashboard
+          </p>
+        </div>
         <Outlet />
       </div>
     </div>
