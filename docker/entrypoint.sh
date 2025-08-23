@@ -23,7 +23,7 @@ until php -r "
     \$attempt = 0;
     while (\$attempt < \$maxAttempts) {
         try {
-            \$pdo = new PDO('pgsql:host=postgres;port=5432;dbname=chatbot_saas', 'postgres', 'kambin');
+            \$pdo = new PDO('pgsql:host=postgres;port=5432;dbname=cte', 'postgres', 'kambin');
             echo 'PostgreSQL is ready!';
             exit(0);
         } catch (PDOException \$e) {

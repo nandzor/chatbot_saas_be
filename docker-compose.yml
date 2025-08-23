@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: chatbot_saas_app
+    container_name: cte_app
     restart: unless-stopped
     ports:
       - "9000:80"
@@ -16,7 +16,7 @@ services:
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_DATABASE=chatbot_saas
+      - DB_DATABASE=cte
       - DB_USERNAME=postgres
       - DB_PASSWORD=kambin
       - REDIS_HOST=redis
@@ -52,10 +52,10 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: chatbot_saas_postgres
+    container_name: cte_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: chatbot_saas
+      POSTGRES_DB: cte
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: kambin
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -67,7 +67,7 @@ services:
     networks:
       - chatbot_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d chatbot_saas"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cte"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -75,7 +75,7 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: chatbot_saas_redis
+    container_name: cte_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
