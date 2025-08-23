@@ -54,10 +54,14 @@ until php -r "
     sleep 2
 done
 
-# Wait for RabbitMQ to be ready
+# Wait for RabbitMQ to be ready (simplified)
 echo "Waiting for RabbitMQ to be ready..."
-until curl -f http://rabbitmq:15672/api/overview > /dev/null 2>&1; do
-    echo "Waiting for RabbitMQ..."
+for i in {1..15}; do
+    if timeout 5 bash -c "</dev/tcp/rabbitmq/5672" 2>/dev/null; then
+        echo "RabbitMQ is ready!"
+        break
+    fi
+    echo "Waiting for RabbitMQ... attempt $i/15"
     sleep 2
 done
 
