@@ -54,18 +54,28 @@ return [
                 'queue' => [
                     'job' => VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob::class,
                 ],
-                // Connection stability options
-                'heartbeat' => env('RABBITMQ_HEARTBEAT', 30),
-                'connection_timeout' => env('RABBITMQ_CONNECTION_TIMEOUT', 30),
-                'read_write_timeout' => env('RABBITMQ_READ_WRITE_TIMEOUT', 30),
+                // Enhanced connection stability options
+                'heartbeat' => env('RABBITMQ_HEARTBEAT', 60),
+                'connection_timeout' => env('RABBITMQ_CONNECTION_TIMEOUT', 60),
+                'read_write_timeout' => env('RABBITMQ_READ_WRITE_TIMEOUT', 60),
                 'keepalive' => env('RABBITMQ_KEEPALIVE', true),
-                'channel_rpc_timeout' => env('RABBITMQ_CHANNEL_RPC_TIMEOUT', 30),
+                'channel_rpc_timeout' => env('RABBITMQ_CHANNEL_RPC_TIMEOUT', 60),
 
                 // Enhanced connection recovery options
                 'auto_recovery' => env('RABBITMQ_AUTO_RECOVERY', true),
-                'recovery_attempts' => env('RABBITMQ_RECOVERY_ATTEMPTS', 10),
-                'recovery_delay' => env('RABBITMQ_RECOVERY_DELAY', 2),
-                'network_recovery_interval' => env('RABBITMQ_NETWORK_RECOVERY_INTERVAL', 5),
+                'recovery_attempts' => env('RABBITMQ_RECOVERY_ATTEMPTS', 20),
+                'recovery_delay' => env('RABBITMQ_RECOVERY_DELAY', 5),
+                'network_recovery_interval' => env('RABBITMQ_NETWORK_RECOVERY_INTERVAL', 10),
+
+                // Additional stability settings
+                'insist' => false,
+                'login_method' => 'AMQPLAIN',
+                'login_response' => null,
+                'locale' => 'en_US',
+                'context' => null,
+                'channel_max' => 0,
+                'frame_max' => 0,
+                'close_on_destruct' => true,
             ],
 
             /*
@@ -96,7 +106,7 @@ return [
             /*
              * Message configuration.
              */
-            'message_persistent' => env('RABBITMQ_MESSAGE_PERSISTENT', false),
+            'message_persistent' => env('RABBITMQ_MESSAGE_PERSISTENT', true),
 
             /*
              * Consumer configuration.
@@ -106,19 +116,19 @@ return [
             'consumer_no_ack' => env('RABBITMQ_CONSUMER_NO_ACK', false),
             'consumer_exclusive' => env('RABBITMQ_CONSUMER_EXCLUSIVE', false),
             'consumer_nowait' => env('RABBITMQ_CONSUMER_NOWAIT', false),
-            'timeout' => 60,
-            'persistent' => env('RABBITMQ_PERSISTENT', false),
+            'timeout' => 90,
+            'persistent' => env('RABBITMQ_PERSISTENT', true),
 
             /*
              * Retry and error handling configuration.
              */
-            'retry_delay' => env('RABBITMQ_CONSUMER_RETRY_DELAY', 3),
-            'max_retries' => env('RABBITMQ_MAX_RETRIES', 3),
+            'retry_delay' => env('RABBITMQ_CONSUMER_RETRY_DELAY', 5),
+            'max_retries' => env('RABBITMQ_MAX_RETRIES', 5),
 
             /*
              * QoS configuration.
              */
-            'qos' => env('RABBITMQ_QOS', false),
+            'qos' => env('RABBITMQ_QOS', true),
             'qos_prefetch_size' => env('RABBITMQ_QOS_PREFETCH_SIZE', 0),
             'qos_prefetch_count' => env('RABBITMQ_QOS_PREFETCH_COUNT', 1),
             'qos_a_global' => env('RABBITMQ_QOS_GLOBAL', false),
@@ -127,8 +137,8 @@ return [
              * Horizon integration.
              */
             'processes' => env('RABBITMQ_PROCESSES', 1),
-            'tries' => env('RABBITMQ_TRIES', 1),
-            'sleep' => env('RABBITMQ_SLEEP', 3),
+            'tries' => env('RABBITMQ_TRIES', 3),
+            'sleep' => env('RABBITMQ_SLEEP', 5),
             'balance' => env('RABBITMQ_BALANCE', 'simple'),
             'nice' => env('RABBITMQ_NICE', 0),
             'memory' => env('RABBITMQ_MEMORY', 128),
@@ -143,11 +153,6 @@ return [
              */
             'failed_exchange' => env('RABBITMQ_FAILED_EXCHANGE', 'failed'),
             'failed_routing_key' => env('RABBITMQ_FAILED_ROUTING_KEY', 'failed'),
-
-            /*
-             * Retry delay for failed jobs (in seconds).
-             */
-            'retry_delay' => env('RABBITMQ_RETRY_DELAY', 0),
         ],
 
     ],
