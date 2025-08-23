@@ -24,28 +24,28 @@ class CustomerFactory extends Factory
         $fullName = $firstName . ' ' . $lastName;
         $email = $this->faker->unique()->safeEmail();
         $phone = $this->faker->phoneNumber();
-        
+
         $customerTypes = ['individual', 'business', 'enterprise', 'startup', 'agency'];
         $customerType = $this->faker->randomElement($customerTypes);
-        
+
         $statuses = ['active', 'inactive', 'pending', 'suspended', 'churned'];
         $status = $this->faker->randomElement($statuses);
-        
+
         $sources = ['website', 'referral', 'social_media', 'advertising', 'partnership', 'cold_outreach'];
         $source = $this->faker->randomElement($sources);
-        
+
         // Generate customer profile data
         $profileData = $this->generateCustomerProfile($customerType);
-        
+
         // Generate contact information
         $contactInfo = $this->generateContactInfo($customerType);
-        
+
         // Generate preferences and settings
         $preferences = $this->generateCustomerPreferences($customerType);
-        
+
         // Generate metadata
         $metadata = $this->generateCustomerMetadata($customerType, $status, $source);
-        
+
         return [
             'organization_id' => Organization::factory(),
             'user_id' => User::factory(),
@@ -58,7 +58,7 @@ class CustomerFactory extends Factory
             'customer_type' => $customerType,
             'status' => $status,
             'source' => $source,
-            
+
             // Profile Information
             'company_name' => $profileData['company_name'],
             'job_title' => $profileData['job_title'],
@@ -68,7 +68,7 @@ class CustomerFactory extends Factory
             'website' => $profileData['website'],
             'linkedin_url' => $profileData['linkedin_url'],
             'twitter_handle' => $profileData['twitter_handle'],
-            
+
             // Contact Information
             'address' => $contactInfo['address'],
             'city' => $contactInfo['city'],
@@ -78,19 +78,19 @@ class CustomerFactory extends Factory
             'timezone' => $contactInfo['timezone'],
             'language' => $contactInfo['language'],
             'currency' => $contactInfo['currency'],
-            
+
             // Customer Details
             'avatar_url' => $this->faker->optional(0.7)->imageUrl(200, 200, 'people'),
             'bio' => $this->faker->optional(0.6)->paragraph(),
             'notes' => $this->faker->optional(0.4)->sentences(2, true),
             'tags' => $this->generateCustomerTags($customerType, $industry ?? null),
-            
+
             // Preferences & Settings
             'communication_preferences' => $preferences['communication'],
             'notification_settings' => $preferences['notifications'],
             'privacy_settings' => $preferences['privacy'],
             'ui_preferences' => $preferences['ui'],
-            
+
             // Engagement & Activity
             'last_contact_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
             'last_purchase_at' => $this->faker->optional(0.6)->dateTimeBetween('-1 year', 'now'),
@@ -100,7 +100,7 @@ class CustomerFactory extends Factory
             'engagement_score' => $this->faker->randomFloat(2, 0, 100),
             'loyalty_points' => $this->faker->numberBetween(0, 10000),
             'referral_count' => $this->faker->numberBetween(0, 20),
-            
+
             // Subscription & Billing
             'subscription_status' => $this->determineSubscriptionStatus($status),
             'subscription_plan' => $this->faker->optional(0.7)->randomElement(['trial', 'starter', 'professional', 'enterprise']),
@@ -108,7 +108,7 @@ class CustomerFactory extends Factory
             'payment_method' => $this->faker->optional(0.5)->randomElement(['credit_card', 'bank_transfer', 'paypal']),
             'tax_exempt' => $this->faker->boolean(10),
             'credit_limit' => $this->faker->optional(0.3)->randomFloat(2, 1000, 50000),
-            
+
             // Support & Communication
             'support_tier' => $this->determineSupportTier($customerType, $status),
             'assigned_agent_id' => $this->faker->optional(0.4)->uuid(),
@@ -116,13 +116,13 @@ class CustomerFactory extends Factory
             'communication_frequency' => $this->faker->randomElement(['daily', 'weekly', 'monthly', 'quarterly', 'as_needed']),
             'marketing_consent' => $this->faker->boolean(70),
             'newsletter_subscription' => $this->faker->boolean(60),
-            
+
             // Integration & API
             'api_access_enabled' => $this->faker->boolean(30),
             'api_key' => $this->faker->optional(0.3)->uuid(),
             'webhook_url' => $this->faker->optional(0.2)->url(),
             'integration_preferences' => $this->generateIntegrationPreferences($customerType),
-            
+
             // Analytics & Tracking
             'first_visit_at' => $this->faker->dateTimeBetween('-2 years', '-6 months'),
             'last_visit_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
@@ -130,23 +130,23 @@ class CustomerFactory extends Factory
             'average_session_duration' => $this->faker->numberBetween(60, 3600),
             'conversion_rate' => $this->faker->randomFloat(2, 0, 15),
             'customer_lifetime_value' => $this->faker->randomFloat(2, 0, 500000),
-            
+
             // Risk & Compliance
             'risk_level' => $this->determineRiskLevel($status, $totalSpent ?? 0),
             'compliance_status' => $this->generateComplianceStatus($customerType),
             'verification_status' => $this->faker->randomElement(['unverified', 'pending', 'verified', 'rejected']),
             'kyc_completed' => $this->faker->boolean(60),
             'aml_check_passed' => $this->faker->boolean(90),
-            
+
             // Metadata
             'metadata' => $metadata,
-            
+
             // System fields
             'created_at' => $this->faker->dateTimeBetween('-2 years', 'now'),
             'updated_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
         ];
     }
-    
+
     /**
      * Generate customer profile based on type
      */
@@ -204,10 +204,10 @@ class CustomerFactory extends Factory
                 'twitter_handle' => $this->faker->optional(0.7)->userName()
             ]
         ];
-        
+
         return $profiles[$customerType] ?? $profiles['individual'];
     }
-    
+
     /**
      * Generate contact information
      */
@@ -215,7 +215,7 @@ class CustomerFactory extends Factory
     {
         $countries = ['ID', 'US', 'SG', 'MY', 'AU', 'GB', 'DE', 'JP', 'CA'];
         $country = $this->faker->randomElement($countries);
-        
+
         $timezones = [
             'ID' => 'Asia/Jakarta',
             'US' => 'America/New_York',
@@ -227,7 +227,7 @@ class CustomerFactory extends Factory
             'JP' => 'Asia/Tokyo',
             'CA' => 'America/Toronto'
         ];
-        
+
         $languages = [
             'ID' => ['id', 'en'],
             'US' => ['en'],
@@ -239,7 +239,7 @@ class CustomerFactory extends Factory
             'JP' => ['ja', 'en'],
             'CA' => ['en', 'fr']
         ];
-        
+
         $currencies = [
             'ID' => 'IDR',
             'US' => 'USD',
@@ -251,7 +251,7 @@ class CustomerFactory extends Factory
             'JP' => 'JPY',
             'CA' => 'CAD'
         ];
-        
+
         return [
             'address' => $this->faker->streetAddress(),
             'city' => $this->faker->city(),
@@ -263,7 +263,7 @@ class CustomerFactory extends Factory
             'currency' => $currencies[$country] ?? 'USD'
         ];
     }
-    
+
     /**
      * Generate customer preferences
      */
@@ -301,7 +301,7 @@ class CustomerFactory extends Factory
             ]
         ];
     }
-    
+
     /**
      * Generate customer metadata
      */
@@ -335,18 +335,18 @@ class CustomerFactory extends Factory
             'last_updated' => now()->toISOString()
         ];
     }
-    
+
     /**
      * Generate customer tags
      */
     private function generateCustomerTags(string $customerType, ?string $industry): array
     {
         $tags = [$customerType];
-        
+
         if ($industry) {
             $tags[] = strtolower(str_replace(' ', '_', $industry));
         }
-        
+
         $additionalTags = [
             'new_customer',
             'returning_customer',
@@ -359,13 +359,13 @@ class CustomerFactory extends Factory
             'active',
             'premium'
         ];
-        
+
         $selectedTags = $this->faker->randomElements($additionalTags, $this->faker->numberBetween(2, 5));
         $tags = array_merge($tags, $selectedTags);
-        
+
         return array_unique($tags);
     }
-    
+
     /**
      * Generate integration preferences
      */
@@ -383,10 +383,10 @@ class CustomerFactory extends Factory
             'analytics' => $this->faker->boolean(80),
             'marketing' => $this->faker->boolean(50)
         ];
-        
+
         return $integrations;
     }
-    
+
     /**
      * Determine subscription status
      */
@@ -401,7 +401,7 @@ class CustomerFactory extends Factory
             default => 'none'
         };
     }
-    
+
     /**
      * Determine support tier
      */
@@ -410,7 +410,7 @@ class CustomerFactory extends Factory
         if ($status !== 'active') {
             return 'basic';
         }
-        
+
         return match($customerType) {
             'enterprise' => 'dedicated',
             'business' => 'priority',
@@ -420,7 +420,7 @@ class CustomerFactory extends Factory
             default => 'basic'
         };
     }
-    
+
     /**
      * Determine risk level
      */
@@ -429,7 +429,7 @@ class CustomerFactory extends Factory
         if ($status === 'churned' || $status === 'suspended') {
             return 'high';
         }
-        
+
         if ($totalSpent > 10000) {
             return 'low';
         } elseif ($totalSpent > 1000) {
@@ -438,7 +438,7 @@ class CustomerFactory extends Factory
             return 'medium';
         }
     }
-    
+
     /**
      * Generate compliance status
      */
@@ -446,16 +446,16 @@ class CustomerFactory extends Factory
     {
         $complianceStandards = ['gdpr', 'ccpa', 'sox', 'hipaa', 'iso27001'];
         $relevantStandards = $this->faker->randomElements($complianceStandards, $this->faker->numberBetween(0, 3));
-        
+
         return [
             'standards' => $relevantStandards,
             'compliance_score' => $this->faker->randomFloat(2, 0.7, 1.0),
-            'last_audit' => $this->faker->optional(0.6)->dateTimeBetween('-1 year', 'now')->toISOString(),
-            'next_audit_due' => $this->faker->dateTimeBetween('now', '+1 year')->toISOString(),
+            'last_audit' => $this->faker->optional(0.6)->dateTimeBetween('-1 year', 'now')->format('c'),
+            'next_audit_due' => $this->faker->dateTimeBetween('now', '+1 year')->format('c'),
             'risk_level' => $this->faker->randomElement(['low', 'medium', 'high'])
         ];
     }
-    
+
     /**
      * Determine customer segment
      */
@@ -470,7 +470,7 @@ class CustomerFactory extends Factory
             default => 'general'
         };
     }
-    
+
     /**
      * Determine sales stage
      */
@@ -486,7 +486,7 @@ class CustomerFactory extends Factory
             default => 'lead'
         };
     }
-    
+
     /**
      * Indicate that the customer is active.
      */
@@ -497,7 +497,7 @@ class CustomerFactory extends Factory
             'subscription_status' => 'subscribed',
         ]);
     }
-    
+
     /**
      * Indicate that the customer is inactive.
      */
@@ -508,7 +508,7 @@ class CustomerFactory extends Factory
             'subscription_status' => 'unsubscribed',
         ]);
     }
-    
+
     /**
      * Indicate that the customer is in trial.
      */
@@ -519,7 +519,7 @@ class CustomerFactory extends Factory
             'subscription_status' => 'trial',
         ]);
     }
-    
+
     /**
      * Indicate that the customer has churned.
      */
@@ -531,7 +531,7 @@ class CustomerFactory extends Factory
             'last_contact_at' => $this->faker->dateTimeBetween('-1 year', '-6 months'),
         ]);
     }
-    
+
     /**
      * Indicate that the customer is an individual.
      */
@@ -544,7 +544,7 @@ class CustomerFactory extends Factory
             'company_size' => '1',
         ]);
     }
-    
+
     /**
      * Indicate that the customer is a business.
      */
@@ -555,7 +555,7 @@ class CustomerFactory extends Factory
             'company_size' => $this->faker->randomElement(['2-10', '11-50', '51-200']),
         ]);
     }
-    
+
     /**
      * Indicate that the customer is an enterprise.
      */
@@ -567,7 +567,7 @@ class CustomerFactory extends Factory
             'support_tier' => 'dedicated',
         ]);
     }
-    
+
     /**
      * Indicate that the customer is a startup.
      */
@@ -578,7 +578,7 @@ class CustomerFactory extends Factory
             'company_size' => $this->faker->randomElement(['2-10', '11-50']),
         ]);
     }
-    
+
     /**
      * Indicate that the customer is an agency.
      */
@@ -589,7 +589,7 @@ class CustomerFactory extends Factory
             'industry' => $this->faker->randomElement(['Marketing', 'Advertising', 'Digital', 'Creative', 'Consulting']),
         ]);
     }
-    
+
     /**
      * Indicate that the customer is high value.
      */
@@ -603,7 +603,7 @@ class CustomerFactory extends Factory
             'support_tier' => 'priority',
         ]);
     }
-    
+
     /**
      * Indicate that the customer is new.
      */
@@ -617,7 +617,7 @@ class CustomerFactory extends Factory
             'status' => 'pending',
         ]);
     }
-    
+
     /**
      * Indicate that the customer is verified.
      */
@@ -629,7 +629,7 @@ class CustomerFactory extends Factory
             'aml_check_passed' => true,
         ]);
     }
-    
+
     /**
      * Indicate that the customer has API access.
      */
@@ -640,7 +640,7 @@ class CustomerFactory extends Factory
             'api_key' => $this->faker->uuid(),
         ]);
     }
-    
+
     /**
      * Indicate that the customer is from a specific source.
      */
@@ -650,7 +650,7 @@ class CustomerFactory extends Factory
             'source' => $source,
         ]);
     }
-    
+
     /**
      * Indicate that the customer is from a specific industry.
      */
@@ -660,7 +660,7 @@ class CustomerFactory extends Factory
             'industry' => $industry,
         ]);
     }
-    
+
     /**
      * Indicate that the customer is from a specific country.
      */

@@ -42,7 +42,7 @@ class ChatSessionFactory extends Factory
             'bot_messages' => $isBotSession ? $this->faker->numberBetween(1, 25) : 0,
             'agent_messages' => $isBotSession ? 0 : $this->faker->numberBetween(1, 25),
             'response_time_avg' => $this->faker->numberBetween(30, 300), // seconds
-            'resolution_time' => $endedAt ? $startedAt->diffInMinutes($endedAt) : null,
+            'resolution_time' => $endedAt ? (int)($endedAt->getTimestamp() - $startedAt->getTimestamp()) / 60 : null,
             'wait_time' => $this->faker->numberBetween(0, 600), // seconds
             'satisfaction_rating' => $endedAt ? $this->faker->optional(70)->numberBetween(1, 5) : null,
             'feedback_text' => $endedAt ? $this->faker->optional()->sentence() : null,
