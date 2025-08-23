@@ -65,17 +65,8 @@ until php -r "
     sleep 2
 done
 
-# Wait for RabbitMQ to be ready with TCP connection test
-echo "Waiting for RabbitMQ to be ready..."
-for i in {1..30}; do
-    if timeout 5 bash -c "</dev/tcp/rabbitmq/5672" 2>/dev/null; then
-        echo "RabbitMQ TCP port is ready! Waiting additional time for AMQP service..."
-        sleep 5
-        break
-    fi
-    echo "Waiting for RabbitMQ... attempt $i/30"
-    sleep 2
-done
+# RabbitMQ removed - using database queue instead
+echo "Using database queue - no RabbitMQ dependency"
 
 # Set proper permissions
 echo "Setting proper permissions..."
