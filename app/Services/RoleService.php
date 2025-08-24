@@ -13,8 +13,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class RoleService
+class RoleService extends BaseService
 {
+    /**
+     * Get the model for the service.
+     */
+    protected function getModel(): \Illuminate\Database\Eloquent\Model
+    {
+        return new Role();
+    }
+
     /**
      * Get roles with pagination and filters
      */

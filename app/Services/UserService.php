@@ -27,19 +27,21 @@ class UserService extends BaseService
     {
         return DB::transaction(function () use ($data) {
             $userData = [
-                'name' => $data['name'],
+                'full_name' => $data['full_name'],
                 'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-                'is_active' => $data['is_active'] ?? true,
-                'settings' => $data['settings'] ?? [],
+                'username' => $data['username'],
+                'password_hash' => Hash::make($data['password_hash']),
+                'role' => $data['role'],
+                'organization_id' => $data['organization_id'],
+                'is_email_verified' => $data['is_email_verified'] ?? false,
+                'status' => $data['status'] ?? 'active',
+                'phone' => $data['phone'] ?? null,
+                'bio' => $data['bio'] ?? null,
+                'department' => $data['department'] ?? null,
+                'job_title' => $data['job_title'] ?? null,
             ];
 
             $user = $this->create($userData);
-
-            // Note: Role assignment will be implemented when Spatie Permission supports Laravel 12
-            // if (isset($data['role'])) {
-            //     $user->assignRole($data['role']);
-            // }
 
             return $user;
         });
@@ -52,25 +54,32 @@ class UserService extends BaseService
     {
         $updateData = [];
 
-        if (isset($data['name'])) {
-            $updateData['name'] = $data['name'];
+        if (isset($data['full_name'])) {
+            $updateData['full_name'] = $data['full_name'];
         }
 
         if (isset($data['email'])) {
             $updateData['email'] = $data['email'];
         }
 
-        if (isset($data['profile_photo_url'])) {
-            $updateData['profile_photo_url'] = $data['profile_photo_url'];
+        if (isset($data['role'])) {
+            $updateData['role'] = $data['role'];
         }
 
-        if (isset($data['settings'])) {
-            $user = $this->getById($userId);
-            if (!$user) {
-                return false;
-            }
-            $settings = array_merge($user->settings ?? [], $data['settings']);
-            $updateData['settings'] = $settings;
+        if (isset($data['phone'])) {
+            $updateData['phone'] = $data['phone'];
+        }
+
+        if (isset($data['bio'])) {
+            $updateData['bio'] = $data['bio'];
+        }
+
+        if (isset($data['department'])) {
+            $updateData['department'] = $data['department'];
+        }
+
+        if (isset($data['job_title'])) {
+            $updateData['job_title'] = $data['job_title'];
         }
 
         $result = $this->update($userId, $updateData);
@@ -98,8 +107,9 @@ class UserService extends BaseService
             return false;
         }
 
+        $newStatus = $user->status === 'active' ? 'inactive' : 'active';
         $result = $this->update($userId, [
-            'is_active' => !$user->is_active,
+            'status' => $newStatus,
         ]);
         return $result !== null;
     }
@@ -134,11 +144,25 @@ class UserService extends BaseService
     /**
      * Search users by name or email.
      */
-    public function searchUsers(string $query, int $perPage = 15): LengthAwarePaginator
+    public function searchUsers(string $query, array $filters = []): LengthAwarePaginator
     {
-        return User::where('name', 'ILIKE', "%{$query}%")
-            ->orWhere('email', 'ILIKE', "%{$query}%")
-            ->paginate($perPage);
+        $queryBuilder = User::where('full_name', 'ILIKE', "%{$query}%")
+            ->orWhere('email', 'ILIKE', "%{$query}%");
+
+        // Apply filters
+        if (isset($filters['status'])) {
+            $queryBuilder->where('status', $filters['status']);
+        }
+
+        if (isset($filters['role'])) {
+            $queryBuilder->where('role', $filters['role']);
+        }
+
+        if (isset($filters['organization_id'])) {
+            $queryBuilder->where('organization_id', $filters['organization_id']);
+        }
+
+        return $queryBuilder->paginate($filters['limit'] ?? 20);
     }
 
     /**
@@ -148,10 +172,10 @@ class UserService extends BaseService
     {
         return [
             'total_users' => User::count(),
-            'active_users' => User::active()->count(),
-            'verified_users' => User::verified()->count(),
-            'inactive_users' => User::where('is_active', false)->count(),
-            'unverified_users' => User::whereNull('email_verified_at')->count(),
+            'active_users' => User::where('status', 'active')->count(),
+            'verified_users' => User::where('is_email_verified', true)->count(),
+            'inactive_users' => User::where('status', 'inactive')->count(),
+            'unverified_users' => User::where('is_email_verified', false)->count(),
         ];
     }
 
@@ -169,7 +193,6 @@ class UserService extends BaseService
     public function softDeleteUser(int $userId): bool
     {
         $result = $this->update($userId, [
-            'is_active' => false,
             'deleted_at' => now(),
         ]);
         return $result !== null;
@@ -181,7 +204,6 @@ class UserService extends BaseService
     public function restoreUser(int $userId): bool
     {
         $result = $this->update($userId, [
-            'is_active' => true,
             'deleted_at' => null,
         ]);
         return $result !== null;
@@ -193,6 +215,59 @@ class UserService extends BaseService
     public function getUserByEmail(string $email): ?User
     {
         return User::where('email', $email)->first();
+    }
+
+    /**
+     * Get all users with pagination, filters, and search.
+     */
+    public function getAllUsers(
+        Request $request,
+        array $filters = [],
+        array $relations = [],
+        array $select = []
+    ): LengthAwarePaginator {
+        $query = User::query();
+
+        // Apply filters
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (isset($filters['role'])) {
+            $query->where('role', $filters['role']);
+        }
+
+        if (isset($filters['organization_id'])) {
+            $query->where('organization_id', $filters['organization_id']);
+        }
+
+        // Apply search
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('full_name', 'ILIKE', "%{$search}%")
+                  ->orWhere('email', 'ILIKE', "%{$search}%");
+            });
+        }
+
+        // Apply sorting
+        $sortField = $request->get('sort', 'created_at');
+        $sortOrder = $request->get('order', 'desc');
+        $query->orderBy($sortField, $sortOrder);
+
+        // Load relations
+        if (!empty($relations)) {
+            $query->with($relations);
+        }
+
+        // Select fields
+        if (!empty($select)) {
+            $query->select($select);
+        }
+
+        // Apply pagination
+        $perPage = $request->get('per_page', 15);
+        return $query->paginate($perPage);
     }
 
     /**

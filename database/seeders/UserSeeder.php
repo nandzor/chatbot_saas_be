@@ -11,6 +11,168 @@ use Illuminate\Support\Facades\Hash;
 class UserSeeder extends Seeder
 {
     /**
+     * Generate permissions based on user role.
+     */
+    private function generatePermissionsByRole(string $role): array
+    {
+        switch ($role) {
+            case 'super_admin':
+                return [
+                    'users.view_all' => true,
+                    'users.create' => true,
+                    'users.update' => true,
+                    'users.delete' => true,
+                    'users.manage_roles' => true,
+                    'organizations.view' => true,
+                    'organizations.create' => true,
+                    'organizations.update' => true,
+                    'organizations.delete' => true,
+                    'roles.view' => true,
+                    'roles.create' => true,
+                    'roles.update' => true,
+                    'roles.delete' => true,
+                    'roles.manage_permissions' => true,
+                    'permissions.view' => true,
+                    'permissions.create' => true,
+                    'permissions.update' => true,
+                    'permissions.delete' => true,
+                    'system_logs.view' => true,
+                    'system.manage' => true,
+                    'agents.view' => true,
+                    'agents.create' => true,
+                    'agents.update' => true,
+                    'agents.delete' => true,
+                    'agents.execute' => true,
+                    'customers.view' => true,
+                    'customers.create' => true,
+                    'customers.update' => true,
+                    'customers.delete' => true,
+                    'chat_sessions.view' => true,
+                    'chat_sessions.create' => true,
+                    'chat_sessions.update' => true,
+                    'chat_sessions.delete' => true,
+                    'messages.view' => true,
+                    'messages.create' => true,
+                    'messages.update' => true,
+                    'messages.delete' => true,
+                    'knowledge_articles.view' => true,
+                    'knowledge_articles.create' => true,
+                    'knowledge_articles.update' => true,
+                    'knowledge_articles.delete' => true,
+                    'analytics.view' => true,
+                    'billing.view' => true,
+                    'billing.manage' => true
+                ];
+            case 'org_admin':
+                return [
+                    'users.view_org' => true,
+                    'users.create_org' => true,
+                    'users.update_org' => true,
+                    'users.delete_org' => true,
+                    'agents.view' => true,
+                    'agents.create' => true,
+                    'agents.update' => true,
+                    'agents.delete' => true,
+                    'agents.execute' => true,
+                    'customers.view' => true,
+                    'customers.create' => true,
+                    'customers.update' => true,
+                    'customers.delete' => true,
+                    'chat_sessions.view' => true,
+                    'chat_sessions.create' => true,
+                    'chat_sessions.update' => true,
+                    'chat_sessions.delete' => true,
+                    'messages.view' => true,
+                    'messages.create' => true,
+                    'messages.update' => true,
+                    'messages.delete' => true,
+                    'knowledge_articles.view' => true,
+                    'knowledge_articles.create' => true,
+                    'knowledge_articles.update' => true,
+                    'knowledge_articles.delete' => true,
+                    'analytics.view' => true,
+                    'billing.view' => true,
+                    'reports.view' => true
+                ];
+            case 'agent':
+                return [
+                    'chat_sessions.view' => true,
+                    'chat_sessions.create' => true,
+                    'chat_sessions.update' => true,
+                    'customers.view' => true,
+                    'customers.update' => true,
+                    'knowledge_articles.view' => true,
+                    'knowledge_articles.create' => true,
+                    'knowledge_articles.update' => true,
+                    'messages.view' => true,
+                    'messages.create' => true,
+                    'messages.update' => true,
+                    'analytics.view_own' => true,
+                    'reports.view' => true
+                ];
+            case 'developer':
+                return [
+                    'api_keys.view' => true,
+                    'api_keys.create' => true,
+                    'api_keys.update' => true,
+                    'api_keys.delete' => true,
+                    'system_logs.view' => true,
+                    'webhooks.view' => true,
+                    'webhooks.create' => true,
+                    'webhooks.update' => true,
+                    'webhooks.delete' => true,
+                    'ai_models.view' => true,
+                    'ai_models.create' => true,
+                    'ai_models.update' => true,
+                    'ai_models.delete' => true,
+                    'workflows.view' => true,
+                    'workflows.create' => true,
+                    'workflows.update' => true,
+                    'workflows.delete' => true
+                ];
+            case 'moderator':
+                return [
+                    'content_moderation' => true,
+                    'user_moderation' => true,
+                    'chat_monitoring' => true,
+                    'reports.view' => true,
+                    'content_approval' => true,
+                    'user_suspension' => true,
+                    'chat_review' => true,
+                    'abuse_reports' => true,
+                    'chat_sessions.view' => true,
+                    'messages.view' => true,
+                    'knowledge_articles.view' => true,
+                    'knowledge_articles.update' => true
+                ];
+            case 'customer':
+                return [
+                    'own_profile.view' => true,
+                    'own_profile.update' => true,
+                    'chat_sessions.create' => true,
+                    'chat_sessions.view_own' => true,
+                    'messages.create' => true,
+                    'messages.view_own' => true,
+                    'knowledge_articles.view' => true
+                ];
+            case 'viewer':
+                return [
+                    'analytics.view' => true,
+                    'reports.view' => true,
+                    'content.view' => true,
+                    'users.view_org' => true,
+                    'chat_sessions.view' => true,
+                    'knowledge_articles.view' => true
+                ];
+            default:
+                return [
+                    'own_profile.view' => true,
+                    'own_profile.update' => true
+                ];
+        }
+    }
+
+    /**
      * Run the database seeds.
      */
     public function run(): void
@@ -65,7 +227,7 @@ class UserSeeder extends Seeder
                 'languages' => ['indonesia', 'english'],
                 'api_access_enabled' => true,
                 'api_rate_limit' => 1000,
-                'permissions' => [],
+                'permissions' => $this->generatePermissionsByRole('super_admin'),
                 'status' => 'active'
             ],
             [
@@ -109,7 +271,7 @@ class UserSeeder extends Seeder
                 'languages' => ['indonesia', 'english'],
                 'api_access_enabled' => true,
                 'api_rate_limit' => 500,
-                'permissions' => [],
+                'permissions' => $this->generatePermissionsByRole('super_admin'),
                 'status' => 'active'
             ],
             [
@@ -153,7 +315,7 @@ class UserSeeder extends Seeder
                 'languages' => ['indonesia', 'english'],
                 'api_access_enabled' => false,
                 'api_rate_limit' => 100,
-                'permissions' => [],
+                'permissions' => $this->generatePermissionsByRole('moderator'),
                 'status' => 'active'
             ]
         ];
@@ -212,7 +374,7 @@ class UserSeeder extends Seeder
                     'languages' => [$organization->locale, 'english'],
                     'api_access_enabled' => $organization->api_enabled,
                     'api_rate_limit' => 200,
-                    'permissions' => [],
+                    'permissions' => $this->generatePermissionsByRole('org_admin'),
                     'status' => 'active'
                 ],
                 [
@@ -257,7 +419,7 @@ class UserSeeder extends Seeder
                     'languages' => [$organization->locale, 'english'],
                     'api_access_enabled' => $organization->api_enabled,
                     'api_rate_limit' => 100,
-                    'permissions' => [],
+                    'permissions' => $this->generatePermissionsByRole('org_admin'),
                     'status' => 'active'
                 ],
                 [
@@ -302,7 +464,7 @@ class UserSeeder extends Seeder
                     'languages' => [$organization->locale, 'english'],
                     'api_access_enabled' => false,
                     'api_rate_limit' => 50,
-                    'permissions' => [],
+                    'permissions' => $this->generatePermissionsByRole('agent'),
                     'status' => 'active'
                 ],
                 [
@@ -347,7 +509,7 @@ class UserSeeder extends Seeder
                     'languages' => [$organization->locale, 'english'],
                     'api_access_enabled' => false,
                     'api_rate_limit' => 50,
-                    'permissions' => [],
+                    'permissions' => $this->generatePermissionsByRole('agent'),
                     'status' => 'active'
                 ],
                 [
@@ -392,7 +554,7 @@ class UserSeeder extends Seeder
                     'languages' => [$organization->locale, 'english'],
                     'api_access_enabled' => $organization->api_enabled,
                     'api_rate_limit' => 100,
-                    'permissions' => [],
+                    'permissions' => $this->generatePermissionsByRole('viewer'),
                     'status' => 'active'
                 ],
                 [
@@ -437,7 +599,7 @@ class UserSeeder extends Seeder
                     'languages' => [$organization->locale, 'english'],
                     'api_access_enabled' => false,
                     'api_rate_limit' => 10,
-                    'permissions' => [],
+                    'permissions' => $this->generatePermissionsByRole('customer'),
                     'status' => 'active'
                 ]
             ];

@@ -25,15 +25,15 @@ class UserController extends BaseApiController
     {
         try {
             $pagination = $this->getPaginationParams($request);
-            $filters = $this->getFilterParams($request, ['status', 'role', 'organization_id', 'is_active']);
+            $filters = $this->getFilterParams($request, ['status', 'role', 'organization_id']);
             $search = $this->getSearchParams($request);
-            $sort = $this->getSortParams($request, ['name', 'email', 'created_at', 'status'], 'created_at');
+            $sort = $this->getSortParams($request, ['full_name', 'email', 'created_at', 'status'], 'created_at');
 
             $users = $this->userService->getAll(
                 $request,
                 $filters,
                 ['organization', 'roles'],
-                ['id', 'name', 'email', 'status', 'is_active', 'organization_id', 'created_at']
+                ['id', 'full_name', 'email', 'status', 'organization_id', 'created_at']
             );
 
             $this->logApiAction('users_listed', [
@@ -96,7 +96,7 @@ class UserController extends BaseApiController
     /**
      * Display the specified user.
      */
-    public function show(int $id): JsonResponse
+    public function show(string $id): JsonResponse
     {
         try {
             $user = $this->userService->getById($id, ['organization', 'roles']);
@@ -130,7 +130,7 @@ class UserController extends BaseApiController
     /**
      * Update the specified user.
      */
-    public function update(UpdateUserRequest $request, int $id): JsonResponse
+    public function update(UpdateUserRequest $request, string $id): JsonResponse
     {
         try {
             $user = $this->userService->getById($id);
@@ -168,7 +168,7 @@ class UserController extends BaseApiController
     /**
      * Remove the specified user from storage.
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(string $id): JsonResponse
     {
         try {
             $user = $this->userService->getById($id);
@@ -204,7 +204,7 @@ class UserController extends BaseApiController
     /**
      * Toggle user status.
      */
-    public function toggleStatus(int $id): JsonResponse
+    public function toggleStatus(string $id): JsonResponse
     {
         try {
             $user = $this->userService->getById($id);
@@ -276,9 +276,8 @@ class UserController extends BaseApiController
         try {
             $request->validate([
                 'user_ids' => 'required|array',
-                'user_ids.*' => 'required|integer|exists:users,id',
+                'user_ids.*' => 'required|string|exists:users,id',
                 'data' => 'required|array',
-                'data.is_active' => 'sometimes|boolean',
             ]);
 
             $affected = $this->userService->bulkUpdateUsers(
@@ -314,7 +313,7 @@ class UserController extends BaseApiController
     /**
      * Restore a soft-deleted user.
      */
-    public function restore(int $id): JsonResponse
+    public function restore(string $id): JsonResponse
     {
         try {
             $user = $this->userService->getById($id);

@@ -10,8 +10,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class OrganizationService
+class OrganizationService extends BaseService
 {
+    /**
+     * Get the model for the service.
+     */
+    protected function getModel(): \Illuminate\Database\Eloquent\Model
+    {
+        return new Organization();
+    }
+
     /**
      * Get paginated organizations with filters and search.
      */
@@ -267,35 +275,4 @@ class OrganizationService
         return true;
     }
 
-    /**
-     * Apply filters to query.
-     */
-    private function applyFilters(Builder $query, array $filters): void
-    {
-        if (!empty($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('slug', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('industry', 'like', "%{$search}%");
-            });
-        }
-
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (!empty($filters['type'])) {
-            $query->where('type', $filters['type']);
-        }
-
-        if (!empty($filters['country'])) {
-            $query->where('country', $filters['country']);
-        }
-
-        if (!empty($filters['created_at'])) {
-            $query->whereDate('created_at', $filters['created_at']);
-        }
-    }
 }

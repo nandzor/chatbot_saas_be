@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use App\Services\PermissionManagementService;
+use App\Services\PermissionService;
 use App\Exceptions\PermissionDeniedException;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
@@ -16,19 +16,19 @@ class PermissionMiddleware
     /**
      * The permission management service.
      */
-    protected PermissionManagementService $permissionService;
+    protected PermissionService $permissionService;
 
     /**
      * Create a new middleware instance.
      */
-    public function __construct(PermissionManagementService $permissionService)
+    public function __construct(PermissionService $permissionService)
     {
         $this->permissionService = $permissionService;
     }
 
     /**
      * Handle an incoming request.
-     * 
+     *
      * Usage examples:
      * - Route::middleware(['permission:users.view'])->group(...)
      * - Route::middleware(['permission:users.view,users.create'])->group(...)
@@ -52,7 +52,7 @@ class PermissionMiddleware
 
         // Parse permissions (support multiple formats)
         $parsedPermissions = $this->parsePermissions($permissions);
-        
+
         // Check if user has required permissions
         try {
             $hasPermission = $this->checkUserPermissions($user, $organizationId, $parsedPermissions);
@@ -90,7 +90,7 @@ class PermissionMiddleware
 
     /**
      * Parse permissions from middleware parameters.
-     * 
+     *
      * Supports multiple formats:
      * - Single permission: 'users.view'
      * - Multiple permissions (AND): 'users.view,users.create'
@@ -108,7 +108,7 @@ class PermissionMiddleware
         }
 
         $permissionString = $permissions[0];
-        
+
         // Check for OR operator (|)
         if (str_contains($permissionString, '|')) {
             $permissionList = explode('|', $permissionString);
@@ -118,7 +118,7 @@ class PermissionMiddleware
                 'check_type' => 'any'
             ];
         }
-        
+
         // Check for AND operator (,)
         if (str_contains($permissionString, ',')) {
             $permissionList = explode(',', $permissionString);
@@ -128,7 +128,7 @@ class PermissionMiddleware
                 'check_type' => 'all'
             ];
         }
-        
+
         // Check for wildcard (*)
         if (str_contains($permissionString, '.*')) {
             $baseResource = str_replace('.*', '', $permissionString);
@@ -139,7 +139,7 @@ class PermissionMiddleware
                 'check_type' => 'wildcard'
             ];
         }
-        
+
         // Single permission
         return [
             'type' => 'single',
@@ -156,19 +156,19 @@ class PermissionMiddleware
         switch ($parsedPermissions['check_type']) {
             case 'none':
                 return true;
-                
+
             case 'single':
                 return $this->checkSinglePermission($user, $organizationId, $parsedPermissions['permissions'][0]);
-                
+
             case 'all':
                 return $this->checkAllPermissions($user, $organizationId, $parsedPermissions['permissions']);
-                
+
             case 'any':
                 return $this->checkAnyPermission($user, $organizationId, $parsedPermissions['permissions']);
-                
+
             case 'wildcard':
                 return $this->checkWildcardPermission($user, $organizationId, $parsedPermissions['base_resource']);
-                
+
             default:
                 return false;
         }
@@ -186,7 +186,7 @@ class PermissionMiddleware
         }
 
         [$resource, $action] = $parts;
-        
+
         return $this->permissionService->userHasPermission(
             $user->id,
             $organizationId,
@@ -229,13 +229,13 @@ class PermissionMiddleware
     {
         // Check if user has any permission for the resource
         $userPermissions = $this->permissionService->getUserPermissions($user->id, $organizationId);
-        
+
         foreach ($userPermissions as $permission) {
             if (str_starts_with($permission->name, $baseResource . '.')) {
                 return true;
             }
         }
-        
+
         return false;
     }
 

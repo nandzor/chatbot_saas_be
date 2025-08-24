@@ -8,7 +8,7 @@ use App\Models\Organization;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RolePermission;
-use App\Services\PermissionManagementService;
+use App\Services\PermissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
@@ -18,7 +18,7 @@ class PermissionManagementTest extends TestCase
 
     protected User $user;
     protected Organization $organization;
-    protected PermissionManagementService $permissionService;
+    protected PermissionService $permissionService;
 
     protected function setUp(): void
     {
@@ -34,7 +34,7 @@ class PermissionManagementTest extends TestCase
         ]);
 
         // Create permission service
-        $this->permissionService = app(PermissionManagementService::class);
+        $this->permissionService = app(PermissionService::class);
     }
 
     /** @test */

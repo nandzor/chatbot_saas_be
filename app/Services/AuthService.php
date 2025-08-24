@@ -17,8 +17,16 @@ use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Laravel\Sanctum\PersonalAccessToken;
 
-class AuthService
+class AuthService extends BaseService
 {
+    /**
+     * Get the model for the service.
+     */
+    protected function getModel(): \Illuminate\Database\Eloquent\Model
+    {
+        return new User();
+    }
+
     /**
      * Default token TTL in minutes.
      */
