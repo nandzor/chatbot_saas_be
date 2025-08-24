@@ -25,6 +25,7 @@ import ProfileSettings from '@/features/shared/ProfileSettings';
 
 // Role Management Pages
 import RoleList from '@/pages/roles/RoleList';
+import PermissionList from '@/pages/permissions/PermissionList';
 
 // Super Admin Pages
 import SuperAdminDashboard from '@/pages/superadmin/Dashboard';
@@ -133,14 +134,7 @@ export const router = createBrowserRouter([
               </RoleBasedRoute>
             )
           },
-          {
-            path: 'roles',
-            element: (
-              <RoleBasedRoute requiredPermission="roles.view">
-                <RoleList />
-              </RoleBasedRoute>
-            )
-          },
+
           {
             path: 'profile',
             element: <ProfileSettings />
@@ -161,6 +155,8 @@ export const router = createBrowserRouter([
           { path: 'financials', element: <Financials /> },
           { path: 'clients', element: <ClientManagement /> },
           { path: 'system', element: <SystemSettings /> },
+          { path: 'system/roles', element: <RoleList /> },
+          { path: 'system/permissions', element: <PermissionList /> },
 
           // Client Success & Management Routes
           { path: 'client-health', element: <ClientHealthDashboard /> },

@@ -40,6 +40,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
           { id: 'client-health', label: 'Client Health Dashboard', icon: Heart, href: '/superadmin/client-health' },
           { id: 'onboarding', label: 'Onboarding Pipeline', icon: UserPlus, href: '/superadmin/onboarding' },
           { id: 'automation', label: 'Automation & Playbooks', icon: Zap, href: '/superadmin/automation' },
+          { id: 'system', label: 'System Administration', icon: Shield, href: '/superadmin/system' },
           { id: 'platform', label: 'Platform Engineering & DevOps', icon: Settings, href: '/superadmin/platform/configuration' }
         ];
       case 'org_admin':
@@ -50,7 +51,6 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
           { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, href: '/dashboard/knowledge' },
           { id: 'automations', label: 'Automations', icon: Workflow, href: '/dashboard/automations' },
           { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-          { id: 'roles', label: 'Role Management', icon: Shield, href: '/dashboard/roles' },
           { id: 'profile', label: 'Profile Settings', icon: User, href: '/dashboard/profile' }
         ];
       case 'agent':

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import UserAvatar from '@/components/common/UserAvatar';
-import { 
-  Home, 
-  Building2, 
-  DollarSign, 
+import {
+  Home,
+  Building2,
+  DollarSign,
   Settings,
   Shield,
   BarChart3,
@@ -15,15 +15,15 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import { 
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage, 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui';
 
 const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
@@ -31,27 +31,33 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
   const [userStatus, setUserStatus] = useState('online');
 
   const sidebarItems = [
-    { 
-      id: 'dashboard', 
-      label: 'Dashboard', 
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
       icon: Home,
       description: 'Business Intelligence & Platform Overview'
     },
-    { 
-      id: 'clients', 
-      label: 'Client Management', 
+    {
+      id: 'clients',
+      label: 'Client Management',
       icon: Building2,
       description: 'Organizations & Subscriptions'
     },
-    { 
-      id: 'financials', 
-      label: 'Financials', 
+    {
+      id: 'financials',
+      label: 'Financials',
       icon: DollarSign,
       description: 'Revenue, Plans & Transactions'
     },
-    { 
-      id: 'platform', 
-      label: 'Platform', 
+    {
+      id: 'system',
+      label: 'System Administration',
+      icon: Shield,
+      description: 'Roles, Permissions & System Settings'
+    },
+    {
+      id: 'platform',
+      label: 'Platform',
       icon: Settings,
       description: 'Configuration & Security'
     }
@@ -84,6 +90,12 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
           { id: 'platform-n8n', label: 'N8N Service', icon: Zap },
           { id: 'platform-security', label: 'Security & Audit', icon: Shield }
         ];
+      case 'system':
+        return [
+          { id: 'system-roles', label: 'Role Management', icon: Shield },
+          { id: 'system-permissions', label: 'Permission Management', icon: Shield },
+          { id: 'system-settings', label: 'System Settings', icon: Settings }
+        ];
       default:
         return [];
     }
@@ -111,20 +123,21 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
             <p className="text-xs text-muted-foreground">Platform Management</p>
           </div>
         </div>
-        
+
         {/* Main Navigation */}
         <nav className="space-y-2">
           {sidebarItems.map(item => {
             const Icon = item.icon;
             const isActive = activeMenu === item.id;
-            
+            const subMenuItems = getSubMenuItems(item.id);
+
             return (
               <div key={item.id}>
                 <button
                   onClick={() => setActiveMenu(item.id)}
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all group ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-red-500/10 to-orange-500/10 text-red-600 border-l-4 border-red-500' 
+                    isActive
+                      ? 'bg-gradient-to-r from-red-500/10 to-orange-500/10 text-red-600 border-l-4 border-red-500'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   }`}
                 >
@@ -133,12 +146,37 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
                     <div className="text-sm font-medium">{item.label}</div>
                     <div className="text-xs text-muted-foreground">{item.description}</div>
                   </div>
-                  {isActive ? (
-                    <ChevronDown className="w-4 h-4" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {subMenuItems.length > 0 && (
+                    isActive ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )
                   )}
                 </button>
+
+                {/* Sub-menu items */}
+                {isActive && subMenuItems.length > 0 && (
+                  <div className="ml-4 mt-2 space-y-1">
+                    {subMenuItems.map(subItem => {
+                      const SubIcon = subItem.icon;
+                      return (
+                        <button
+                          key={subItem.id}
+                          onClick={() => setActiveMenu(subItem.id)}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+                            activeMenu === subItem.id
+                              ? 'bg-red-100 text-red-700'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <SubIcon className="w-4 h-4" />
+                          {subItem.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -166,7 +204,7 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
           </div>
         </div>
       </div>
-      
+
       {/* User Profile Footer */}
       <div className="mt-auto p-4 border-t border-border">
         <div className="flex items-center gap-3">
@@ -202,7 +240,7 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
             </Select>
           </div>
         </div>
-        
+
         {/* Role Badge */}
         <div className="mt-2 px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-md text-center">
           Super Administrator

@@ -4,6 +4,9 @@ import SuperAdminDashboard from './SuperAdminDashboard';
 import ClientManagement from './ClientManagement';
 import Financials from './Financials';
 import Platform from './Platform';
+import SystemSettings from './SystemSettings';
+import RoleList from '@/pages/roles/RoleList';
+import PermissionList from '@/pages/permissions/PermissionList';
 import UserProfile from '../auth/UserProfile';
 
 const SuperAdmin = () => {
@@ -19,6 +22,14 @@ const SuperAdmin = () => {
         return <Financials />;
       case 'platform':
         return <Platform />;
+      case 'system':
+        return <SystemSettings />;
+      case 'system-roles':
+        return <RoleList />;
+      case 'system-permissions':
+        return <PermissionList />;
+      case 'system-settings':
+        return <SystemSettings />;
       default:
         return <SuperAdminDashboard />;
     }

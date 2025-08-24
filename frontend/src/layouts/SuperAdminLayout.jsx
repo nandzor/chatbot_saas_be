@@ -5,12 +5,13 @@ import Sidebar from '@/components/layout/Sidebar';
 import SidebarProvider from '@/components/layout/SidebarProvider';
 import SidebarToggle from '@/components/layout/SidebarToggle';
 import { useSidebar } from '@/components/layout/SidebarProvider';
-import { 
-  BarChart3, 
-  DollarSign, 
-  Users, 
+import {
+  BarChart3,
+  DollarSign,
+  Users,
   Settings,
-  LogOut 
+  Shield,
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -27,9 +28,9 @@ const SuperAdminContent = () => {
   const navigation = [
     { name: 'Dashboard', href: '/superadmin', icon: BarChart3 },
     { name: 'Financials', href: '/superadmin/financials', icon: DollarSign },
-    { 
-      name: 'Client Success & Management', 
-      href: '/superadmin/clients', 
+    {
+      name: 'Client Success & Management',
+      href: '/superadmin/clients',
       icon: Users,
       submenu: [
         { name: 'Client Health Dashboard', href: '/superadmin/client-health' },
@@ -39,9 +40,20 @@ const SuperAdminContent = () => {
         { name: 'Communication Center', href: '/superadmin/communication' }
       ]
     },
-    { 
-      name: 'Platform Engineering & DevOps', 
-      href: '/superadmin/platform/configuration', 
+    {
+      name: 'System Administration',
+      href: '/superadmin/system',
+      icon: Shield,
+      submenu: [
+        { name: 'Role Management', href: '/superadmin/system/roles' },
+        { name: 'Permission Management', href: '/superadmin/system/permissions' },
+        { name: 'System Settings', href: '/superadmin/system' },
+        { name: 'Security & Compliance', href: '/superadmin/platform/security' }
+      ]
+    },
+    {
+      name: 'Platform Engineering & DevOps',
+      href: '/superadmin/platform/configuration',
       icon: Settings,
       submenu: [
         { name: 'Platform Configuration', href: '/superadmin/platform/configuration' },
@@ -54,8 +66,8 @@ const SuperAdminContent = () => {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <Sidebar 
-        role="super_admin" 
+      <Sidebar
+        role="super_admin"
         isCollapsed={isCollapsed}
         onToggle={toggleSidebar}
         isMobile={isMobile}
