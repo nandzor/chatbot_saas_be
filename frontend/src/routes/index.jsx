@@ -32,6 +32,7 @@ import SuperAdminDashboard from '@/pages/superadmin/Dashboard';
 import Financials from '@/pages/superadmin/Financials';
 import ClientManagement from '@/pages/superadmin/ClientManagement';
 import SystemSettings from '@/pages/superadmin/SystemSettings';
+import UserManagement from '@/pages/superadmin/UserManagement';
 
 // Agent Pages
 import AgentDashboard from '@/features/agent/AgentDashboard';
@@ -154,6 +155,7 @@ export const router = createBrowserRouter([
           { index: true, element: <SuperAdminDashboard /> },
           { path: 'financials', element: <Financials /> },
           { path: 'clients', element: <ClientManagement /> },
+          { path: 'users', element: <UserManagement /> },
           { path: 'system', element: <SystemSettings /> },
           { path: 'system/roles', element: <RoleList /> },
           { path: 'system/permissions', element: <PermissionList /> },

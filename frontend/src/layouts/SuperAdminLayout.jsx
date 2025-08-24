@@ -28,6 +28,7 @@ const SuperAdminContent = () => {
   const navigation = [
     { name: 'Dashboard', href: '/superadmin', icon: BarChart3 },
     { name: 'Financials', href: '/superadmin/financials', icon: DollarSign },
+    { name: 'User Management', href: '/superadmin/users', icon: Users },
     {
       name: 'Client Success & Management',
       href: '/superadmin/clients',
