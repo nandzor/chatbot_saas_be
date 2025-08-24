@@ -134,20 +134,20 @@ Route::prefix('v1')->group(function () {
 
         // Role Management routes
         Route::prefix('roles')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'index']);
-            Route::post('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'store']);
-            Route::get('/available', [\App\Http\Controllers\Api\RoleManagementController::class, 'getAvailableRoles']);
-            Route::get('/statistics', [\App\Http\Controllers\Api\RoleManagementController::class, 'statistics']);
+            Route::get('/', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'store']);
+            Route::get('/available', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'getAvailableRoles']);
+            Route::get('/statistics', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'statistics']);
 
             Route::prefix('{id}')->group(function () {
-                Route::get('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'show']);
-                Route::put('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'update']);
-                Route::delete('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'destroy']);
-                Route::get('/users', [\App\Http\Controllers\Api\RoleManagementController::class, 'getUsers']);
+                Route::get('/', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'show']);
+                Route::put('/', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'update']);
+                Route::delete('/', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'destroy']);
+                Route::get('/users', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'getUsers']);
             });
 
-            Route::post('/assign', [\App\Http\Controllers\Api\RoleManagementController::class, 'assignRole']);
-            Route::post('/revoke', [\App\Http\Controllers\Api\RoleManagementController::class, 'revokeRole']);
+            Route::post('/assign', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'assignRole']);
+            Route::post('/revoke', [\App\Http\Controllers\Api\Admin\V1\RoleManagementController::class, 'revokeRole']);
         });
 
         // Permission Management routes

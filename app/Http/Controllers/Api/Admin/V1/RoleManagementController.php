@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Admin\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Role\StoreRoleRequest;
@@ -9,7 +9,7 @@ use App\Http\Requests\Role\AssignRoleRequest;
 use App\Http\Requests\Role\RevokeRoleRequest;
 use App\Http\Resources\Role\RoleResource;
 use App\Http\Resources\Role\RoleCollection;
-use App\Http\Resources\User\UserResource;
+use App\Http\Resources\UserResource;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserRole;
@@ -190,119 +190,17 @@ class RoleManagementController extends Controller
     }
 
     /**
-     * Get users assigned to a specific role
-     */
-    public function getUsers(string $roleId): JsonResponse
-    {
-        try {
-            $users = $this->roleService->getUsersByRole($roleId);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Users retrieved successfully',
-                'data' => UserResource::collection($users),
-                'meta' => [
-                    'total' => $users->count(),
-                    'role_id' => $roleId
-                ]
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error retrieving users for role: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve users for role',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
-        }
-    }
-
-    /**
-     * Assign role to user(s)
-     */
-    public function assignRole(AssignRoleRequest $request): JsonResponse
-    {
-        try {
-            DB::beginTransaction();
-
-            $result = $this->roleService->assignRoleToUsers(
-                $request->role_id,
-                $request->user_ids,
-                $request->validated()
-            );
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Role assigned successfully',
-                'data' => [
-                    'assigned_count' => $result['assigned_count'],
-                    'already_assigned_count' => $result['already_assigned_count'],
-                    'failed_count' => $result['failed_count'],
-                    'users' => UserResource::collection($result['users'])
-                ]
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error assigning role: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to assign role',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
-        }
-    }
-
-    /**
-     * Revoke role from user(s)
-     */
-    public function revokeRole(RevokeRoleRequest $request): JsonResponse
-    {
-        try {
-            DB::beginTransaction();
-
-            $result = $this->roleService->revokeRoleFromUsers(
-                $request->role_id,
-                $request->user_ids
-            );
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Role revoked successfully',
-                'data' => [
-                    'revoked_count' => $result['revoked_count'],
-                    'not_assigned_count' => $result['not_assigned_count'],
-                    'failed_count' => $result['failed_count']
-                ]
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error revoking role: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to revoke role',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
-        }
-    }
-
-    /**
      * Get available roles for assignment
      */
-    public function getAvailableRoles(): JsonResponse
+    public function getAvailableRoles(Request $request): JsonResponse
     {
         try {
-            $roles = $this->roleService->getAvailableRoles();
+            $roles = $this->roleService->getAvailableRoles($request);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Available roles retrieved successfully',
-                'data' => RoleResource::collection($roles)
+                'data' => new RoleCollection($roles)
             ]);
         } catch (\Exception $e) {
             Log::error('Error retrieving available roles: ' . $e->getMessage());
@@ -318,10 +216,10 @@ class RoleManagementController extends Controller
     /**
      * Get role statistics
      */
-    public function statistics(): JsonResponse
+    public function statistics(Request $request): JsonResponse
     {
         try {
-            $stats = $this->roleService->getRoleStatistics();
+            $stats = $this->roleService->getRoleStatistics($request);
 
             return response()->json([
                 'success' => true,
@@ -334,6 +232,113 @@ class RoleManagementController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve role statistics',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get users assigned to a specific role
+     */
+    public function getUsers(Request $request, string $id): JsonResponse
+    {
+        try {
+            $users = $this->roleService->getUsersByRole($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Role users retrieved successfully',
+                'data' => UserResource::collection($users),
+                'meta' => [
+                    'total' => $users->total(),
+                    'per_page' => $users->perPage(),
+                    'current_page' => $users->currentPage(),
+                    'last_page' => $users->lastPage(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error retrieving role users: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve role users',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * Assign a role to a user
+     */
+    public function assignRole(AssignRoleRequest $request): JsonResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            $result = $this->roleService->assignRoleToUsers(
+                $request->role_id,
+                [$request->user_id],
+                ['organization_id' => $request->organization_id]
+            );
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to assign role to user'
+                ], 400);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Role assigned successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error assigning role: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to assign role',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * Revoke a role from a user
+     */
+    public function revokeRole(RevokeRoleRequest $request): JsonResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            $result = $this->roleService->revokeRoleFromUsers(
+                $request->role_id,
+                [$request->user_id]
+            );
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to revoke role from user'
+                ], 400);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Role revoked successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error revoking role: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to revoke role',
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
