@@ -65,12 +65,16 @@ class UserService extends BaseService
         }
 
         if (isset($data['settings'])) {
-            $user = $this->findByIdOrFail($userId);
+            $user = $this->getById($userId);
+            if (!$user) {
+                return false;
+            }
             $settings = array_merge($user->settings ?? [], $data['settings']);
             $updateData['settings'] = $settings;
         }
 
-        return $this->update($userId, $updateData);
+        $result = $this->update($userId, $updateData);
+        return $result !== null;
     }
 
     /**
@@ -78,9 +82,10 @@ class UserService extends BaseService
      */
     public function changePassword(int $userId, string $newPassword): bool
     {
-        return $this->update($userId, [
+        $result = $this->update($userId, [
             'password' => Hash::make($newPassword),
         ]);
+        return $result !== null;
     }
 
     /**
@@ -88,11 +93,15 @@ class UserService extends BaseService
      */
     public function toggleUserStatus(int $userId): bool
     {
-        $user = $this->findByIdOrFail($userId);
+        $user = $this->getById($userId);
+        if (!$user) {
+            return false;
+        }
 
-        return $this->update($userId, [
+        $result = $this->update($userId, [
             'is_active' => !$user->is_active,
         ]);
+        return $result !== null;
     }
 
     /**
@@ -159,10 +168,11 @@ class UserService extends BaseService
      */
     public function softDeleteUser(int $userId): bool
     {
-        return $this->update($userId, [
+        $result = $this->update($userId, [
             'is_active' => false,
             'deleted_at' => now(),
         ]);
+        return $result !== null;
     }
 
     /**
@@ -170,10 +180,11 @@ class UserService extends BaseService
      */
     public function restoreUser(int $userId): bool
     {
-        return $this->update($userId, [
+        $result = $this->update($userId, [
             'is_active' => true,
             'deleted_at' => null,
         ]);
+        return $result !== null;
     }
 
     /**

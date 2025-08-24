@@ -726,7 +726,7 @@ $metrics = [
 ```php
 // Log admin actions
 Log::channel('admin')->info('User created by admin', [
-    'admin_id' => auth()->id(),
+    'admin_id' => Auth::user()->id,
     'admin_email' => auth()->user()->email,
     'target_user_id' => $user->id,
     'target_user_email' => $user->email,

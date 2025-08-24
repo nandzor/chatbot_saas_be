@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Api\V1\BaseController;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
-class PermissionManagementController extends BaseController
+class PermissionManagementController extends BaseApiController
 {
     /**
      * Get all permissions for the organization.
@@ -95,7 +95,7 @@ class PermissionManagementController extends BaseController
             return $this->createdResponse('Permission created successfully', $permission);
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to create permission', $e->getMessage());
         }
@@ -130,7 +130,7 @@ class PermissionManagementController extends BaseController
             return $this->updatedResponse('Permission updated successfully', $permission);
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to update permission', $e->getMessage());
         }
@@ -190,10 +190,10 @@ class PermissionManagementController extends BaseController
 
             // This would typically create a permission group model
             // For now, we'll just return success
-            return $this->createdResponse('Permission group created successfully', $validated);
+            return $this->successResponse('Permission group created successfully', $validated, 201);
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to create permission group', $e->getMessage());
         }
@@ -241,7 +241,7 @@ class PermissionManagementController extends BaseController
             return $this->successResponse('Permissions assigned to role successfully');
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to assign permissions to role', $e->getMessage());
         }
@@ -270,9 +270,9 @@ class PermissionManagementController extends BaseController
             return $this->successResponse('Permissions removed from role successfully');
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to remove permissions from role', $e->getMessage());
+            return $this->serverErrorResponse('Failed to remove permissions to role', $e->getMessage());
         }
     }
 
@@ -318,7 +318,7 @@ class PermissionManagementController extends BaseController
             ]);
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to check user permission', $e->getMessage());
         }

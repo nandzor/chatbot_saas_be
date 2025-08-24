@@ -3,7 +3,7 @@
 
 ### 🐛 **Problem Identified**
 All Admin Controllers were experiencing linter errors due to the use of Laravel's `auth()` helper function:
-- `auth()->id()` → "Undefined method 'id'"
+- `Auth::user()->id` → "Undefined method 'id'"
 - `auth()->user()` → "Undefined method 'user'"
 
 ### ✅ **Solution Applied**
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Auth;
 
 #### **2. Replaced auth() Helper with Auth Facade**
 Systematically replaced all instances:
-- `auth()->id()` → `Auth::id()`
+- `Auth::user()->id` → `Auth::id()`
 - `auth()->user()` → `Auth::user()`
 
 #### **3. Files Fixed**
@@ -35,8 +35,8 @@ Systematically replaced all instances:
 #### **Fix Method**
 Used `sed` commands to systematically replace all instances:
 ```bash
-# Replace auth()->id() with Auth::id()
-find app/Http/Controllers/Api/Admin -name "*.php" -exec sed -i 's/auth()->id()/Auth::id()/g' {} \;
+# Replace Auth::user()->id with Auth::id()
+find app/Http/Controllers/Api/Admin -name "*.php" -exec sed -i 's/Auth::user()->id/Auth::id()/g' {} \;
 
 # Replace auth()->user() with Auth::user()
 find app/Http/Controllers/Api/Admin -name "*.php" -exec sed -i 's/auth()->user()/Auth::user()/g' {} \;

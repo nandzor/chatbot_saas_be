@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Builder;
 
-class PermissionManagementService extends BaseService
+class PermissionService extends BaseService
 {
     /**
      * Cache TTL for permission checks (5 minutes)

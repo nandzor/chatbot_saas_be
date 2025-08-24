@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Api\V1\BaseController;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-class OrganizationManagementController extends BaseController
+class OrganizationManagementController extends BaseApiController
 {
     /**
      * Get paginated list of organizations with filters and search.
@@ -44,14 +44,17 @@ class OrganizationManagementController extends BaseController
 
             $organizations = $query->paginate($pagination['per_page'], ['*'], 'page', $pagination['page']);
 
-            return $this->paginatedResponse(
+            return $this->successResponse(
                 'Organizations retrieved successfully',
                 $organizations->items(),
+                200,
                 [
-                    'current_page' => $organizations->currentPage(),
-                    'per_page' => $organizations->perPage(),
-                    'total' => $organizations->total(),
-                    'last_page' => $organizations->lastPage()
+                    'pagination' => [
+                        'current_page' => $organizations->currentPage(),
+                        'per_page' => $organizations->perPage(),
+                        'total' => $organizations->total(),
+                        'last_page' => $organizations->lastPage()
+                    ]
                 ]
             );
 
@@ -97,10 +100,10 @@ class OrganizationManagementController extends BaseController
 
             $organization = Organization::create($validated);
 
-            return $this->createdResponse('Organization created successfully', $organization);
+            return $this->successResponse('Organization created successfully', $organization, 201);
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to create organization', $e->getMessage());
         }
@@ -131,10 +134,10 @@ class OrganizationManagementController extends BaseController
             $organization->update($validated);
             $organization->refresh();
 
-            return $this->updatedResponse('Organization updated successfully', $organization);
+            return $this->successResponse('Organization updated successfully', $organization, 200);
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to update organization', $e->getMessage());
         }
@@ -154,7 +157,7 @@ class OrganizationManagementController extends BaseController
 
             $organization->delete();
 
-            return $this->deletedResponse('Organization deleted successfully');
+            return $this->successResponse('Organization deleted successfully', null, 200);
 
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to delete organization', $e->getMessage());
@@ -238,7 +241,7 @@ class OrganizationManagementController extends BaseController
             return $this->successResponse('User added to organization successfully');
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to add user to organization', $e->getMessage());
         }

@@ -127,7 +127,7 @@ class UserController extends Controller
 
     public function index()
     {
-        $userId = auth()->id();
+        $userId = Auth::user()->id;
         $organizationId = auth()->user()->organization_id;
 
         // Check if user has permission to read users
@@ -186,7 +186,7 @@ $success = $this->permissionService->assignPermissionsToRole(
     $roleId,
     ['permission-uuid-1', 'permission-uuid-2'],
     $organizationId,
-    auth()->id()
+    Auth::user()->id
 );
 ```
 
@@ -431,7 +431,7 @@ PERMISSION_AUDIT_LOG=true
 // All permission changes are logged
 Log::info('Permission created', [
     'permission_id' => $permission->id,
-    'created_by' => auth()->id(),
+    'created_by' => Auth::user()->id,
     'organization_id' => $organizationId
 ]);
 

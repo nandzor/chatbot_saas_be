@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 abstract class BaseService
 {
@@ -29,7 +30,7 @@ abstract class BaseService
      * Get all records with optional pagination
      */
     public function getAll(
-        Request $request = null,
+        ?Request $request = null,
         array $filters = [],
         array $relations = [],
         array $select = ['*']
@@ -440,7 +441,7 @@ abstract class BaseService
             'action' => $action,
             'model' => $this->getModelClass(),
             'model_id' => $model ? $model->id : null,
-            'user_id' => auth()->id(),
+            'user_id' => Auth::user()->id,
             'timestamp' => now()->toISOString(),
         ]);
 
@@ -458,7 +459,7 @@ abstract class BaseService
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
             'model' => $this->getModelClass(),
-            'user_id' => auth()->id(),
+            'user_id' => Auth::user()->id,
             'timestamp' => now()->toISOString(),
         ]);
 

@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Api\V1\BaseController;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-class RoleManagementController extends BaseController
+class RoleManagementController extends BaseApiController
 {
     /**
      * Get paginated list of roles with filters and search.
@@ -43,14 +43,17 @@ class RoleManagementController extends BaseController
 
             $roles = $query->paginate($pagination['per_page'], ['*'], 'page', $pagination['page']);
 
-            return $this->paginatedResponse(
+            return $this->successResponse(
                 'Roles retrieved successfully',
                 $roles->items(),
+                200,
                 [
-                    'current_page' => $roles->currentPage(),
-                    'per_page' => $roles->perPage(),
-                    'total' => $roles->total(),
-                    'last_page' => $roles->lastPage()
+                    'pagination' => [
+                        'current_page' => $roles->currentPage(),
+                        'per_page' => $roles->perPage(),
+                        'total' => $roles->total(),
+                        'last_page' => $roles->lastPage()
+                    ]
                 ]
             );
 
@@ -97,7 +100,7 @@ class RoleManagementController extends BaseController
             return $this->createdResponse('Role created successfully', $role);
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to create role', $e->getMessage());
         }
@@ -129,7 +132,7 @@ class RoleManagementController extends BaseController
             return $this->updatedResponse('Role updated successfully', $role);
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to update role', $e->getMessage());
         }
@@ -217,7 +220,7 @@ class RoleManagementController extends BaseController
             return $this->successResponse('Role assigned to user successfully');
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to assign role to user', $e->getMessage());
         }
@@ -250,7 +253,7 @@ class RoleManagementController extends BaseController
             return $this->successResponse('Role revoked from user successfully');
 
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($e);
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Failed to revoke role from user', $e->getMessage());
         }

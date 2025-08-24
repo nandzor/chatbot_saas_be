@@ -6,13 +6,14 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserRole;
 use App\Models\Permission;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class RoleManagementService
+class RoleService
 {
     /**
      * Get roles with pagination and filters
@@ -89,7 +90,7 @@ class RoleManagementService
         Log::info('Role created', [
             'role_id' => $role->id,
             'role_name' => $role->name,
-            'created_by' => auth()->id()
+            'created_by' => Auth::user()->id
         ]);
 
         return $role->load(['permissions', 'users']);
@@ -107,7 +108,7 @@ class RoleManagementService
         }
 
         // Prevent updating system roles
-        if ($role->is_system_role && !auth()->user()->isSuperAdmin()) {
+        if ($role->is_system_role) {
             throw new \Exception('System roles cannot be modified');
         }
 
@@ -123,7 +124,7 @@ class RoleManagementService
         Log::info('Role updated', [
             'role_id' => $role->id,
             'role_name' => $role->name,
-            'updated_by' => auth()->id()
+            'updated_by' => Auth::user()->id
         ]);
 
         return $role->load(['permissions', 'users']);
@@ -157,7 +158,7 @@ class RoleManagementService
             Log::info('Role deleted', [
                 'role_id' => $role->id,
                 'role_name' => $role->name,
-                'deleted_by' => auth()->id()
+                'deleted_by' => Auth::user()->id
             ]);
         }
 
@@ -220,7 +221,7 @@ class RoleManagementService
                     'scope_context' => json_encode($options['scope_context'] ?? $user->organization_id),
                     'effective_from' => $options['effective_from'] ?? now(),
                     'effective_until' => $options['effective_until'] ?? null,
-                    'assigned_by' => auth()->id(),
+                    'assigned_by' => Auth::user()->id,
                     'assigned_reason' => $options['assigned_reason'] ?? null
                 ]);
 
@@ -232,7 +233,7 @@ class RoleManagementService
                     'role_name' => $role->name,
                     'user_id' => $user->id,
                     'user_email' => $user->email,
-                    'assigned_by' => auth()->id()
+                    'assigned_by' => Auth::user()->id
                 ]);
 
             } catch (\Exception $e) {
@@ -298,7 +299,7 @@ class RoleManagementService
                     'role_id' => $roleId,
                     'role_name' => $role->name,
                     'user_id' => $userId,
-                    'revoked_by' => auth()->id()
+                    'revoked_by' => Auth::user()->id
                 ]);
 
             } catch (\Exception $e) {
