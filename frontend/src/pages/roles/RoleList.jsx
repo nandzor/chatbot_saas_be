@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import CreateRoleDialog from './CreateRoleDialog';
 import ViewRoleDetailsDialog from './ViewRoleDetailsDialog';
+import EditRoleDialog from './EditRoleDialog';
 import { roleManagementService } from '@/services/RoleManagementService';
 import { toast } from 'react-hot-toast';
 import {
@@ -208,6 +209,37 @@ const RoleList = () => {
     } catch (error) {
       console.error('Error cloning role:', error);
       toast.error(error.message || 'Failed to clone role');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [loadRoles, pagination.current_page]);
+
+  const handleEditRoleSubmit = useCallback(async (updatedRoleData) => {
+    try {
+      setActionLoading(true);
+
+      // Ensure we have valid role data
+      if (!updatedRoleData || !updatedRoleData.id) {
+        console.error('Invalid role data received:', updatedRoleData);
+        toast.error('Invalid role data received');
+        return;
+      }
+
+      // Update local state with the updated role data
+      setRoles(prevRoles =>
+        prevRoles.map(role =>
+          role.id === updatedRoleData.id ? updatedRoleData : role
+        )
+      );
+
+      setShowEditModal(false);
+      setSelectedRole(null);
+
+      // Reload roles to ensure data consistency with backend
+      loadRoles(pagination.current_page);
+    } catch (error) {
+      console.error('Error handling role update:', error);
+      toast.error('Failed to update role list');
     } finally {
       setActionLoading(false);
     }
@@ -579,12 +611,10 @@ const RoleList = () => {
                                   View Details
                                 </DropdownMenuItem>
 
-                                {!role.is_system_role && (
-                                  <DropdownMenuItem onClick={() => handleEditRole(role)}>
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit Role
-                                  </DropdownMenuItem>
-                                )}
+                                <DropdownMenuItem onClick={() => handleEditRole(role)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Role
+                                </DropdownMenuItem>
 
                                 <DropdownMenuItem onClick={() => handleCloneRole(role)}>
                                   <Copy className="w-4 h-4 mr-2" />
@@ -678,6 +708,15 @@ const RoleList = () => {
         onEdit={handleEditRole}
         onClone={handleCloneRole}
         onDelete={handleDeleteRole}
+      />
+
+      {/* Edit Role Dialog */}
+      <EditRoleDialog
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        role={selectedRole}
+        onSubmit={handleEditRoleSubmit}
+        loading={actionLoading}
       />
 
       {/* Delete Confirmation Modal */}
