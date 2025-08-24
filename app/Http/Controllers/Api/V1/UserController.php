@@ -2,23 +2,21 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\CreateUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
-class UserController extends BaseController
+class UserController extends BaseApiController
 {
-    /**
-     * Create a new controller instance.
-     */
-    public function __construct(
-        protected UserService $userService
-    ) {}
+    public function __construct(protected UserService $userService)
+    {
+        parent::__construct();
+    }
 
     /**
      * Display a listing of users.
@@ -26,16 +24,40 @@ class UserController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
-            $perPage = $this->getPerPage($request);
-            $users = $this->userService->getPaginated($request, $perPage);
+            $pagination = $this->getPaginationParams($request);
+            $filters = $this->getFilterParams($request, ['status', 'role', 'organization_id', 'is_active']);
+            $search = $this->getSearchParams($request);
+            $sort = $this->getSortParams($request, ['name', 'email', 'created_at', 'status'], 'created_at');
 
-            return $this->paginatedResponse(
-                $users->through(fn($user) => new UserResource($user)),
-                'Users retrieved successfully'
+            $users = $this->userService->getAll(
+                $request,
+                $filters,
+                ['organization', 'roles'],
+                ['id', 'name', 'email', 'status', 'is_active', 'organization_id', 'created_at']
             );
+
+            $this->logApiAction('users_listed', [
+                'filters' => $filters,
+                'search' => $search,
+                'pagination' => $pagination
+            ]);
+
+            return $this->successResponseWithLog(
+                'users_listed',
+                'Users retrieved successfully',
+                $users->through(fn($user) => new UserResource($user)),
+                200,
+                ['pagination' => $pagination]
+            );
+
         } catch (\Exception $e) {
-            Log::error('Error retrieving users: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to retrieve users');
+            return $this->errorResponseWithLog(
+                'users_list_error',
+                'Failed to retrieve users',
+                $e->getMessage(),
+                500,
+                'USERS_LIST_ERROR'
+            );
         }
     }
 
@@ -47,14 +69,27 @@ class UserController extends BaseController
         try {
             $user = $this->userService->createUser($request->validated());
 
-            return $this->successResponse(
-                new UserResource($user),
+            $this->logApiAction('user_created', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'organization_id' => $user->organization_id
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_created',
                 'User created successfully',
-                Response::HTTP_CREATED
+                new UserResource($user),
+                201
             );
+
         } catch (\Exception $e) {
-            Log::error('Error creating user: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to create user');
+            return $this->errorResponseWithLog(
+                'user_creation_error',
+                'Failed to create user',
+                $e->getMessage(),
+                500,
+                'USER_CREATION_ERROR'
+            );
         }
     }
 
@@ -64,19 +99,31 @@ class UserController extends BaseController
     public function show(int $id): JsonResponse
     {
         try {
-            $user = $this->userService->findById($id);
+            $user = $this->userService->getById($id, ['organization', 'roles']);
 
             if (!$user) {
-                return $this->notFoundResponse('User not found');
+                return $this->handleResourceNotFound('User', $id);
             }
 
-            return $this->successResponse(
-                new UserResource($user),
-                'User retrieved successfully'
+            $this->logApiAction('user_viewed', [
+                'user_id' => $id,
+                'viewed_by' => $this->getCurrentUser()?->id
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_viewed',
+                'User retrieved successfully',
+                new UserResource($user)
             );
+
         } catch (\Exception $e) {
-            Log::error('Error retrieving user: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to retrieve user');
+            return $this->errorResponseWithLog(
+                'user_view_error',
+                'Failed to retrieve user',
+                $e->getMessage(),
+                500,
+                'USER_VIEW_ERROR'
+            );
         }
     }
 
@@ -86,72 +133,71 @@ class UserController extends BaseController
     public function update(UpdateUserRequest $request, int $id): JsonResponse
     {
         try {
-            $user = $this->userService->findById($id);
+            $user = $this->userService->getById($id);
 
             if (!$user) {
-                return $this->notFoundResponse('User not found');
+                return $this->handleResourceNotFound('User', $id);
             }
 
             $this->userService->updateProfile($id, $request->validated());
-            $updatedUser = $this->userService->findById($id);
+            $updatedUser = $this->userService->getById($id, ['organization', 'roles']);
 
-            return $this->successResponse(
-                new UserResource($updatedUser),
-                'User updated successfully'
+            $this->logApiAction('user_updated', [
+                'user_id' => $id,
+                'updated_by' => $this->getCurrentUser()?->id,
+                'changes' => $request->validated()
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_updated',
+                'User updated successfully',
+                new UserResource($updatedUser)
             );
+
         } catch (\Exception $e) {
-            Log::error('Error updating user: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to update user');
+            return $this->errorResponseWithLog(
+                'user_update_error',
+                'Failed to update user',
+                $e->getMessage(),
+                500,
+                'USER_UPDATE_ERROR'
+            );
         }
     }
 
     /**
-     * Remove the specified user.
+     * Remove the specified user from storage.
      */
     public function destroy(int $id): JsonResponse
     {
         try {
-            $user = $this->userService->findById($id);
+            $user = $this->userService->getById($id);
 
             if (!$user) {
-                return $this->notFoundResponse('User not found');
+                return $this->handleResourceNotFound('User', $id);
             }
 
-            // Soft delete (deactivate) instead of hard delete
             $this->userService->softDeleteUser($id);
 
-            return $this->successResponse(
-                null,
+            $this->logApiAction('user_deleted', [
+                'user_id' => $id,
+                'deleted_by' => $this->getCurrentUser()?->id,
+                'user_email' => $user->email
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_deleted',
                 'User deleted successfully'
             );
+
         } catch (\Exception $e) {
-            Log::error('Error deleting user: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to delete user');
-        }
-    }
-
-    /**
-     * Search users.
-     */
-    public function search(Request $request): JsonResponse
-    {
-        try {
-            $query = $request->get('q', '');
-            $perPage = $this->getPerPage($request);
-
-            if (empty($query)) {
-                return $this->errorResponse('Search query is required');
-            }
-
-            $users = $this->userService->searchUsers($query, $perPage);
-
-            return $this->paginatedResponse(
-                $users->through(fn($user) => new UserResource($user)),
-                'Search completed successfully'
+            return $this->errorResponseWithLog(
+                'user_deletion_error',
+                'Failed to delete user',
+                $e->getMessage(),
+                500,
+                'USER_DELETION_ERROR'
             );
-        } catch (\Exception $e) {
-            Log::error('Error searching users: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to search users');
         }
     }
 
@@ -161,22 +207,35 @@ class UserController extends BaseController
     public function toggleStatus(int $id): JsonResponse
     {
         try {
-            $user = $this->userService->findById($id);
+            $user = $this->userService->getById($id);
 
             if (!$user) {
-                return $this->notFoundResponse('User not found');
+                return $this->handleResourceNotFound('User', $id);
             }
 
             $this->userService->toggleUserStatus($id);
-            $updatedUser = $this->userService->findById($id);
+            $updatedUser = $this->userService->getById($id, ['organization', 'roles']);
 
-            return $this->successResponse(
-                new UserResource($updatedUser),
-                'User status updated successfully'
+            $this->logApiAction('user_status_toggled', [
+                'user_id' => $id,
+                'toggled_by' => $this->getCurrentUser()?->id,
+                'new_status' => $updatedUser->status
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_status_toggled',
+                'User status toggled successfully',
+                new UserResource($updatedUser)
             );
+
         } catch (\Exception $e) {
-            Log::error('Error toggling user status: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to update user status');
+            return $this->errorResponseWithLog(
+                'user_status_toggle_error',
+                'Failed to toggle user status',
+                $e->getMessage(),
+                500,
+                'USER_STATUS_TOGGLE_ERROR'
+            );
         }
     }
 
@@ -188,13 +247,24 @@ class UserController extends BaseController
         try {
             $statistics = $this->userService->getUserStatistics();
 
-            return $this->successResponse(
-                $statistics,
-                'User statistics retrieved successfully'
+            $this->logApiAction('user_statistics_viewed', [
+                'viewed_by' => $this->getCurrentUser()?->id
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_statistics_viewed',
+                'User statistics retrieved successfully',
+                $statistics
             );
+
         } catch (\Exception $e) {
-            Log::error('Error retrieving user statistics: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to retrieve user statistics');
+            return $this->errorResponseWithLog(
+                'user_statistics_error',
+                'Failed to retrieve user statistics',
+                $e->getMessage(),
+                500,
+                'USER_STATISTICS_ERROR'
+            );
         }
     }
 
@@ -216,38 +286,109 @@ class UserController extends BaseController
                 $request->data
             );
 
-            return $this->successResponse(
-                ['affected_rows' => $affected],
-                'Users updated successfully'
+            $this->logApiAction('users_bulk_updated', [
+                'affected_users' => $affected,
+                'updated_by' => $this->getCurrentUser()?->id,
+                'changes' => $request->data
+            ]);
+
+            return $this->successResponseWithLog(
+                'users_bulk_updated',
+                'Users updated successfully',
+                ['affected_count' => $affected]
             );
+
+        } catch (ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error bulk updating users: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to update users');
+            return $this->errorResponseWithLog(
+                'users_bulk_update_error',
+                'Failed to bulk update users',
+                $e->getMessage(),
+                500,
+                'USERS_BULK_UPDATE_ERROR'
+            );
         }
     }
 
     /**
-     * Restore soft deleted user.
+     * Restore a soft-deleted user.
      */
     public function restore(int $id): JsonResponse
     {
         try {
-            $user = $this->userService->findById($id);
+            $user = $this->userService->getById($id);
 
             if (!$user) {
-                return $this->notFoundResponse('User not found');
+                return $this->handleResourceNotFound('User', $id);
             }
 
             $this->userService->restoreUser($id);
-            $restoredUser = $this->userService->findById($id);
+            $restoredUser = $this->userService->getById($id, ['organization', 'roles']);
 
-            return $this->successResponse(
-                new UserResource($restoredUser),
-                'User restored successfully'
+            $this->logApiAction('user_restored', [
+                'user_id' => $id,
+                'restored_by' => $this->getCurrentUser()?->id
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_restored',
+                'User restored successfully',
+                new UserResource($restoredUser)
             );
+
         } catch (\Exception $e) {
-            Log::error('Error restoring user: ' . $e->getMessage());
-            return $this->serverErrorResponse('Failed to restore user');
+            return $this->errorResponseWithLog(
+                'user_restore_error',
+                'Failed to restore user',
+                $e->getMessage(),
+                500,
+                'USER_RESTORE_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Search users.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'query' => 'required|string|min:2',
+                'filters' => 'sometimes|array',
+                'limit' => 'sometimes|integer|min:1|max:100'
+            ]);
+
+            $results = $this->userService->searchUsers(
+                $request->get('query'),
+                $request->get('filters', []),
+                $request->get('limit', 20)
+            );
+
+            $this->logApiAction('users_searched', [
+                'query' => $request->query,
+                'filters' => $request->get('filters', []),
+                'results_count' => $results->count(),
+                'searched_by' => $this->getCurrentUser()?->id
+            ]);
+
+            return $this->successResponseWithLog(
+                'users_searched',
+                'Users search completed successfully',
+                $results->through(fn($user) => new UserResource($user))
+            );
+
+        } catch (ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'users_search_error',
+                'Failed to search users',
+                $e->getMessage(),
+                500,
+                'USERS_SEARCH_ERROR'
+            );
         }
     }
 }
