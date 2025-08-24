@@ -89,16 +89,34 @@ class AuthResource extends JsonResource
      */
     protected function getUserPermissions($user): array
     {
-        if (!$user || !method_exists($user, 'getAllPermissions')) {
+        if (!$user) {
             return [];
         }
 
         try {
-            return $user->getAllPermissions()
-                       ->pluck('name')
-                       ->toArray();
+            // Get permissions from user's permissions field (array)
+            $directPermissions = $user->permissions ?? [];
+
+            // Get permissions from roles if available
+            $rolePermissions = [];
+            if (method_exists($user, 'getAllPermissions')) {
+                $rolePermissions = $user->getAllPermissions()
+                                       ->pluck('code')
+                                       ->toArray();
+            }
+
+            // If no role permissions found, try to get from loaded roles
+            if (empty($rolePermissions) && $user->relationLoaded('roles')) {
+                $rolePermissions = $user->roles->flatMap(function ($role) {
+                    return $role->permissions->pluck('code')->toArray();
+                })->toArray();
+            }
+
+            // Merge and return unique permissions
+            $allPermissions = array_merge($directPermissions, $rolePermissions);
+            return array_values(array_unique($allPermissions));
         } catch (\Exception $e) {
-            return [];
+            return $user->permissions ?? [];
         }
     }
 

@@ -4,14 +4,14 @@ import { useNavigate, Link } from 'react-router-dom';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
-  const { login, testUsers, isLoading: authLoading } = useAuth();
+  const { login, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   console.log('🔐 Login component rendering...');
@@ -20,14 +20,16 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.username.trim()) {
-      newErrors.username = 'Username is required';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 3) {
-      newErrors.password = 'Password must be at least 3 characters';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
     }
 
     setErrors(newErrors);
@@ -46,23 +48,43 @@ const Login = () => {
     setErrors({});
 
     try {
-      const result = await login(formData.username, formData.password);
+      // Prepare credentials for email login
+      const credentials = { email: formData.email, password: formData.password };
+
+      const result = await login(credentials.email, credentials.password);
       if (result.success) {
         console.log('✅ Login successful, redirecting...');
 
         // Redirect based on role
+        console.log('🔄 Login redirect - User role:', result.user.role);
+
         switch (result.user.role) {
-          case 'superadmin':
+          case 'super_admin':
+            console.log('🔄 Redirecting to /superadmin');
             navigate('/superadmin');
             break;
-          case 'organization_admin':
+          case 'org_admin':
+            console.log('🔄 Redirecting to /dashboard');
             navigate('/dashboard');
             break;
           case 'agent':
+            console.log('🔄 Redirecting to /agent');
             navigate('/agent');
             break;
-          default:
+          case 'customer':
+            console.log('🔄 Redirecting to /dashboard');
             navigate('/dashboard');
+            break;
+          default:
+            console.log('🔄 Default redirect - checking permissions');
+            // Fallback based on permissions
+            if (result.user.permissions && result.user.permissions.includes('*')) {
+              console.log('🔄 Redirecting to /superadmin (permission fallback)');
+              navigate('/superadmin');
+            } else {
+              console.log('🔄 Redirecting to /dashboard (default fallback)');
+              navigate('/dashboard');
+            }
         }
       }
     } catch (error) {
@@ -84,14 +106,16 @@ const Login = () => {
     }
   };
 
-  // Handle demo user login
+  // Handle demo user login with email only
   const handleDemoLogin = (demoUser) => {
     setFormData({
-      username: demoUser.username,
+      email: demoUser.email,
       password: demoUser.password
     });
     setErrors({});
   };
+
+
 
   // Handle key press events
   const handleKeyPress = (e) => {
@@ -100,11 +124,11 @@ const Login = () => {
     }
   };
 
-  // Auto-focus username field on mount
+  // Auto-focus email field on mount
   useEffect(() => {
-    const usernameInput = document.getElementById('username');
-    if (usernameInput) {
-      usernameInput.focus();
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+      emailInput.focus();
     }
   }, []);
 
@@ -120,32 +144,34 @@ const Login = () => {
         </p>
       </div>
 
+
+
       {/* Login Form */}
       <form className="space-y-6" onSubmit={handleSubmit} noValidate>
-        {/* Username Field */}
+        {/* Email Field */}
         <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-            Username
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            Email Address
           </label>
           <div className="relative">
             <input
-              id="username"
-              name="username"
-              type="text"
+              id="email"
+              name="email"
+              type="email"
               required
-              value={formData.username}
+              value={formData.email}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               className={`
                 appearance-none block w-full px-4 py-3 border rounded-lg shadow-sm
                 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                 sm:text-sm transition-colors duration-200
-                ${errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}
+                ${errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}
               `}
-              placeholder="Enter your username"
+              placeholder="Enter your email address"
               disabled={isLoading || authLoading}
             />
-            {errors.username && (
+            {errors.email && (
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -153,12 +179,12 @@ const Login = () => {
               </div>
             )}
           </div>
-          {errors.username && (
+          {errors.email && (
             <p className="mt-2 text-sm text-red-600 flex items-center">
               <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
-              {errors.username}
+              {errors.email}
             </p>
           )}
         </div>
@@ -279,31 +305,90 @@ const Login = () => {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-3">
-          {testUsers.map((user) => (
-            <button
-              key={user.id}
-              onClick={() => handleDemoLogin(user)}
-              disabled={isLoading || authLoading}
-              className={`
-                w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300
-                rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700
-                transition-all duration-200 hover:bg-gray-50 hover:border-gray-400
-                disabled:opacity-50 disabled:cursor-not-allowed
-                ${isLoading || authLoading ? 'cursor-not-allowed' : 'cursor-pointer'}
-              `}
-            >
-              <div className="text-center">
-                <div className="font-semibold text-gray-900 mb-1">
-                  {user.role.replace('_', ' ').toUpperCase()}
-                </div>
-                <div className="text-xs text-gray-500">
-                  <span className="font-mono">{user.username}</span>
-                  <span className="mx-2">•</span>
-                  <span className="font-mono">{user.password}</span>
-                </div>
+          {/* Unified Auth Demo Users */}
+          <button
+            onClick={() => handleDemoLogin({ email: 'admin@test.com', password: 'Password123!' })}
+            disabled={isLoading || authLoading}
+            className={`
+              w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300
+              rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700
+              transition-all duration-200 hover:bg-gray-50 hover:border-gray-400
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${isLoading || authLoading ? 'cursor-not-allowed' : 'cursor-pointer'}
+            `}
+          >
+            <div className="text-center">
+              <div className="font-semibold text-gray-900 mb-1">ORGANIZATION ADMIN</div>
+              <div className="text-xs text-gray-500">
+                <span className="font-mono">admin@test.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">Password123!</span>
               </div>
-            </button>
-          ))}
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleDemoLogin({ email: 'customer@test.com', password: 'Password123!' })}
+            disabled={isLoading || authLoading}
+            className={`
+              w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300
+              rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700
+              transition-all duration-200 hover:bg-gray-50 hover:border-gray-400
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${isLoading || authLoading ? 'cursor-not-allowed' : 'cursor-pointer'}
+            `}
+          >
+            <div className="text-center">
+              <div className="font-semibold text-gray-900 mb-1">CUSTOMER</div>
+              <div className="text-xs text-gray-500">
+                <span className="font-mono">customer@test.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">Password123!</span>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleDemoLogin({ email: 'agent@test.com', password: 'Password123!' })}
+            disabled={isLoading || authLoading}
+            className={`
+              w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300
+              rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700
+              transition-all duration-200 hover:bg-gray-50 hover:border-gray-400
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${isLoading || authLoading ? 'cursor-not-allowed' : 'cursor-pointer'}
+            `}
+          >
+            <div className="text-center">
+              <div className="font-semibold text-gray-900 mb-1">AGENT</div>
+              <div className="text-xs text-gray-500">
+                <span className="font-mono">agent@test.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">Password123!</span>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleDemoLogin({ email: 'superadmin@test.com', password: 'Password123!' })}
+            disabled={isLoading || authLoading}
+            className={`
+              w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300
+              rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700
+              transition-all duration-200 hover:bg-gray-50 hover:border-gray-400
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${isLoading || authLoading ? 'cursor-not-allowed' : 'cursor-pointer'}
+            `}
+          >
+            <div className="text-center">
+              <div className="font-semibold text-gray-900 mb-1">SUPER ADMIN</div>
+              <div className="text-xs text-gray-500">
+                <span className="font-mono">superadmin@test.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">Password123!</span>
+              </div>
+            </div>
+          </button>
         </div>
       </div>
 

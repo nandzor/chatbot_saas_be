@@ -131,6 +131,24 @@ Route::prefix('v1')->group(function () {
                 return response()->json(['message' => 'Performance analytics endpoint - to be implemented']);
             });
         });
+
+        // Role Management routes
+        Route::prefix('roles')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'store']);
+            Route::get('/available', [\App\Http\Controllers\Api\RoleManagementController::class, 'getAvailableRoles']);
+            Route::get('/statistics', [\App\Http\Controllers\Api\RoleManagementController::class, 'statistics']);
+
+            Route::prefix('{id}')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'show']);
+                Route::put('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'update']);
+                Route::delete('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'destroy']);
+                Route::get('/users', [\App\Http\Controllers\Api\RoleManagementController::class, 'getUsers']);
+            });
+
+            Route::post('/assign', [\App\Http\Controllers\Api\RoleManagementController::class, 'assignRole']);
+            Route::post('/revoke', [\App\Http\Controllers\Api\RoleManagementController::class, 'revokeRole']);
+        });
     });
 });
 

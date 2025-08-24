@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { authService } from '@/services/AuthService';
 
 // Constants for better maintainability
 const STORAGE_KEYS = {
@@ -7,11 +8,7 @@ const STORAGE_KEYS = {
   THEME: 'chatbot_theme'
 };
 
-const USER_ROLES = {
-  SUPERADMIN: 'superadmin',
-  ORGANIZATION_ADMIN: 'organization_admin',
-  AGENT: 'agent'
-};
+
 
 // Safe import utilities with fallbacks
 const safeImport = (importPath, fallback) => {
@@ -23,72 +20,7 @@ const safeImport = (importPath, fallback) => {
   }
 };
 
-// Avatar utility with fallback
-const getUserAvatarData = (email, name) => {
-  try {
-    const { getUserAvatarData: avatarFn } = safeImport('@/utils/avatarUtils', {});
-    if (avatarFn) {
-      return avatarFn(email, name);
-    }
-  } catch {
-    // Fallback avatar generation
-  }
 
-  // Default fallback
-  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
-  const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500'];
-  const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-  return {
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128`,
-    initials,
-    color: randomColor
-  };
-};
-
-// Test users data
-export const testUsers = [
-  {
-    id: 1,
-    username: 'superadmin',
-    password: 'super123',
-    name: 'Super Administrator',
-    email: 'superadmin@system.com',
-    role: USER_ROLES.SUPERADMIN,
-    avatar: getUserAvatarData('superadmin@system.com', 'Super Administrator').avatar,
-    permissions: ['*'], // All permissions
-    description: 'Full system access across all organizations',
-    organizationId: null,
-    organizationName: null
-  },
-  {
-    id: 2,
-    username: 'orgadmin',
-    password: 'admin123',
-    name: 'Ahmad Rahman',
-    email: 'ahmad.rahman@company.com',
-    role: USER_ROLES.ORGANIZATION_ADMIN,
-    organizationId: 'org-001',
-    organizationName: 'PT Teknologi Nusantara',
-    avatar: getUserAvatarData('ahmad.rahman@company.com', 'Ahmad Rahman').avatar,
-    permissions: ['handle_chats', 'manage_users', 'manage_agents', 'manage_settings', 'view_analytics', 'manage_billing', 'manage_automations'],
-    description: 'Organization administrator with full org management access'
-  },
-  {
-    id: 3,
-    username: 'agent1',
-    password: 'agent123',
-    name: 'Sari Dewi',
-    email: 'sari.dewi@company.com',
-    role: USER_ROLES.AGENT,
-    organizationId: 'org-001',
-    organizationName: 'PT Teknologi Nusantara',
-    avatar: getUserAvatarData('sari.dewi@company.com', 'Sari Dewi').avatar,
-    specialization: 'Customer Support',
-    permissions: ['handle_chats', 'view_conversations', 'update_profile'],
-    description: 'Customer support agent with chat handling capabilities'
-  }
-];
 
 // Context creation
 const AuthContext = createContext();
@@ -108,8 +40,7 @@ export const useAuth = () => {
       updateUser: () => {},
       checkAuth: () => Promise.resolve(false),
       hasPermission: () => false,
-      isRole: () => false,
-      testUsers: []
+      isRole: () => false
     };
   }
   return context;
@@ -171,40 +102,48 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
-  // Login function with comprehensive error handling
-  const login = useCallback(async (username, password) => {
+  // Login function with unified auth support
+  const login = useCallback(async (usernameOrEmail, password) => {
     setIsLoading(true);
     setError(null);
 
     try {
       // Input validation
-      if (!username || !password) {
-        throw new Error('Username and password are required');
+      if (!usernameOrEmail || !password) {
+        throw new Error('Username/email and password are required');
       }
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Prepare credentials for unified auth
+      const credentials = {
+        password,
+        ...(usernameOrEmail.includes('@') ? { email: usernameOrEmail } : { username: usernameOrEmail })
+      };
 
-      // Find user in test users
-      const foundUser = testUsers.find(
-        u => u.username === username && u.password === password
-      );
+      // Call unified auth service
+      const response = await authService.login(credentials);
 
-      if (foundUser) {
-        // Remove password from user object for security
-        const { password: _, ...userWithoutPassword } = foundUser;
+      if (response.success) {
+        const userData = response.data.user;
 
-        // Add session metadata
+                // Add session metadata
         const userWithSession = {
-          ...userWithoutPassword,
+          ...userData,
           lastLogin: new Date().toISOString(),
+          authMethod: response.data.auth_method || 'jwt',
+          tokens: {
+            access_token: response.data.access_token,
+            refresh_token: response.data.refresh_token,
+            sanctum_token: response.data.sanctum_token,
+          },
           sessionId: `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         };
 
+        // Update state
         setUser(userWithSession);
         setIsAuthenticated(true);
+        setError(null);
 
-        // Save to localStorage with error handling
+        // Save to localStorage
         try {
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userWithSession));
           localStorage.setItem(STORAGE_KEYS.SESSION, userWithSession.sessionId);
@@ -213,26 +152,38 @@ export const AuthProvider = ({ children }) => {
           // Continue without storage - user is still logged in
         }
 
-        toaster.addToast(`Welcome back, ${userWithSession.name}!`, 'success');
-        console.log('✅ Login successful:', userWithSession.username);
+        toaster.addToast(`Welcome back, ${userWithSession.full_name || userWithSession.name}!`, 'success');
+        console.log('✅ Login successful:', userWithSession.username || userWithSession.email);
 
         return { success: true, user: userWithSession };
       } else {
-        throw new Error('Invalid username or password');
+        throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
       console.error('❌ Login error:', error);
-      setError(error.message || 'Login failed');
-      toaster.addToast(error.message || 'Login failed', 'error');
+
+      // Handle unified auth errors
+      if (error.response?.data) {
+        const authError = authService.handleAuthError(error);
+        setError(authError.message);
+        toaster.addToast(authError.message, 'error');
+      } else {
+        setError(error.message || 'Login failed');
+        toaster.addToast(error.message || 'Login failed', 'error');
+      }
+
       throw error;
     } finally {
       setIsLoading(false);
     }
   }, [toaster]);
 
-  // Logout function
-  const logout = useCallback(() => {
+  // Logout function with unified auth support
+  const logout = useCallback(async () => {
     try {
+      // Call unified auth logout
+      await authService.logout();
+
       setUser(null);
       setIsAuthenticated(false);
       setError(null);
@@ -246,6 +197,13 @@ export const AuthProvider = ({ children }) => {
       console.log('✅ User logged out');
     } catch (error) {
       console.error('❌ Logout error:', error);
+      // Even if API call fails, clear local state
+      setUser(null);
+      setIsAuthenticated(false);
+      setError(null);
+      localStorage.removeItem(STORAGE_KEYS.USER);
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
+      sessionStorage.clear();
     }
   }, [toaster]);
 
@@ -274,27 +232,54 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user, toaster]);
 
-  // Check authentication status
+  // Check authentication status with unified auth
   const checkAuth = useCallback(async () => {
     try {
-      const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-      const sessionId = localStorage.getItem(STORAGE_KEYS.SESSION);
+      // Check if user has valid tokens
+      if (!authService.isAuthenticated()) {
+        console.log('❌ No valid tokens found');
+        return false;
+      }
 
-      if (savedUser && sessionId) {
-        const userData = JSON.parse(savedUser);
+      // Try to get current user from API
+      try {
+        const userData = await authService.getCurrentUser();
 
-        // Basic session validation
-        if (userData.sessionId === sessionId) {
+        if (userData) {
+          // Update user data with latest info
+          const updatedUser = {
+            ...userData,
+            lastLogin: new Date().toISOString(),
+            authMethod: localStorage.getItem('auth_method') || 'jwt',
+          };
+
+          setUser(updatedUser);
+          setIsAuthenticated(true);
+          setError(null);
+
+          // Update localStorage
+          try {
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+          } catch (storageError) {
+            console.warn('⚠️ Failed to update localStorage:', storageError);
+          }
+
+          console.log('✅ Authentication validated:', updatedUser.username || updatedUser.email);
+          return true;
+        }
+      } catch (apiError) {
+        console.warn('⚠️ API validation failed, checking local storage');
+
+        // Fallback to local storage validation
+        const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
+        if (savedUser) {
+          const userData = JSON.parse(savedUser);
           setUser(userData);
           setIsAuthenticated(true);
           return true;
-        } else {
-          // Session mismatch, clear everything
-          console.warn('⚠️ Session mismatch detected, clearing auth');
-          logout();
-          return false;
         }
       }
+
       return false;
     } catch (error) {
       console.error('❌ Check auth error:', error);
@@ -303,15 +288,141 @@ export const AuthProvider = ({ children }) => {
     }
   }, [logout]);
 
-  // Permission checking
-  const hasPermission = useCallback((permission) => {
-    if (!user || !user.permissions) return false;
-    return user.permissions.includes('*') || user.permissions.includes(permission);
+    // Permission checking - integrated with backend permissions (using codes)
+  const hasPermission = useCallback((permissionCode) => {
+    if (!user) return false;
+
+    // Check if user has super admin role (all permissions)
+    if (user.role === 'super_admin') return true;
+
+    // Check permissions array from backend (codes)
+    if (user.permissions && Array.isArray(user.permissions)) {
+      // Super admin wildcard
+      if (user.permissions.includes('*')) return true;
+      return user.permissions.includes(permissionCode);
+    }
+
+    return false;
   }, [user]);
 
-  // Role checking
+  // Multiple permission check (any)
+  const hasAnyPermission = useCallback((permissionCodes) => {
+    if (!user || !Array.isArray(permissionCodes)) return false;
+
+    // Check if user has super admin role (all permissions)
+    if (user.role === 'super_admin') return true;
+
+    // Check permissions array from backend
+    if (user.permissions && Array.isArray(user.permissions)) {
+      // Super admin wildcard
+      if (user.permissions.includes('*')) return true;
+      return permissionCodes.some(code => user.permissions.includes(code));
+    }
+
+    return false;
+  }, [user, hasPermission]);
+
+  // All permissions check
+  const hasAllPermissions = useCallback((permissionCodes) => {
+    if (!user || !Array.isArray(permissionCodes)) return false;
+
+    // Check if user has super admin role (all permissions)
+    if (user.role === 'super_admin') return true;
+
+    // Check permissions array from backend
+    if (user.permissions && Array.isArray(user.permissions)) {
+      // Super admin wildcard
+      if (user.permissions.includes('*')) return true;
+      return permissionCodes.every(code => user.permissions.includes(code));
+    }
+
+    return false;
+  }, [user, hasPermission]);
+
+  // Role checking - integrated with backend roles
   const isRole = useCallback((role) => {
-    return user?.role === role;
+    if (!user) return false;
+
+    console.log('🔍 Checking role:', { required: role, userRole: user.role, userRoles: user.roles });
+
+    // Check direct role assignment
+    if (user.role === role) {
+      console.log('✅ Direct role match:', { required: role, userRole: user.role });
+      return true;
+    }
+
+    // Role mapping - using exact backend keys
+    const roleEquivalents = {
+      'org_admin': ['org_admin'],
+      'super_admin': ['super_admin'],
+      'agent': ['agent'],
+      'customer': ['customer']
+    };
+
+    // Check if user role is equivalent to required role
+    const equivalents = roleEquivalents[role] || [role];
+    if (equivalents.includes(user.role)) {
+      console.log('✅ Role equivalent match:', { required: role, userRole: user.role, equivalents });
+      return true;
+    }
+
+    // Check roles array from backend
+    if (user.roles && Array.isArray(user.roles)) {
+      const hasRole = user.roles.some(userRole => {
+        const roleName = typeof userRole === 'object' ? userRole.name : userRole;
+        const match = equivalents.includes(roleName);
+        if (match) {
+          console.log('✅ Role in array match:', { required: role, found: roleName });
+        }
+        return match;
+      });
+      if (!hasRole) {
+        console.log('❌ No role match found in roles array:', { required: role, userRoles: user.roles });
+      }
+      return hasRole;
+    }
+
+    console.log('❌ Role check failed:', { required: role, userRole: user.role, userRoles: user.roles });
+    return false;
+  }, [user]);
+
+  // Get user permissions from backend
+  const getUserPermissions = useCallback(() => {
+    if (!user) return [];
+
+    // Super admin has all permissions
+    if (user.role === 'super_admin') return ['*'];
+
+    // Collect permissions from direct assignment
+    let permissions = user.permissions || [];
+
+    // Collect permissions from roles
+    if (user.roles && Array.isArray(user.roles)) {
+      user.roles.forEach(role => {
+        if (role.permissions && Array.isArray(role.permissions)) {
+          permissions = [...permissions, ...role.permissions];
+        }
+      });
+    }
+
+    // Remove duplicates
+    return [...new Set(permissions)];
+  }, [user]);
+
+  // Get user roles from backend
+  const getUserRoles = useCallback(() => {
+    if (!user) return [];
+
+    let roles = [user.role]; // Primary role
+
+    // Add additional roles
+    if (user.roles && Array.isArray(user.roles)) {
+      const additionalRoles = user.roles.map(role => role.name || role);
+      roles = [...roles, ...additionalRoles];
+    }
+
+    // Remove duplicates
+    return [...new Set(roles)];
   }, [user]);
 
   // Context value with memoization
@@ -325,14 +436,19 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     checkAuth,
     hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
     isRole,
-    testUsers
-  }), [user, isLoading, isAuthenticated, error, login, logout, updateUser, checkAuth, hasPermission, isRole]);
+    getUserPermissions,
+    getUserRoles
+  }), [user, isLoading, isAuthenticated, error, login, logout, updateUser, checkAuth, hasPermission, hasAnyPermission, hasAllPermissions, isRole, getUserPermissions, getUserRoles]);
 
   // Development logging
   if (import.meta.env.DEV) {
     console.log('🔐 AuthContext state:', {
       user: user?.username,
+      userRole: user?.role,
+      userRoles: user?.roles,
       isAuthenticated,
       isLoading,
       error

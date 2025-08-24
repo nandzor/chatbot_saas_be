@@ -23,6 +23,9 @@ import Automations from '@/pages/automations/Automations';
 import Settings from '@/pages/settings/Settings';
 import ProfileSettings from '@/features/shared/ProfileSettings';
 
+// Role Management Pages
+import RoleList from '@/pages/roles/RoleList';
+
 // Super Admin Pages
 import SuperAdminDashboard from '@/pages/superadmin/Dashboard';
 import Financials from '@/pages/superadmin/Financials';
@@ -91,47 +94,55 @@ export const router = createBrowserRouter([
       {
         path: '/dashboard',
         element: (
-          <RoleBasedRoute requiredRole="organization_admin">
+          <RoleBasedRoute requiredRole="org_admin">
             <DashboardLayout />
           </RoleBasedRoute>
         ),
         children: [
           { index: true, element: <Dashboard /> },
-          { 
-            path: 'inbox', 
+          {
+            path: 'inbox',
             element: (
               <RoleBasedRoute requiredPermission="handle_chats">
                 <Inbox />
               </RoleBasedRoute>
-            ) 
+            )
           },
-          { 
-            path: 'analytics', 
+          {
+            path: 'analytics',
             element: (
               <RoleBasedRoute requiredPermission="view_analytics">
                 <Analytics />
               </RoleBasedRoute>
-            ) 
+            )
           },
           { path: 'knowledge', element: <Knowledge /> },
-          { 
-            path: 'automations', 
+          {
+            path: 'automations',
             element: (
               <RoleBasedRoute requiredPermission="manage_settings">
                 <Automations />
               </RoleBasedRoute>
-            ) 
+            )
           },
-          { 
-            path: 'settings', 
+          {
+            path: 'settings',
             element: (
               <RoleBasedRoute requiredPermission="manage_settings">
                 <Settings />
               </RoleBasedRoute>
-            ) 
+            )
           },
-          { 
-            path: 'profile', 
+          {
+            path: 'roles',
+            element: (
+              <RoleBasedRoute requiredPermission="roles.view">
+                <RoleList />
+              </RoleBasedRoute>
+            )
+          },
+          {
+            path: 'profile',
             element: <ProfileSettings />
           },
         ],
@@ -141,7 +152,7 @@ export const router = createBrowserRouter([
       {
         path: '/superadmin',
         element: (
-          <RoleBasedRoute requiredRole="superadmin">
+          <RoleBasedRoute requiredRole="super_admin">
             <SuperAdminLayout />
           </RoleBasedRoute>
         ),
@@ -150,18 +161,18 @@ export const router = createBrowserRouter([
           { path: 'financials', element: <Financials /> },
           { path: 'clients', element: <ClientManagement /> },
           { path: 'system', element: <SystemSettings /> },
-          
+
           // Client Success & Management Routes
           { path: 'client-health', element: <ClientHealthDashboard /> },
           { path: 'onboarding', element: <OnboardingPipeline /> },
           { path: 'automation', element: <AutomationPlaybooks /> },
           { path: 'communication', element: <ClientCommunicationCenter /> },
-          
+
           // Platform Engineering & DevOps Routes
           { path: 'platform/configuration', element: <PlatformConfiguration /> },
           { path: 'platform/health', element: <ServiceInfrastructureHealth /> },
           { path: 'platform/security', element: <SecurityCompliance /> },
-          
+
           // Nested Client Routes - Inside SuperAdmin Layout
           { path: 'clients/:clientId', element: <ClientLayout /> },
           { path: 'clients/:clientId/users', element: <ClientLayout /> },

@@ -97,8 +97,11 @@ class AuthService
         // Log successful login
         $this->logAuthEvent('login_success', $user, $request);
 
+        // Load user with roles and permissions for complete response
+        $userWithRelations = $user->fresh()->load(['roles.permissions', 'organization']);
+
         return array_merge($tokenData, [
-            'user' => $user->fresh(),
+            'user' => $userWithRelations,
             'session' => $session,
             'expires_in' => $this->getTokenTTL($remember),
         ]);

@@ -3,7 +3,7 @@ import axios from 'axios';
 class AuthService {
   constructor() {
     this.api = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
+      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:9000/api',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -74,15 +74,30 @@ class AuthService {
 
   /**
    * Login user with unified authentication
+   * Supports both email and username login
    */
   async login(credentials) {
     try {
-      const response = await this.api.post('/auth/login', credentials);
+      // Validate credentials
+      if (!credentials.email && !credentials.username) {
+        throw new Error('Email or username is required');
+      }
+      if (!credentials.password) {
+        throw new Error('Password is required');
+      }
+
+      // Prepare login data
+      const loginData = {
+        password: credentials.password,
+        ...(credentials.email ? { email: credentials.email } : { username: credentials.username })
+      };
+
+      const response = await this.api.post('/auth/login', loginData);
 
       if (response.data.success) {
         const { data } = response.data;
 
-        // Store tokens
+        // Store tokens with unified auth support
         this.updateTokens({
           access_token: data.access_token,
           refresh_token: data.refresh_token,
@@ -90,11 +105,19 @@ class AuthService {
           token_type: data.token_type,
           expires_in: data.expires_in,
           refresh_expires_in: data.refresh_expires_in,
+          auth_method: data.auth_method || 'jwt', // Track which auth method was used
         });
 
-        // Set default headers
+        // Set default headers for unified auth
         this.api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
-        this.api.defaults.headers.common['X-Sanctum-Token'] = data.sanctum_token;
+        if (data.sanctum_token) {
+          this.api.defaults.headers.common['X-Sanctum-Token'] = data.sanctum_token;
+        }
+
+        // Store user data
+        if (data.user) {
+          localStorage.setItem('chatbot_user', JSON.stringify(data.user));
+        }
       }
 
       return response.data;
@@ -181,25 +204,48 @@ class AuthService {
   }
 
   /**
-   * Update tokens in localStorage and headers
+   * Update tokens in localStorage and headers with unified auth support
    */
   updateTokens(tokens) {
-    localStorage.setItem('jwt_token', tokens.access_token);
-    localStorage.setItem('refresh_token', tokens.refresh_token);
-    localStorage.setItem('sanctum_token', tokens.sanctum_token);
-    localStorage.setItem('token_expires_at', new Date(Date.now() + tokens.expires_in * 1000).toISOString());
-    localStorage.setItem('refresh_expires_at', new Date(Date.now() + tokens.refresh_expires_in * 1000).toISOString());
+    // Store JWT token
+    if (tokens.access_token) {
+      localStorage.setItem('jwt_token', tokens.access_token);
+      localStorage.setItem('token_expires_at', new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString());
+    }
+
+    // Store refresh token
+    if (tokens.refresh_token) {
+      localStorage.setItem('refresh_token', tokens.refresh_token);
+      localStorage.setItem('refresh_expires_at', new Date(Date.now() + (tokens.refresh_expires_in || 86400) * 1000).toISOString());
+    }
+
+    // Store Sanctum token (fallback)
+    if (tokens.sanctum_token) {
+      localStorage.setItem('sanctum_token', tokens.sanctum_token);
+    }
+
+    // Store auth method for debugging
+    if (tokens.auth_method) {
+      localStorage.setItem('auth_method', tokens.auth_method);
+    }
+
+    // Store unified auth metadata
+    localStorage.setItem('unified_auth_enabled', 'true');
+    localStorage.setItem('last_auth_update', new Date().toISOString());
   }
 
   /**
-   * Clear all tokens
+   * Clear all tokens and user data
    */
   clearTokens() {
-    localStorage.removeItem('jwt_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('sanctum_token');
-    localStorage.removeItem('token_expires_at');
-    localStorage.removeItem('refresh_expires_at');
+    // Clear all auth-related localStorage items
+    const authKeys = [
+      'jwt_token', 'refresh_token', 'sanctum_token',
+      'token_expires_at', 'refresh_expires_at', 'auth_method',
+      'unified_auth_enabled', 'last_auth_update', 'chatbot_user'
+    ];
+
+    authKeys.forEach(key => localStorage.removeItem(key));
 
     // Clear headers
     delete this.api.defaults.headers.common['Authorization'];
@@ -228,13 +274,106 @@ class AuthService {
   }
 
   /**
-   * Get current tokens
+   * Get current tokens with unified auth info
    */
   getTokens() {
     return {
       jwt: localStorage.getItem('jwt_token') || undefined,
       sanctum: localStorage.getItem('sanctum_token') || undefined,
       refresh: localStorage.getItem('refresh_token') || undefined,
+      auth_method: localStorage.getItem('auth_method') || 'jwt',
+      unified_auth_enabled: localStorage.getItem('unified_auth_enabled') === 'true',
+      last_auth_update: localStorage.getItem('last_auth_update'),
+    };
+  }
+
+  /**
+   * Check unified auth status and health
+   */
+  async checkUnifiedAuthHealth() {
+    try {
+      const response = await this.api.get('/auth/me');
+      return {
+        status: 'healthy',
+        auth_method: response.data.data?.auth_method || 'unknown',
+        user: response.data.data?.user,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        error: error.response?.data?.message || error.message,
+        auth_method: localStorage.getItem('auth_method') || 'unknown',
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  /**
+   * Handle unified auth errors with fallback strategies
+   */
+  handleAuthError(error) {
+    const errorResponse = error.response?.data;
+
+    // Handle specific error codes from backend
+    switch (errorResponse?.error_code) {
+      case 'TOKEN_EXPIRED':
+        return this.handleTokenExpired();
+      case 'TOKEN_INVALID':
+        return this.handleTokenInvalid();
+      case 'RATE_LIMIT_EXCEEDED':
+        return this.handleRateLimitExceeded(errorResponse);
+      case 'USER_LOCKED':
+        return this.handleUserLocked(errorResponse);
+      default:
+        return {
+          type: 'general',
+          message: errorResponse?.message || 'Authentication failed',
+          details: errorResponse?.errors || {}
+        };
+    }
+  }
+
+  /**
+   * Handle token expired with automatic refresh
+   */
+  async handleTokenExpired() {
+    try {
+      await this.refreshTokens();
+      return { type: 'refreshed', message: 'Token refreshed successfully' };
+    } catch (error) {
+      this.clearTokens();
+      return { type: 'expired', message: 'Session expired, please login again' };
+    }
+  }
+
+  /**
+   * Handle invalid token
+   */
+  handleTokenInvalid() {
+    this.clearTokens();
+    return { type: 'invalid', message: 'Invalid token, please login again' };
+  }
+
+  /**
+   * Handle rate limit exceeded
+   */
+  handleRateLimitExceeded(errorResponse) {
+    return {
+      type: 'rate_limit',
+      message: 'Too many requests, please try again later',
+      retryAfter: errorResponse?.retry_after || 60
+    };
+  }
+
+  /**
+   * Handle locked user
+   */
+  handleUserLocked(errorResponse) {
+    return {
+      type: 'locked',
+      message: 'Account is locked, please contact administrator',
+      lockedUntil: errorResponse?.locked_until
     };
   }
 

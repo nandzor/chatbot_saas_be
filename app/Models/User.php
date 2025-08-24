@@ -516,12 +516,24 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
-     * Check if user has specific permission.
+     * Check if user has specific permission (using codes).
      */
-    public function hasPermission(string $permission): bool
+    public function hasPermission(string $permissionCode): bool
     {
+        // Super admin has all permissions
+        if ($this->role === 'super_admin') {
+            return true;
+        }
+
+        // Check direct permissions (stored as codes in permissions field)
+        $directPermissions = $this->permissions ?? [];
+        if (in_array($permissionCode, $directPermissions)) {
+            return true;
+        }
+
+        // Check permissions from roles
         return $this->getAllPermissions()
-                   ->contains('code', $permission);
+                   ->contains('code', $permissionCode);
     }
 
     /**

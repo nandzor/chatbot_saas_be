@@ -95,24 +95,34 @@ class UserResource extends JsonResource
                 });
             }),
 
-            // Permissions (if loaded)
-            'permissions' => $this->when(
-                method_exists($this->resource, 'getAllPermissions'),
-                function () {
-                    try {
-                        return $this->getAllPermissions()->map(function ($permission) {
-                            return [
-                                'name' => $permission->name,
-                                'code' => $permission->code,
-                                'resource' => $permission->resource,
-                                'action' => $permission->action,
-                            ];
-                        });
-                    } catch (\Exception $e) {
-                        return [];
+            // Permissions - use codes for frontend compatibility
+            'permissions' => function () {
+                try {
+                    // Get permissions from user's permissions field (array of codes)
+                    $directPermissions = $this->permissions ?? [];
+
+                    // Get permissions from roles if available
+                    $rolePermissions = [];
+                    if (method_exists($this->resource, 'getAllPermissions')) {
+                        $rolePermissions = $this->getAllPermissions()
+                                               ->pluck('code')
+                                               ->toArray();
                     }
+
+                    // If no role permissions found, try to get from loaded roles
+                    if (empty($rolePermissions) && $this->relationLoaded('roles')) {
+                        $rolePermissions = $this->roles->flatMap(function ($role) {
+                            return $role->permissions->pluck('code')->toArray();
+                        })->toArray();
+                    }
+
+                    // Merge and return unique permission codes
+                    $allPermissions = array_merge($directPermissions, $rolePermissions);
+                    return array_values(array_unique($allPermissions));
+                } catch (\Exception $e) {
+                    return $this->permissions ?? [];
                 }
-            ),
+            },
 
             // Timestamps
             'created_at' => $this->created_at?->toISOString(),

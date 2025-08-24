@@ -2,18 +2,18 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import UserAvatar from '@/components/common/UserAvatar';
-import { 
-  Home, 
-  Building2, 
-  Users, 
-  CreditCard, 
-  Activity, 
+import {
+  Home,
+  Building2,
+  Users,
+  CreditCard,
+  Activity,
   Shield,
-  MessageSquare, 
-  BarChart3, 
-  BookOpen, 
-  Workflow, 
-  Settings, 
+  MessageSquare,
+  BarChart3,
+  BookOpen,
+  Workflow,
+  Settings,
   User,
   Bot,
   ChevronLeft,
@@ -28,10 +28,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
   const { user } = useAuth();
   const location = useLocation();
-  
-  const getSidebarItems = () => {
+
+    const getSidebarItems = () => {
+    // Use exact backend role keys
     switch(role) {
-      case 'superadmin':
+      case 'super_admin':
         return [
           { id: 'dashboard', label: 'Dashboard', icon: BarChart3, href: '/superadmin' },
           { id: 'financials', label: 'Financials', icon: DollarSign, href: '/superadmin/financials' },
@@ -41,7 +42,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
           { id: 'automation', label: 'Automation & Playbooks', icon: Zap, href: '/superadmin/automation' },
           { id: 'platform', label: 'Platform Engineering & DevOps', icon: Settings, href: '/superadmin/platform/configuration' }
         ];
-      case 'organization_admin':
+      case 'org_admin':
         return [
           { id: 'dashboard', label: 'Dashboard', icon: Home, href: '/dashboard' },
           { id: 'inbox', label: 'Inbox', icon: MessageSquare, href: '/dashboard/inbox' },
@@ -49,6 +50,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
           { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, href: '/dashboard/knowledge' },
           { id: 'automations', label: 'Automations', icon: Workflow, href: '/dashboard/automations' },
           { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' },
+          { id: 'roles', label: 'Role Management', icon: Shield, href: '/dashboard/roles' },
           { id: 'profile', label: 'Profile Settings', icon: User, href: '/dashboard/profile' }
         ];
       case 'agent':
@@ -66,7 +68,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
 
   const renderNavItem = (item) => {
     const Icon = item.icon;
-    
+
     // Special handling for dashboard items to prevent false active states
     let isActive = false;
     if (item.href === '/superadmin') {
@@ -82,7 +84,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
       // For other items, check if current path starts with the href
       isActive = location.pathname.startsWith(item.href);
     }
-    
+
     if (isCollapsed) {
       return (
         <div key={item.id} className="group relative">
@@ -90,7 +92,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
             to={item.href}
             className={`w-full flex items-center justify-center p-3 rounded-lg transition-all ${
               isActive
-                ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-primary border-l-4 border-primary' 
+                ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-primary border-l-4 border-primary'
                 : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
             }`}
             title={item.label}
@@ -111,7 +113,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
         to={item.href}
         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
           isActive
-            ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-primary border-l-4 border-primary' 
+            ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-primary border-l-4 border-primary'
             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
         }`}
       >
@@ -134,22 +136,23 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
           </div>
           {!isCollapsed && (
             <div>
-              <h1 className="text-lg font-bold text-foreground">ChatBot Pro</h1>
-              <p className="text-xs text-muted-foreground capitalize">
-                {role === 'superadmin' ? 'Super Admin' : 
-                 role === 'organization_admin' ? 'Organization Admin' : 
-                 role === 'agent' ? 'Agent' : role.replace('_', ' ')}
-              </p>
+                              <h1 className="text-lg font-bold text-foreground">ChatBot Pro</h1>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {role === 'super_admin' ? 'Super Admin' :
+                   role === 'org_admin' ? 'Organization Admin' :
+                   role === 'agent' ? 'Agent' :
+                   role === 'customer' ? 'Customer' : role.replace('_', ' ')}
+                </p>
             </div>
           )}
         </div>
-        
+
         {/* Navigation */}
         <nav className="space-y-2">
           {sidebarItems.map(renderNavItem)}
         </nav>
       </div>
-      
+
       {/* User Profile Section */}
       <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-border ${
         isCollapsed ? 'px-2' : ''
