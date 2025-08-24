@@ -5,182 +5,241 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 abstract class BaseController extends Controller
 {
     /**
-     * Default per page value for pagination.
-     */
-    protected int $defaultPerPage = 15;
-
-    /**
-     * Maximum per page value for pagination.
-     */
-    protected int $maxPerPage = 100;
-
-    /**
-     * Return a successful response.
+     * Success response with data
      */
     protected function successResponse(
-        mixed $data = null,
         string $message = 'Success',
-        int $statusCode = Response::HTTP_OK
+        mixed $data = null,
+        int $statusCode = Response::HTTP_OK,
+        array $meta = []
     ): JsonResponse {
-        return response()->json([
+        $response = [
             'success' => true,
             'message' => $message,
-            'data' => $data,
-        ], $statusCode);
+            'timestamp' => now()->toISOString(),
+        ];
+
+        if ($data !== null) {
+            $response['data'] = $data;
+        }
+
+        if (!empty($meta)) {
+            $response['meta'] = $meta;
+        }
+
+        return response()->json($response, $statusCode);
     }
 
     /**
-     * Return an error response.
+     * Error response with consistent format
      */
     protected function errorResponse(
         string $message = 'Error',
         mixed $detail = null,
-        int $statusCode = Response::HTTP_BAD_REQUEST
+        int $statusCode = Response::HTTP_BAD_REQUEST,
+        array $errors = []
     ): JsonResponse {
         $response = [
             'success' => false,
             'message' => $message,
+            'timestamp' => now()->toISOString(),
         ];
 
-        if ($detail) {
+        if ($detail !== null) {
             $response['detail'] = $detail;
         }
 
-        return response()->json($response, $statusCode);
-    }
-
-    /**
-     * Return an error response with debug information.
-     */
-    protected function errorResponseWithDebug(
-        string $message = 'Error',
-        int $statusCode = Response::HTTP_BAD_REQUEST,
-        mixed $errors = null,
-        ?\Exception $exception = null
-    ): JsonResponse {
-        $response = [
-            'success' => false,
-            'message' => $message,
-        ];
-
-        if ($errors) {
+        if (!empty($errors)) {
             $response['errors'] = $errors;
         }
 
-        // Add debug information in development environment
-        if (config('app.debug') && $exception) {
-            $response['debug'] = [
-                'message' => $exception->getMessage(),
-                'file' => $exception->getFile(),
-                'line' => $exception->getLine(),
-                'trace' => $exception->getTraceAsString(),
-            ];
-        }
-
         return response()->json($response, $statusCode);
     }
 
     /**
-     * Return a paginated response.
+     * Not found response
      */
-    protected function paginatedResponse(
-        $paginatedData,
-        string $message = 'Success'
+    protected function notFoundResponse(
+        string $message = 'Resource not found',
+        mixed $detail = null
     ): JsonResponse {
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => $paginatedData->items(),
-            'pagination' => [
-                'current_page' => $paginatedData->currentPage(),
-                'last_page' => $paginatedData->lastPage(),
-                'per_page' => $paginatedData->perPage(),
-                'total' => $paginatedData->total(),
-                'from' => $paginatedData->firstItem(),
-                'to' => $paginatedData->lastItem(),
-                'has_more_pages' => $paginatedData->hasMorePages(),
-            ],
-        ]);
+        return $this->errorResponse($message, $detail, Response::HTTP_NOT_FOUND);
     }
 
     /**
-     * Return a not found response.
+     * Unauthorized response
      */
-    protected function notFoundResponse(string $message = 'Resource not found'): JsonResponse
-    {
-        return $this->errorResponse($message, null, Response::HTTP_NOT_FOUND);
+    protected function unauthorizedResponse(
+        string $message = 'Unauthorized access',
+        mixed $detail = null
+    ): JsonResponse {
+        return $this->errorResponse($message, $detail, Response::HTTP_UNAUTHORIZED);
     }
 
     /**
-     * Return an unauthorized response.
+     * Forbidden response
      */
-    protected function unauthorizedResponse(string $message = 'Unauthorized'): JsonResponse
-    {
-        return $this->errorResponse($message, null, Response::HTTP_UNAUTHORIZED);
+    protected function forbiddenResponse(
+        string $message = 'Access forbidden',
+        mixed $detail = null
+    ): JsonResponse {
+        return $this->errorResponse($message, $detail, Response::HTTP_FORBIDDEN);
     }
 
     /**
-     * Return a forbidden response.
-     */
-    protected function forbiddenResponse(string $message = 'Forbidden'): JsonResponse
-    {
-        return $this->errorResponse($message, null, Response::HTTP_FORBIDDEN);
-    }
-
-    /**
-     * Return a validation error response.
+     * Validation error response
      */
     protected function validationErrorResponse(
-        array $errors,
-        string $message = 'Validation failed'
+        ValidationException $exception
     ): JsonResponse {
-        return $this->errorResponse($message, $errors, Response::HTTP_UNPROCESSABLE_ENTITY);
+        return $this->errorResponse(
+            'Validation failed',
+            $exception->errors(),
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
     }
 
     /**
-     * Return a server error response.
+     * Server error response
      */
-    protected function serverErrorResponse(string $message = 'Internal server error'): JsonResponse
-    {
-        return $this->errorResponse($message, null, Response::HTTP_INTERNAL_SERVER_ERROR);
+    protected function serverErrorResponse(
+        string $message = 'Internal server error',
+        mixed $detail = null
+    ): JsonResponse {
+        return $this->errorResponse($message, $detail, Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**
-     * Get the per page value from request.
+     * Created response
      */
-    protected function getPerPage(Request $request): int
-    {
-        $perPage = (int) $request->get('per_page', $this->defaultPerPage);
-
-        return min($perPage, $this->maxPerPage);
+    protected function createdResponse(
+        string $message = 'Resource created successfully',
+        mixed $data = null
+    ): JsonResponse {
+        return $this->successResponse($message, $data, Response::HTTP_CREATED);
     }
 
     /**
-     * Transform data using a resource.
+     * Updated response
      */
-    protected function transformData(mixed $data, string $resourceClass): mixed
-    {
-        if (is_null($data)) {
-            return null;
+    protected function updatedResponse(
+        string $message = 'Resource updated successfully',
+        mixed $data = null
+    ): JsonResponse {
+        return $this->successResponse($message, $data, Response::HTTP_OK);
+    }
+
+    /**
+     * Deleted response
+     */
+    protected function deletedResponse(
+        string $message = 'Resource deleted successfully'
+    ): JsonResponse {
+        return $this->successResponse($message, null, Response::HTTP_OK);
+    }
+
+    /**
+     * Paginated response with metadata
+     */
+    protected function paginatedResponse(
+        string $message = 'Data retrieved successfully',
+        mixed $data = null,
+        array $pagination = []
+    ): JsonResponse {
+        $meta = [
+            'pagination' => $pagination,
+            'timestamp' => now()->toISOString(),
+        ];
+
+        return $this->successResponse($message, $data, Response::HTTP_OK, $meta);
+    }
+
+    /**
+     * Log error with context
+     */
+    protected function logError(
+        string $message,
+        \Throwable $exception,
+        array $context = []
+    ): void {
+        $context = array_merge($context, [
+            'exception' => $exception->getMessage(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
+
+        Log::error($message, $context);
+    }
+
+    /**
+     * Handle exceptions consistently
+     */
+    protected function handleException(
+        \Throwable $exception,
+        string $operation = 'operation',
+        array $context = []
+    ): JsonResponse {
+        $this->logError("Error during {$operation}", $exception, $context);
+
+        if ($exception instanceof ValidationException) {
+            return $this->validationErrorResponse($exception);
         }
 
-        return new $resourceClass($data);
+        if (config('app.debug')) {
+            return $this->serverErrorResponse(
+                'An error occurred',
+                $exception->getMessage()
+            );
+        }
+
+        return $this->serverErrorResponse('An unexpected error occurred');
     }
 
     /**
-     * Transform collection using a resource.
+     * Get pagination parameters from request
      */
-    protected function transformCollection(mixed $collection, string $resourceClass): mixed
+    protected function getPaginationParams(Request $request): array
     {
-        if (is_null($collection) || $collection->isEmpty()) {
-            return [];
+        return [
+            'page' => (int) $request->get('page', 1),
+            'per_page' => (int) $request->get('per_page', 15),
+            'sort_by' => $request->get('sort_by', 'created_at'),
+            'sort_order' => $request->get('sort_order', 'desc'),
+        ];
+    }
+
+    /**
+     * Get filter parameters from request
+     */
+    protected function getFilterParams(Request $request, array $allowedFilters = []): array
+    {
+        if (empty($allowedFilters)) {
+            return $request->only(['search', 'status', 'category', 'is_active']);
         }
 
-        return $resourceClass::collection($collection);
+        return $request->only($allowedFilters);
+    }
+
+    /**
+     * Validate pagination parameters
+     */
+    protected function validatePaginationParams(array $params): array
+    {
+        return [
+            'page' => max(1, $params['page'] ?? 1),
+            'per_page' => min(100, max(1, $params['per_page'] ?? 15)),
+            'sort_by' => $params['sort_by'] ?? 'created_at',
+            'sort_order' => in_array($params['sort_order'] ?? 'desc', ['asc', 'desc'])
+                ? $params['sort_order']
+                : 'desc',
+        ];
     }
 }
