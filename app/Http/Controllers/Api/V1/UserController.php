@@ -365,7 +365,7 @@ class UserController extends BaseApiController
             );
 
             $this->logApiAction('users_searched', [
-                'query' => $request->query,
+                'query' => $request->get('query'),
                 'filters' => $request->get('filters', []),
                 'results_count' => $results->count(),
                 'searched_by' => $this->getCurrentUser()?->id
