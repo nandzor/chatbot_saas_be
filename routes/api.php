@@ -34,24 +34,6 @@ Route::prefix('v1')->group(function () {
     // Protected routes - using unified authentication (JWT OR Sanctum)
     Route::middleware(['unified.auth'])->group(function () {
 
-        // User management routes
-        Route::prefix('users')->group(function () {
-            Route::get('/', [UserController::class, 'index']);
-            Route::post('/', [UserController::class, 'store']);
-            Route::get('/search', [UserController::class, 'search']);
-            Route::get('/statistics', [UserController::class, 'statistics']);
-            Route::patch('/bulk-update', [UserController::class, 'bulkUpdate']);
-
-            Route::prefix('{id}')->group(function () {
-                Route::get('/', [UserController::class, 'show']);
-                Route::put('/', [UserController::class, 'update']);
-                Route::patch('/', [UserController::class, 'update']);
-                Route::delete('/', [UserController::class, 'destroy']);
-                Route::patch('/toggle-status', [UserController::class, 'toggleStatus']);
-                Route::patch('/restore', [UserController::class, 'restore']);
-            });
-        });
-
         // Current user routes
         Route::prefix('me')->group(function () {
             Route::get('/', function (Request $request) {
@@ -132,6 +114,24 @@ Route::prefix('v1')->group(function () {
             });
         });
 
+        // User management routes
+        Route::prefix('users')->group(function () {
+            Route::get('/', [UserController::class, 'index']);
+            Route::post('/', [UserController::class, 'store']);
+            Route::get('/search', [UserController::class, 'search']);
+            Route::get('/statistics', [UserController::class, 'statistics']);
+            Route::patch('/bulk-update', [UserController::class, 'bulkUpdate']);
+
+            Route::prefix('{id}')->group(function () {
+                Route::get('/', [UserController::class, 'show']);
+                Route::put('/', [UserController::class, 'update']);
+                Route::patch('/', [UserController::class, 'update']);
+                Route::delete('/', [UserController::class, 'destroy']);
+                Route::patch('/toggle-status', [UserController::class, 'toggleStatus']);
+                Route::patch('/restore', [UserController::class, 'restore']);
+            });
+        });
+
         // Role Management routes
         Route::prefix('roles')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\RoleManagementController::class, 'index']);
@@ -148,6 +148,35 @@ Route::prefix('v1')->group(function () {
 
             Route::post('/assign', [\App\Http\Controllers\Api\RoleManagementController::class, 'assignRole']);
             Route::post('/revoke', [\App\Http\Controllers\Api\RoleManagementController::class, 'revokeRole']);
+        });
+
+        // Permission Management routes
+        Route::prefix('permissions')->group(function () {
+            // Permission CRUD operations
+            Route::get('/', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'index']);
+            Route::get('/{permissionId}', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'show']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'store']);
+            Route::put('/{permissionId}', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'update']);
+            Route::delete('/{permissionId}', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'destroy']);
+
+            // Permission groups
+            Route::prefix('groups')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'getPermissionGroups']);
+                Route::post('/', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'createPermissionGroup']);
+            });
+
+            // Role permission management
+            Route::prefix('roles')->group(function () {
+                Route::get('/{roleId}/permissions', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'getRolePermissions']);
+                Route::post('/{roleId}/permissions', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'assignPermissionsToRole']);
+                Route::delete('/{roleId}/permissions', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'removePermissionsFromRole']);
+            });
+
+            // User permission operations
+            Route::prefix('users')->group(function () {
+                Route::get('/permissions', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'getUserPermissions']);
+                Route::post('/check-permission', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'checkUserPermission']);
+            });
         });
     });
 });

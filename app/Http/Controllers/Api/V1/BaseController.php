@@ -39,16 +39,16 @@ abstract class BaseController extends Controller
      */
     protected function errorResponse(
         string $message = 'Error',
-        int $statusCode = Response::HTTP_BAD_REQUEST,
-        mixed $errors = null
+        mixed $detail = null,
+        int $statusCode = Response::HTTP_BAD_REQUEST
     ): JsonResponse {
         $response = [
             'success' => false,
             'message' => $message,
         ];
 
-        if ($errors) {
-            $response['errors'] = $errors;
+        if ($detail) {
+            $response['detail'] = $detail;
         }
 
         return response()->json($response, $statusCode);
@@ -113,7 +113,7 @@ abstract class BaseController extends Controller
      */
     protected function notFoundResponse(string $message = 'Resource not found'): JsonResponse
     {
-        return $this->errorResponse($message, Response::HTTP_NOT_FOUND);
+        return $this->errorResponse($message, null, Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -121,7 +121,7 @@ abstract class BaseController extends Controller
      */
     protected function unauthorizedResponse(string $message = 'Unauthorized'): JsonResponse
     {
-        return $this->errorResponse($message, Response::HTTP_UNAUTHORIZED);
+        return $this->errorResponse($message, null, Response::HTTP_UNAUTHORIZED);
     }
 
     /**
@@ -129,7 +129,7 @@ abstract class BaseController extends Controller
      */
     protected function forbiddenResponse(string $message = 'Forbidden'): JsonResponse
     {
-        return $this->errorResponse($message, Response::HTTP_FORBIDDEN);
+        return $this->errorResponse($message, null, Response::HTTP_FORBIDDEN);
     }
 
     /**
@@ -139,7 +139,7 @@ abstract class BaseController extends Controller
         array $errors,
         string $message = 'Validation failed'
     ): JsonResponse {
-        return $this->errorResponse($message, Response::HTTP_UNPROCESSABLE_ENTITY, $errors);
+        return $this->errorResponse($message, $errors, Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     /**
@@ -147,7 +147,7 @@ abstract class BaseController extends Controller
      */
     protected function serverErrorResponse(string $message = 'Internal server error'): JsonResponse
     {
-        return $this->errorResponse($message, Response::HTTP_INTERNAL_SERVER_ERROR);
+        return $this->errorResponse($message, null, Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**

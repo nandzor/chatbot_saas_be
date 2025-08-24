@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.response' => \App\Http\Middleware\ApiResponseMiddleware::class,
             'can' => \App\Http\Middleware\AdminPermissionMiddleware::class,
             'admin.only' => \App\Http\Middleware\AdminOnly::class,
+            'permission' => \App\Http\Middleware\PermissionMiddleware::class,
             'throttle.auth' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':5,1',
             'throttle.refresh' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':10,1',
             'throttle.validation' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':20,1',
