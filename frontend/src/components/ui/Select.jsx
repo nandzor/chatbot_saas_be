@@ -2,14 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/utils/cn';
 import { ChevronDown } from 'lucide-react';
 
-const Select = React.forwardRef(({ 
-  children, 
-  value, 
-  onValueChange, 
+const Select = React.forwardRef(({
+  children,
+  value,
+  onValueChange,
   defaultValue,
   className,
   placeholder = "Select option",
-  ...props 
+  disabled = false,
+  ...props
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(value || defaultValue);
@@ -39,13 +40,15 @@ const Select = React.forwardRef(({
   };
 
   const toggleOpen = () => {
-    setIsOpen(!isOpen);
+    if (!disabled) {
+      setIsOpen(!isOpen);
+    }
   };
 
   // Find the selected item's display text
   const getDisplayText = () => {
     if (!selectedValue) return placeholder;
-    
+
     // Look through children to find the selected value
     let displayText = selectedValue;
     React.Children.forEach(children, (child) => {
@@ -53,7 +56,7 @@ const Select = React.forwardRef(({
         displayText = child.props.children;
       }
     });
-    
+
     return displayText;
   };
 
@@ -62,6 +65,7 @@ const Select = React.forwardRef(({
       <button
         type="button"
         onClick={toggleOpen}
+        disabled={disabled}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           className
@@ -73,7 +77,7 @@ const Select = React.forwardRef(({
         </span>
         <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
       </button>
-      
+
       {isOpen && (
         <div className="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
           <div className="p-1">
@@ -112,9 +116,22 @@ const SelectItem = React.forwardRef(({ className, value, children, ...props }, r
 ));
 SelectItem.displayName = "SelectItem";
 
-// Export komponen yang diperlukan untuk kompatibilitas
-const SelectTrigger = Select;
-const SelectValue = ({ children }) => children;
-const SelectContent = ({ children }) => children;
+// SelectTrigger component - wrapper for Select
+const SelectTrigger = React.forwardRef(({ children, ...props }, ref) => {
+  return React.cloneElement(children, { ref, ...props });
+});
+SelectTrigger.displayName = "SelectTrigger";
+
+// SelectValue component - displays the selected value
+const SelectValue = ({ placeholder, children }) => {
+  return children || placeholder;
+};
+SelectValue.displayName = "SelectValue";
+
+// SelectContent component - wrapper for dropdown content
+const SelectContent = ({ children, ...props }) => {
+  return <div {...props}>{children}</div>;
+};
+SelectContent.displayName = "SelectContent";
 
 export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem };

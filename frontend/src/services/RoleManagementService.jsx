@@ -2,7 +2,7 @@ import { api } from './api';
 
 class RoleManagementService {
   constructor() {
-    this.baseUrl = '/roles';
+    this.baseUrl = '/v1/roles';
   }
 
   /**

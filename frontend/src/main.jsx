@@ -1,16 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Toaster } from 'react-hot-toast';
 import App from './App.jsx';
 
 // Professional Error Boundary Component
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { 
-      hasError: false, 
-      error: null, 
+    this.state = {
+      hasError: false,
+      error: null,
       errorInfo: null,
-      errorId: null 
+      errorId: null
     };
   }
 
@@ -21,7 +22,7 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     // Generate unique error ID for tracking
     const errorId = `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     console.group(`🚨 Frontend Error [${errorId}]`);
     console.error('Error:', error);
     console.error('Error Info:', errorInfo);
@@ -58,7 +59,7 @@ class ErrorBoundary extends React.Component {
               <p className="text-sm text-gray-500 mb-4">
                 We're sorry, but something unexpected happened. Please try refreshing the page.
               </p>
-              
+
               {this.state.errorId && (
                 <p className="text-xs text-gray-400 mb-4">
                   Error ID: {this.state.errorId}
@@ -72,7 +73,7 @@ class ErrorBoundary extends React.Component {
                 >
                   Refresh Page
                 </button>
-                
+
                 <button
                   onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
                   className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
@@ -114,32 +115,56 @@ if (import.meta.env.DEV) {
 // Main application render with comprehensive error handling
 try {
   const rootElement = document.getElementById('root');
-  
+
   if (!rootElement) {
     throw new Error('Root element #root not found in DOM');
   }
 
   console.log('✅ Root element found:', rootElement);
-  
+
   const root = ReactDOM.createRoot(rootElement);
-  
+
   root.render(
     <React.StrictMode>
       <ErrorBoundary>
         <App />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#10B981',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              duration: 5000,
+              iconTheme: {
+                primary: '#EF4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
       </ErrorBoundary>
     </React.StrictMode>,
   );
-  
+
   console.log('✅ App rendered successfully');
-  
+
 } catch (error) {
   console.error('❌ Critical error during app initialization:', error);
-  
+
   // Fallback error display
   document.body.innerHTML = `
     <div style="
-      padding: 40px; 
+      padding: 40px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       text-align: center;
       background: #f9fafb;
@@ -153,13 +178,13 @@ try {
           🚨 Application Failed to Load
         </h1>
         <p style="color: #6b7280; margin-bottom: 24px;">
-          We encountered a critical error while starting the application. 
+          We encountered a critical error while starting the application.
           Please check the browser console for more details.
         </p>
         <div style="
-          background: #f3f4f6; 
-          padding: 16px; 
-          border-radius: 8px; 
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
           text-align: left;
           font-family: monospace;
           font-size: 14px;
@@ -168,14 +193,14 @@ try {
         ">
           <strong>Error:</strong> ${error.message}
         </div>
-        <button 
-          onclick="window.location.reload()" 
+        <button
+          onclick="window.location.reload()"
           style="
-            background: #3b82f6; 
-            color: white; 
-            border: none; 
-            padding: 12px 24px; 
-            border-radius: 6px; 
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
           "

@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import CreateRoleDialog from './CreateRoleDialog';
 import ViewRoleDetailsDialog from './ViewRoleDetailsDialog';
+import { roleManagementService } from '@/services/RoleManagementService';
+import { toast } from 'react-hot-toast';
 import {
   Button,
   Input,
@@ -76,204 +78,45 @@ const RoleList = () => {
     level_max: ''
   });
 
-  // Mock data for demonstration (replace with actual API calls)
-  const mockRoles = useMemo(() => [
-    {
-      id: 1,
-      name: 'Super Administrator',
-      code: 'super_admin',
-      display_name: 'Super Administrator',
-      description: 'Full system access with all permissions and capabilities',
-      scope: 'global',
-      level: 100,
-      is_system_role: true,
-      is_default: false,
-      is_active: true,
-      current_users: 2,
-      max_users: null,
-      color: '#DC2626',
-      icon: 'shield-check',
-      badge_text: 'SUPER',
-      metadata: {
-        created_via: 'system',
-        system_role: true,
-        dangerous_role: true,
-        permissions_count: 150
-      },
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 2,
-      name: 'System Administrator',
-      code: 'system_admin',
-      display_name: 'System Administrator',
-      description: 'System-wide administration and configuration management',
-      scope: 'global',
-      level: 90,
-      is_system_role: true,
-      is_default: false,
-      is_active: true,
-      current_users: 5,
-      max_users: 10,
-      color: '#2563EB',
-      icon: 'settings',
-      badge_text: 'SYS',
-      metadata: {
-        created_via: 'system',
-        system_role: true,
-        permissions_count: 120
-      },
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 3,
-      name: 'Organization Administrator',
-      code: 'org_admin',
-      display_name: 'Organization Administrator',
-      description: 'Full organization access and management capabilities',
-      scope: 'organization',
-      level: 80,
-      is_system_role: false,
-      is_default: true,
-      is_active: true,
-      current_users: 15,
-      max_users: 50,
-      color: '#059669',
-      icon: 'building',
-      badge_text: 'ORG',
-      metadata: {
-        created_via: 'seeder',
-        system_role: false,
-        permissions_count: 85
-      },
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 4,
-      name: 'Agent Manager',
-      code: 'agent_manager',
-      display_name: 'Agent Manager',
-      description: 'Manage agents and customer interaction workflows',
-      scope: 'organization',
-      level: 60,
-      is_system_role: false,
-      is_default: false,
-      is_active: true,
-      current_users: 8,
-      max_users: 20,
-      color: '#7C3AED',
-      icon: 'users',
-      badge_text: 'MGR',
-      metadata: {
-        created_via: 'seeder',
-        system_role: false,
-        permissions_count: 45
-      },
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 5,
-      name: 'Customer Agent',
-      code: 'customer_agent',
-      display_name: 'Customer Agent',
-      description: 'Handle customer chats and provide support services',
-      scope: 'organization',
-      level: 40,
-      is_system_role: false,
-      is_default: true,
-      is_active: true,
-      current_users: 45,
-      max_users: 100,
-      color: '#EA580C',
-      icon: 'message-circle',
-      badge_text: 'AGENT',
-      metadata: {
-        created_via: 'seeder',
-        system_role: false,
-        permissions_count: 25
-      },
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 6,
-      name: 'Content Manager',
-      code: 'content_manager',
-      display_name: 'Content Manager',
-      description: 'Manage knowledge base and content creation',
-      scope: 'organization',
-      level: 50,
-      is_system_role: false,
-      is_default: false,
-      is_active: true,
-      current_users: 12,
-      max_users: 30,
-      color: '#0891B2',
-      icon: 'file-text',
-      badge_text: 'CONTENT',
-      metadata: {
-        created_via: 'seeder',
-        system_role: false,
-        permissions_count: 35
-      },
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    }
-  ], []);
-
-  // Load roles with mock data
+  // Load roles from API
   const loadRoles = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Filter roles based on current filters
-      let filteredRoles = [...mockRoles];
-
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
-        filteredRoles = filteredRoles.filter(role =>
-          role.name.toLowerCase().includes(searchTerm) ||
-          role.code.toLowerCase().includes(searchTerm) ||
-          role.description.toLowerCase().includes(searchTerm)
-        );
-      }
-
-      if (filters.scope) {
-        filteredRoles = filteredRoles.filter(role => role.scope === filters.scope);
-      }
-
-      if (filters.is_active !== '') {
-        filteredRoles = filteredRoles.filter(role => role.is_active === (filters.is_active === 'true'));
-      }
-
-      if (filters.is_system_role !== '') {
-        filteredRoles = filteredRoles.filter(role => role.is_system_role === (filters.is_system_role === 'true'));
-      }
-
-      if (filters.level_min) {
-        filteredRoles = filteredRoles.filter(role => role.level >= parseInt(filters.level_min));
-      }
-
-      if (filters.level_max) {
-        filteredRoles = filteredRoles.filter(role => role.level <= parseInt(filters.level_max));
-      }
-
-      setRoles(filteredRoles);
-      setPagination({
-        current_page: page,
-        last_page: Math.ceil(filteredRoles.length / pagination.per_page),
+      // Prepare API parameters
+      const params = {
+        page: page,
         per_page: pagination.per_page,
-        total: filteredRoles.length
+        ...filters
+      };
+
+      // Remove empty filters
+      Object.keys(params).forEach(key => {
+        if (params[key] === '' || params[key] === null || params[key] === undefined) {
+          delete params[key];
+        }
       });
+
+      const response = await roleManagementService.getRoles(params);
+
+      if (response.success) {
+        setRoles(response.data || []);
+
+        // Update pagination from API response
+        if (response.meta && response.meta.pagination) {
+          setPagination({
+            current_page: response.meta.pagination.current_page || page,
+            last_page: response.meta.pagination.last_page || 1,
+            per_page: response.meta.pagination.per_page || 15,
+            total: response.meta.pagination.total || 0
+          });
+        }
+      } else {
+        setError(response.message || 'Failed to load roles');
+      }
     } catch (err) {
+      console.error('Error loading roles:', err);
       setError(err.message || 'Failed to load roles');
     } finally {
       setLoading(false);
@@ -318,39 +161,61 @@ const RoleList = () => {
   const handleCreateRoleSubmit = useCallback(async (roleData) => {
     try {
       setActionLoading(true);
-      // TODO: Implement actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Create new role with generated ID
-      const newRole = {
-        ...roleData,
-        id: Math.max(...roles.map(r => r.id)) + 1,
-        current_users: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      const formattedData = roleManagementService.formatRoleData(roleData);
+      const response = await roleManagementService.createRole(formattedData);
 
-      setRoles(prev => [newRole, ...prev]);
-      setShowCreateModal(false);
-
-      // Show success message
-      alert(`Role "${newRole.name}" has been created successfully`);
+      if (response.success) {
+        toast.success(`Role "${response.data.name}" has been created successfully`);
+        setShowCreateModal(false);
+        // Reload roles to show the new role
+        loadRoles(pagination.current_page);
+      } else {
+        toast.error(response.message || 'Failed to create role');
+      }
     } catch (error) {
-      alert(`Failed to create role: ${error.message}`);
+      console.error('Error creating role:', error);
+      toast.error(error.message || 'Failed to create role');
     } finally {
       setActionLoading(false);
     }
-  }, [roles]);
+  }, [loadRoles, pagination.current_page]);
 
-  const handleCloneRole = useCallback((role) => {
-    setSelectedRole(role);
-    // TODO: Implement clone functionality
-    alert(`Clone role ${role.name} functionality will be implemented here`);
-  }, []);
+  const handleCloneRole = useCallback(async (role) => {
+    try {
+      setActionLoading(true);
 
-  const handleDeleteRole = useCallback(async (role) => {
+      // Clone the role data
+      const cloneData = {
+        ...role,
+        name: `${role.name} (Copy)`,
+        code: `${role.code}_copy`,
+        display_name: `${role.display_name} (Copy)`,
+        description: `${role.description} (Cloned from ${role.name})`,
+        is_system_role: false // Cloned roles are always custom
+      };
+
+      const formattedData = roleManagementService.formatRoleData(cloneData);
+      const response = await roleManagementService.createRole(formattedData);
+
+      if (response.success) {
+        toast.success(`Role "${response.data.name}" has been cloned successfully`);
+        // Reload roles to show the cloned role
+        loadRoles(pagination.current_page);
+      } else {
+        toast.error(response.message || 'Failed to clone role');
+      }
+    } catch (error) {
+      console.error('Error cloning role:', error);
+      toast.error(error.message || 'Failed to clone role');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [loadRoles, pagination.current_page]);
+
+  const handleDeleteRole = useCallback((role) => {
     if (role.is_system_role) {
-      alert('System roles cannot be deleted');
+      toast.error('System roles cannot be deleted');
       return;
     }
 
@@ -363,21 +228,25 @@ const RoleList = () => {
 
     try {
       setActionLoading(true);
-      // TODO: Implement actual delete API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      setRoles(prev => prev.filter(role => role.id !== selectedRole.id));
-      setShowDeleteConfirm(false);
-      setSelectedRole(null);
+      const response = await roleManagementService.deleteRole(selectedRole.id);
 
-      // Show success message
-      alert(`Role "${selectedRole.name}" has been deleted successfully`);
+      if (response.success) {
+        toast.success(`Role "${selectedRole.name}" has been deleted successfully`);
+        setShowDeleteConfirm(false);
+        setSelectedRole(null);
+        // Reload roles to reflect the deletion
+        loadRoles(pagination.current_page);
+      } else {
+        toast.error(response.message || 'Failed to delete role');
+      }
     } catch (error) {
-      alert(`Failed to delete role: ${error.message}`);
+      console.error('Error deleting role:', error);
+      toast.error(error.message || 'Failed to delete role');
     } finally {
       setActionLoading(false);
     }
-  }, [selectedRole]);
+  }, [selectedRole, loadRoles, pagination.current_page]);
 
   // Get scope icon and color
   const getScopeInfo = useCallback((scope) => {
@@ -482,18 +351,6 @@ const RoleList = () => {
                   <SelectItem value="false">Custom Roles</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Select value={filters.level_min} onValueChange={(value) => handleFilterChange('level_min', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Min Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Any Level</SelectItem>
-                  {[1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(level => (
-                    <SelectItem key={level} value={level.toString()}>{level}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
@@ -518,7 +375,7 @@ const RoleList = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Roles</p>
-                  <p className="text-2xl font-bold text-gray-900">{roles.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{pagination.total}</p>
                 </div>
               </div>
             </CardContent>
@@ -533,7 +390,7 @@ const RoleList = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Active Roles</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {roles.filter(role => role.is_active).length}
+                    {roles.filter(role => role.status === 'active').length}
                   </p>
                 </div>
               </div>
@@ -565,7 +422,7 @@ const RoleList = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {roles.reduce((sum, role) => sum + role.current_users, 0)}
+                    {roles.reduce((sum, role) => sum + (role.current_users || 0), 0)}
                   </p>
                 </div>
               </div>
@@ -578,7 +435,7 @@ const RoleList = () => {
           <CardHeader>
             <CardTitle>Roles Overview</CardTitle>
             <CardDescription>
-              {roles.length} roles found • Showing {pagination.current_page} of {pagination.last_page} pages
+              {pagination.total} roles found • Showing {pagination.current_page} of {pagination.last_page} pages
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -614,16 +471,16 @@ const RoleList = () => {
                           <div className="flex items-center">
                             <div
                               className="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
-                              style={{ backgroundColor: role.color + '20' }}
+                              style={{ backgroundColor: (role.color || '#6B7280') + '20' }}
                             >
-                              <Shield className="w-5 h-5" style={{ color: role.color }} />
+                              <Shield className="w-5 h-5" style={{ color: role.color || '#6B7280' }} />
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
                                 <h3 className="text-sm font-semibold text-gray-900">{role.name}</h3>
                                 {role.is_system_role && (
                                   <Badge variant="destructive" className="text-xs">
-                                    {role.badge_text}
+                                    {role.badge_text || 'SYS'}
                                   </Badge>
                                 )}
                                 {role.is_default && (
@@ -655,7 +512,7 @@ const RoleList = () => {
                               </Badge>
                             </div>
                             <div className="text-xs text-gray-400">
-                              {role.metadata?.permissions_count || 0} permissions
+                              {role.permissions_count || 0} permissions
                             </div>
                           </div>
                         </td>
@@ -665,7 +522,7 @@ const RoleList = () => {
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-600">Current:</span>
                               <span className="text-sm font-medium text-gray-900">
-                                {role.current_users}
+                                {role.current_users || 0}
                               </span>
                             </div>
                             {role.max_users && (
@@ -681,7 +538,7 @@ const RoleList = () => {
                                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                 style={{
                                   width: role.max_users
-                                    ? `${(role.current_users / role.max_users) * 100}%`
+                                    ? `${((role.current_users || 0) / role.max_users) * 100}%`
                                     : '100%'
                                 }}
                               ></div>
@@ -691,7 +548,7 @@ const RoleList = () => {
 
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            {role.is_active ? (
+                            {role.status === 'active' ? (
                               <Badge className="bg-green-100 text-green-800">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Active
@@ -699,7 +556,7 @@ const RoleList = () => {
                             ) : (
                               <Badge variant="secondary">
                                 <XCircle className="w-3 h-3 mr-1" />
-                                Inactive
+                                {role.status || 'Inactive'}
                               </Badge>
                             )}
                           </div>
@@ -805,7 +662,7 @@ const RoleList = () => {
         </Card>
       </div>
 
-            {/* Create Role Dialog */}
+      {/* Create Role Dialog */}
       <CreateRoleDialog
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}

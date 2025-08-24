@@ -1,22 +1,25 @@
-import React, { useState, useCallback } from 'react';
-import { 
-  X, 
-  Shield, 
-  Users, 
-  Settings, 
-  Palette, 
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  X,
+  Shield,
+  Users,
+  Settings,
+  Palette,
   Eye,
   EyeOff,
   Save,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
-import { 
-  Button, 
-  Input, 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
+import { roleManagementService } from '@/services/RoleManagementService';
+import { toast } from 'react-hot-toast';
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
   SelectValue,
   Badge,
   Card,
@@ -43,15 +46,47 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
     icon: 'shield',
     badge_text: '',
     inherits_permissions: true,
-    parent_role_id: null
+    parent_role_id: null,
+    organization_id: null // Will be set from context or props
   });
 
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
+  // Reset form to initial state
+  const resetForm = useCallback(() => {
+    setFormData({
+      name: '',
+      code: '',
+      display_name: '',
+      description: '',
+      scope: 'organization',
+      level: 50,
+      is_system_role: false,
+      is_default: false,
+      is_active: true,
+      max_users: null,
+      color: '#3B82F6',
+      icon: 'shield',
+      badge_text: '',
+      inherits_permissions: true,
+      parent_role_id: null,
+      organization_id: null
+    });
+    setErrors({});
+  }, []);
 
   // Handle form input changes
   const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
@@ -91,6 +126,11 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
       newErrors.max_users = 'Max users must be at least 1';
     }
 
+    // Validate color format
+    if (formData.color && !/^#[0-9A-F]{6}$/i.test(formData.color)) {
+      newErrors.color = 'Color must be a valid hex color (e.g., #3B82F6)';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
@@ -98,63 +138,82 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
   // Handle form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     try {
-      await onSubmit(formData);
-      // Reset form on success
-      setFormData({
-        name: '',
-        code: '',
-        display_name: '',
-        description: '',
-        scope: 'organization',
-        level: 50,
-        is_system_role: false,
-        is_default: false,
-        is_active: true,
-        max_users: null,
-        color: '#3B82F6',
-        icon: 'shield',
-        badge_text: '',
-        inherits_permissions: true,
-        parent_role_id: null
-      });
-      setErrors({});
+      setSubmitting(true);
+
+      // Prepare data for API submission
+      const roleData = {
+        name: formData.name.trim(),
+        code: formData.code.trim(),
+        display_name: formData.display_name.trim() || formData.name.trim(),
+        description: formData.description.trim(),
+        scope: formData.scope,
+        level: parseInt(formData.level),
+        is_system_role: Boolean(formData.is_system_role),
+        is_default: Boolean(formData.is_default),
+        status: formData.is_active ? 'active' : 'inactive',
+        max_users: formData.max_users ? parseInt(formData.max_users) : null,
+        color: formData.color,
+        icon: formData.icon,
+        badge_text: formData.badge_text.trim(),
+        inherits_permissions: Boolean(formData.inherits_permissions),
+        parent_role_id: formData.parent_role_id,
+        organization_id: formData.organization_id,
+        metadata: {
+          created_via: 'manual',
+          created_by: 'current_user', // This should come from auth context
+          icon: formData.icon,
+          badge_text: formData.badge_text
+        }
+      };
+
+      // Call API to create role
+      const response = await roleManagementService.createRole(roleData);
+
+      if (response.success) {
+        toast.success(`Role "${response.data.name}" has been created successfully`);
+
+        // Call parent onSubmit if provided
+        if (onSubmit) {
+          await onSubmit(response.data);
+        }
+
+        // Reset form and close dialog
+        resetForm();
+        onClose();
+      } else {
+        toast.error(response.message || 'Failed to create role');
+      }
     } catch (error) {
       console.error('Failed to create role:', error);
+
+      // Handle specific API errors
+      if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to create role. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
     }
-  }, [formData, onSubmit, validateForm]);
+  }, [formData, onSubmit, validateForm, onClose, resetForm]);
 
   // Handle close
   const handleClose = useCallback(() => {
-    if (!loading) {
-      setFormData({
-        name: '',
-        code: '',
-        display_name: '',
-        description: '',
-        scope: 'organization',
-        level: 50,
-        is_system_role: false,
-        is_default: false,
-        is_active: true,
-        max_users: null,
-        color: '#3B82F6',
-        icon: 'shield',
-        badge_text: '',
-        inherits_permissions: true,
-        parent_role_id: null
-      });
-      setErrors({});
+    if (!submitting) {
+      resetForm();
       onClose();
     }
-  }, [loading, onClose]);
+  }, [submitting, onClose, resetForm]);
 
   if (!isOpen) return null;
+
+  const isFormValid = formData.name.trim() && formData.code.trim() && formData.level >= 1 && formData.level <= 100;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -174,7 +233,7 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
             variant="ghost"
             size="sm"
             onClick={handleClose}
-            disabled={loading}
+            disabled={submitting}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="w-5 h-5" />
@@ -206,12 +265,13 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       className={errors.name ? 'border-red-300' : ''}
+                      disabled={submitting}
                     />
                     {errors.name && (
                       <p className="text-sm text-red-600 mt-1">{errors.name}</p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Role Code *
@@ -222,12 +282,14 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                         value={formData.code}
                         onChange={(e) => handleInputChange('code', e.target.value)}
                         className={errors.code ? 'border-red-300' : ''}
+                        disabled={submitting}
                       />
                       <Button
                         type="button"
                         variant="outline"
                         onClick={generateCode}
                         className="whitespace-nowrap"
+                        disabled={submitting}
                       >
                         Generate
                       </Button>
@@ -247,9 +309,10 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       placeholder="e.g., Content Manager"
                       value={formData.display_name}
                       onChange={(e) => handleInputChange('display_name', e.target.value)}
+                      disabled={submitting}
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Badge Text
@@ -259,6 +322,7 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       value={formData.badge_text}
                       onChange={(e) => handleInputChange('badge_text', e.target.value)}
                       maxLength={20}
+                      disabled={submitting}
                     />
                   </div>
                 </div>
@@ -272,7 +336,8 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    disabled={submitting}
                   />
                 </div>
               </CardContent>
@@ -295,7 +360,11 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Scope *
                     </label>
-                    <Select value={formData.scope} onValueChange={(value) => handleInputChange('scope', value)}>
+                    <Select
+                      value={formData.scope}
+                      onValueChange={(value) => handleInputChange('scope', value)}
+                      disabled={submitting}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -308,7 +377,7 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Level *
@@ -320,12 +389,13 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       value={formData.level}
                       onChange={(e) => handleInputChange('level', parseInt(e.target.value))}
                       className={errors.level ? 'border-red-300' : ''}
+                      disabled={submitting}
                     />
                     {errors.level && (
                       <p className="text-sm text-red-600 mt-1">{errors.level}</p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Max Users
@@ -337,6 +407,7 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       value={formData.max_users || ''}
                       onChange={(e) => handleInputChange('max_users', e.target.value ? parseInt(e.target.value) : null)}
                       className={errors.max_users ? 'border-red-300' : ''}
+                      disabled={submitting}
                     />
                     {errors.max_users && (
                       <p className="text-sm text-red-600 mt-1">{errors.max_users}</p>
@@ -349,7 +420,11 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Icon
                     </label>
-                    <Select value={formData.icon} onValueChange={(value) => handleInputChange('icon', value)}>
+                    <Select
+                      value={formData.icon}
+                      onValueChange={(value) => handleInputChange('icon', value)}
+                      disabled={submitting}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -365,7 +440,7 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Color
@@ -376,13 +451,18 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                         value={formData.color}
                         onChange={(e) => handleInputChange('color', e.target.value)}
                         className="w-16 h-10 p-1"
+                        disabled={submitting}
                       />
                       <Input
                         value={formData.color}
                         onChange={(e) => handleInputChange('color', e.target.value)}
-                        className="flex-1"
+                        className={`flex-1 ${errors.color ? 'border-red-300' : ''}`}
+                        disabled={submitting}
                       />
                     </div>
+                    {errors.color && (
+                      <p className="text-sm text-red-600 mt-1">{errors.color}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -410,9 +490,10 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       <Switch
                         checked={formData.is_system_role}
                         onCheckedChange={(checked) => handleInputChange('is_system_role', checked)}
+                        disabled={submitting}
                       />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div>
                         <label className="text-sm font-medium text-gray-700">Default Role</label>
@@ -421,10 +502,11 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       <Switch
                         checked={formData.is_default}
                         onCheckedChange={(checked) => handleInputChange('is_default', checked)}
+                        disabled={submitting}
                       />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -434,9 +516,10 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       <Switch
                         checked={formData.is_active}
                         onCheckedChange={(checked) => handleInputChange('is_active', checked)}
+                        disabled={submitting}
                       />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div>
                         <label className="text-sm font-medium text-gray-700">Inherit Permissions</label>
@@ -445,6 +528,7 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       <Switch
                         checked={formData.inherits_permissions}
                         onCheckedChange={(checked) => handleInputChange('inherits_permissions', checked)}
+                        disabled={submitting}
                       />
                     </div>
                   </div>
@@ -465,7 +549,7 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
-                  <div 
+                  <div
                     className="w-12 h-12 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: formData.color + '20' }}
                   >
@@ -510,18 +594,18 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
               type="button"
               variant="outline"
               onClick={handleClose}
-              disabled={loading}
+              disabled={submitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700"
+              disabled={submitting || !isFormValid}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
             >
-              {loading ? (
+              {submitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Creating...
                 </>
               ) : (
