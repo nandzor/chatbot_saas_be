@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authService } from '@/services/AuthService';
+import { hasPermission as checkPermission, hasRole as checkRole } from '@/utils/permissionUtils';
 
 // Constants for better maintainability
 const STORAGE_KEYS = {
@@ -292,17 +293,17 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = useCallback((permissionCode) => {
     if (!user) return false;
 
-    // Check if user has super admin role (all permissions)
-    if (user.role === 'super_admin') return true;
+    console.log('🔍 Checking permission:', { 
+      required: permissionCode, 
+      userRole: user.role, 
+      userPermissions: user.permissions 
+    });
 
-    // Check permissions array from backend (codes)
-    if (user.permissions && Array.isArray(user.permissions)) {
-      // Super admin wildcard
-      if (user.permissions.includes('*')) return true;
-      return user.permissions.includes(permissionCode);
-    }
-
-    return false;
+    // Use utility function for permission checking
+    const hasPermission = checkPermission(user, permissionCode);
+    console.log('🔍 Permission check result:', { permissionCode, hasPermission });
+    
+    return hasPermission;
   }, [user]);
 
   // Multiple permission check (any)
@@ -345,45 +346,11 @@ export const AuthProvider = ({ children }) => {
 
     console.log('🔍 Checking role:', { required: role, userRole: user.role, userRoles: user.roles });
 
-    // Check direct role assignment
-    if (user.role === role) {
-      console.log('✅ Direct role match:', { required: role, userRole: user.role });
-      return true;
-    }
-
-    // Role mapping - using exact backend keys
-    const roleEquivalents = {
-      'org_admin': ['org_admin'],
-      'super_admin': ['super_admin'],
-      'agent': ['agent'],
-      'customer': ['customer']
-    };
-
-    // Check if user role is equivalent to required role
-    const equivalents = roleEquivalents[role] || [role];
-    if (equivalents.includes(user.role)) {
-      console.log('✅ Role equivalent match:', { required: role, userRole: user.role, equivalents });
-      return true;
-    }
-
-    // Check roles array from backend
-    if (user.roles && Array.isArray(user.roles)) {
-      const hasRole = user.roles.some(userRole => {
-        const roleName = typeof userRole === 'object' ? userRole.name : userRole;
-        const match = equivalents.includes(roleName);
-        if (match) {
-          console.log('✅ Role in array match:', { required: role, found: roleName });
-        }
-        return match;
-      });
-      if (!hasRole) {
-        console.log('❌ No role match found in roles array:', { required: role, userRoles: user.roles });
-      }
-      return hasRole;
-    }
-
-    console.log('❌ Role check failed:', { required: role, userRole: user.role, userRoles: user.roles });
-    return false;
+    // Use utility function for role checking
+    const hasRole = checkRole(user, role);
+    console.log('🔍 Role check result:', { required: role, hasRole });
+    
+    return hasRole;
   }, [user]);
 
   // Get user permissions from backend

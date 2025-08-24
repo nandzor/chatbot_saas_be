@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { canAccessSettings } from '@/utils/permissionUtils';
 
 const RoleBasedRoute = ({
   children,
@@ -46,6 +47,32 @@ const RoleBasedRoute = ({
 
   // Check permission-based access
   if (requiredPermission && !hasPermission(requiredPermission)) {
+    console.log('🚫 Permission access denied:', {
+      requiredPermission,
+      userRole: user?.role,
+      userPermissions: user?.permissions,
+      isAuthenticated,
+      user
+    });
+
+    // Fallback: Super admin can access all routes
+    if (user?.role === 'super_admin') {
+      console.log('✅ Super admin access granted to all routes');
+      return children;
+    }
+
+    // Fallback: Org admin can access org_admin specific routes
+    if (user?.role === 'org_admin' && requiredPermission === 'manage_settings') {
+      console.log('✅ Org admin access granted to settings route');
+      return children;
+    }
+
+    // Use utility function for settings access
+    if (requiredPermission === 'manage_settings' && canAccessSettings(user)) {
+      console.log('✅ User has settings access via utility function');
+      return children;
+    }
+
     return <Navigate to={fallbackPath} replace />;
   }
 

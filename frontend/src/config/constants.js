@@ -22,7 +22,7 @@ export const ROLES = {
 export const PERMISSIONS = {
   // Super Admin Permissions
   ALL: '*',
-  
+
   // Organization Admin Permissions
   HANDLE_CHATS: 'handle_chats',
   MANAGE_USERS: 'manage_users',
@@ -31,7 +31,8 @@ export const PERMISSIONS = {
   VIEW_ANALYTICS: 'view_analytics',
   MANAGE_BILLING: 'manage_billing',
   MANAGE_AUTOMATIONS: 'manage_automations',
-  
+  MANAGE_KNOWLEDGE_BASE: 'manage_knowledge_base',
+
   // Agent Permissions
   VIEW_CONVERSATIONS: 'view_conversations',
   UPDATE_PROFILE: 'update_profile'
@@ -44,7 +45,7 @@ export const ROUTES = {
   REGISTER: '/auth/register',
   FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',
-  
+
   // Dashboard Routes
   DASHBOARD: '/dashboard',
   INBOX: '/dashboard/inbox',
@@ -52,18 +53,18 @@ export const ROUTES = {
   KNOWLEDGE: '/dashboard/knowledge',
   AUTOMATIONS: '/dashboard/automations',
   SETTINGS: '/dashboard/settings',
-  
+
   // Super Admin Routes
   SUPERADMIN: '/superadmin',
   SUPERADMIN_FINANCIALS: '/superadmin/financials',
   SUPERADMIN_CLIENTS: '/superadmin/clients',
   SUPERADMIN_SYSTEM: '/superadmin/system',
-  
+
   // Agent Routes
   AGENT: '/agent',
   AGENT_INBOX: '/agent/inbox',
   AGENT_PROFILE: '/agent/profile',
-  
+
   // Error Routes
   UNAUTHORIZED: '/unauthorized',
   SERVER_ERROR: '/server-error',

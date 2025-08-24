@@ -27,7 +27,8 @@ const PERMISSIONS = {
     'view_analytics',
     'manage_billing',
     'manage_automations',
-    'manage_knowledge_base'
+    'manage_knowledge_base',
+    'manage_settings'
   ],
 
   // Agent permissions

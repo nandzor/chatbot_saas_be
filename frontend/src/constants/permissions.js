@@ -92,6 +92,29 @@ export const PERMISSIONS = {
     DELETE: 'api_keys.delete'
   },
 
+  // Settings Management
+  SETTINGS: {
+    VIEW: 'settings.view',
+    MANAGE: 'manage_settings',
+    UPDATE: 'settings.update',
+    CONFIGURE: 'settings.configure'
+  },
+
+  // Organization Management
+  ORGANIZATION: {
+    VIEW: 'organization.view',
+    MANAGE: 'manage_organization',
+    UPDATE: 'organization.update',
+    CONFIGURE: 'organization.configure'
+  },
+
+  // Chat Management
+  CHAT: {
+    HANDLE: 'handle_chats',
+    VIEW: 'chat.view',
+    MANAGE: 'chat.manage'
+  },
+
   // Webhooks
   WEBHOOKS: {
     VIEW: 'webhooks.view',
@@ -171,6 +194,28 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.ROLES.VIEW,
     PERMISSIONS.PERMISSIONS.VIEW,
     PERMISSIONS.SYSTEM_LOGS.VIEW
+  ],
+
+  ORGANIZATION_ADMIN: [
+    PERMISSIONS.ORGANIZATION.VIEW,
+    PERMISSIONS.ORGANIZATION.MANAGE,
+    PERMISSIONS.ORGANIZATION.UPDATE,
+    PERMISSIONS.ORGANIZATION.CONFIGURE,
+    PERMISSIONS.SETTINGS.MANAGE,
+    PERMISSIONS.SETTINGS.UPDATE,
+    PERMISSIONS.SETTINGS.CONFIGURE
+  ],
+
+  CHAT_MANAGEMENT: [
+    PERMISSIONS.CHAT.HANDLE,
+    PERMISSIONS.CHAT.VIEW,
+    PERMISSIONS.CHAT.MANAGE
+  ],
+
+  AUTOMATION_MANAGEMENT: [
+    'manage_automations',
+    'manage_workflows',
+    'configure_bots'
   ]
 };
 
@@ -181,8 +226,16 @@ export const ROLE_PERMISSIONS = {
     ...PERMISSION_GROUPS.USER_MANAGEMENT,
     ...PERMISSION_GROUPS.AGENT_MANAGEMENT,
     ...PERMISSION_GROUPS.CONTENT_MANAGEMENT,
+    ...PERMISSION_GROUPS.ORGANIZATION_ADMIN,
+    ...PERMISSION_GROUPS.CHAT_MANAGEMENT,
+    ...PERMISSION_GROUPS.AUTOMATION_MANAGEMENT,
     PERMISSIONS.ANALYTICS.VIEW,
-    PERMISSIONS.BILLING.MANAGE
+    PERMISSIONS.BILLING.MANAGE,
+    PERMISSIONS.SETTINGS.MANAGE,
+    PERMISSIONS.ORGANIZATION.MANAGE,
+    PERMISSIONS.CHAT.HANDLE,
+    'manage_automations',
+    'manage_knowledge_base'
   ],
   AGENT: [
     PERMISSIONS.CHAT_SESSIONS.VIEW,
