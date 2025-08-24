@@ -362,8 +362,7 @@ class UserController extends BaseApiController
 
             $results = $this->userService->searchUsers(
                 $request->get('query'),
-                $request->get('filters', []),
-                $request->get('limit', 20)
+                $request->get('filters', [])
             );
 
             $this->logApiAction('users_searched', [

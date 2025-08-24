@@ -144,7 +144,7 @@ class UserFactory extends Factory
             'password_changed_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
             
             // Session Management
-            'active_sessions' => $activeSessions,
+            'active_sessions' => $activeSessions ?? [],
             'max_concurrent_sessions' => $this->faker->randomElement([1, 2, 3, 5]),
             
             // UI/UX Preferences
