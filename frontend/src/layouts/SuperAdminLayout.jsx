@@ -55,7 +55,7 @@ const SuperAdminContent = () => {
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <Sidebar 
-        role="superadmin" 
+        role="super_admin" 
         isCollapsed={isCollapsed}
         onToggle={toggleSidebar}
         isMobile={isMobile}
