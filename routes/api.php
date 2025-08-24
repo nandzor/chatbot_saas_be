@@ -1,8 +1,11 @@
 <?php
 
-use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\RoleManagementController;
+use App\Http\Controllers\Api\V1\PermissionManagementController;
+use App\Http\Controllers\Api\V1\OrganizationManagementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,7 +18,14 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Health check endpoint
+// ============================================================================
+// PUBLIC ROUTES (No Authentication Required)
+// ============================================================================
+
+/**
+ * Health Check Endpoint
+ * Used for monitoring and health checks
+ */
 Route::get('/health', function () {
     return response()->json([
         'status' => 'healthy',
@@ -25,16 +35,25 @@ Route::get('/health', function () {
     ]);
 });
 
-// API V1 Routes
+// ============================================================================
+// API V1 ROUTES (Protected Routes)
+// ============================================================================
+
 Route::prefix('v1')->group(function () {
 
-        // Authentication routes are now handled in routes/auth.php
+    // Note: Authentication routes are handled in routes/auth.php
     // This provides unified JWT + Sanctum + Refresh token authentication
 
-    // Protected routes - using unified authentication (JWT OR Sanctum)
+    // ========================================================================
+    // PROTECTED ROUTES - Using Unified Authentication (JWT OR Sanctum)
+    // ========================================================================
+
     Route::middleware(['unified.auth'])->group(function () {
 
-        // Current user routes
+        // ====================================================================
+        // USER PROFILE & ACCOUNT MANAGEMENT
+        // ====================================================================
+
         Route::prefix('me')->group(function () {
             Route::get('/', function (Request $request) {
                 return response()->json([
@@ -42,213 +61,289 @@ Route::prefix('v1')->group(function () {
                     'data' => $request->user(),
                 ]);
             });
+
             Route::put('/profile', function () {
                 // TODO: Implement profile update
                 return response()->json(['message' => 'Profile update endpoint - to be implemented']);
             });
+
             Route::post('/change-password', function () {
                 // TODO: Implement password change
                 return response()->json(['message' => 'Change password endpoint - to be implemented']);
             });
+
             Route::post('/logout', function () {
                 // TODO: Implement logout
                 return response()->json(['message' => 'Logout endpoint - to be implemented']);
             });
         });
 
-        // Example chatbot-specific routes
+        // ====================================================================
+        // CHATBOT MANAGEMENT
+        // ====================================================================
+
         Route::prefix('chatbots')->group(function () {
             Route::get('/', function () {
                 return response()->json(['message' => 'Chatbots list endpoint - to be implemented']);
             });
+
             Route::post('/', function () {
                 return response()->json(['message' => 'Create chatbot endpoint - to be implemented']);
             });
+
             Route::prefix('{id}')->group(function () {
                 Route::get('/', function () {
                     return response()->json(['message' => 'Get chatbot endpoint - to be implemented']);
                 });
+
                 Route::put('/', function () {
                     return response()->json(['message' => 'Update chatbot endpoint - to be implemented']);
                 });
+
                 Route::delete('/', function () {
                     return response()->json(['message' => 'Delete chatbot endpoint - to be implemented']);
                 });
+
                 Route::post('/train', function () {
                     return response()->json(['message' => 'Train chatbot endpoint - to be implemented']);
                 });
+
                 Route::post('/chat', function () {
                     return response()->json(['message' => 'Chat with bot endpoint - to be implemented']);
                 });
             });
         });
 
-        // Conversations routes
+        // ====================================================================
+        // CONVERSATION MANAGEMENT
+        // ====================================================================
+
         Route::prefix('conversations')->group(function () {
             Route::get('/', function () {
                 return response()->json(['message' => 'Conversations list endpoint - to be implemented']);
             });
+
             Route::post('/', function () {
                 return response()->json(['message' => 'Create conversation endpoint - to be implemented']);
             });
+
             Route::prefix('{id}')->group(function () {
                 Route::get('/', function () {
                     return response()->json(['message' => 'Get conversation endpoint - to be implemented']);
                 });
+
                 Route::post('/messages', function () {
                     return response()->json(['message' => 'Send message endpoint - to be implemented']);
                 });
             });
         });
 
-        // Analytics routes
+        // ====================================================================
+        // ANALYTICS & REPORTING
+        // ====================================================================
+
         Route::prefix('analytics')->group(function () {
             Route::get('/dashboard', function () {
                 return response()->json(['message' => 'Dashboard analytics endpoint - to be implemented']);
             });
+
             Route::get('/usage', function () {
                 return response()->json(['message' => 'Usage analytics endpoint - to be implemented']);
             });
+
             Route::get('/performance', function () {
                 return response()->json(['message' => 'Performance analytics endpoint - to be implemented']);
             });
         });
 
-        // User management routes - dengan permission middleware
-        Route::prefix('users')->middleware(['permission:users.view', 'organization'])->group(function () {
+        // ====================================================================
+        // USER MANAGEMENT (With Permission Middleware)
+        // ====================================================================
+
+        Route::prefix('users')
+            ->middleware(['permission:users.view', 'organization'])
+            ->group(function () {
+
+            // Basic CRUD operations
             Route::get('/', [UserController::class, 'index']);
             Route::get('/search', [UserController::class, 'search']);
             Route::get('/statistics', [UserController::class, 'statistics']);
 
+            // Individual user operations
             Route::prefix('{id}')->group(function () {
                 Route::get('/', [UserController::class, 'show']);
             });
 
-            // Routes yang memerlukan additional permissions
+            // Routes requiring additional permissions
             Route::middleware(['permission:users.create'])->post('/', [UserController::class, 'store']);
+
             Route::middleware(['permission:users.update'])->group(function () {
                 Route::put('/{id}', [UserController::class, 'update']);
                 Route::patch('/{id}', [UserController::class, 'update']);
                 Route::patch('/{id}/toggle-status', [UserController::class, 'toggleStatus']);
             });
+
             Route::middleware(['permission:users.delete'])->delete('/{id}', [UserController::class, 'destroy']);
             Route::middleware(['permission:users.restore'])->patch('/{id}/restore', [UserController::class, 'restore']);
             Route::middleware(['permission:users.bulk_update'])->patch('/bulk-update', [UserController::class, 'bulkUpdate']);
         });
 
-        // Role Management routes - dengan permission middleware
-        Route::prefix('roles')->middleware(['permission:roles.view', 'organization'])->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'index']);
-            Route::get('/available', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'getAvailableRoles']);
-            Route::get('/statistics', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'statistics']);
+        // ====================================================================
+        // ROLE MANAGEMENT (With Permission Middleware)
+        // ====================================================================
 
+        Route::prefix('roles')
+            ->middleware(['permission:roles.view', 'organization'])
+            ->group(function () {
+
+            // Basic operations
+            Route::get('/', [RoleManagementController::class, 'index']);
+            Route::get('/available', [RoleManagementController::class, 'getAvailableRoles']);
+            Route::get('/statistics', [RoleManagementController::class, 'statistics']);
+
+            // Individual role operations
             Route::prefix('{id}')->group(function () {
-                Route::get('/', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'show']);
-                Route::get('/users', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'getUsers']);
+                Route::get('/', [RoleManagementController::class, 'show']);
+                Route::get('/users', [RoleManagementController::class, 'getUsers']);
             });
 
-            // Routes yang memerlukan additional permissions
-            Route::middleware(['permission:roles.create'])->post('/', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'store']);
-            Route::middleware(['permission:roles.update'])->put('/{id}', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'update']);
-            Route::middleware(['permission:roles.delete'])->delete('/{id}', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'destroy']);
-            Route::middleware(['permission:roles.assign'])->post('/assign', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'assignRole']);
-            Route::middleware(['permission:roles.revoke'])->post('/revoke', [\App\Http\Controllers\Api\V1\RoleManagementController::class, 'revokeRole']);
+            // Routes requiring additional permissions
+            Route::middleware(['permission:roles.create'])->post('/', [RoleManagementController::class, 'store']);
+            Route::middleware(['permission:roles.update'])->put('/{id}', [RoleManagementController::class, 'update']);
+            Route::middleware(['permission:roles.delete'])->delete('/{id}', [RoleManagementController::class, 'destroy']);
+            Route::middleware(['permission:roles.assign'])->post('/assign', [RoleManagementController::class, 'assignRole']);
+            Route::middleware(['permission:roles.revoke'])->post('/revoke', [RoleManagementController::class, 'revokeRole']);
         });
 
-        // Permission Management routes - dengan permission middleware
-        Route::prefix('permissions')->middleware(['permission:permissions.view', 'organization'])->group(function () {
-            // Permission CRUD operations
-            Route::get('/', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'index']);
-            Route::get('/{permissionId}', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'show']);
+        // ====================================================================
+        // PERMISSION MANAGEMENT (With Permission Middleware)
+        // ====================================================================
 
-            // Routes yang memerlukan additional permissions
-            Route::middleware(['permission:permissions.create'])->post('/', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'store']);
-            Route::middleware(['permission:permissions.update'])->put('/{permissionId}', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'update']);
-            Route::middleware(['permission:permissions.delete'])->delete('/{permissionId}', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'destroy']);
+        Route::prefix('permissions')
+            ->middleware(['permission:permissions.view', 'organization'])
+            ->group(function () {
 
-            // Permission groups
+            // Basic CRUD operations
+            Route::get('/', [PermissionManagementController::class, 'index']);
+            Route::get('/{permissionId}', [PermissionManagementController::class, 'show']);
+
+            // Routes requiring additional permissions
+            Route::middleware(['permission:permissions.create'])->post('/', [PermissionManagementController::class, 'store']);
+            Route::middleware(['permission:permissions.update'])->put('/{permissionId}', [PermissionManagementController::class, 'update']);
+            Route::middleware(['permission:permissions.delete'])->delete('/{permissionId}', [PermissionManagementController::class, 'destroy']);
+
+            // Permission groups management
             Route::prefix('groups')->group(function () {
-                Route::get('/', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'getPermissionGroups']);
-                Route::middleware(['permission:permissions.manage_groups'])->post('/', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'createPermissionGroup']);
+                Route::get('/', [PermissionManagementController::class, 'getPermissionGroups']);
+                Route::middleware(['permission:permissions.manage_groups'])->post('/', [PermissionManagementController::class, 'createPermissionGroup']);
             });
 
             // Role permission management
             Route::prefix('roles')->group(function () {
-                Route::get('/{roleId}/permissions', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'getRolePermissions']);
-                Route::middleware(['permission:permissions.assign'])->post('/{roleId}/permissions', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'assignPermissionsToRole']);
-                Route::middleware(['permission:permissions.revoke'])->delete('/{roleId}/permissions', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'removePermissionsFromRole']);
+                Route::get('/{roleId}/permissions', [PermissionManagementController::class, 'getRolePermissions']);
+                Route::middleware(['permission:permissions.assign'])->post('/{roleId}/permissions', [PermissionManagementController::class, 'assignPermissionsToRole']);
+                Route::middleware(['permission:permissions.revoke'])->delete('/{roleId}/permissions', [PermissionManagementController::class, 'removePermissionsFromRole']);
             });
 
             // User permission operations
             Route::prefix('users')->group(function () {
-                Route::get('/permissions', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'getUserPermissions']);
-                Route::middleware(['permission:permissions.check'])->post('/check-permission', [\App\Http\Controllers\Api\V1\PermissionManagementController::class, 'checkUserPermission']);
+                Route::get('/permissions', [PermissionManagementController::class, 'getUserPermissions']);
+                Route::middleware(['permission:permissions.check'])->post('/check-permission', [PermissionManagementController::class, 'checkUserPermission']);
             });
         });
 
-        // Organization Management routes - dengan permission middleware
-        Route::prefix('organizations')->middleware(['permission:organizations.view', 'organization'])->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'index']);
-            Route::get('/statistics', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'statistics']);
+        // ====================================================================
+        // ORGANIZATION MANAGEMENT (With Permission Middleware)
+        // ====================================================================
 
+        Route::prefix('organizations')
+            ->middleware(['permission:organizations.view', 'organization'])
+            ->group(function () {
+
+            // Basic operations
+            Route::get('/', [OrganizationManagementController::class, 'index']);
+            Route::get('/statistics', [OrganizationManagementController::class, 'statistics']);
+
+            // Individual organization operations
             Route::prefix('{id}')->group(function () {
-                Route::get('/', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'show']);
+                Route::get('/', [OrganizationManagementController::class, 'show']);
             });
 
-            // Routes yang memerlukan additional permissions
-            Route::middleware(['permission:organizations.create'])->post('/', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'store']);
-            Route::middleware(['permission:organizations.update'])->put('/{id}', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'update']);
-            Route::middleware(['permission:organizations.delete'])->delete('/{id}', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'destroy']);
+            // Routes requiring additional permissions
+            Route::middleware(['permission:organizations.create'])->post('/', [OrganizationManagementController::class, 'store']);
+            Route::middleware(['permission:organizations.update'])->put('/{id}', [OrganizationManagementController::class, 'update']);
+            Route::middleware(['permission:organizations.delete'])->delete('/{id}', [OrganizationManagementController::class, 'destroy']);
 
             // Organization users management
             Route::prefix('{id}')->group(function () {
-                Route::get('/users', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'users']);
-                Route::middleware(['permission:organizations.add_user'])->post('/users', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'addUser']);
-                Route::middleware(['permission:organizations.remove_user'])->delete('/users/{userId}', [\App\Http\Controllers\Api\V1\OrganizationManagementController::class, 'removeUser']);
+                Route::get('/users', [OrganizationManagementController::class, 'users']);
+                Route::middleware(['permission:organizations.add_user'])->post('/users', [OrganizationManagementController::class, 'addUser']);
+                Route::middleware(['permission:organizations.remove_user'])->delete('/users/{userId}', [OrganizationManagementController::class, 'removeUser']);
             });
         });
 
-        // Advanced Permission Examples - menunjukkan flexibility middleware
-        Route::prefix('advanced')->middleware(['permission:advanced.*'])->group(function () {
-            // Wildcard permission - user harus punya permission apapun yang dimulai dengan 'advanced.'
-            Route::get('/dashboard', function () {
-                return response()->json(['message' => 'Advanced dashboard - requires any advanced.* permission']);
-            });
-        });
+        // ====================================================================
+        // ADVANCED PERMISSION EXAMPLES
+        // Demonstrating middleware flexibility
+        // ====================================================================
 
-        // Multiple Permission Examples - AND logic
-        Route::prefix('reports')->middleware(['permission:reports.view,reports.export'])->group(function () {
-            // User harus punya BOTH permissions: reports.view AND reports.export
-            Route::get('/export', function () {
-                return response()->json(['message' => 'Report export - requires reports.view AND reports.export']);
+        // Wildcard permission example - user must have any permission starting with 'advanced.'
+        Route::prefix('advanced')
+            ->middleware(['permission:advanced.*'])
+            ->group(function () {
+                Route::get('/dashboard', function () {
+                    return response()->json(['message' => 'Advanced dashboard - requires any advanced.* permission']);
+                });
             });
-        });
 
-        // Multiple Permission Examples - OR logic
-        Route::prefix('analytics')->middleware(['permission:analytics.view|analytics.admin'])->group(function () {
-            // User harus punya EITHER permission: analytics.view OR analytics.admin
-            Route::get('/data', function () {
-                return response()->json(['message' => 'Analytics data - requires analytics.view OR analytics.admin']);
+        // Multiple AND permissions example - user must have BOTH permissions
+        Route::prefix('reports')
+            ->middleware(['permission:reports.view,reports.export'])
+            ->group(function () {
+                Route::get('/export', function () {
+                    return response()->json(['message' => 'Report export - requires reports.view AND reports.export']);
+                });
             });
-        });
 
-        // Organization Access Examples
-        Route::prefix('organization')->middleware(['organization:strict'])->group(function () {
-            // Strict mode - user hanya bisa akses organization mereka sendiri
-            Route::get('/info', function () {
-                return response()->json(['message' => 'Organization info - strict access only']);
+        // Multiple OR permissions example - user must have EITHER permission
+        Route::prefix('analytics')
+            ->middleware(['permission:analytics.view|analytics.admin'])
+            ->group(function () {
+                Route::get('/data', function () {
+                    return response()->json(['message' => 'Analytics data - requires analytics.view OR analytics.admin']);
+                });
             });
-        });
 
-        Route::prefix('shared')->middleware(['organization:flexible'])->group(function () {
-            // Flexible mode - user bisa akses organization mereka atau jika tidak ada specific org
-            Route::get('/resources', function () {
-                return response()->json(['message' => 'Shared resources - flexible access']);
+        // ====================================================================
+        // ORGANIZATION ACCESS EXAMPLES
+        // Different organization access modes
+        // ====================================================================
+
+        // Strict mode - user can only access their own organization
+        Route::prefix('organization')
+            ->middleware(['organization:strict'])
+            ->group(function () {
+                Route::get('/info', function () {
+                    return response()->json(['message' => 'Organization info - strict access only']);
+                });
             });
-        });
 
-        // Test Routes untuk Middleware Permission System
+        // Flexible mode - user can access their organization or if no specific org
+        Route::prefix('shared')
+            ->middleware(['organization:flexible'])
+            ->group(function () {
+                Route::get('/resources', function () {
+                    return response()->json(['message' => 'Shared resources - flexible access']);
+                });
+            });
+
+        // ====================================================================
+        // TEST ROUTES FOR MIDDLEWARE PERMISSION SYSTEM
+        // For development and testing purposes
+        // ====================================================================
+
         Route::prefix('test')->group(function () {
+
             // Test single permission
             Route::get('/single', function () {
                 return response()->json([
@@ -307,7 +402,10 @@ Route::prefix('v1')->group(function () {
     });
 });
 
-// Fallback route for API
+// ============================================================================
+// FALLBACK ROUTE
+// ============================================================================
+
 Route::fallback(function () {
     return response()->json([
         'success' => false,
