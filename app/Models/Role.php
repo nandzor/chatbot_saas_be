@@ -34,6 +34,7 @@ class Role extends Model
         'badge_text',
         'metadata',
         'status',
+        'is_active',
     ];
 
     protected $casts = [
@@ -147,6 +148,22 @@ class Role extends Model
     public function isDefaultRole(): bool
     {
         return $this->is_default;
+    }
+
+    /**
+     * Get is_active attribute based on status.
+     */
+    public function getIsActiveAttribute(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /**
+     * Set is_active attribute by updating status.
+     */
+    public function setIsActiveAttribute(bool $value): void
+    {
+        $this->attributes['status'] = $value ? 'active' : 'inactive';
     }
 
     /**

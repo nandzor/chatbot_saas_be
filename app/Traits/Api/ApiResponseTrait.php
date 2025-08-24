@@ -278,12 +278,14 @@ trait ApiResponseTrait
      */
     protected function updatedResponse(
         mixed $data = null,
-        string $message = 'Resource updated successfully'
+        string $message = 'Resource updated successfully',
+        array $meta = []
     ): JsonResponse {
         return $this->successResponse(
             message: $message,
             data: $data,
-            statusCode: 200
+            statusCode: 200,
+            meta: $meta
         );
     }
 

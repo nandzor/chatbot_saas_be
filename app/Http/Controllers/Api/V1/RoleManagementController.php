@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseApiController;
+use App\Http\Requests\Role\UpdateRoleRequest;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -109,7 +110,7 @@ class RoleManagementController extends BaseApiController
     /**
      * Update the specified role.
      */
-    public function update(Request $request, string $roleId): JsonResponse
+    public function update(UpdateRoleRequest $request, string $roleId): JsonResponse
     {
         try {
             $role = Role::find($roleId);
@@ -118,18 +119,42 @@ class RoleManagementController extends BaseApiController
                 return $this->notFoundResponse('Role not found');
             }
 
-            $validated = $request->validate([
-                'name' => 'sometimes|string|max:255|unique:roles,name,' . $roleId,
-                'description' => 'nullable|string',
-                'scope' => 'sometimes|string|in:global,organization,user',
-                'is_system_role' => 'boolean',
-                'organization_id' => 'nullable|integer|exists:organizations,id'
-            ]);
+            // Get validated data from request
+            $validated = $request->validated();
 
+            // Handle status field mapping
+            if (isset($validated['status'])) {
+                // Keep status as is, no mapping needed since database uses 'status' field
+            }
+
+            // Handle is_active field mapping to status
+            if (isset($validated['is_active'])) {
+                $validated['status'] = $validated['is_active'] ? 'active' : 'inactive';
+                unset($validated['is_active']);
+            }
+
+            // Update role
             $role->update($validated);
             $role->refresh();
 
-            return $this->updatedResponse('Role updated successfully', $role);
+            // Log the update action
+            $this->logApiAction('role_updated', [
+                'role_id' => $role->id,
+                'role_name' => $role->name,
+                'updated_by' => $this->getCurrentUser()?->id,
+                'changes' => $validated
+            ]);
+
+            // Return enhanced update response with role data in message field
+            return $this->updatedResponse(
+                data: 'Role updated successfully',
+                message: json_encode($role->toArray()),
+                meta: [
+                    'execution_time_ms' => microtime(true) - LARAVEL_START,
+                    'memory_usage_mb' => memory_get_usage(true) / 1024 / 1024,
+                    'queries_count' => 0
+                ]
+            );
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
