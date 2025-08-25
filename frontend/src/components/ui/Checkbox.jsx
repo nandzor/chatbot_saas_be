@@ -2,12 +2,13 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 
-const Checkbox = React.forwardRef(({ 
-  className, 
+const Checkbox = React.forwardRef(({
+  className,
   checked = false,
   onChange,
+  onCheckedChange,
   disabled = false,
-  ...props 
+  ...props
 }, ref) => {
   return (
     <div className="flex items-center space-x-2">
@@ -15,7 +16,14 @@ const Checkbox = React.forwardRef(({
         type="checkbox"
         ref={ref}
         checked={checked}
-        onChange={onChange}
+        onChange={(e) => {
+          if (onChange) {
+            onChange(e);
+          }
+          if (onCheckedChange) {
+            onCheckedChange(e.target.checked);
+          }
+        }}
         disabled={disabled}
         className={cn(
           "h-4 w-4 rounded border border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
