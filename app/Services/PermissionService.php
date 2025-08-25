@@ -34,11 +34,17 @@ class PermissionService extends BaseService
     const ROLE_PERMISSIONS_CACHE_PREFIX = 'role_permissions';
 
     /**
-     * Get all permissions for an organization
+     * Get all permissions for an organization (null for global permissions)
      */
-    public function getOrganizationPermissions(string $organizationId, array $filters = []): Collection
+    public function getOrganizationPermissions(?string $organizationId, array $filters = []): Collection
     {
-        $query = Permission::where('organization_id', $organizationId);
+        $query = Permission::query();
+
+        if ($organizationId !== null) {
+            $query->where('organization_id', $organizationId);
+        } else {
+            $query->whereNull('organization_id');
+        }
 
         // Apply filters
         if (isset($filters['category'])) {
@@ -70,24 +76,36 @@ class PermissionService extends BaseService
     /**
      * Get permission by ID
      */
-    public function getPermissionById(string $permissionId, string $organizationId): ?Permission
+    public function getPermissionById(string $permissionId, ?string $organizationId): ?Permission
     {
-        return Permission::where('id', $permissionId)
-                        ->where('organization_id', $organizationId)
-                        ->first();
+        $query = Permission::where('id', $permissionId);
+
+        if ($organizationId !== null) {
+            $query->where('organization_id', $organizationId);
+        } else {
+            $query->whereNull('organization_id');
+        }
+
+        return $query->first();
     }
 
     /**
      * Create a new permission
      */
-    public function createPermission(array $data, string $organizationId): Permission
+    public function createPermission(array $data, ?string $organizationId): Permission
     {
         $this->validatePermissionData($data);
 
         // Check if permission code already exists
-        $existingPermission = Permission::where('organization_id', $organizationId)
-                                      ->where('code', $data['code'])
-                                      ->first();
+        $query = Permission::query();
+
+        if ($organizationId !== null) {
+            $query->where('organization_id', $organizationId);
+        } else {
+            $query->whereNull('organization_id');
+        }
+
+        $existingPermission = $query->where('code', $data['code'])->first();
 
         if ($existingPermission) {
             throw new InvalidPermissionException("Permission code '{$data['code']}' already exists in this organization.");
@@ -131,13 +149,13 @@ class PermissionService extends BaseService
         }
     }
 
-    /**
+        /**
      * Update an existing permission
      */
-    public function updatePermission(string $permissionId, array $data, string $organizationId): Permission
+    public function updatePermission(string $permissionId, array $data, ?string $organizationId): Permission
     {
         $permission = $this->getPermissionById($permissionId, $organizationId);
-        
+
         if (!$permission) {
             throw new InvalidPermissionException("Permission not found.");
         }
@@ -150,10 +168,17 @@ class PermissionService extends BaseService
 
         // Check if permission code already exists (excluding current permission)
         if (isset($data['code'])) {
-            $existingPermission = Permission::where('organization_id', $organizationId)
-                                          ->where('code', $data['code'])
-                                          ->where('id', '!=', $permissionId)
-                                          ->first();
+            $query = Permission::query();
+
+            if ($organizationId !== null) {
+                $query->where('organization_id', $organizationId);
+            } else {
+                $query->whereNull('organization_id');
+            }
+
+            $existingPermission = $query->where('code', $data['code'])
+                                      ->where('id', '!=', $permissionId)
+                                      ->first();
 
             if ($existingPermission) {
                 throw new InvalidPermissionException("Permission code '{$data['code']}' already exists in this organization.");
@@ -181,10 +206,10 @@ class PermissionService extends BaseService
     /**
      * Delete a permission
      */
-    public function deletePermission(string $permissionId, string $organizationId): bool
+    public function deletePermission(string $permissionId, ?string $organizationId): bool
     {
         $permission = $this->getPermissionById($permissionId, $organizationId);
-        
+
         if (!$permission) {
             throw new InvalidPermissionException("Permission not found.");
         }
@@ -206,7 +231,7 @@ class PermissionService extends BaseService
             if ($deleted) {
                 // Clear permission cache
                 $this->clearPermissionCache($organizationId);
-                
+
                 DB::commit();
                 Log::info("Permission deleted", ['permission_id' => $permissionId, 'organization_id' => $organizationId]);
             }
@@ -222,7 +247,7 @@ class PermissionService extends BaseService
     /**
      * Get permissions for a specific user
      */
-    public function getUserPermissions(string $userId, string $organizationId, bool $useCache = true): Collection
+    public function getUserPermissions(string $userId, ?string $organizationId, bool $useCache = true): Collection
     {
         $cacheKey = $this->getUserPermissionsCacheKey($userId, $organizationId);
 
@@ -242,13 +267,13 @@ class PermissionService extends BaseService
     /**
      * Check if user has a specific permission
      */
-    public function userHasPermission(string $userId, string $organizationId, string $resource, string $action, string $scope = 'organization'): bool
+    public function userHasPermission(string $userId, ?string $organizationId, string $resource, string $action, string $scope = 'organization'): bool
     {
         $permissions = $this->getUserPermissions($userId, $organizationId);
-        
+
         return $permissions->contains(function ($permission) use ($resource, $action, $scope) {
-            return $permission->resource === $resource && 
-                   $permission->action === $action && 
+            return $permission->resource === $resource &&
+                   $permission->action === $action &&
                    $permission->scope === $scope;
         });
     }
@@ -256,7 +281,7 @@ class PermissionService extends BaseService
     /**
      * Check if user has any of the specified permissions
      */
-    public function userHasAnyPermission(string $userId, string $organizationId, array $permissions): bool
+    public function userHasAnyPermission(string $userId, ?string $organizationId, array $permissions): bool
     {
         foreach ($permissions as $permission) {
             if ($this->userHasPermission($userId, $organizationId, $permission['resource'], $permission['action'], $permission['scope'] ?? 'organization')) {
@@ -269,7 +294,7 @@ class PermissionService extends BaseService
     /**
      * Check if user has all of the specified permissions
      */
-    public function userHasAllPermissions(string $userId, string $organizationId, array $permissions): bool
+    public function userHasAllPermissions(string $userId, ?string $organizationId, array $permissions): bool
     {
         foreach ($permissions as $permission) {
             if (!$this->userHasPermission($userId, $organizationId, $permission['resource'], $permission['action'], $permission['scope'] ?? 'organization')) {
@@ -282,7 +307,7 @@ class PermissionService extends BaseService
     /**
      * Assign permissions to a role
      */
-    public function assignPermissionsToRole(string $roleId, array $permissionIds, string $organizationId, string $grantedBy = null): bool
+    public function assignPermissionsToRole(string $roleId, array $permissionIds, string $organizationId, ?string $grantedBy = null): bool
     {
         $role = Role::where('id', $roleId)
                     ->where('organization_id', $organizationId)
@@ -359,7 +384,7 @@ class PermissionService extends BaseService
             if ($deleted > 0) {
                 // Clear role permission cache
                 $this->clearRolePermissionCache($roleId);
-                
+
                 DB::commit();
                 Log::info("Permissions removed from role", ['role_id' => $roleId, 'permission_count' => $deleted]);
             }
@@ -513,7 +538,7 @@ class PermissionService extends BaseService
     {
         // Clear all user permission caches for the organization
         $users = User::where('organization_id', $organizationId)->pluck('id');
-        
+
         foreach ($users as $userId) {
             $this->clearUserPermissionCache($userId, $organizationId);
         }
@@ -611,6 +636,6 @@ class PermissionService extends BaseService
      */
     protected function getModel(): \Illuminate\Database\Eloquent\Model
     {
-        return new \App\Models\Permission();
+        return new Permission();
     }
 }

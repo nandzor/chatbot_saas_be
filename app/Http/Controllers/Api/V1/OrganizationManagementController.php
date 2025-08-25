@@ -3,46 +3,34 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Models\Organization;
-use App\Models\User;
+use App\Services\OrganizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class OrganizationManagementController extends BaseApiController
 {
+    protected OrganizationService $organizationService;
+
+    public function __construct(OrganizationService $organizationService)
+    {
+        $this->organizationService = $organizationService;
+    }
+
     /**
      * Get paginated list of organizations with filters and search.
      */
     public function index(Request $request): JsonResponse
     {
         try {
-            $pagination = $this->getPaginationParams($request);
-            $filters = $this->getFilterParams($request, [
-                'search', 'status', 'plan', 'created_at'
-            ]);
-
-            $query = Organization::query();
-
-            // Apply filters
-            if (!empty($filters['search'])) {
-                $query->where('name', 'like', '%' . $filters['search'] . '%')
-                      ->orWhere('domain', 'like', '%' . $filters['search'] . '%');
-            }
-
-            if (!empty($filters['status'])) {
-                $query->where('status', $filters['status']);
-            }
-
-            if (!empty($filters['plan'])) {
-                $query->where('plan', $filters['plan']);
-            }
-
-            if (!empty($filters['created_at'])) {
-                $query->whereDate('created_at', $filters['created_at']);
-            }
-
-            $organizations = $query->paginate($pagination['per_page'], ['*'], 'page', $pagination['page']);
+            $organizations = $this->organizationService->getPaginatedOrganizations(
+                $request->get('page', 1),
+                $request->get('per_page', 15),
+                $request->only(['search', 'status', 'plan']),
+                $request->get('sort_by', 'created_at'),
+                $request->get('sort_order', 'desc')
+            );
 
             return $this->successResponse(
                 'Organizations retrieved successfully',
@@ -59,7 +47,18 @@ class OrganizationManagementController extends BaseApiController
             );
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve organizations', $e->getMessage());
+            Log::error('Get organizations error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve organizations',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -69,7 +68,12 @@ class OrganizationManagementController extends BaseApiController
     public function show(string $organizationId): JsonResponse
     {
         try {
-            $organization = Organization::with(['users'])->find($organizationId);
+            // Validate organizationId parameter
+            if (empty($organizationId)) {
+                return $this->errorResponse('Organization ID is required', null, 400);
+            }
+
+            $organization = $this->organizationService->getOrganizationWithDetails($organizationId);
 
             if (!$organization) {
                 return $this->notFoundResponse('Organization not found');
@@ -78,7 +82,18 @@ class OrganizationManagementController extends BaseApiController
             return $this->successResponse('Organization retrieved successfully', $organization);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve organization', $e->getMessage());
+            Log::error('Get organization error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve organization',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -98,14 +113,25 @@ class OrganizationManagementController extends BaseApiController
                 'settings' => 'nullable|array'
             ]);
 
-            $organization = Organization::create($validated);
+            $organization = $this->organizationService->createOrganization($validated, $this->getCurrentUser());
 
-            return $this->successResponse('Organization created successfully', $organization, 201);
+            return $this->createdResponse('Organization created successfully', $organization);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to create organization', $e->getMessage());
+            Log::error('Create organization error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to create organization',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -115,7 +141,12 @@ class OrganizationManagementController extends BaseApiController
     public function update(Request $request, string $organizationId): JsonResponse
     {
         try {
-            $organization = Organization::find($organizationId);
+            // Validate organizationId parameter
+            if (empty($organizationId)) {
+                return $this->errorResponse('Organization ID is required', null, 400);
+            }
+
+            $organization = $this->organizationService->getOrganizationWithDetails($organizationId);
 
             if (!$organization) {
                 return $this->notFoundResponse('Organization not found');
@@ -131,15 +162,25 @@ class OrganizationManagementController extends BaseApiController
                 'settings' => 'nullable|array'
             ]);
 
-            $organization->update($validated);
-            $organization->refresh();
+            $updatedOrganization = $this->organizationService->updateOrganization($organizationId, $validated, $this->getCurrentUser());
 
-            return $this->successResponse('Organization updated successfully', $organization, 200);
+            return $this->successResponse('Organization updated successfully', $updatedOrganization);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to update organization', $e->getMessage());
+            Log::error('Update organization error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to update organization',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -149,18 +190,34 @@ class OrganizationManagementController extends BaseApiController
     public function destroy(string $organizationId): JsonResponse
     {
         try {
-            $organization = Organization::find($organizationId);
+            // Validate organizationId parameter
+            if (empty($organizationId)) {
+                return $this->errorResponse('Organization ID is required', null, 400);
+            }
+
+            $organization = $this->organizationService->getOrganizationWithDetails($organizationId);
 
             if (!$organization) {
                 return $this->notFoundResponse('Organization not found');
             }
 
-            $organization->delete();
+            $this->organizationService->deleteOrganization($organizationId, $this->getCurrentUser());
 
-            return $this->successResponse('Organization deleted successfully', null, 200);
+            return $this->deletedResponse('Organization deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to delete organization', $e->getMessage());
+            Log::error('Delete organization error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to delete organization',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -170,41 +227,60 @@ class OrganizationManagementController extends BaseApiController
     public function statistics(): JsonResponse
     {
         try {
-            $statistics = [
-                'total_organizations' => Organization::count(),
-                'active_organizations' => Organization::where('status', 'active')->count(),
-                'inactive_organizations' => Organization::where('status', 'inactive')->count(),
-                'suspended_organizations' => Organization::where('status', 'suspended')->count(),
-                'free_plan' => Organization::where('plan', 'free')->count(),
-                'basic_plan' => Organization::where('plan', 'basic')->count(),
-                'premium_plan' => Organization::where('plan', 'premium')->count(),
-                'enterprise_plan' => Organization::where('plan', 'enterprise')->count(),
-                'organizations_with_users' => Organization::has('users')->count()
-            ];
+            $statistics = $this->organizationService->getOrganizationStatistics();
 
             return $this->successResponse('Organization statistics retrieved successfully', $statistics);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve organization statistics', $e->getMessage());
+            Log::error('Get organization statistics error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve organization statistics',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
     /**
-     * Get users in organization.
+     * Get users for a specific organization.
      */
     public function users(string $organizationId): JsonResponse
     {
         try {
-            $organization = Organization::with('users')->find($organizationId);
+            // Validate organizationId parameter
+            if (empty($organizationId)) {
+                return $this->errorResponse('Organization ID is required', null, 400);
+            }
+
+            $organization = $this->organizationService->getOrganizationWithDetails($organizationId);
 
             if (!$organization) {
                 return $this->notFoundResponse('Organization not found');
             }
 
-            return $this->successResponse('Organization users retrieved successfully', $organization->users);
+            $users = $this->organizationService->getOrganizationUsers($organizationId);
+
+            return $this->successResponse('Organization users retrieved successfully', $users);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve organization users', $e->getMessage());
+            Log::error('Get organization users error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve organization users',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -214,69 +290,96 @@ class OrganizationManagementController extends BaseApiController
     public function addUser(Request $request, string $organizationId): JsonResponse
     {
         try {
+            // Validate organizationId parameter
+            if (empty($organizationId)) {
+                return $this->errorResponse('Organization ID is required', null, 400);
+            }
+
             $validated = $request->validate([
-                'user_id' => 'required|integer|exists:users,id'
+                'user_id' => 'required|integer|exists:users,id',
+                'role_id' => 'required|string|exists:roles,id'
             ]);
 
-            $organization = Organization::find($organizationId);
-            $user = User::find($validated['user_id']);
+            $organization = $this->organizationService->getOrganizationWithDetails($organizationId);
 
             if (!$organization) {
                 return $this->notFoundResponse('Organization not found');
             }
 
-            if (!$user) {
-                return $this->notFoundResponse('User not found');
+            $success = $this->organizationService->addUserToOrganization(
+                $organizationId,
+                $validated['user_id'],
+                $validated['role_id'],
+                $this->getCurrentUser()
+            );
+
+            if ($success) {
+                return $this->successResponse('User added to organization successfully');
             }
 
-            // Check if user is already in this organization
-            if ($user->organization_id == $organizationId) {
-                return $this->errorResponse('User is already in this organization');
-            }
-
-            // Simple user assignment
-            $user->organization_id = $organizationId;
-            $user->save();
-
-            return $this->successResponse('User added to organization successfully');
+            return $this->errorResponse('Failed to add user to organization', ['error' => 'Could not add user']);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to add user to organization', $e->getMessage());
+            Log::error('Add user to organization error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to add user to organization',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
     /**
      * Remove user from organization.
      */
-    public function removeUser(string $organizationId, string $userId): JsonResponse
+    public function removeUser(Request $request, string $organizationId, string $userId): JsonResponse
     {
         try {
-            $organization = Organization::find($organizationId);
-            $user = User::find($userId);
+            // Validate organizationId parameter
+            if (empty($organizationId)) {
+                return $this->errorResponse('Organization ID is required', null, 400);
+            }
+
+            // Validate userId parameter
+            if (empty($userId)) {
+                return $this->errorResponse('User ID is required', null, 400);
+            }
+
+            $organization = $this->organizationService->getOrganizationWithDetails($organizationId);
 
             if (!$organization) {
                 return $this->notFoundResponse('Organization not found');
             }
 
-            if (!$user) {
-                return $this->notFoundResponse('User not found');
+            $success = $this->organizationService->removeUserFromOrganization($organizationId, $userId, $this->getCurrentUser());
+
+            if ($success) {
+                return $this->successResponse('User removed from organization successfully');
             }
 
-            // Check if user is in this organization
-            if ($user->organization_id != $organizationId) {
-                return $this->errorResponse('User is not in this organization');
-            }
-
-            // Simple user removal
-            $user->organization_id = null;
-            $user->save();
-
-            return $this->successResponse('User removed from organization successfully');
+            return $this->errorResponse('Failed to remove user from organization', ['error' => 'Could not remove user']);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to remove user from organization', $e->getMessage());
+            Log::error('Remove user from organization error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to remove user from organization',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 }

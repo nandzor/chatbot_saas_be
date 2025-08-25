@@ -3,64 +3,65 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Models\Permission;
-use App\Models\Role;
-use App\Models\User;
-use Illuminate\Http\Request;
+use App\Services\PermissionService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class PermissionManagementController extends BaseApiController
 {
+    protected PermissionService $permissionService;
+
+    public function __construct(PermissionService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
+
     /**
      * Get all permissions for the organization.
      */
     public function index(Request $request): JsonResponse
     {
         try {
-            $filters = $this->getFilterParams($request, [
-                'category', 'resource', 'is_system', 'is_visible', 'status'
-            ]);
-
-            $query = Permission::query();
-
-            // Apply filters
-            if (!empty($filters['category'])) {
-                $query->where('category', $filters['category']);
-            }
-
-            if (!empty($filters['resource'])) {
-                $query->where('resource', $filters['resource']);
-            }
-
-            if (isset($filters['is_system'])) {
-                $query->where('is_system', $filters['is_system']);
-            }
-
-            if (isset($filters['is_visible'])) {
-                $query->where('is_visible', $filters['is_visible']);
-            }
-
-            if (!empty($filters['status'])) {
-                $query->where('status', $filters['status']);
-            }
-
-            $permissions = $query->get();
+            $permissions = $this->permissionService->getOrganizationPermissions(
+                $this->getCurrentOrganization()?->id,
+                $request->all()
+            );
 
             return $this->successResponse('Permissions retrieved successfully', $permissions);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve permissions', $e->getMessage());
+            Log::error('Get permissions error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve permissions',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
     /**
-     * Get a specific permission by ID.
+     * Get specific permission details.
      */
     public function show(string $permissionId): JsonResponse
     {
         try {
-            $permission = Permission::find($permissionId);
+            // Validate permissionId parameter
+            if (empty($permissionId)) {
+                return $this->errorResponse('Permission ID is required', null, 400);
+            }
+
+            $permission = $this->permissionService->getPermissionById(
+                $permissionId,
+                $this->getCurrentOrganization()?->id
+            );
 
             if (!$permission) {
                 return $this->notFoundResponse('Permission not found');
@@ -69,7 +70,18 @@ class PermissionManagementController extends BaseApiController
             return $this->successResponse('Permission retrieved successfully', $permission);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve permission', $e->getMessage());
+            Log::error('Get permission error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve permission',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -80,104 +92,154 @@ class PermissionManagementController extends BaseApiController
     {
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255|unique:permissions,name',
+                'name' => 'required|string|max:255',
+                'code' => 'required|string|max:100',
                 'description' => 'nullable|string',
-                'category' => 'required|string|max:100',
                 'resource' => 'required|string|max:100',
                 'action' => 'required|string|max:100',
-                'is_system' => 'boolean',
+                'category' => 'required|string|max:100',
+                'is_system_permission' => 'boolean',
                 'is_visible' => 'boolean',
                 'status' => 'string|in:active,inactive'
             ]);
 
-            $permission = Permission::create($validated);
+            $permission = $this->permissionService->createPermission(
+                $validated,
+                $this->getCurrentOrganization()?->id
+            );
 
             return $this->createdResponse('Permission created successfully', $permission);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to create permission', $e->getMessage());
+            Log::error('Create permission error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to create permission',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
     /**
-     * Update an existing permission.
+     * Update the specified permission.
      */
     public function update(Request $request, string $permissionId): JsonResponse
     {
         try {
-            $permission = Permission::find($permissionId);
-
-            if (!$permission) {
-                return $this->notFoundResponse('Permission not found');
+            // Validate permissionId parameter
+            if (empty($permissionId)) {
+                return $this->errorResponse('Permission ID is required', null, 400);
             }
 
             $validated = $request->validate([
-                'name' => 'sometimes|string|max:255|unique:permissions,name,' . $permissionId,
+                'name' => 'sometimes|string|max:255',
                 'description' => 'nullable|string',
-                'category' => 'sometimes|string|max:100',
-                'resource' => 'sometimes|string|max:100',
-                'action' => 'sometimes|string|max:100',
-                'is_system' => 'boolean',
                 'is_visible' => 'boolean',
                 'status' => 'string|in:active,inactive'
             ]);
 
-            $permission->update($validated);
-            $permission->refresh();
+            $updatedPermission = $this->permissionService->updatePermission(
+                $permissionId,
+                $validated,
+                $this->getCurrentOrganization()?->id
+            );
 
-            return $this->updatedResponse('Permission updated successfully', $permission);
+            return $this->successResponse('Permission updated successfully', $updatedPermission);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to update permission', $e->getMessage());
+            Log::error('Update permission error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to update permission',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
     /**
-     * Delete a permission.
+     * Remove the specified permission.
      */
     public function destroy(string $permissionId): JsonResponse
     {
         try {
-            $permission = Permission::find($permissionId);
-
-            if (!$permission) {
-                return $this->notFoundResponse('Permission not found');
+            // Validate permissionId parameter
+            if (empty($permissionId)) {
+                return $this->errorResponse('Permission ID is required', null, 400);
             }
 
-            $permission->delete();
+            $success = $this->permissionService->deletePermission(
+                $permissionId,
+                $this->getCurrentOrganization()?->id
+            );
+
+            if (!$success) {
+                return $this->errorResponse('Failed to delete permission', ['error' => 'Could not delete permission']);
+            }
 
             return $this->deletedResponse('Permission deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to delete permission', $e->getMessage());
+            Log::error('Delete permission error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to delete permission',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
     /**
      * Get permission groups.
      */
-    public function getPermissionGroups(Request $request): JsonResponse
+    public function getPermissionGroups(): JsonResponse
     {
         try {
-            $groups = Permission::select('category')
-                              ->distinct()
-                              ->whereNotNull('category')
-                              ->get()
-                              ->pluck('category');
+            $groups = $this->permissionService->getPermissionGroups(
+                $this->getCurrentOrganization()?->id
+            );
 
             return $this->successResponse('Permission groups retrieved successfully', $groups);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve permission groups', $e->getMessage());
+            Log::error('Get permission groups error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve permission groups',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
     /**
-     * Create a new permission group.
+     * Create permission group.
      */
     public function createPermissionGroup(Request $request): JsonResponse
     {
@@ -185,17 +247,31 @@ class PermissionManagementController extends BaseApiController
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
-                'category' => 'required|string|max:100'
+                'permission_ids' => 'array'
             ]);
 
-            // This would typically create a permission group model
-            // For now, we'll just return success
-            return $this->successResponse('Permission group created successfully', $validated, 201);
+            $group = $this->permissionService->createPermissionGroup(
+                $validated,
+                $this->getCurrentOrganization()?->id
+            );
+
+            return $this->createdResponse('Permission group created successfully', $group);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to create permission group', $e->getMessage());
+            Log::error('Create permission group error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to create permission group',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -205,16 +281,31 @@ class PermissionManagementController extends BaseApiController
     public function getRolePermissions(string $roleId): JsonResponse
     {
         try {
-            $role = Role::with('permissions')->find($roleId);
-
-            if (!$role) {
-                return $this->notFoundResponse('Role not found');
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
             }
 
-            return $this->successResponse('Role permissions retrieved successfully', $role->permissions);
+            $permissions = $this->permissionService->getRolePermissions(
+                $roleId,
+                $this->getCurrentOrganization()?->id
+            );
+
+            return $this->successResponse('Role permissions retrieved successfully', $permissions);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve role permissions', $e->getMessage());
+            Log::error('Get role permissions error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve role permissions',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -224,26 +315,43 @@ class PermissionManagementController extends BaseApiController
     public function assignPermissionsToRole(Request $request, string $roleId): JsonResponse
     {
         try {
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
+            }
+
             $validated = $request->validate([
                 'permission_ids' => 'required|array',
                 'permission_ids.*' => 'required|string|exists:permissions,id'
             ]);
 
-            $role = Role::find($roleId);
+            $success = $this->permissionService->assignPermissionsToRole(
+                $roleId,
+                $validated['permission_ids'],
+                $this->getCurrentOrganization()?->id
+            );
 
-            if (!$role) {
-                return $this->notFoundResponse('Role not found');
+            if (!$success) {
+                return $this->errorResponse('Failed to assign permissions to role', ['error' => 'Could not assign permissions']);
             }
-
-            // Simple permission assignment - you might want to use a pivot table
-            $role->permissions()->sync($validated['permission_ids']);
 
             return $this->successResponse('Permissions assigned to role successfully');
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to assign permissions to role', $e->getMessage());
+            Log::error('Assign permissions to role error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to assign permissions to role',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -253,26 +361,43 @@ class PermissionManagementController extends BaseApiController
     public function removePermissionsFromRole(Request $request, string $roleId): JsonResponse
     {
         try {
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
+            }
+
             $validated = $request->validate([
                 'permission_ids' => 'required|array',
                 'permission_ids.*' => 'required|string|exists:permissions,id'
             ]);
 
-            $role = Role::find($roleId);
+            $success = $this->permissionService->removePermissionsFromRole(
+                $roleId,
+                $validated['permission_ids'],
+                $this->getCurrentOrganization()?->id
+            );
 
-            if (!$role) {
-                return $this->notFoundResponse('Role not found');
+            if (!$success) {
+                return $this->errorResponse('Failed to remove permissions from role', ['error' => 'Could not remove permissions']);
             }
-
-            // Simple permission removal
-            $role->permissions()->detach($validated['permission_ids']);
 
             return $this->successResponse('Permissions removed from role successfully');
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to remove permissions to role', $e->getMessage());
+            Log::error('Remove permissions from role error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to remove permissions from role',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -282,14 +407,31 @@ class PermissionManagementController extends BaseApiController
     public function getUserPermissions(Request $request): JsonResponse
     {
         try {
-            // This would typically get permissions from the authenticated user
-            // For now, we'll return a placeholder
-            $permissions = Permission::where('status', 'active')->take(10)->get();
+            $user = $this->getCurrentUser();
+            if (!$user) {
+                return $this->errorResponse('User not found', ['error' => 'Authenticated user not found'], 404);
+            }
+
+            $permissions = $this->permissionService->getUserPermissions(
+                $user->id,
+                $this->getCurrentOrganization()?->id
+            );
 
             return $this->successResponse('User permissions retrieved successfully', $permissions);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve user permissions', $e->getMessage());
+            Log::error('Get user permissions error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve user permissions',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -305,10 +447,17 @@ class PermissionManagementController extends BaseApiController
                 'action' => 'sometimes|string'
             ]);
 
-            // Simple permission check - you would implement your own logic here
-            $hasPermission = Permission::where('name', $validated['permission'])
-                                    ->where('status', 'active')
-                                    ->exists();
+            $user = $this->getCurrentUser();
+            if (!$user) {
+                return $this->errorResponse('User not found', ['error' => 'Authenticated user not found'], 404);
+            }
+
+            $hasPermission = $this->permissionService->userHasPermission(
+                $user->id,
+                $this->getCurrentOrganization()?->id,
+                $validated['resource'] ?? 'general',
+                $validated['action'] ?? 'view'
+            );
 
             return $this->successResponse('Permission check completed', [
                 'has_permission' => $hasPermission,
@@ -320,7 +469,18 @@ class PermissionManagementController extends BaseApiController
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to check user permission', $e->getMessage());
+            Log::error('Check user permission error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to check user permission',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 }

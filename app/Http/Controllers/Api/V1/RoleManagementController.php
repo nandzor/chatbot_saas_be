@@ -4,45 +4,28 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Role\UpdateRoleRequest;
-use App\Models\Role;
-use App\Models\User;
+use App\Services\RoleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class RoleManagementController extends BaseApiController
 {
+    protected RoleService $roleService;
+
+    public function __construct(RoleService $roleService)
+    {
+        $this->roleService = $roleService;
+    }
+
     /**
      * Get paginated list of roles with filters and search.
      */
     public function index(Request $request): JsonResponse
     {
         try {
-            $pagination = $this->getPaginationParams($request);
-            $filters = $this->getFilterParams($request, [
-                'search', 'scope', 'is_system_role', 'organization_id'
-            ]);
-
-            $query = Role::query();
-
-            // Apply filters
-            if (!empty($filters['search'])) {
-                $query->where('name', 'like', '%' . $filters['search'] . '%');
-            }
-
-            if (!empty($filters['scope'])) {
-                $query->where('scope', $filters['scope']);
-            }
-
-            if (isset($filters['is_system_role'])) {
-                $query->where('is_system_role', $filters['is_system_role']);
-            }
-
-            if (!empty($filters['organization_id'])) {
-                $query->where('organization_id', $filters['organization_id']);
-            }
-
-            $roles = $query->paginate($pagination['per_page'], ['*'], 'page', $pagination['page']);
+            $roles = $this->roleService->getRoles($request);
 
             return $this->successResponse(
                 'Roles retrieved successfully',
@@ -59,7 +42,18 @@ class RoleManagementController extends BaseApiController
             );
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve roles', $e->getMessage());
+            Log::error('Get roles error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve roles',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -69,7 +63,12 @@ class RoleManagementController extends BaseApiController
     public function show(string $roleId): JsonResponse
     {
         try {
-            $role = Role::with(['users', 'permissions'])->find($roleId);
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            $role = $this->roleService->getRoleWithDetails($roleId);
 
             if (!$role) {
                 return $this->notFoundResponse('Role not found');
@@ -78,7 +77,18 @@ class RoleManagementController extends BaseApiController
             return $this->successResponse('Role retrieved successfully', $role);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve role', $e->getMessage());
+            Log::error('Get role error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve role',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -91,19 +101,30 @@ class RoleManagementController extends BaseApiController
             $validated = $request->validate([
                 'name' => 'required|string|max:255|unique:roles,name',
                 'description' => 'nullable|string',
-                'scope' => 'required|string|in:global,organization,user',
+                'scope' => 'required|string|in:global,organization,department,team,personal',
                 'is_system_role' => 'boolean',
                 'organization_id' => 'nullable|integer|exists:organizations,id'
             ]);
 
-            $role = Role::create($validated);
+            $role = $this->roleService->createRole($validated);
 
             return $this->createdResponse('Role created successfully', $role);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to create role', $e->getMessage());
+            Log::error('Create role error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to create role',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -113,7 +134,12 @@ class RoleManagementController extends BaseApiController
     public function update(UpdateRoleRequest $request, string $roleId): JsonResponse
     {
         try {
-            $role = Role::find($roleId);
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            $role = $this->roleService->getRoleWithDetails($roleId);
 
             if (!$role) {
                 return $this->notFoundResponse('Role not found');
@@ -134,13 +160,12 @@ class RoleManagementController extends BaseApiController
             }
 
             // Update role
-            $role->update($validated);
-            $role->refresh();
+            $updatedRole = $this->roleService->updateRole($roleId, $validated);
 
             // Log the update action
             $this->logApiAction('role_updated', [
-                'role_id' => $role->id,
-                'role_name' => $role->name,
+                'role_id' => $updatedRole->id,
+                'role_name' => $updatedRole->name,
                 'updated_by' => $this->getCurrentUser()?->id,
                 'changes' => $validated
             ]);
@@ -148,7 +173,7 @@ class RoleManagementController extends BaseApiController
             // Return enhanced update response with role data in message field
             return $this->updatedResponse(
                 data: 'Role updated successfully',
-                message: json_encode($role->toArray()),
+                message: json_encode($updatedRole->toArray()),
                 meta: [
                     'execution_time_ms' => microtime(true) - LARAVEL_START,
                     'memory_usage_mb' => memory_get_usage(true) / 1024 / 1024,
@@ -159,7 +184,18 @@ class RoleManagementController extends BaseApiController
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to update role', $e->getMessage());
+            Log::error('Update role error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to update role',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -169,18 +205,34 @@ class RoleManagementController extends BaseApiController
     public function destroy(string $roleId): JsonResponse
     {
         try {
-            $role = Role::find($roleId);
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            $role = $this->roleService->getRoleWithDetails($roleId);
 
             if (!$role) {
                 return $this->notFoundResponse('Role not found');
             }
 
-            $role->delete();
+            $this->roleService->deleteRole($roleId);
 
             return $this->deletedResponse('Role deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to delete role', $e->getMessage());
+            Log::error('Delete role error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to delete role',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -190,14 +242,23 @@ class RoleManagementController extends BaseApiController
     public function getAvailableRoles(): JsonResponse
     {
         try {
-            $roles = Role::where('is_system_role', false)
-                        ->where('scope', '!=', 'global')
-                        ->get(['id', 'name', 'description', 'scope']);
+            $roles = $this->roleService->getAvailableRoles();
 
             return $this->successResponse('Available roles retrieved successfully', $roles);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve available roles', $e->getMessage());
+            Log::error('Get available roles error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve available roles',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -207,16 +268,34 @@ class RoleManagementController extends BaseApiController
     public function getUsers(string $roleId): JsonResponse
     {
         try {
-            $role = Role::with('users')->find($roleId);
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            $role = $this->roleService->getRoleWithDetails($roleId);
 
             if (!$role) {
                 return $this->notFoundResponse('Role not found');
             }
 
-            return $this->successResponse('Role users retrieved successfully', $role->users);
+            $users = $this->roleService->getUsersByRole($roleId);
+
+            return $this->successResponse('Role users retrieved successfully', $users);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve role users', $e->getMessage());
+            Log::error('Get role users error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve role users',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -228,26 +307,32 @@ class RoleManagementController extends BaseApiController
         try {
             $validated = $request->validate([
                 'user_id' => 'required|integer|exists:users,id',
-                'role_id' => 'required|integer|exists:roles,id'
+                'role_id' => 'required|string|exists:roles,id'
             ]);
 
-            $user = User::find($validated['user_id']);
-            $role = Role::find($validated['role_id']);
+            $success = $this->roleService->assignRoleToUsers($validated['role_id'], [$validated['user_id']]);
 
-            if (!$user || !$role) {
-                return $this->notFoundResponse('User or role not found');
+            if ($success) {
+                return $this->successResponse('Role assigned to user successfully');
             }
 
-            // Simple role assignment - you might want to use a pivot table
-            $user->role = $role->name;
-            $user->save();
-
-            return $this->successResponse('Role assigned to user successfully');
+            return $this->errorResponse('Failed to assign role to user', ['error' => 'Could not assign role']);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to assign role to user', $e->getMessage());
+            Log::error('Assign role error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to assign role to user',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -259,28 +344,32 @@ class RoleManagementController extends BaseApiController
         try {
             $validated = $request->validate([
                 'user_id' => 'required|integer|exists:users,id',
-                'role_id' => 'required|integer|exists:roles,id'
+                'role_id' => 'required|string|exists:roles,id'
             ]);
 
-            $user = User::find($validated['user_id']);
-            $role = Role::find($validated['role_id']);
+            $success = $this->roleService->revokeRoleFromUsers($validated['role_id'], [$validated['user_id']]);
 
-            if (!$user || !$role) {
-                return $this->notFoundResponse('User or role not found');
+            if ($success) {
+                return $this->successResponse('Role revoked from user successfully');
             }
 
-            // Simple role revocation
-            if ($user->role === $role->name) {
-                $user->role = null;
-                $user->save();
-            }
-
-            return $this->successResponse('Role revoked from user successfully');
+            return $this->errorResponse('Failed to revoke role from user', ['error' => 'Could not revoke role']);
 
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to revoke role from user', $e->getMessage());
+            Log::error('Revoke role error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to revoke role from user',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 
@@ -290,20 +379,23 @@ class RoleManagementController extends BaseApiController
     public function statistics(): JsonResponse
     {
         try {
-            $statistics = [
-                'total_roles' => Role::count(),
-                'system_roles' => Role::where('is_system_role', true)->count(),
-                'custom_roles' => Role::where('is_system_role', false)->count(),
-                'global_roles' => Role::where('scope', 'global')->count(),
-                'organization_roles' => Role::where('scope', 'organization')->count(),
-                'user_roles' => Role::where('scope', 'user')->count(),
-                'roles_with_users' => Role::has('users')->count()
-            ];
+            $statistics = $this->roleService->getRoleStatistics();
 
             return $this->successResponse('Role statistics retrieved successfully', $statistics);
 
         } catch (\Exception $e) {
-            return $this->serverErrorResponse('Failed to retrieve role statistics', $e->getMessage());
+            Log::error('Get role statistics error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve role statistics',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
         }
     }
 }
