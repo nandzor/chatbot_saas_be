@@ -1,582 +1,698 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useDataList } from '@/hooks/useDataList';
+import { useForm } from '@/hooks/useForm';
+import { useModal } from '@/hooks/useModal';
+import { permissionService } from '@/services/PermissionService';
+import {
+  DataTable,
+  FilterBar,
+  PageHeader,
+  PageContainer,
+  UnifiedFormModal,
+  DetailsModal,
+  ConfirmDialog,
+  BulkActions
+} from '@/components/common';
+import {
+  Button,
+  Badge,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Pagination,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@/components/ui';
 import {
   Plus,
+  Shield,
+  Users,
+  Settings,
+  BarChart3,
+  Download,
+  Upload,
+  RefreshCw,
   Eye,
   Edit,
-  Copy as CopyIcon,
   Trash2,
-  CheckCircle,
-  XCircle,
-  Shield,
-  Settings,
   Key,
-  Lock,
-  Users,
-  FileText
+  Crown
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
-import { usePermissionManagement } from '@/hooks/usePermissionManagement';
-import { usePermissionCheck } from '@/hooks/usePermissionCheck';
-
-import CreatePermissionDialog from './CreatePermissionDialog';
-import ViewPermissionDetailsDialog from './ViewPermissionDetailsDialog';
-import EditPermissionDialog from './EditPermissionDialog';
-
-import {
-  // Header & container
-  PageHeaderWithActions,
-  DataContainer,
-  // Filters
-  FilterBar,
-  // Badges & Buttons
-  Badge,
-  Button,
-  // Table & pagination
-  DataTable,
-  Pagination,
-  // Confirm dialog
-  DeleteConfirmDialog,
-  // States
-  Skeleton,
-  EmptyState,
-  ErrorMessage
-} from '@/components/ui';
-
-// Custom debounce hook
-const useDebounce = (value, delay) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-};
-
-const PermissionList = () => {
-  // Hooks
-  const {
-    permissions,
-    loading,
-    error,
-    filters,
-    pagination,
-    loadPermissions,
-    createPermission,
-    updatePermission,
-    deletePermission,
-    clearError,
-    handlePageChange,
-    handlePerPageChange,
-    refreshPermissions,
-    setFilters,
-  } = usePermissionManagement();
-  const { can } = usePermissionCheck();
-
-  // Local UI state
-  const [selected, setSelected] = useState(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  // Local filter state for immediate UI updates
-  const [localFilters, setLocalFilters] = useState(filters);
-
-  // Debounced filters for API calls
-  const debouncedFilters = useDebounce(localFilters, 500);
-
-  // Initial load ref to prevent duplicate API calls
-  const initialLoadRef = useRef(false);
-
-  // Handle filter changes with immediate UI update
-  const handleFilterChange = useCallback((key, value) => {
-    setLocalFilters(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  }, []);
-
-  const handleClearFilters = useCallback((cleared) => {
-    setLocalFilters(cleared);
-  }, []);
-
-  // Sync local filters with hook filters when debounced
-  useEffect(() => {
-    if (JSON.stringify(debouncedFilters) !== JSON.stringify(filters)) {
-      setFilters(debouncedFilters);
+// Permission table columns configuration
+const permissionColumns = [
+  {
+    key: 'name',
+    header: 'Permission Name',
+    sortable: true,
+    type: 'text',
+    render: (value, item) => (
+      <div className="flex items-center space-x-3">
+        <div className="p-2 bg-purple-100 rounded-lg">
+          <Key className="w-4 h-4 text-purple-600" />
+        </div>
+        <div>
+          <div className="font-medium text-gray-900">{item.name}</div>
+          <div className="text-sm text-gray-500 font-mono">{item.code}</div>
+        </div>
+      </div>
+    )
+  },
+  {
+    key: 'category',
+    header: 'Category',
+    sortable: true,
+    type: 'badge',
+    render: (value) => {
+      const categoryConfig = {
+        user_management: { label: 'User Management', variant: 'default' },
+        role_management: { label: 'Role Management', variant: 'secondary' },
+        permission_management: { label: 'Permission Management', variant: 'outline' },
+        system_admin: { label: 'System Admin', variant: 'destructive' },
+        organization: { label: 'Organization', variant: 'default' },
+        analytics: { label: 'Analytics', variant: 'secondary' }
+      };
+      const config = categoryConfig[value] || { label: value, variant: 'default' };
+      return <Badge variant={config.variant}>{config.label}</Badge>;
     }
-  }, [debouncedFilters, filters, setFilters]);
-
-  // Get permission category icon and color
-  const getCategoryInfo = useCallback((category) => {
-    switch (category) {
-      case 'system':
-        return { icon: Shield, color: 'bg-red-100 text-red-800', label: 'System' };
-      case 'user_management':
-        return { icon: Users, color: 'bg-blue-100 text-blue-800', label: 'User Management' };
-      case 'role_management':
-        return { icon: Key, color: 'bg-purple-100 text-purple-800', label: 'Role Management' };
-      case 'permission_management':
-        return { icon: Lock, color: 'bg-green-100 text-green-800', label: 'Permission Management' };
-      case 'content_management':
-        return { icon: FileText, color: 'bg-yellow-100 text-yellow-800', label: 'Content Management' };
-      case 'settings':
-        return { icon: Settings, color: 'bg-gray-100 text-gray-800', label: 'Settings' };
-      default:
-        return { icon: Settings, color: 'bg-gray-100 text-gray-800', label: category?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Other' };
+  },
+  {
+    key: 'resource',
+    header: 'Resource',
+    sortable: true,
+    type: 'text',
+    render: (value) => (
+      <div className="flex items-center space-x-2">
+        <Shield className="w-4 h-4 text-gray-400" />
+        <span className="font-medium">{value}</span>
+      </div>
+    )
+  },
+  {
+    key: 'action',
+    header: 'Action',
+    sortable: true,
+    type: 'badge',
+    render: (value) => {
+      const actionConfig = {
+        create: { label: 'Create', variant: 'success' },
+        read: { label: 'Read', variant: 'default' },
+        update: { label: 'Update', variant: 'warning' },
+        delete: { label: 'Delete', variant: 'destructive' },
+        manage: { label: 'Manage', variant: 'outline' }
+      };
+      const config = actionConfig[value] || { label: value, variant: 'default' };
+      return <Badge variant={config.variant}>{config.label}</Badge>;
     }
-  }, []);
-
-  // Load permissions when filters change
-  useEffect(() => {
-    // Only load if we have filters or if it's the initial load and no permissions
-    if (Object.keys(filters).length > 0 || (!initialLoadRef.current && permissions.length === 0)) {
-      initialLoadRef.current = true;
-      loadPermissions();
+  },
+  {
+    key: 'is_system',
+    header: 'Type',
+    sortable: true,
+    type: 'badge',
+    render: (value) => (
+      <Badge variant={value ? 'outline' : 'secondary'}>
+        {value ? 'System' : 'Custom'}
+      </Badge>
+    )
+  },
+  {
+    key: 'is_active',
+    header: 'Status',
+    sortable: true,
+    type: 'status',
+    statusConfig: {
+      true: { label: 'Active', variant: 'success' },
+      false: { label: 'Inactive', variant: 'secondary' }
     }
-  }, [filters, loadPermissions, permissions.length]);
+  },
+  {
+    key: 'created_at',
+    header: 'Created',
+    sortable: true,
+    type: 'date',
+    render: (value) => new Date(value).toLocaleDateString()
+  }
+];
 
-  // Error surface
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      clearError();
-    }
-  }, [error, clearError]);
-
-  // Derived data
-  const categoryOptions = useMemo(() => {
-    const set = new Set(permissions.map(p => p.category).filter(Boolean));
-    return Array.from(set);
-  }, [permissions]);
-
-  const filteredPermissions = useMemo(() => {
-    let result = permissions;
-
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      result = result.filter(p =>
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.description || '').toLowerCase().includes(q) ||
-        (p.category || '').toLowerCase().includes(q) ||
-        (p.resource || '').toLowerCase().includes(q) ||
-        (p.action || '').toLowerCase().includes(q)
-      );
-    }
-
-    if (filters.category) result = result.filter(p => p.category === filters.category);
-    if (filters.is_system !== '') result = result.filter(p => p.is_system === (filters.is_system === 'true'));
-    if (filters.is_visible !== '') result = result.filter(p => p.is_visible === (filters.is_visible === 'true'));
-    if (filters.status) result = result.filter(p => p.status === filters.status);
-
-    return result;
-  }, [permissions, filters]);
-
-  // Filter options config for FilterBar
-  const filterOptions = useMemo(() => ([
+// Filter configuration
+const permissionFilterConfig = [
+  {
+    key: 'search',
+    type: 'search',
+    label: 'Search',
+    placeholder: 'Search permissions...'
+  },
     {
       key: 'category',
+    type: 'select',
       label: 'Category',
-      placeholder: 'All Categories',
+    options: [
+      { value: 'user_management', label: 'User Management' },
+      { value: 'role_management', label: 'Role Management' },
+      { value: 'permission_management', label: 'Permission Management' },
+      { value: 'system_admin', label: 'System Admin' },
+      { value: 'organization', label: 'Organization' },
+      { value: 'analytics', label: 'Analytics' }
+    ]
+  },
+  {
+    key: 'resource',
+    type: 'select',
+    label: 'Resource',
+    options: [
+      { value: 'users', label: 'Users' },
+      { value: 'roles', label: 'Roles' },
+      { value: 'permissions', label: 'Permissions' },
+      { value: 'organizations', label: 'Organizations' },
+      { value: 'analytics', label: 'Analytics' }
+    ]
+  },
+  {
+    key: 'action',
+    type: 'select',
+    label: 'Action',
       options: [
-        { value: '', label: 'All Categories' },
-        ...categoryOptions.map(c => ({ value: c, label: c.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) }))
+      { value: 'create', label: 'Create' },
+      { value: 'read', label: 'Read' },
+      { value: 'update', label: 'Update' },
+      { value: 'delete', label: 'Delete' },
+      { value: 'manage', label: 'Manage' }
       ]
     },
     {
       key: 'is_system',
+    type: 'select',
       label: 'Type',
-      placeholder: 'All Types',
       options: [
-        { value: '', label: 'All Types' },
-        { value: 'true', label: 'System Permissions' },
-        { value: 'false', label: 'Custom Permissions' }
+      { value: 'true', label: 'System' },
+      { value: 'false', label: 'Custom' }
       ]
     },
     {
-      key: 'status',
+    key: 'is_active',
+    type: 'select',
       label: 'Status',
-      placeholder: 'All Status',
       options: [
-        { value: '', label: 'All Status' },
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' }
-      ]
-    }
-  ]), [categoryOptions]);
+      { value: 'true', label: 'Active' },
+      { value: 'false', label: 'Inactive' }
+    ]
+  }
+];
 
-  // Columns config for DataTable
-  const columns = useMemo(() => {
-    return [
-      {
-        header: 'Permission',
+// Quick filters
+const quickFilters = [
+  { label: 'System Permissions', filters: { is_system: 'true' } },
+  { label: 'Custom Permissions', filters: { is_system: 'false' } },
+  { label: 'Active Permissions', filters: { is_active: 'true' } },
+  { label: 'User Management', filters: { category: 'user_management' } },
+  { label: 'Role Management', filters: { category: 'role_management' } }
+];
+
+// Permission form fields
+const permissionFormFields = [
+  {
+    name: 'name',
+    label: 'Permission Name',
+    type: 'text',
+    placeholder: 'Enter permission name',
+    required: true
+  },
+  {
+    name: 'code',
+    label: 'Permission Code',
+    type: 'text',
+    placeholder: 'Enter permission code',
+    required: true,
+    helpText: 'Unique identifier for the permission'
+  },
+  {
+    name: 'description',
+    label: 'Description',
+    type: 'textarea',
+    placeholder: 'Enter permission description',
+    rows: 3
+  },
+  {
+    name: 'category',
+    label: 'Category',
+    type: 'select',
+    options: [
+      { value: 'user_management', label: 'User Management' },
+      { value: 'role_management', label: 'Role Management' },
+      { value: 'permission_management', label: 'Permission Management' },
+      { value: 'system_admin', label: 'System Admin' },
+      { value: 'organization', label: 'Organization' },
+      { value: 'analytics', label: 'Analytics' }
+    ],
+    required: true
+  },
+  {
+    name: 'resource',
+    label: 'Resource',
+    type: 'select',
+    options: [
+      { value: 'users', label: 'Users' },
+      { value: 'roles', label: 'Roles' },
+      { value: 'permissions', label: 'Permissions' },
+      { value: 'organizations', label: 'Organizations' },
+      { value: 'analytics', label: 'Analytics' }
+    ],
+    required: true
+  },
+  {
+    name: 'action',
+    label: 'Action',
+    type: 'select',
+    options: [
+      { value: 'create', label: 'Create' },
+      { value: 'read', label: 'Read' },
+      { value: 'update', label: 'Update' },
+      { value: 'delete', label: 'Delete' },
+      { value: 'manage', label: 'Manage' }
+    ],
+    required: true
+  },
+  {
+    name: 'is_active',
+    label: 'Active',
+    type: 'switch',
+    helpText: 'Enable or disable this permission'
+  }
+];
+
+// Permission details fields
+const permissionDetailsFields = [
+  {
         key: 'name',
-        className: 'w-[30%] min-w-[240px]',
-        render: (_val, item) => (
-          <div className="flex items-center">
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
-              style={{ backgroundColor: (item.color || '#6B7280') + '20' }}
-            >
-              <Shield className="w-5 h-5" style={{ color: item.color || '#6B7280' }} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-gray-900">{item.name}</h3>
-                {item.is_system && (
-                  <Badge variant="destructive" className="text-xs">SYS</Badge>
-                )}
-              </div>
-              <p className="text-sm text-gray-500 font-mono">{item.code}</p>
-              {item.description && (
-                <p className="text-xs text-gray-400 mt-1 max-w-xs truncate">{item.description}</p>
-              )}
-            </div>
-          </div>
-        )
-      },
-      {
-        header: 'Category & Resource',
+    label: 'Permission Name',
+    type: 'text'
+  },
+  {
+    key: 'code',
+    label: 'Permission Code',
+    type: 'text'
+  },
+  {
+    key: 'description',
+    label: 'Description',
+    type: 'text'
+  },
+  {
         key: 'category',
-        className: 'w-[30%] min-w-[220px]',
-        render: (_val, item) => {
-          const categoryInfo = getCategoryInfo(item.category);
-          return (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge className={categoryInfo.color}>
-                  <categoryInfo.icon className="w-3 h-3 mr-1" />
-                  {categoryInfo.label}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Resource:</span>
-                <Badge variant="outline" className="font-mono">
-                  {item.resource || 'N/A'}
-                </Badge>
-              </div>
-              <div className="text-xs text-gray-400">Action: {item.action || 'N/A'}</div>
-            </div>
-          );
-        }
-      },
-      {
-        header: 'Access & Scope',
-        key: 'scope',
-        className: 'w-[20%] min-w-[180px]',
-        render: (_val, item) => (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Type:</span>
-              <Badge variant={item.is_system ? 'destructive' : 'outline'}>
-                {item.is_system ? 'System' : 'Custom'}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Visible:</span>
-              <Badge variant={item.is_visible ? 'default' : 'secondary'}>
-                {item.is_visible ? 'Yes' : 'No'}
-              </Badge>
-            </div>
-            <div className="text-xs text-gray-400">{item.metadata?.scope || 'Global'} scope</div>
-          </div>
-        )
-      },
-      {
-        header: 'Status',
-        key: 'status',
-        className: 'w-[10%] min-w-[120px]',
-        render: (val) => (
-          val === 'active' ? (
-            <Badge className="bg-green-100 text-green-800">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Active
-            </Badge>
-          ) : (
-            <Badge variant="secondary">
-              <XCircle className="w-3 h-3 mr-1" />
-              {val || 'Inactive'}
-            </Badge>
-          )
-        )
-      }
-    ];
-  }, [getCategoryInfo]);
+    label: 'Category',
+    type: 'badge'
+  },
+  {
+    key: 'resource',
+    label: 'Resource',
+    type: 'text'
+  },
+  {
+    key: 'action',
+    label: 'Action',
+    type: 'badge'
+  },
+  {
+    key: 'is_system',
+    label: 'Type',
+    type: 'badge'
+  },
+  {
+    key: 'is_active',
+    label: 'Status',
+    type: 'status',
+    statusConfig: {
+      true: { label: 'Active', variant: 'success' },
+      false: { label: 'Inactive', variant: 'secondary' }
+    }
+  },
+  {
+    key: 'created_at',
+    label: 'Created',
+    type: 'date'
+  },
+  {
+    key: 'updated_at',
+    label: 'Updated',
+    type: 'date'
+  }
+];
 
-  // Actions for DataTable
-  const rowActions = useMemo(() => {
-    return [
+const PermissionList = () => {
+  // Modal states
+  const formModal = useModal();
+  const detailsModal = useModal();
+  const deleteModal = useModal();
+
+  // Use generic data list hook
+  const {
+    data: permissions,
+    loading,
+    error,
+    pagination,
+    filters,
+    selectedItems,
+    hasSelectedItems,
+    allItemsSelected,
+    handleFilterChange,
+    handleFiltersReset,
+    handlePageChange,
+    handleItemSelection,
+    handleBulkSelection,
+    clearSelection,
+    createItem,
+    updateItem,
+    deleteItem,
+    bulkDeleteItems,
+    handleSortChange,
+    sorting,
+    retryLoad,
+    refreshData,
+    exportData
+  } = useDataList(permissionService, {
+    defaultFilters: {
+      search: '',
+      category: '',
+      resource: '',
+      action: '',
+      is_system: '',
+      is_active: ''
+    },
+    defaultPerPage: 15,
+    enableSelection: true,
+    enableBulkActions: true
+  });
+
+  // Form hook
+  const form = useForm({}, {
+    name: [
+      { type: 'required', message: 'Name is required' },
+      { type: 'minLength', value: 2, message: 'Name must be at least 2 characters' }
+    ],
+    code: [
+      { type: 'required', message: 'Code is required' },
+      { type: 'pattern', value: /^[a-zA-Z0-9_]+$/, message: 'Code must contain only letters, numbers, and underscores' }
+    ],
+    category: [
+      { type: 'required', message: 'Category is required' }
+    ],
+    resource: [
+      { type: 'required', message: 'Resource is required' }
+    ],
+    action: [
+      { type: 'required', message: 'Action is required' }
+    ]
+  });
+
+  // Row actions configuration
+  const rowActions = [
       {
         label: 'View Details',
         icon: Eye,
-        onClick: (item) => onView(item)
+      action: 'view'
       },
       {
         label: 'Edit Permission',
         icon: Edit,
-        onClick: (item) => onEdit(item),
-        className: !can('permissions.update') ? 'pointer-events-none opacity-50' : '',
-        separator: true
-      },
-      {
-        label: 'Clone Permission',
-        icon: CopyIcon,
-        onClick: (item) => onClone(item)
+      action: 'edit'
       },
       {
         label: 'Delete Permission',
         icon: Trash2,
-        onClick: (item) => onAskDelete(item),
-        className: `text-red-600 focus:text-red-600 ${!can('permissions.delete') ? 'pointer-events-none opacity-50' : ''}`,
-        separator: true
-      }
-    ];
-  }, [can]);
-
-  // Handlers
-  const handleCreateSubmit = async (data) => {
-    try {
-      setActionLoading(true);
-      const res = await createPermission(data);
-      if (res.success) {
-        toast.success('Permission created');
-        setShowCreate(false);
-      } else {
-        toast.error(res.error || 'Failed to create');
-      }
-    } finally {
-      setActionLoading(false);
+      action: 'delete'
     }
-  };
+  ];
 
-  const onEdit = (permission) => {
-    setSelected(permission);
-    setShowEdit(true);
-  };
-
-  const handleEditSubmit = async (data) => {
-    try {
-      if (!selected) return;
-      setActionLoading(true);
-      const res = await updatePermission(selected.id, data);
-      if (res.success) {
-        toast.success('Permission updated');
-        setShowEdit(false);
-        setSelected(null);
-      } else {
-        toast.error(res.error || 'Failed to update');
-      }
-    } finally {
-      setActionLoading(false);
+  // Handle row actions
+  const handleRowAction = useCallback((action, item) => {
+    switch (action.action) {
+      case 'view':
+        detailsModal.open(item);
+        break;
+      case 'edit':
+        form.setFormData(item);
+        formModal.open({ mode: 'edit', data: item });
+        break;
+      case 'delete':
+        deleteModal.open(item);
+        break;
     }
-  };
+  }, [detailsModal, formModal, deleteModal, form]);
 
-  const onView = (permission) => {
-    setSelected(permission);
-    setShowDetails(true);
-  };
+  // Handle row click
+  const handleRowClick = useCallback((item) => {
+    detailsModal.open(item);
+  }, [detailsModal]);
 
-  const onClone = (permission) => {
-    setSelected({ ...permission, id: undefined, name: `${permission.name} (Copy)` });
-    setShowCreate(true);
-  };
+  // Handle form submission
+  const handleFormSubmit = useCallback(async (formData) => {
+    const modalData = formModal.data;
+    const mode = modalData?.mode || 'create';
 
-  const onAskDelete = (permission) => {
-    setSelected(permission);
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDelete = async () => {
-    try {
-      if (!selected) return;
-      setActionLoading(true);
-      const res = await deletePermission(selected.id);
-      if (res.success) {
-        toast.success('Permission deleted');
-        setShowDeleteConfirm(false);
-        setSelected(null);
+    let result;
+    if (mode === 'create') {
+      result = await createItem(formData);
       } else {
-        toast.error(res.error || 'Failed to delete');
-      }
-    } finally {
-      setActionLoading(false);
+      const selectedPermission = modalData?.data;
+      if (!selectedPermission) return { success: false };
+      result = await updateItem(selectedPermission.id, formData);
     }
-  };
 
-  // Loading state (skeleton) - AFTER all hooks
-  if (loading && permissions.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+    if (result.success) {
+      formModal.close();
+      form.resetForm();
+    }
+    return result;
+  }, [createItem, updateItem, formModal, form]);
 
-  const showEmpty = !loading && filteredPermissions.length === 0;
+  // Handle create permission
+  const handleCreatePermission = useCallback(() => {
+    form.resetForm();
+    formModal.open({ mode: 'create' });
+  }, [formModal, form]);
+
+  // Handle delete permission
+  const handleDeletePermission = useCallback(async () => {
+    const selectedPermission = deleteModal.data;
+    if (!selectedPermission) return { success: false };
+
+    const result = await deleteItem(selectedPermission.id);
+    if (result.success) {
+      deleteModal.close();
+    }
+    return result;
+  }, [deleteItem, deleteModal]);
+
+  // Handle bulk delete
+  const handleBulkDelete = useCallback(async () => {
+    if (!hasSelectedItems) return;
+
+    const result = await bulkDeleteItems(selectedItems);
+    if (result.success) {
+      clearSelection();
+    }
+    return result;
+  }, [bulkDeleteItems, selectedItems, hasSelectedItems, clearSelection]);
+
+  // Handle export
+  const handleExport = useCallback(async () => {
+    return await exportData('json');
+  }, [exportData]);
+
+  // Handle quick filter
+  const handleQuickFilter = useCallback((filter) => {
+    handleFilterChange(filter.filters);
+  }, [handleFilterChange]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <PageHeaderWithActions
+    <PageContainer>
+      {/* Page Header */}
+      <PageHeader
           title="Permission Management"
-          description="Manage system permissions, access controls, and security policies across the system"
+        description="Manage system permissions and access control"
+        icon={Key}
           primaryAction={{
-            text: 'Create Permission',
+          label: 'Create Permission',
             icon: Plus,
-            onClick: () => { setSelected(null); setShowCreate(true); },
-            disabled: !can('permissions.create')
-          }}
-        />
-
-        {/* Error message (non-blocking) */}
-        <ErrorMessage error={error} className="" />
+          onClick: handleCreatePermission,
+          disabled: loading
+        }}
+        secondaryActions={[
+          {
+            label: 'Refresh',
+            icon: RefreshCw,
+            onClick: refreshData,
+            disabled: loading
+          },
+          {
+            label: 'Export',
+            icon: Download,
+            onClick: handleExport,
+            disabled: loading
+          }
+        ]}
+        metadata={[
+          { label: 'Total Permissions', value: pagination.total },
+          { label: 'Active Permissions', value: permissions.filter(p => p.is_active).length },
+          { label: 'System Permissions', value: permissions.filter(p => p.is_system).length }
+        ]}
+      />
 
         {/* Filters */}
         <FilterBar
           filters={filters}
           onFilterChange={handleFilterChange}
-          onClearFilters={handleClearFilters}
-          searchPlaceholder="Search permissions by name, code, description, or resource..."
-          filterOptions={filterOptions}
-          className=""
-        />
+        onReset={handleFiltersReset}
+        filterConfig={permissionFilterConfig}
+        enableQuickFilters={true}
+        quickFilters={quickFilters}
+        onQuickFilter={handleQuickFilter}
+        showExportImport={true}
+        onExport={handleExport}
+        loading={loading}
+        hasActiveFilters={Object.values(filters).some(v => v !== '' && v !== null && v !== undefined)}
+        activeFilterCount={Object.values(filters).filter(v => v !== '' && v !== null && v !== undefined).length}
+      />
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <DataContainer>
-            <div className="p-0">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Shield className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Permissions</p>
-                  <p className="text-2xl font-bold text-gray-900">{pagination.total || permissions.length}</p>
-                </div>
-              </div>
-            </div>
-          </DataContainer>
+      {/* Bulk Actions */}
+      <BulkActions
+        selectedCount={selectedItems.length}
+        totalCount={pagination.total}
+        onClearSelection={clearSelection}
+        primaryAction={{
+          label: 'Delete Selected',
+          icon: Trash2,
+          variant: 'destructive',
+          onClick: handleBulkDelete
+        }}
+        actions={[
+          {
+            label: 'Export Selected',
+            icon: Download,
+            variant: 'outline',
+            onClick: () => exportData('json', { ids: selectedItems })
+          }
+        ]}
+      />
 
-          <DataContainer>
-            <div className="p-0">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Permissions</p>
-                  <p className="text-2xl font-bold text-gray-900">{permissions.filter(p => p.status === 'active').length}</p>
-                </div>
-              </div>
-            </div>
-          </DataContainer>
-
-          <DataContainer>
-            <div className="p-0">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Shield className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">System Permissions</p>
-                  <p className="text-2xl font-bold text-gray-900">{permissions.filter(p => p.is_system).length}</p>
-                </div>
-              </div>
-            </div>
-          </DataContainer>
-
-          <DataContainer>
-            <div className="p-0">
-              <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <CopyIcon className="w-6 h-6 text-orange-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Custom Permissions</p>
-                  <p className="text-2xl font-bold text-gray-900">{permissions.filter(p => !p.is_system).length}</p>
-                </div>
-              </div>
-            </div>
-          </DataContainer>
-        </div>
-
-        {/* Table or Empty */}
-        <DataContainer>
-          <div className="mb-2">
-            <h3 className="text-lg font-semibold text-gray-900">Permissions Overview</h3>
-            <p className="text-sm text-gray-600">
-              {pagination.total} permissions found • Showing {pagination.current_page} of {pagination.last_page} pages
-            </p>
-          </div>
-
-          {showEmpty ? (
-            <EmptyState
-              title="No permissions found"
-              description="Try adjusting filters or create a new permission."
-              actionText={can('permissions.create') ? 'Create Permission' : undefined}
-              onAction={can('permissions.create') ? () => { setSelected(null); setShowCreate(true); } : undefined}
-              className=""
-            />
-          ) : (
-            <>
+      {/* Data Table */}
               <DataTable
-                data={filteredPermissions}
-                columns={columns}
-                actions={rowActions}
+        data={permissions}
+        columns={permissionColumns}
                 loading={loading}
-                emptyMessage="No permissions found."
-              />
+        error={error}
+        selectedItems={selectedItems}
+        onItemSelect={handleItemSelection}
+        onBulkSelect={handleBulkSelection}
+        enableSelection={true}
+        sorting={sorting}
+        onSortChange={handleSortChange}
+        enableSorting={true}
+        onRowClick={handleRowClick}
+        rowActions={rowActions}
+        onRowAction={handleRowAction}
+        emptyMessage="No permissions found"
+        emptyActionText="Create Permission"
+        onEmptyAction={handleCreatePermission}
+        errorMessage="Failed to load permissions"
+        onRetry={retryLoad}
+        showPaginationInfo={true}
+        pagination={pagination}
+        variant="default"
+        striped={true}
+        hoverable={true}
+      />
 
+      {/* Pagination */}
+      {pagination.last_page > 1 && (
+        <div className="flex justify-center">
               <Pagination
-                className="mt-6"
                 currentPage={pagination.current_page}
                 totalPages={pagination.last_page}
                 totalItems={pagination.total}
-                perPage={pagination.per_page}
                 onPageChange={handlePageChange}
-                onPerPageChange={handlePerPageChange}
-              />
-            </>
-          )}
-        </DataContainer>
-      </div>
+            itemsPerPage={pagination.per_page}
+            showItemsPerPage={true}
+            onItemsPerPageChange={(perPage) => {
+              // Handle per page change
+            }}
+          />
+        </div>
+      )}
 
-      {/* Create */}
-      <CreatePermissionDialog isOpen={showCreate} onClose={() => setShowCreate(false)} onSubmit={handleCreateSubmit} loading={actionLoading} />
-
-      {/* Edit */}
-      <EditPermissionDialog isOpen={showEdit} onClose={() => setShowEdit(false)} permission={selected} onSubmit={handleEditSubmit} loading={actionLoading} />
-
-      {/* Details */}
-      <ViewPermissionDetailsDialog isOpen={showDetails} onClose={() => setShowDetails(false)} permission={selected} onEdit={onEdit} onClone={onClone} onDelete={onAskDelete} />
-
-      {/* Delete confirm */}
-      <DeleteConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={confirmDelete}
-        itemName={selected?.name}
-        itemType="permission"
-        loading={actionLoading}
+      {/* Unified Form Modal */}
+      <UnifiedFormModal
+        isOpen={formModal.isOpen}
+        onClose={formModal.close}
+        mode={formModal.data?.mode || 'create'}
+        onSubmit={handleFormSubmit}
+        title={formModal.data?.mode === 'edit' ? 'Edit Permission' : 'Create New Permission'}
+        description={formModal.data?.mode === 'edit' ? 'Update permission information and settings' : 'Create a new permission with specific access controls'}
+        icon={formModal.data?.mode === 'edit' ? Edit : Key}
+        fields={permissionFormFields}
+        formData={form.formData}
+        errors={form.errors}
+        touched={form.touched}
+        isSubmitting={form.isSubmitting}
+        isValid={form.isValid}
+        handleChange={form.handleChange}
+        handleBlur={form.handleBlur}
+        resetForm={form.resetForm}
+        submitText={formModal.data?.mode === 'edit' ? 'Update Permission' : 'Create Permission'}
+        size="lg"
       />
-    </div>
+
+      {/* Permission Details Modal */}
+      <DetailsModal
+        isOpen={detailsModal.isOpen}
+        onClose={detailsModal.close}
+        title="Permission Details"
+        description="View detailed information about this permission"
+        icon={Key}
+        data={detailsModal.data || {}}
+        fields={permissionDetailsFields}
+        primaryAction={{
+          label: 'Edit Permission',
+          icon: Edit,
+          onClick: () => {
+            if (detailsModal.data) {
+              form.setFormData(detailsModal.data);
+              detailsModal.close();
+              formModal.open({ mode: 'edit', data: detailsModal.data });
+            }
+          }
+        }}
+        secondaryAction={{
+          label: 'Delete Permission',
+          icon: Trash2,
+          variant: 'destructive',
+          onClick: () => {
+            if (detailsModal.data) {
+              detailsModal.close();
+              deleteModal.open(detailsModal.data);
+            }
+          }
+        }}
+        size="xl"
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={deleteModal.isOpen}
+        onClose={deleteModal.close}
+        onConfirm={handleDeletePermission}
+        title="Delete Permission"
+        description={`Are you sure you want to delete "${deleteModal.data?.name}"? This action cannot be undone.`}
+        variant="destructive"
+        confirmText="Delete Permission"
+        cancelText="Cancel"
+        confirmVariant="destructive"
+      />
+    </PageContainer>
   );
 };
 

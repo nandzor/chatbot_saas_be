@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useDataList } from '@/hooks/useDataList';
 import { useForm } from '@/hooks/useForm';
 import { useModal } from '@/hooks/useModal';
-import { roleService } from '@/services/RoleService';
+import { organizationService } from '@/services/OrganizationService';
 import {
   DataTable,
   FilterBar,
@@ -12,9 +12,7 @@ import {
   DetailsModal,
   ConfirmDialog,
   BulkActions,
-  StatusBadge,
-  StatisticsCard,
-  StatisticsGrid
+  StatusBadge
 } from '@/components/common';
 import {
   Button,
@@ -31,7 +29,8 @@ import {
 } from '@/components/ui';
 import {
   Plus,
-  Shield,
+  Building2,
+  Users,
   Settings,
   BarChart3,
   Download,
@@ -40,79 +39,57 @@ import {
   Eye,
   Edit,
   Trash2,
-  Users,
-  Crown,
-  CheckCircle,
-  AlertCircle,
-  Key
+  Mail,
+  Phone,
+  Calendar,
+  Globe,
+  MapPin
 } from 'lucide-react';
 
-// Role table columns configuration
-const roleColumns = [
+// Organization table columns configuration
+const organizationColumns = [
   {
     key: 'name',
-    header: 'Role Name',
+    header: 'Organization',
     sortable: true,
     type: 'text',
     render: (value, item) => (
       <div className="flex items-center space-x-3">
-        <div className="p-2 bg-blue-100 rounded-lg">
-          <Shield className="w-4 h-4 text-blue-600" />
+        <div className="p-2 bg-green-100 rounded-lg">
+          <Building2 className="w-4 h-4 text-green-600" />
         </div>
         <div>
           <div className="font-medium text-gray-900">{item.name}</div>
-          <div className="text-sm text-gray-500 font-mono">{item.code}</div>
+          <div className="text-sm text-gray-500 font-mono">{item.slug}</div>
         </div>
       </div>
     )
   },
   {
-    key: 'scope',
-    header: 'Scope',
+    key: 'type',
+    header: 'Type',
     sortable: true,
     type: 'badge',
     render: (value) => {
-      const scopeConfig = {
-        global: { label: 'Global', variant: 'default' },
-        organization: { label: 'Organization', variant: 'secondary' },
-        team: { label: 'Team', variant: 'outline' },
-        project: { label: 'Project', variant: 'destructive' }
+      const typeConfig = {
+        company: { label: 'Company', variant: 'default' },
+        nonprofit: { label: 'Non-Profit', variant: 'secondary' },
+        government: { label: 'Government', variant: 'outline' },
+        educational: { label: 'Educational', variant: 'destructive' }
       };
-      const config = scopeConfig[value] || { label: value, variant: 'default' };
+      const config = typeConfig[value] || { label: value, variant: 'default' };
       return <Badge variant={config.variant}>{config.label}</Badge>;
     }
   },
   {
-    key: 'level',
-    header: 'Level',
+    key: 'industry',
+    header: 'Industry',
     sortable: true,
-    type: 'number',
+    type: 'text',
     render: (value) => (
       <div className="flex items-center space-x-2">
-        <Crown className="w-4 h-4 text-yellow-500" />
-        <span className="font-medium">{value}</span>
+        <span className="text-sm text-gray-600">{value || 'N/A'}</span>
       </div>
-    )
-  },
-  {
-    key: 'is_active',
-    header: 'Status',
-    sortable: true,
-    type: 'status',
-    statusConfig: {
-      true: { label: 'Active', variant: 'success' },
-      false: { label: 'Inactive', variant: 'secondary' }
-    }
-  },
-  {
-    key: 'is_system_role',
-    header: 'Type',
-    sortable: true,
-    type: 'badge',
-    render: (value) => (
-      <Badge variant={value ? 'outline' : 'secondary'}>
-        {value ? 'System' : 'Custom'}
-      </Badge>
     )
   },
   {
@@ -128,14 +105,26 @@ const roleColumns = [
     )
   },
   {
-    key: 'permission_count',
-    header: 'Permissions',
+    key: 'status',
+    header: 'Status',
     sortable: true,
-    type: 'number',
+    type: 'status',
+    statusConfig: {
+      active: { label: 'Active', variant: 'success' },
+      inactive: { label: 'Inactive', variant: 'secondary' },
+      suspended: { label: 'Suspended', variant: 'destructive' },
+      pending: { label: 'Pending', variant: 'warning' }
+    }
+  },
+  {
+    key: 'location',
+    header: 'Location',
+    sortable: true,
+    type: 'text',
     render: (value) => (
       <div className="flex items-center space-x-2">
-        <Key className="w-4 h-4 text-gray-400" />
-        <span className="font-medium">{value || 0}</span>
+        <MapPin className="w-4 h-4 text-gray-400" />
+        <span className="text-sm text-gray-600">{value || 'N/A'}</span>
       </div>
     )
   },
@@ -149,133 +138,177 @@ const roleColumns = [
 ];
 
 // Filter configuration
-const roleFilterConfig = [
+const organizationFilterConfig = [
   {
     key: 'search',
     type: 'search',
     label: 'Search',
-    placeholder: 'Search roles...'
+    placeholder: 'Search organizations...'
   },
   {
-    key: 'scope',
-    type: 'select',
-    label: 'Scope',
-    options: [
-      { value: 'global', label: 'Global' },
-      { value: 'organization', label: 'Organization' },
-      { value: 'team', label: 'Team' },
-      { value: 'project', label: 'Project' }
-    ]
-  },
-  {
-    key: 'is_active',
-    type: 'select',
-    label: 'Status',
-    options: [
-      { value: 'true', label: 'Active' },
-      { value: 'false', label: 'Inactive' }
-    ]
-  },
-  {
-    key: 'is_system_role',
+    key: 'type',
     type: 'select',
     label: 'Type',
     options: [
-      { value: 'true', label: 'System' },
-      { value: 'false', label: 'Custom' }
+      { value: 'company', label: 'Company' },
+      { value: 'nonprofit', label: 'Non-Profit' },
+      { value: 'government', label: 'Government' },
+      { value: 'educational', label: 'Educational' }
     ]
   },
   {
-    key: 'level_min',
-    type: 'number',
-    label: 'Min Level',
-    placeholder: '0'
+    key: 'industry',
+    type: 'select',
+    label: 'Industry',
+    options: [
+      { value: 'technology', label: 'Technology' },
+      { value: 'healthcare', label: 'Healthcare' },
+      { value: 'finance', label: 'Finance' },
+      { value: 'education', label: 'Education' },
+      { value: 'retail', label: 'Retail' },
+      { value: 'manufacturing', label: 'Manufacturing' }
+    ]
   },
   {
-    key: 'level_max',
-    type: 'number',
-    label: 'Max Level',
-    placeholder: '100'
+    key: 'status',
+    type: 'select',
+    label: 'Status',
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' },
+      { value: 'suspended', label: 'Suspended' },
+      { value: 'pending', label: 'Pending' }
+    ]
+  },
+  {
+    key: 'location',
+    type: 'select',
+    label: 'Location',
+    options: [
+      { value: 'us', label: 'United States' },
+      { value: 'eu', label: 'Europe' },
+      { value: 'asia', label: 'Asia' },
+      { value: 'other', label: 'Other' }
+    ]
+  },
+  {
+    key: 'created_at_start',
+    type: 'date',
+    label: 'Created From'
+  },
+  {
+    key: 'created_at_end',
+    type: 'date',
+    label: 'Created To'
   }
 ];
 
 // Quick filters
 const quickFilters = [
-  { label: 'System Roles', filters: { is_system_role: 'true' } },
-  { label: 'Custom Roles', filters: { is_system_role: 'false' } },
-  { label: 'Active Roles', filters: { is_active: 'true' } },
-  { label: 'Global Roles', filters: { scope: 'global' } }
+  { label: 'Active Organizations', filters: { status: 'active' } },
+  { label: 'Companies', filters: { type: 'company' } },
+  { label: 'Technology', filters: { industry: 'technology' } },
+  { label: 'Large Organizations', filters: { user_count_min: '100' } },
+  { label: 'Recent Organizations', filters: { created_at_start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] } }
 ];
 
-// Role form fields
-const roleFormFields = [
+// Organization form fields
+const organizationFormFields = [
   {
     name: 'name',
-    label: 'Role Name',
+    label: 'Organization Name',
     type: 'text',
-    placeholder: 'Enter role name',
+    placeholder: 'Enter organization name',
     required: true
   },
   {
-    name: 'code',
-    label: 'Role Code',
+    name: 'slug',
+    label: 'Organization Slug',
     type: 'text',
-    placeholder: 'Enter role code',
+    placeholder: 'Enter organization slug',
     required: true,
-    helpText: 'Unique identifier for the role'
+    helpText: 'Unique identifier for the organization (lowercase, hyphens only)'
   },
   {
     name: 'description',
     label: 'Description',
     type: 'textarea',
-    placeholder: 'Enter role description',
+    placeholder: 'Enter organization description',
     rows: 3
   },
   {
-    name: 'scope',
-    label: 'Scope',
+    name: 'type',
+    label: 'Type',
     type: 'select',
     options: [
-      { value: 'global', label: 'Global' },
-      { value: 'organization', label: 'Organization' },
-      { value: 'team', label: 'Team' },
-      { value: 'project', label: 'Project' }
+      { value: 'company', label: 'Company' },
+      { value: 'nonprofit', label: 'Non-Profit' },
+      { value: 'government', label: 'Government' },
+      { value: 'educational', label: 'Educational' }
     ],
     required: true
   },
   {
-    name: 'level',
-    label: 'Level',
-    type: 'number',
-    placeholder: 'Enter role level',
-    min: 0,
-    max: 100,
+    name: 'industry',
+    label: 'Industry',
+    type: 'select',
+    options: [
+      { value: 'technology', label: 'Technology' },
+      { value: 'healthcare', label: 'Healthcare' },
+      { value: 'finance', label: 'Finance' },
+      { value: 'education', label: 'Education' },
+      { value: 'retail', label: 'Retail' },
+      { value: 'manufacturing', label: 'Manufacturing' }
+    ]
+  },
+  {
+    name: 'email',
+    label: 'Contact Email',
+    type: 'email',
+    placeholder: 'Enter contact email'
+  },
+  {
+    name: 'phone',
+    label: 'Contact Phone',
+    type: 'tel',
+    placeholder: 'Enter contact phone'
+  },
+  {
+    name: 'website',
+    label: 'Website',
+    type: 'url',
+    placeholder: 'Enter website URL'
+  },
+  {
+    name: 'location',
+    label: 'Location',
+    type: 'text',
+    placeholder: 'Enter location'
+  },
+  {
+    name: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' },
+      { value: 'suspended', label: 'Suspended' },
+      { value: 'pending', label: 'Pending' }
+    ],
     required: true
-  },
-  {
-    name: 'is_active',
-    label: 'Active',
-    type: 'switch',
-    helpText: 'Enable or disable this role'
-  },
-  {
-    name: 'color',
-    label: 'Color',
-    type: 'color',
-    helpText: 'Choose a color for this role'
   }
 ];
 
-// Role details fields
-const roleDetailsFields = [
+// Organization details fields
+const organizationDetailsFields = [
   {
     key: 'name',
-    label: 'Role Name',
+    label: 'Organization Name',
     type: 'text'
   },
   {
-    key: 'code',
-    label: 'Role Code',
+    key: 'slug',
+    label: 'Organization Slug',
     type: 'text'
   },
   {
@@ -284,28 +317,34 @@ const roleDetailsFields = [
     type: 'text'
   },
   {
-    key: 'scope',
-    label: 'Scope',
-    type: 'badge'
-  },
-  {
-    key: 'level',
-    label: 'Level',
-    type: 'number'
-  },
-  {
-    key: 'is_active',
-    label: 'Status',
-    type: 'status',
-    statusConfig: {
-      true: { label: 'Active', variant: 'success' },
-      false: { label: 'Inactive', variant: 'secondary' }
-    }
-  },
-  {
-    key: 'is_system_role',
+    key: 'type',
     label: 'Type',
     type: 'badge'
+  },
+  {
+    key: 'industry',
+    label: 'Industry',
+    type: 'text'
+  },
+  {
+    key: 'email',
+    label: 'Contact Email',
+    type: 'text'
+  },
+  {
+    key: 'phone',
+    label: 'Contact Phone',
+    type: 'text'
+  },
+  {
+    key: 'website',
+    label: 'Website',
+    type: 'text'
+  },
+  {
+    key: 'location',
+    label: 'Location',
+    type: 'text'
   },
   {
     key: 'user_count',
@@ -313,9 +352,15 @@ const roleDetailsFields = [
     type: 'number'
   },
   {
-    key: 'permission_count',
-    label: 'Permissions',
-    type: 'number'
+    key: 'status',
+    label: 'Status',
+    type: 'status',
+    statusConfig: {
+      active: { label: 'Active', variant: 'success' },
+      inactive: { label: 'Inactive', variant: 'secondary' },
+      suspended: { label: 'Suspended', variant: 'destructive' },
+      pending: { label: 'Pending', variant: 'warning' }
+    }
   },
   {
     key: 'created_at',
@@ -329,7 +374,7 @@ const roleDetailsFields = [
   }
 ];
 
-const RoleList = () => {
+const OrganizationList = () => {
   // Modal states
   const formModal = useModal();
   const detailsModal = useModal();
@@ -337,7 +382,7 @@ const RoleList = () => {
 
   // Use generic data list hook
   const {
-    data: roles,
+    data: organizations,
     loading,
     error,
     pagination,
@@ -360,14 +405,15 @@ const RoleList = () => {
     retryLoad,
     refreshData,
     exportData
-  } = useDataList(roleService, {
+  } = useDataList(organizationService, {
     defaultFilters: {
-    search: '',
-    scope: '',
-    is_active: '',
-    is_system_role: '',
-    level_min: '',
-    level_max: ''
+      search: '',
+      type: '',
+      industry: '',
+      status: '',
+      location: '',
+      created_at_start: '',
+      created_at_end: ''
     },
     defaultPerPage: 15,
     enableSelection: true,
@@ -380,64 +426,17 @@ const RoleList = () => {
       { type: 'required', message: 'Name is required' },
       { type: 'minLength', value: 2, message: 'Name must be at least 2 characters' }
     ],
-    code: [
-      { type: 'required', message: 'Code is required' },
-      { type: 'pattern', value: /^[a-zA-Z0-9_]+$/, message: 'Code must contain only letters, numbers, and underscores' }
+    slug: [
+      { type: 'required', message: 'Slug is required' },
+      { type: 'pattern', value: /^[a-z0-9-]+$/, message: 'Slug must contain only lowercase letters, numbers, and hyphens' }
     ],
-    level: [
-      { type: 'required', message: 'Level is required' },
-      { type: 'min', value: 0, message: 'Level must be at least 0' },
-      { type: 'max', value: 100, message: 'Level must be at most 100' }
+    type: [
+      { type: 'required', message: 'Type is required' }
+    ],
+    status: [
+      { type: 'required', message: 'Status is required' }
     ]
   });
-
-  // Calculate statistics
-  const statistics = {
-    totalRoles: roles.length,
-    activeRoles: roles.filter(role => role.is_active).length,
-    systemRoles: roles.filter(role => role.is_system_role).length,
-    customRoles: roles.filter(role => !role.is_system_role).length
-  };
-
-  // Statistics cards configuration
-  const statisticsCards = [
-    {
-      key: 'total-roles',
-      title: 'Total Roles',
-      value: statistics.totalRoles,
-      subtitle: 'All roles in the system',
-      icon: Shield,
-      variant: 'info',
-      size: 'default'
-    },
-    {
-      key: 'active-roles',
-      title: 'Active Roles',
-      value: statistics.activeRoles,
-      subtitle: 'Currently active roles',
-      icon: CheckCircle,
-      variant: 'success',
-      size: 'default'
-    },
-    {
-      key: 'system-roles',
-      title: 'System Roles',
-      value: statistics.systemRoles,
-      subtitle: 'Built-in system roles',
-      icon: Crown,
-      variant: 'warning',
-      size: 'default'
-    },
-    {
-      key: 'custom-roles',
-      title: 'Custom Roles',
-      value: statistics.customRoles,
-      subtitle: 'User-created custom roles',
-      icon: Users,
-      variant: 'default',
-      size: 'default'
-    }
-  ];
 
   // Row actions configuration
   const rowActions = [
@@ -447,12 +446,12 @@ const RoleList = () => {
       action: 'view'
     },
     {
-      label: 'Edit Role',
+      label: 'Edit Organization',
       icon: Edit,
       action: 'edit'
     },
     {
-      label: 'Delete Role',
+      label: 'Delete Organization',
       icon: Trash2,
       action: 'delete'
     }
@@ -487,10 +486,10 @@ const RoleList = () => {
     let result;
     if (mode === 'create') {
       result = await createItem(formData);
-      } else {
-      const selectedRole = modalData?.data;
-      if (!selectedRole) return { success: false };
-      result = await updateItem(selectedRole.id, formData);
+    } else {
+      const selectedOrganization = modalData?.data;
+      if (!selectedOrganization) return { success: false };
+      result = await updateItem(selectedOrganization.id, formData);
     }
 
     if (result.success) {
@@ -500,18 +499,18 @@ const RoleList = () => {
     return result;
   }, [createItem, updateItem, formModal, form]);
 
-  // Handle create role
-  const handleCreateRole = useCallback(() => {
+  // Handle create organization
+  const handleCreateOrganization = useCallback(() => {
     form.resetForm();
     formModal.open({ mode: 'create' });
   }, [formModal, form]);
 
-  // Handle delete role
-  const handleDeleteRole = useCallback(async () => {
-    const selectedRole = deleteModal.data;
-    if (!selectedRole) return { success: false };
+  // Handle delete organization
+  const handleDeleteOrganization = useCallback(async () => {
+    const selectedOrganization = deleteModal.data;
+    if (!selectedOrganization) return { success: false };
 
-    const result = await deleteItem(selectedRole.id);
+    const result = await deleteItem(selectedOrganization.id);
     if (result.success) {
       deleteModal.close();
     }
@@ -543,18 +542,18 @@ const RoleList = () => {
     <PageContainer>
       {/* Page Header */}
       <PageHeader
-        title="Role Management"
-        description="Manage system roles, permissions, and access controls"
-        icon={Shield}
+        title="Organization Management"
+        description="Manage organizations, users, and settings"
+        icon={Building2}
         primaryAction={{
-          label: 'Create Role',
+          label: 'Create Organization',
           icon: Plus,
-          onClick: handleCreateRole,
+          onClick: handleCreateOrganization,
           disabled: loading
         }}
         secondaryActions={[
           {
-            label: 'Import Roles',
+            label: 'Import Organizations',
             icon: Upload,
             onClick: () => {/* Handle import */},
             disabled: loading
@@ -572,24 +571,19 @@ const RoleList = () => {
             disabled: loading
           }
         ]}
-        metadata={[]}
+        metadata={[
+          { label: 'Total Organizations', value: pagination.total },
+          { label: 'Active Organizations', value: organizations.filter(o => o.status === 'active').length },
+          { label: 'Total Users', value: organizations.reduce((sum, org) => sum + (org.user_count || 0), 0) }
+        ]}
       />
-
-        {/* Statistics Cards */}
-      <div className="mb-6">
-        <StatisticsGrid
-          items={statisticsCards}
-          columns={4}
-          gap={6}
-        />
-      </div>
 
       {/* Filters */}
       <FilterBar
         filters={filters}
         onFilterChange={handleFilterChange}
         onReset={handleFiltersReset}
-        filterConfig={roleFilterConfig}
+        filterConfig={organizationFilterConfig}
         enableQuickFilters={true}
         quickFilters={quickFilters}
         onQuickFilter={handleQuickFilter}
@@ -620,7 +614,7 @@ const RoleList = () => {
           },
           {
             label: 'Activate Selected',
-            icon: CheckCircle,
+            icon: Building2,
             variant: 'outline',
             onClick: () => {/* Handle bulk activate */}
           }
@@ -629,8 +623,8 @@ const RoleList = () => {
 
       {/* Data Table */}
       <DataTable
-        data={roles}
-        columns={roleColumns}
+        data={organizations}
+        columns={organizationColumns}
         loading={loading}
         error={error}
         selectedItems={selectedItems}
@@ -643,10 +637,10 @@ const RoleList = () => {
         onRowClick={handleRowClick}
         rowActions={rowActions}
         onRowAction={handleRowAction}
-        emptyMessage="No roles found"
-        emptyActionText="Create Role"
-        onEmptyAction={handleCreateRole}
-        errorMessage="Failed to load roles"
+        emptyMessage="No organizations found"
+        emptyActionText="Create Organization"
+        onEmptyAction={handleCreateOrganization}
+        errorMessage="Failed to load organizations"
         onRetry={retryLoad}
         showPaginationInfo={true}
         pagination={pagination}
@@ -678,10 +672,10 @@ const RoleList = () => {
         onClose={formModal.close}
         mode={formModal.data?.mode || 'create'}
         onSubmit={handleFormSubmit}
-        title={formModal.data?.mode === 'edit' ? 'Edit Role' : 'Create New Role'}
-        description={formModal.data?.mode === 'edit' ? 'Update role information and settings' : 'Create a new role with specific permissions and scope'}
-        icon={formModal.data?.mode === 'edit' ? Edit : Shield}
-        fields={roleFormFields}
+        title={formModal.data?.mode === 'edit' ? 'Edit Organization' : 'Create New Organization'}
+        description={formModal.data?.mode === 'edit' ? 'Update organization information and settings' : 'Create a new organization with specific settings and users'}
+        icon={formModal.data?.mode === 'edit' ? Edit : Building2}
+        fields={organizationFormFields}
         formData={form.formData}
         errors={form.errors}
         touched={form.touched}
@@ -690,21 +684,21 @@ const RoleList = () => {
         handleChange={form.handleChange}
         handleBlur={form.handleBlur}
         resetForm={form.resetForm}
-        submitText={formModal.data?.mode === 'edit' ? 'Update Role' : 'Create Role'}
+        submitText={formModal.data?.mode === 'edit' ? 'Update Organization' : 'Create Organization'}
         size="lg"
       />
 
-      {/* Role Details Modal */}
+      {/* Organization Details Modal */}
       <DetailsModal
         isOpen={detailsModal.isOpen}
         onClose={detailsModal.close}
-        title="Role Details"
-        description="View detailed information about this role"
-        icon={Shield}
+        title="Organization Details"
+        description="View detailed information about this organization"
+        icon={Building2}
         data={detailsModal.data || {}}
-        fields={roleDetailsFields}
+        fields={organizationDetailsFields}
         primaryAction={{
-          label: 'Edit Role',
+          label: 'Edit Organization',
           icon: Edit,
           onClick: () => {
             if (detailsModal.data) {
@@ -715,7 +709,7 @@ const RoleList = () => {
           }
         }}
         secondaryAction={{
-          label: 'Delete Role',
+          label: 'Delete Organization',
           icon: Trash2,
           variant: 'destructive',
           onClick: () => {
@@ -732,11 +726,11 @@ const RoleList = () => {
       <ConfirmDialog
         isOpen={deleteModal.isOpen}
         onClose={deleteModal.close}
-        onConfirm={handleDeleteRole}
-        title="Delete Role"
+        onConfirm={handleDeleteOrganization}
+        title="Delete Organization"
         description={`Are you sure you want to delete "${deleteModal.data?.name}"? This action cannot be undone.`}
-                variant="destructive"
-        confirmText="Delete Role"
+        variant="destructive"
+        confirmText="Delete Organization"
         cancelText="Cancel"
         confirmVariant="destructive"
       />
@@ -744,4 +738,4 @@ const RoleList = () => {
   );
 };
 
-export default RoleList;
+export default OrganizationList;
