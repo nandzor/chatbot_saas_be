@@ -38,7 +38,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy application files
 COPY . .
 
-# Install PHP dependencies
+# Install PHP dependencies (including dev for build process)
+RUN composer install --optimize-autoloader --no-interaction
+
+# Remove dev dependencies after build to reduce image size
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Set proper permissions
