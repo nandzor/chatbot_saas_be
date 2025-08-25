@@ -52,14 +52,10 @@ export const usePermissionManagement = () => {
         }
       });
 
-      console.log('usePermissionManagement: Loading permissions with params:', params);
-
       const response = await permissionManagementService.getPermissions(params);
-      console.log('usePermissionManagement: Service response:', response);
 
       if (response.success) {
         setPermissions(response.data || []);
-        console.log('usePermissionManagement: Permissions loaded:', response.data?.length || 0);
 
         // Update pagination from API response
         if (response.meta && response.meta.pagination) {
@@ -70,7 +66,6 @@ export const usePermissionManagement = () => {
             total: response.meta.pagination.total || 0
           };
 
-          console.log('usePermissionManagement: Updating pagination:', newPagination);
           setPagination(prev => ({ ...prev, ...newPagination }));
         }
       } else {
@@ -173,20 +168,18 @@ export const usePermissionManagement = () => {
     }
   }, []); // Empty dependency array since we use refs
 
-  // Load permissions on component mount
-  useEffect(() => {
-    loadPermissions();
-  }, []); // Empty dependency array to run only once on mount
+  // Remove the initial load useEffect - let the component handle it
+  // useEffect(() => {
+  //   loadPermissions();
+  // }, []); // Empty dependency array to run only once on mount
 
   // Create permission
   const createPermission = useCallback(async (permissionData) => {
     try {
       setLoading(true);
       const formattedData = permissionManagementService.formatPermissionData(permissionData);
-      console.log('usePermissionManagement: Creating permission with data:', formattedData);
 
       const response = await permissionManagementService.createPermission(formattedData);
-      console.log('usePermissionManagement: Create response:', response);
 
       if (response.success) {
         toast.success(`Permission "${response.data.name}" has been created successfully`);
@@ -216,10 +209,8 @@ export const usePermissionManagement = () => {
 
       setLoading(true);
       const formattedData = permissionManagementService.formatPermissionData(permissionData);
-      console.log('usePermissionManagement: Updating permission', id, 'with data:', formattedData);
 
       const response = await permissionManagementService.updatePermission(id, formattedData);
-      console.log('usePermissionManagement: Update response:', response);
 
       if (response.success) {
         toast.success(`Permission "${response.data.name}" has been updated successfully`);
@@ -248,10 +239,8 @@ export const usePermissionManagement = () => {
       if (!id) return { success: false, error: 'Permission ID is required' };
 
       setLoading(true);
-      console.log('usePermissionManagement: Deleting permission:', id);
 
       const response = await permissionManagementService.deletePermission(id);
-      console.log('usePermissionManagement: Delete response:', response);
 
       if (response.success) {
         toast.success('Permission has been deleted successfully');
@@ -303,7 +292,6 @@ export const usePermissionManagement = () => {
         return { success: false, error: response.message };
       }
     } catch (error) {
-      console.error('Error cloning permission:', error);
       toast.error(error.message || 'Failed to clone permission');
       return { success: false, error: error.message };
     } finally {
@@ -342,9 +330,9 @@ export const usePermissionManagement = () => {
     setFilters(newFilters);
     // Reset to first page when filters change
     setPagination(prev => ({ ...prev, current_page: 1 }));
-    // Load with new filters on next tick to ensure state is updated
-    setTimeout(() => loadPermissions(1), 0);
-  }, [loadPermissions]);
+    // Remove the direct loadPermissions call - let the useEffect handle it
+    // setTimeout(() => loadPermissions(1), 0);
+  }, []);
 
   return {
     // State

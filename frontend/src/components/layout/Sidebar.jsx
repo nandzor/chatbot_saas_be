@@ -153,59 +153,6 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
         </nav>
       </div>
 
-      {/* User Profile Section */}
-      <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-border ${
-        isCollapsed ? 'px-2' : ''
-      }`}>
-        {isCollapsed ? (
-          <div className="flex justify-center">
-            <div className="group relative">
-              <div className="cursor-pointer">
-                <UserAvatar user={user} size="sm" />
-              </div>
-              {/* Tooltip for collapsed state */}
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                <div className="text-center">
-                  <p className="font-medium">{user?.name || 'Admin User'}</p>
-                  <p className="text-xs text-gray-300">Click to view profile</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            <UserAvatar user={user} size="default" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">{user?.name || 'Admin User'}</p>
-              <Select defaultValue="online">
-                <SelectTrigger className="h-6 text-xs border-0 p-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="online">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      Online
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="busy">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                      Busy
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="offline">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-gray-500" />
-                      Offline
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 };

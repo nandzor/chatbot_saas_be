@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Plus,
   Eye,
@@ -43,6 +43,23 @@ import {
   ErrorMessage
 } from '@/components/ui';
 
+// Custom debounce hook
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 const PermissionList = () => {
   // Hooks
   const {
@@ -71,17 +88,33 @@ const PermissionList = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Handle filter changes
+  // Local filter state for immediate UI updates
+  const [localFilters, setLocalFilters] = useState(filters);
+
+  // Debounced filters for API calls
+  const debouncedFilters = useDebounce(localFilters, 500);
+
+  // Initial load ref to prevent duplicate API calls
+  const initialLoadRef = useRef(false);
+
+  // Handle filter changes with immediate UI update
   const handleFilterChange = useCallback((key, value) => {
-    setFilters(prev => ({
+    setLocalFilters(prev => ({
       ...prev,
       [key]: value
     }));
-  }, [setFilters]);
+  }, []);
 
   const handleClearFilters = useCallback((cleared) => {
-    setFilters(cleared);
-  }, [setFilters]);
+    setLocalFilters(cleared);
+  }, []);
+
+  // Sync local filters with hook filters when debounced
+  useEffect(() => {
+    if (JSON.stringify(debouncedFilters) !== JSON.stringify(filters)) {
+      setFilters(debouncedFilters);
+    }
+  }, [debouncedFilters, filters, setFilters]);
 
   // Get permission category icon and color
   const getCategoryInfo = useCallback((category) => {
@@ -105,8 +138,12 @@ const PermissionList = () => {
 
   // Load permissions when filters change
   useEffect(() => {
-    loadPermissions();
-  }, [filters]);
+    // Only load if we have filters or if it's the initial load and no permissions
+    if (Object.keys(filters).length > 0 || (!initialLoadRef.current && permissions.length === 0)) {
+      initialLoadRef.current = true;
+      loadPermissions();
+    }
+  }, [filters, loadPermissions, permissions.length]);
 
   // Error surface
   useEffect(() => {
