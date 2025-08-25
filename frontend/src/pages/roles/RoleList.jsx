@@ -16,11 +16,20 @@ import {
   Building2,
   Globe,
   UserCheck,
-  Settings
+  Settings,
+  BarChart3,
+  UserPlus,
+  Key,
+  Archive,
+  Download
 } from 'lucide-react';
 import CreateRoleDialog from './CreateRoleDialog';
 import ViewRoleDetailsDialog from './ViewRoleDetailsDialog';
 import EditRoleDialog from './EditRoleDialog';
+import RoleAssignmentModal from './RoleAssignmentModal';
+import RolePermissionsModal from './RolePermissionsModal';
+import RoleBulkActions from './RoleBulkActions';
+import RoleAnalytics from './RoleAnalytics';
 import { roleManagementService } from '@/services/RoleManagementService';
 import { toast } from 'react-hot-toast';
 import {
@@ -47,7 +56,12 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  Skeleton
+  Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Checkbox
 } from '@/components/ui';
 
 const RoleList = () => {
@@ -60,7 +74,11 @@ const RoleList = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [activeTab, setActiveTab] = useState('list');
 
   // Pagination and filters
   const [pagination, setPagination] = useState({
@@ -280,6 +298,48 @@ const RoleList = () => {
     }
   }, [selectedRole, loadRoles, pagination.current_page]);
 
+  // Handle role selection for bulk actions
+  const handleRoleSelection = useCallback((roleId, checked) => {
+    if (checked) {
+      setSelectedRoles(prev => [...prev, roleId]);
+    } else {
+      setSelectedRoles(prev => prev.filter(id => id !== roleId));
+    }
+  }, []);
+
+  // Handle bulk action success
+  const handleBulkActionSuccess = useCallback(async (data) => {
+    await loadRoles(pagination.current_page);
+    setSelectedRoles([]);
+  }, [loadRoles, pagination.current_page]);
+
+  // Handle clear selection
+  const handleClearSelection = useCallback(() => {
+    setSelectedRoles([]);
+  }, []);
+
+  // Handle role assignment
+  const handleRoleAssignment = useCallback((role) => {
+    setSelectedRole(role);
+    setShowAssignmentModal(true);
+  }, []);
+
+  // Handle role permissions
+  const handleRolePermissions = useCallback((role) => {
+    setSelectedRole(role);
+    setShowPermissionsModal(true);
+  }, []);
+
+  // Handle assignment success
+  const handleAssignmentSuccess = useCallback(async (data) => {
+    await loadRoles(pagination.current_page);
+  }, [loadRoles, pagination.current_page]);
+
+  // Handle permissions success
+  const handlePermissionsSuccess = useCallback(async (data) => {
+    await loadRoles(pagination.current_page);
+  }, [loadRoles, pagination.current_page]);
+
   // Get scope icon and color
   const getScopeInfo = useCallback((scope) => {
     switch (scope) {
@@ -328,62 +388,96 @@ const RoleList = () => {
                   Manage user roles, permissions, and access control across the system
                 </CardDescription>
               </div>
-              <Button onClick={handleCreateRole} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Role
-              </Button>
+              <div className="flex items-center gap-3">
+                <RoleBulkActions
+                  selectedRoles={selectedRoles}
+                  onSuccess={handleBulkActionSuccess}
+                  onClearSelection={handleClearSelection}
+                />
+                <Button onClick={handleCreateRole} className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Role
+                </Button>
+              </div>
             </div>
           </CardHeader>
 
-          {/* Advanced Filters */}
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              <div className="lg:col-span-2">
-                <Input
-                  placeholder="Search roles by name, code, or description..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                  className="w-full"
-                  icon={<Search className="w-4 h-4" />}
-                />
+          {/* Tabs */}
+          <CardContent className="px-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="px-6 pb-4 border-b border-gray-200">
+                <TabsList className="inline-flex h-12 items-center justify-center rounded-lg bg-gray-100 p-1 text-gray-500 w-auto">
+                  <TabsTrigger
+                    value="list"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-3 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Role List
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="analytics"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-3 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200"
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Analytics
+                  </TabsTrigger>
+                </TabsList>
               </div>
 
-              <Select value={filters.scope} onValueChange={(value) => handleFilterChange('scope', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Scopes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Scopes</SelectItem>
-                  <SelectItem value="global">Global</SelectItem>
-                  <SelectItem value="organization">Organization</SelectItem>
-                  <SelectItem value="department">Department</SelectItem>
-                  <SelectItem value="team">Team</SelectItem>
-                  <SelectItem value="personal">Personal</SelectItem>
-                </SelectContent>
-              </Select>
+              <TabsContent value="list" className="space-y-6 px-6 pt-6">
+                {/* Advanced Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                  <div className="lg:col-span-2">
+                    <Input
+                      placeholder="Search roles by name, code, or description..."
+                      value={filters.search}
+                      onChange={(e) => handleFilterChange('search', e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
 
-              <Select value={filters.is_active} onValueChange={(value) => handleFilterChange('is_active', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+                  <Select value={filters.scope} onValueChange={(value) => handleFilterChange('scope', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Scopes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Scopes</SelectItem>
+                      <SelectItem value="global">Global</SelectItem>
+                      <SelectItem value="organization">Organization</SelectItem>
+                      <SelectItem value="department">Department</SelectItem>
+                      <SelectItem value="team">Team</SelectItem>
+                      <SelectItem value="personal">Personal</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-              <Select value={filters.is_system_role} onValueChange={(value) => handleFilterChange('is_system_role', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
-                  <SelectItem value="true">System Roles</SelectItem>
-                  <SelectItem value="false">Custom Roles</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                  <Select value={filters.is_active} onValueChange={(value) => handleFilterChange('is_active', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Status</SelectItem>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={filters.is_system_role} onValueChange={(value) => handleFilterChange('is_system_role', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Types</SelectItem>
+                      <SelectItem value="true">System Roles</SelectItem>
+                      <SelectItem value="false">Custom Roles</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="space-y-6 px-6 pt-6">
+                <RoleAnalytics />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -476,6 +570,18 @@ const RoleList = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <Checkbox
+                        checked={selectedRoles.length === roles.length && roles.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedRoles(roles.map(role => role.id));
+                          } else {
+                            setSelectedRoles([]);
+                          }
+                        }}
+                      />
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Role Information
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -499,6 +605,12 @@ const RoleList = () => {
 
                     return (
                       <tr key={role.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <Checkbox
+                            checked={selectedRoles.includes(role.id)}
+                            onCheckedChange={(checked) => handleRoleSelection(role.id, checked)}
+                          />
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center">
                             <div
@@ -621,6 +733,23 @@ const RoleList = () => {
                                   Clone Role
                                 </DropdownMenuItem>
 
+                                <DropdownMenuItem onClick={() => handleRoleAssignment(role)}>
+                                  <UserPlus className="w-4 h-4 mr-2" />
+                                  Assign Users
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem onClick={() => handleRolePermissions(role)}>
+                                  <Key className="w-4 h-4 mr-2" />
+                                  Manage Permissions
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem onClick={() => window.open(`/api/v1/roles/${role.id}/export`, '_blank')}>
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Export Role
+                                </DropdownMenuItem>
+
                                 {!role.is_system_role && (
                                   <>
                                     <DropdownMenuSeparator />
@@ -717,6 +846,22 @@ const RoleList = () => {
         role={selectedRole}
         onSubmit={handleEditRoleSubmit}
         loading={actionLoading}
+      />
+
+      {/* Role Assignment Modal */}
+      <RoleAssignmentModal
+        isOpen={showAssignmentModal}
+        onClose={() => setShowAssignmentModal(false)}
+        role={selectedRole}
+        onSuccess={handleAssignmentSuccess}
+      />
+
+      {/* Role Permissions Modal */}
+      <RolePermissionsModal
+        isOpen={showPermissionsModal}
+        onClose={() => setShowPermissionsModal(false)}
+        role={selectedRole}
+        onSuccess={handlePermissionsSuccess}
       />
 
       {/* Delete Confirmation Modal */}

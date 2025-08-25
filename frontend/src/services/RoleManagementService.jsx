@@ -109,6 +109,258 @@ class RoleManagementService {
   }
 
   /**
+   * Get available users for role assignment
+   */
+  async getAvailableUsersForRole(roleId) {
+    try {
+      const response = await api.get(`${this.baseUrl}/${roleId}/available-users`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get role assignment statistics
+   */
+  async getRoleAssignmentStats(roleId) {
+    try {
+      const response = await api.get(`${this.baseUrl}/${roleId}/assignment-stats`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Bulk assign role to users
+   */
+  async bulkAssignRole(roleId, userIds, options = {}) {
+    try {
+      const response = await api.post(`${this.baseUrl}/${roleId}/bulk-assign`, {
+        user_ids: userIds,
+        ...options
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Bulk revoke role from users
+   */
+  async bulkRevokeRole(roleId, userIds) {
+    try {
+      const response = await api.post(`${this.baseUrl}/${roleId}/bulk-revoke`, {
+        user_ids: userIds
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get all permissions
+   */
+  async getPermissions() {
+    try {
+      const response = await api.get('/v1/permissions');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get permissions for a specific role
+   */
+  async getRolePermissions(roleId) {
+    try {
+      const response = await api.get(`${this.baseUrl}/${roleId}/permissions`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Update permissions for a role
+   */
+  async updateRolePermissions(roleId, permissionIds) {
+    try {
+      const response = await api.put(`${this.baseUrl}/${roleId}/permissions`, {
+        permission_ids: permissionIds
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Grant permission to role
+   */
+  async grantPermission(roleId, permissionId, options = {}) {
+    try {
+      const response = await api.post(`${this.baseUrl}/${roleId}/permissions`, {
+        permission_id: permissionId,
+        ...options
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Revoke permission from role
+   */
+  async revokePermission(roleId, permissionId) {
+    try {
+      const response = await api.delete(`${this.baseUrl}/${roleId}/permissions/${permissionId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get role analytics
+   */
+  async getAnalytics(params = {}) {
+    try {
+      const response = await api.get(`${this.baseUrl}/analytics`, { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get role statistics
+   */
+  async getStatistics() {
+    try {
+      const response = await api.get(`${this.baseUrl}/statistics`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Export roles data
+   */
+  async exportRoles(format = 'json', filters = {}) {
+    try {
+      const response = await api.get(`${this.baseUrl}/export`, {
+        params: { format, ...filters },
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Import roles data
+   */
+  async importRoles(file, options = {}) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      Object.keys(options).forEach(key => {
+        formData.append(key, options[key]);
+      });
+
+      const response = await api.post(`${this.baseUrl}/import`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Bulk delete roles
+   */
+  async bulkDelete(roleIds) {
+    try {
+      const response = await api.post(`${this.baseUrl}/bulk-delete`, {
+        role_ids: roleIds
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Bulk clone roles
+   */
+  async bulkClone(roleIds, options = {}) {
+    try {
+      const response = await api.post(`${this.baseUrl}/bulk-clone`, {
+        role_ids: roleIds,
+        ...options
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Bulk archive roles
+   */
+  async bulkArchive(roleIds) {
+    try {
+      const response = await api.post(`${this.baseUrl}/bulk-archive`, {
+        role_ids: roleIds
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Bulk unarchive roles
+   */
+  async bulkUnarchive(roleIds) {
+    try {
+      const response = await api.post(`${this.baseUrl}/bulk-unarchive`, {
+        role_ids: roleIds
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Bulk assign users to roles
+   */
+  async bulkAssignUsers(roleIds, options = {}) {
+    try {
+      const response = await api.post(`${this.baseUrl}/bulk-assign-users`, {
+        role_ids: roleIds,
+        ...options
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Get available roles for assignment
    */
   async getAvailableRoles() {
