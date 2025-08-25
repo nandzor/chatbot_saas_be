@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 abstract class BaseMiddleware
 {
@@ -37,13 +38,10 @@ abstract class BaseMiddleware
             return false;
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (method_exists($user, 'hasRole') && is_callable([$user, 'hasRole'])) {
-            return $user->hasRole($role);
-        }
-
-        return false;
+        return $user->hasRole($role);
     }
 
     /**
@@ -55,13 +53,10 @@ abstract class BaseMiddleware
             return false;
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (method_exists($user, 'hasAnyRole') && is_callable([$user, 'hasAnyRole'])) {
-            return $user->hasAnyRole($roles);
-        }
-
-        return false;
+        return $user->hasAnyRole($roles);
     }
 
     /**
@@ -73,13 +68,10 @@ abstract class BaseMiddleware
             return false;
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (method_exists($user, 'hasPermission') && is_callable([$user, 'hasPermission'])) {
-            return $user->hasPermission($permission);
-        }
-
-        return false;
+        return $user->hasPermission($permission);
     }
 
     /**
@@ -91,13 +83,10 @@ abstract class BaseMiddleware
             return false;
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (method_exists($user, 'hasAllPermissions')) {
-            return $user->hasAllPermissions($permissions);
-        }
-
-        return false;
+        return $user->hasAllPermissions($permissions);
     }
 
     /**
@@ -109,13 +98,10 @@ abstract class BaseMiddleware
             return false;
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (method_exists($user, 'isSuperAdmin')) {
-            return $user->isSuperAdmin();
-        }
-
-        return $this->hasRole('super_admin');
+        return $user->isSuperAdmin();
     }
 
     /**
@@ -127,13 +113,10 @@ abstract class BaseMiddleware
             return false;
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (method_exists($user, 'isAdmin')) {
-            return $user->isAdmin();
-        }
-
-        return $this->hasRole('admin');
+        return $user->isAdmin();
     }
 
     /**
@@ -229,7 +212,7 @@ abstract class BaseMiddleware
             'message' => $message,
             'retry_after' => RateLimiter::availableIn($this->resolveRequestSignature(request(), 'default')),
             'timestamp' => now()->toISOString(),
-        ], Response::HTTP_TOO_MANY_REQUESTS);
+        ], SymfonyResponse::HTTP_TOO_MANY_REQUESTS);
     }
 
     /**
@@ -311,7 +294,7 @@ abstract class BaseMiddleware
             'message' => $message,
             'error' => 'AUTHENTICATION_REQUIRED',
             'timestamp' => now()->toISOString(),
-        ], Response::HTTP_UNAUTHORIZED);
+        ], SymfonyResponse::HTTP_UNAUTHORIZED);
     }
 
     /**
@@ -324,7 +307,7 @@ abstract class BaseMiddleware
             'message' => $message,
             'error' => 'INSUFFICIENT_PERMISSIONS',
             'timestamp' => now()->toISOString(),
-        ], Response::HTTP_FORBIDDEN);
+        ], SymfonyResponse::HTTP_FORBIDDEN);
     }
 
     /**
@@ -338,7 +321,7 @@ abstract class BaseMiddleware
             'errors' => $errors,
             'error' => 'VALIDATION_ERROR',
             'timestamp' => now()->toISOString(),
-        ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        ], SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     /**
@@ -351,7 +334,7 @@ abstract class BaseMiddleware
             'message' => $message,
             'error' => 'RESOURCE_NOT_FOUND',
             'timestamp' => now()->toISOString(),
-        ], Response::HTTP_NOT_FOUND);
+        ], SymfonyResponse::HTTP_NOT_FOUND);
     }
 
     /**
@@ -364,7 +347,7 @@ abstract class BaseMiddleware
             'message' => $message,
             'error' => 'INTERNAL_SERVER_ERROR',
             'timestamp' => now()->toISOString(),
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        ], SymfonyResponse::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**
