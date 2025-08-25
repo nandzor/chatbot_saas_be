@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Shield,
   Users,
@@ -79,6 +79,7 @@ const RoleList = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [activeTab, setActiveTab] = useState('list');
+  const initialLoadRef = useRef(false);
 
   // Pagination and filters
   const [pagination, setPagination] = useState({
@@ -98,16 +99,20 @@ const RoleList = () => {
   });
 
   // Load roles from API
-  const loadRoles = useCallback(async (page = 1) => {
+  const loadRoles = useCallback(async (page = 1, customFilters = null, customPerPage = null) => {
     try {
       setLoading(true);
       setError(null);
 
+      // Use provided parameters or current state
+      const currentFilters = customFilters || filters;
+      const currentPerPage = customPerPage || pagination.per_page;
+
       // Prepare API parameters
       const params = {
         page: page,
-        per_page: pagination.per_page,
-        ...filters
+        per_page: currentPerPage,
+        ...currentFilters
       };
 
       // Remove empty filters
@@ -140,12 +145,15 @@ const RoleList = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination.per_page]);
+  }, []); // Remove dependencies to prevent infinite loops
 
-  // Load roles on component mount and filter changes
+  // Load roles on component mount only
   useEffect(() => {
-    loadRoles();
-  }, [loadRoles]);
+    if (!initialLoadRef.current) {
+      initialLoadRef.current = true;
+      loadRoles();
+    }
+  }, []); // Empty dependency array - only run on mount
 
   // Handle filter changes
   const handleFilterChange = useCallback((key, value) => {
@@ -156,11 +164,26 @@ const RoleList = () => {
     setPagination(prev => ({ ...prev, current_page: 1 }));
   }, []);
 
+  // Reload when filters change with debouncing
+  useEffect(() => {
+    // Skip initial load (handled by mount useEffect)
+    if (initialLoadRef.current) {
+      const hasActiveFilters = filters.search !== '' || Object.values(filters).some(f => f !== '');
+      if (hasActiveFilters) {
+        const timeoutId = setTimeout(() => {
+          loadRoles(1, filters);
+        }, 500); // Debounce for 500ms
+
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [filters, loadRoles]);
+
   // Handle pagination
   const handlePageChange = useCallback((page) => {
     setPagination(prev => ({ ...prev, current_page: page }));
-    loadRoles(page);
-  }, [loadRoles]);
+    loadRoles(page, filters);
+  }, [loadRoles, filters]);
 
   // Handle role actions
   const handleCreateRole = useCallback(() => {
@@ -188,7 +211,7 @@ const RoleList = () => {
         toast.success(`Role "${response.data.name}" has been created successfully`);
         setShowCreateModal(false);
         // Reload roles to show the new role
-        loadRoles(pagination.current_page);
+        loadRoles(pagination.current_page, filters);
       } else {
         toast.error(response.message || 'Failed to create role');
       }
@@ -220,7 +243,7 @@ const RoleList = () => {
       if (response.success) {
         toast.success(`Role "${response.data.name}" has been cloned successfully`);
         // Reload roles to show the cloned role
-        loadRoles(pagination.current_page);
+        loadRoles(pagination.current_page, filters);
       } else {
         toast.error(response.message || 'Failed to clone role');
       }
@@ -254,7 +277,7 @@ const RoleList = () => {
       setSelectedRole(null);
 
       // Reload roles to ensure data consistency with backend
-      loadRoles(pagination.current_page);
+      loadRoles(pagination.current_page, filters);
     } catch (error) {
       console.error('Error handling role update:', error);
       toast.error('Failed to update role list');
@@ -286,7 +309,7 @@ const RoleList = () => {
         setShowDeleteConfirm(false);
         setSelectedRole(null);
         // Reload roles to reflect the deletion
-        loadRoles(pagination.current_page);
+        loadRoles(pagination.current_page, filters);
       } else {
         toast.error(response.message || 'Failed to delete role');
       }
@@ -309,9 +332,9 @@ const RoleList = () => {
 
   // Handle bulk action success
   const handleBulkActionSuccess = useCallback(async (data) => {
-    await loadRoles(pagination.current_page);
+    await loadRoles(pagination.current_page, filters);
     setSelectedRoles([]);
-  }, [loadRoles, pagination.current_page]);
+  }, [loadRoles, pagination.current_page, filters]);
 
   // Handle clear selection
   const handleClearSelection = useCallback(() => {
@@ -332,13 +355,13 @@ const RoleList = () => {
 
   // Handle assignment success
   const handleAssignmentSuccess = useCallback(async (data) => {
-    await loadRoles(pagination.current_page);
-  }, [loadRoles, pagination.current_page]);
+    await loadRoles(pagination.current_page, filters);
+  }, [loadRoles, pagination.current_page, filters]);
 
   // Handle permissions success
   const handlePermissionsSuccess = useCallback(async (data) => {
-    await loadRoles(pagination.current_page);
-  }, [loadRoles, pagination.current_page]);
+    await loadRoles(pagination.current_page, filters);
+  }, [loadRoles, pagination.current_page, filters]);
 
   // Get scope icon and color
   const getScopeInfo = useCallback((scope) => {
