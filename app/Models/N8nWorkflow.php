@@ -2,18 +2,19 @@
 
 namespace App\Models;
 
-use App\Traits\BelongsToOrganization;
-use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class N8nWorkflow extends Model
 {
-    use HasFactory, HasUuid, BelongsToOrganization;
+    use HasFactory;
 
     protected $table = 'n8n_workflows';
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'organization_id',
@@ -64,16 +65,18 @@ class N8nWorkflow extends Model
         'permissions' => 'array',
         'api_endpoints' => 'array',
         'metadata' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
-
-    protected $hidden = [
-        'webhook_secret',
     ];
 
     /**
-     * Get the user who created this workflow.
+     * Get the organization that owns this workflow
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class, 'organization_id');
+    }
+
+    /**
+     * Get the user who created this workflow
      */
     public function creator(): BelongsTo
     {
@@ -81,7 +84,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get the previous version of this workflow.
+     * Get the previous version of this workflow
      */
     public function previousVersion(): BelongsTo
     {
@@ -89,7 +92,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get newer versions of this workflow.
+     * Get newer versions of this workflow
      */
     public function newerVersions(): HasMany
     {
@@ -97,7 +100,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get the workflow executions.
+     * Get the workflow executions
      */
     public function executions(): HasMany
     {
@@ -105,7 +108,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get successful executions.
+     * Get successful executions
      */
     public function successfulExecutions(): HasMany
     {
@@ -113,7 +116,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get failed executions.
+     * Get failed executions
      */
     public function failedExecutions(): HasMany
     {
@@ -121,7 +124,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get recent executions.
+     * Get recent executions
      */
     public function recentExecutions(int $limit = 10): HasMany
     {
@@ -129,7 +132,83 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Check if workflow is active.
+     * Scope for active workflows
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_enabled', true);
+    }
+
+    /**
+     * Scope for workflows by status
+     */
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    /**
+     * Scope for workflows by tag
+     */
+    public function scopeByTag($query, $tag)
+    {
+        return $query->whereJsonContains('tags', $tag);
+    }
+
+    /**
+     * Scope for latest versions
+     */
+    public function scopeLatestVersions($query)
+    {
+        return $query->where('is_latest_version', true);
+    }
+
+    /**
+     * Scope for specific trigger type
+     */
+    public function scopeWithTriggerType($query, string $triggerType)
+    {
+        return $query->where('trigger_type', $triggerType);
+    }
+
+    /**
+     * Scope for scheduled workflows
+     */
+    public function scopeScheduled($query)
+    {
+        return $query->where('trigger_type', 'schedule')
+                    ->whereNotNull('schedule_expression');
+    }
+
+    /**
+     * Scope for webhook workflows
+     */
+    public function scopeWebhookTriggered($query)
+    {
+        return $query->where('trigger_type', 'webhook')
+                    ->whereNotNull('webhook_url');
+    }
+
+    /**
+     * Get workflow statistics
+     */
+    public function getStatisticsAttribute()
+    {
+        return [
+            'total_executions' => $this->total_executions,
+            'success_rate' => $this->total_executions > 0
+                ? round(($this->successful_executions / $this->total_executions) * 100, 2)
+                : 0,
+            'failure_rate' => $this->total_executions > 0
+                ? round(($this->failed_executions / $this->total_executions) * 100, 2)
+                : 0,
+            'average_time' => $this->avg_execution_time,
+            'last_execution' => $this->last_execution_at,
+        ];
+    }
+
+    /**
+     * Check if workflow is active
      */
     public function isActive(): bool
     {
@@ -137,7 +216,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Check if workflow is paused.
+     * Check if workflow is paused
      */
     public function isPaused(): bool
     {
@@ -145,7 +224,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Check if workflow has errors.
+     * Check if workflow has errors
      */
     public function hasErrors(): bool
     {
@@ -153,7 +232,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Check if workflow is scheduled.
+     * Check if workflow is scheduled
      */
     public function isScheduled(): bool
     {
@@ -161,7 +240,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Check if workflow uses webhooks.
+     * Check if workflow uses webhooks
      */
     public function usesWebhooks(): bool
     {
@@ -169,7 +248,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Check if workflow is latest version.
+     * Check if workflow is latest version
      */
     public function isLatestVersion(): bool
     {
@@ -177,7 +256,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get success rate percentage.
+     * Get success rate percentage
      */
     public function getSuccessRateAttribute(): float
     {
@@ -189,7 +268,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get execution status.
+     * Get execution status
      */
     public function getExecutionStatusAttribute(): string
     {
@@ -207,7 +286,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get execution status color.
+     * Get execution status color
      */
     public function getExecutionStatusColorAttribute(): string
     {
@@ -221,7 +300,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get average execution time in human readable format.
+     * Get average execution time in human readable format
      */
     public function getAvgExecutionTimeHumanAttribute(): ?string
     {
@@ -239,7 +318,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get node count.
+     * Get node count
      */
     public function getNodeCountAttribute(): int
     {
@@ -247,7 +326,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Get connection count.
+     * Get connection count
      */
     public function getConnectionCountAttribute(): int
     {
@@ -264,7 +343,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Check if user has permission.
+     * Check if user has permission
      */
     public function userHasPermission(User $user, string $permission): bool
     {
@@ -279,7 +358,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Grant permission to user.
+     * Grant permission to user
      */
     public function grantPermission(User $user, string $permission): void
     {
@@ -294,7 +373,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Revoke permission from user.
+     * Revoke permission from user
      */
     public function revokePermission(User $user, string $permission): void
     {
@@ -308,7 +387,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Share workflow with user.
+     * Share workflow with user
      */
     public function shareWith(User $user): void
     {
@@ -321,7 +400,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Unshare workflow with user.
+     * Unshare workflow with user
      */
     public function unshareWith(User $user): void
     {
@@ -332,7 +411,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Activate workflow.
+     * Activate workflow
      */
     public function activate(): void
     {
@@ -343,7 +422,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Pause workflow.
+     * Pause workflow
      */
     public function pause(): void
     {
@@ -354,7 +433,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Create new version.
+     * Create new version
      */
     public function createNewVersion(array $changes = []): self
     {
@@ -382,7 +461,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Update execution statistics.
+     * Update execution statistics
      */
     public function updateExecutionStats(string $status, int $duration): void
     {
@@ -407,90 +486,32 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Scope for active workflows.
+     * Check if workflow is healthy
      */
-    public function scopeActive($query)
+    public function isHealthy(): bool
     {
-        return $query->where('status', 'active')
-                    ->where('is_enabled', true);
+        if ($this->total_executions === 0) {
+            return true;
+        }
+
+        $failureRate = ($this->failed_executions / $this->total_executions) * 100;
+        return $failureRate < 20; // Consider healthy if failure rate < 20%
     }
 
     /**
-     * Scope for latest versions.
+     * Get workflow health status
      */
-    public function scopeLatestVersions($query)
+    public function getHealthStatusAttribute(): string
     {
-        return $query->where('is_latest_version', true);
-    }
+        if ($this->isHealthy()) {
+            return 'healthy';
+        }
 
-    /**
-     * Scope for specific trigger type.
-     */
-    public function scopeWithTriggerType($query, string $triggerType)
-    {
-        return $query->where('trigger_type', $triggerType);
-    }
+        if ($this->failed_executions > 0 && $this->successful_executions === 0) {
+            return 'critical';
+        }
 
-    /**
-     * Scope for scheduled workflows.
-     */
-    public function scopeScheduled($query)
-    {
-        return $query->where('trigger_type', 'schedule')
-                    ->whereNotNull('schedule_expression');
-    }
-
-    /**
-     * Scope for webhook workflows.
-     */
-    public function scopeWebhookTriggered($query)
-    {
-        return $query->where('trigger_type', 'webhook')
-                    ->whereNotNull('webhook_url');
-    }
-
-    /**
-     * Scope for workflows created by user.
-     */
-    public function scopeCreatedBy($query, $userId)
-    {
-        return $query->where('created_by', $userId);
-    }
-
-    /**
-     * Scope for workflows shared with user.
-     */
-    public function scopeSharedWith($query, $userId)
-    {
-        return $query->whereJsonContains('shared_with', $userId);
-    }
-
-    /**
-     * Order by execution count.
-     */
-    public function scopeByExecutionCount($query, string $direction = 'desc')
-    {
-        return $query->orderBy('total_executions', $direction);
-    }
-
-    /**
-     * Order by success rate.
-     */
-    public function scopeBySuccessRate($query, string $direction = 'desc')
-    {
-        return $query->orderByRaw('(successful_executions / NULLIF(total_executions, 0)) ' . $direction);
-    }
-
-    /**
-     * Search workflows.
-     */
-    public function scopeSearch($query, string $term)
-    {
-        return $query->where(function ($query) use ($term) {
-            $query->where('name', 'LIKE', "%{$term}%")
-                  ->orWhere('description', 'LIKE', "%{$term}%")
-                  ->orWhere('category', 'LIKE', "%{$term}%")
-                  ->orWhereJsonContains('tags', $term);
-        });
+        return 'warning';
     }
 }
+
