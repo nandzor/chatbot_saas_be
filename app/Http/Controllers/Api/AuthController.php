@@ -19,6 +19,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Token;
+use App\Models\User;
 
 class AuthController extends BaseApiController
 {
@@ -147,37 +150,99 @@ class AuthController extends BaseApiController
     /**
      * Refresh JWT token using refresh token.
      */
-    public function refresh(RefreshTokenRequest $request): JsonResponse
+    public function refresh(Request $request)
     {
         try {
-            $refreshToken = $request->validated()['refresh_token'];
-
-            $authData = $this->authService->refreshWithToken($refreshToken);
-
-            return $this->successResponse(
-                'Token refreshed successfully',
-                $authData,
-                200
-            );
-        } catch (ValidationException $e) {
-            return $this->errorResponse(
-                'Token refresh failed',
-                $e->errors(),
-                401
-            );
-        } catch (\Exception $e) {
-            Log::error('Token refresh error: ' . $e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
+            // Validasi input
+            $request->validate([
+                'refresh_token' => 'required|string'
             ]);
 
-            return $this->errorResponseWithDebug(
-                'Token refresh failed',
-                500,
-                ['error' => 'Could not refresh token'],
-                $e
-            );
+            // Pastikan refresh_token ada dalam request
+            if (!$request->has('refresh_token') || empty($request->input('refresh_token'))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Refresh token is required'
+                ], 400);
+            }
+
+            $refreshToken = $request->input('refresh_token');
+
+            // Verifikasi refresh token
+            try {
+                $payload = JWTAuth::manager()->decode(
+                    new Token($refreshToken),
+                    JWTAuth::manager()->getJWTProvider()->getSecret()
+                );
+
+                // Ambil user berdasarkan payload
+                $user = User::find($payload->get('sub'));
+
+                if (!$user) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'User not found'
+                    ], 404);
+                }
+
+                // Generate token baru
+                $token = JWTAuth::fromUser($user);
+
+                // Generate refresh token baru
+                $newRefreshToken = JWTAuth::manager()->encode(
+                    JWTAuth::manager()->getJWTProvider()->encode([
+                        'sub' => $user->id,
+                        'iat' => time(),
+                        'exp' => time() + (60 * 60 * 24 * 7), // 7 days
+                        'type' => 'refresh'
+                    ])
+                );
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Token refreshed successfully',
+                    'data' => [
+                        'user' => $user,
+                        'access_token' => $token,
+                        'refresh_token' => $newRefreshToken,
+                        'token_type' => 'bearer',
+                        'expires_in' => config('jwt.ttl') * 60
+                    ]
+                ]);
+
+            } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Refresh token has expired'
+                ], 401);
+            } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid refresh token'
+                ], 401);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid refresh token format'
+                ], 400);
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while refreshing token',
+                'debug' => [
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine()
+                ]
+            ], 500);
         }
     }
 

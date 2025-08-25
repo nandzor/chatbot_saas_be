@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react';
 
 const Alert = React.forwardRef(({ className, variant = "default", children, ...props }, ref) => {

@@ -1,7 +1,7 @@
 import React from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 
-const Slider = React.forwardRef(({ 
+const Slider = React.forwardRef(({
   className,
   min = 0,
   max = 100,
@@ -9,7 +9,7 @@ const Slider = React.forwardRef(({
   value = [0],
   onValueChange,
   disabled = false,
-  ...props 
+  ...props
 }, ref) => {
   const handleChange = (e) => {
     const newValue = [parseFloat(e.target.value)];
@@ -24,7 +24,7 @@ const Slider = React.forwardRef(({
     <div className={cn("relative flex w-full touch-none select-none items-center", className)}>
       <div className="relative w-full h-2 bg-secondary rounded-full">
         {/* Progress track */}
-        <div 
+        <div
           className="absolute h-2 bg-primary rounded-full transition-all duration-150"
           style={{ width: `${percentage}%` }}
         />

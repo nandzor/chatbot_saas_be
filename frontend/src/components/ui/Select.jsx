@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
 
 const Select = React.forwardRef(({

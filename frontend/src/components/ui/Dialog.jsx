@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { Button } from './index';
 

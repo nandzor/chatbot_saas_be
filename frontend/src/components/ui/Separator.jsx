@@ -1,11 +1,11 @@
 import React from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 
-const Separator = React.forwardRef(({ 
-  className, 
-  orientation = "horizontal", 
-  decorative = true, 
-  ...props 
+const Separator = React.forwardRef(({
+  className,
+  orientation = "horizontal",
+  decorative = true,
+  ...props
 }, ref) => (
   <div
     ref={ref}

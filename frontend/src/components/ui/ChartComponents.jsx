@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 
 const ChartContainer = React.forwardRef(({ className, children, ...props }, ref) => (
   <div
@@ -31,8 +31,8 @@ const ChartTooltipContent = ({ active, payload, label }) => {
           <p className="text-sm font-medium">{label}</p>
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2">
-              <div 
-                className="h-3 w-3 rounded-full" 
+              <div
+                className="h-3 w-3 rounded-full"
                 style={{ backgroundColor: entry.color }}
               />
               <span className="text-sm text-muted-foreground">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Copy as CopyIcon } from 'lucide-react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 
 const Copy = React.forwardRef(({ className, ...props }, ref) => (
   <CopyIcon

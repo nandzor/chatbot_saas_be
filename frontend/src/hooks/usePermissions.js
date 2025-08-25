@@ -1,213 +1,206 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { PERMISSIONS, PERMISSION_GROUPS, hasPermission, hasAnyPermission, hasAllPermissions } from '@/constants/permissions';
+import { useState, useEffect, useCallback } from 'react';
+import permissionService from '@/services/PermissionService';
 
 /**
- * Custom hook for permission checking
- * Provides convenient methods for checking user permissions
+ * Custom hook for managing permissions
+ * Provides state management and API integration for permissions CRUD operations
  */
 export const usePermissions = () => {
-  const { user, hasPermission: contextHasPermission, hasAnyPermission: contextHasAnyPermission, hasAllPermissions: contextHasAllPermissions } = useAuth();
+  const [permissions, setPermissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 15,
+    total: 0
+  });
 
-  // Get user permissions array
-  const getUserPermissions = () => {
-    if (!user || !user.permissions) return [];
-    return user.permissions;
-  };
+  /**
+   * Fetch permissions with optional filters
+   */
+  const fetchPermissions = useCallback(async (params = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  // Check if user has specific permission
-  const can = (permissionCode) => {
-    return contextHasPermission(permissionCode);
-  };
+      const response = await permissionService.getPermissions(params);
 
-  // Check if user has any of the permissions
-  const canAny = (permissionCodes) => {
-    return contextHasAnyPermission(permissionCodes);
-  };
-
-  // Check if user has all permissions
-  const canAll = (permissionCodes) => {
-    return contextHasAllPermissions(permissionCodes);
-  };
-
-  // Check if user cannot do something
-  const cannot = (permissionCode) => {
-    return !can(permissionCode);
-  };
-
-  // Specific permission checkers for common use cases
-  const permissions = {
-    // User Management
-    users: {
-      view: () => can(PERMISSIONS.USERS.VIEW),
-      create: () => can(PERMISSIONS.USERS.CREATE),
-      update: () => can(PERMISSIONS.USERS.UPDATE),
-      delete: () => can(PERMISSIONS.USERS.DELETE),
-      manage: () => canAny([
-        PERMISSIONS.USERS.CREATE,
-        PERMISSIONS.USERS.UPDATE,
-        PERMISSIONS.USERS.DELETE
-      ])
-    },
-
-    // Agent Management
-    agents: {
-      view: () => can(PERMISSIONS.AGENTS.VIEW),
-      create: () => can(PERMISSIONS.AGENTS.CREATE),
-      update: () => can(PERMISSIONS.AGENTS.UPDATE),
-      delete: () => can(PERMISSIONS.AGENTS.DELETE),
-      execute: () => can(PERMISSIONS.AGENTS.EXECUTE),
-      manage: () => canAny([
-        PERMISSIONS.AGENTS.CREATE,
-        PERMISSIONS.AGENTS.UPDATE,
-        PERMISSIONS.AGENTS.DELETE
-      ])
-    },
-
-    // Customer Management
-    customers: {
-      view: () => can(PERMISSIONS.CUSTOMERS.VIEW),
-      create: () => can(PERMISSIONS.CUSTOMERS.CREATE),
-      update: () => can(PERMISSIONS.CUSTOMERS.UPDATE),
-      delete: () => can(PERMISSIONS.CUSTOMERS.DELETE),
-      manage: () => canAny([
-        PERMISSIONS.CUSTOMERS.CREATE,
-        PERMISSIONS.CUSTOMERS.UPDATE,
-        PERMISSIONS.CUSTOMERS.DELETE
-      ])
-    },
-
-    // Chat Sessions
-    chatSessions: {
-      view: () => can(PERMISSIONS.CHAT_SESSIONS.VIEW),
-      create: () => can(PERMISSIONS.CHAT_SESSIONS.CREATE),
-      update: () => can(PERMISSIONS.CHAT_SESSIONS.UPDATE),
-      delete: () => can(PERMISSIONS.CHAT_SESSIONS.DELETE),
-      manage: () => canAny([
-        PERMISSIONS.CHAT_SESSIONS.CREATE,
-        PERMISSIONS.CHAT_SESSIONS.UPDATE,
-        PERMISSIONS.CHAT_SESSIONS.DELETE
-      ])
-    },
-
-    // Knowledge Management
-    knowledge: {
-      view: () => can(PERMISSIONS.KNOWLEDGE.VIEW),
-      create: () => can(PERMISSIONS.KNOWLEDGE.CREATE),
-      update: () => can(PERMISSIONS.KNOWLEDGE.UPDATE),
-      delete: () => can(PERMISSIONS.KNOWLEDGE.DELETE),
-      publish: () => can(PERMISSIONS.KNOWLEDGE.PUBLISH),
-      manage: () => canAny([
-        PERMISSIONS.KNOWLEDGE.CREATE,
-        PERMISSIONS.KNOWLEDGE.UPDATE,
-        PERMISSIONS.KNOWLEDGE.DELETE
-      ])
-    },
-
-    // Analytics
-    analytics: {
-      view: () => can(PERMISSIONS.ANALYTICS.VIEW),
-      export: () => can(PERMISSIONS.ANALYTICS.EXPORT)
-    },
-
-    // Billing
-    billing: {
-      view: () => can(PERMISSIONS.BILLING.VIEW),
-      manage: () => can(PERMISSIONS.BILLING.MANAGE)
-    },
-
-    // API Management
-    apiKeys: {
-      view: () => can(PERMISSIONS.API_KEYS.VIEW),
-      create: () => can(PERMISSIONS.API_KEYS.CREATE),
-      update: () => can(PERMISSIONS.API_KEYS.UPDATE),
-      delete: () => can(PERMISSIONS.API_KEYS.DELETE),
-      manage: () => canAny([
-        PERMISSIONS.API_KEYS.CREATE,
-        PERMISSIONS.API_KEYS.UPDATE,
-        PERMISSIONS.API_KEYS.DELETE
-      ])
-    },
-
-    // Workflows
-    workflows: {
-      view: () => can(PERMISSIONS.WORKFLOWS.VIEW),
-      create: () => can(PERMISSIONS.WORKFLOWS.CREATE),
-      update: () => can(PERMISSIONS.WORKFLOWS.UPDATE),
-      delete: () => can(PERMISSIONS.WORKFLOWS.DELETE),
-      execute: () => can(PERMISSIONS.WORKFLOWS.EXECUTE),
-      manage: () => canAny([
-        PERMISSIONS.WORKFLOWS.CREATE,
-        PERMISSIONS.WORKFLOWS.UPDATE,
-        PERMISSIONS.WORKFLOWS.DELETE
-      ])
-    },
-
-    // System Administration
-    system: {
-      viewOrganizations: () => can(PERMISSIONS.ORGANIZATIONS.VIEW),
-      manageOrganizations: () => canAny([
-        PERMISSIONS.ORGANIZATIONS.CREATE,
-        PERMISSIONS.ORGANIZATIONS.UPDATE,
-        PERMISSIONS.ORGANIZATIONS.DELETE
-      ]),
-      viewRoles: () => can(PERMISSIONS.ROLES.VIEW),
-      manageRoles: () => canAny([
-        PERMISSIONS.ROLES.CREATE,
-        PERMISSIONS.ROLES.UPDATE,
-        PERMISSIONS.ROLES.DELETE
-      ]),
-      viewPermissions: () => can(PERMISSIONS.PERMISSIONS.VIEW),
-      managePermissions: () => canAny([
-        PERMISSIONS.PERMISSIONS.CREATE,
-        PERMISSIONS.PERMISSIONS.UPDATE,
-        PERMISSIONS.PERMISSIONS.DELETE
-      ]),
-      viewLogs: () => can(PERMISSIONS.SYSTEM_LOGS.VIEW)
+      if (response.success) {
+        setPermissions(response.data || []);
+        // Handle pagination if backend provides it
+        if (response.meta && response.meta.pagination) {
+          setPagination(response.meta.pagination);
+        }
+      } else {
+        setError(response.message || 'Failed to fetch permissions');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'An error occurred while fetching permissions');
+      console.error('Error fetching permissions:', err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  // Check if user has admin privileges
-  const isAdmin = () => {
-    return user?.role === 'super_admin' || user?.role === 'org_admin';
-  };
+  /**
+   * Create a new permission
+   */
+  const createPermission = useCallback(async (permissionData) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  // Check if user is super admin
-  const isSuperAdmin = () => {
-    return user?.role === 'super_admin';
-  };
+      const response = await permissionService.createPermission(permissionData);
 
-  // Check if user has management permissions for any resource
-  const canManageAny = () => {
-    return canAny([
-      ...PERMISSION_GROUPS.USER_MANAGEMENT,
-      ...PERMISSION_GROUPS.AGENT_MANAGEMENT,
-      ...PERMISSION_GROUPS.CONTENT_MANAGEMENT
-    ]);
-  };
+      if (response.success) {
+        // Refresh permissions list
+        await fetchPermissions();
+        return { success: true, data: response.data };
+      } else {
+        setError(response.message || 'Failed to create permission');
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'An error occurred while creating permission';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchPermissions]);
+
+  /**
+   * Update an existing permission
+   */
+  const updatePermission = useCallback(async (permissionId, permissionData) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await permissionService.updatePermission(permissionId, permissionData);
+
+      if (response.success) {
+        // Update local state
+        setPermissions(prev =>
+          prev.map(permission =>
+            permission.id === permissionId
+              ? { ...permission, ...response.data }
+              : permission
+          )
+        );
+        return { success: true, data: response.data };
+      } else {
+        setError(response.message || 'Failed to update permission');
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'An error occurred while updating permission';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Delete a permission
+   */
+  const deletePermission = useCallback(async (permissionId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await permissionService.deletePermission(permissionId);
+
+      if (response.success) {
+        // Remove from local state
+        setPermissions(prev => prev.filter(permission => permission.id !== permissionId));
+        return { success: true };
+      } else {
+        setError(response.message || 'Failed to delete permission');
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'An error occurred while deleting permission';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Get permission by ID
+   */
+  const getPermission = useCallback(async (permissionId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await permissionService.getPermission(permissionId);
+
+      if (response.success) {
+        return { success: true, data: response.data };
+      } else {
+        setError(response.message || 'Failed to fetch permission');
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'An error occurred while fetching permission';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Get permission groups
+   */
+  const getPermissionGroups = useCallback(async () => {
+    try {
+      const response = await permissionService.getPermissionGroups();
+
+      if (response.success) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  /**
+   * Clear error state
+   */
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  /**
+   * Refresh permissions list
+   */
+  const refresh = useCallback(() => {
+    fetchPermissions();
+  }, [fetchPermissions]);
 
   return {
-    // User data
-    user,
-    getUserPermissions,
-
-    // Basic permission checking
-    can,
-    cannot,
-    canAny,
-    canAll,
-
-    // Specific permission objects
+    // State
     permissions,
+    loading,
+    error,
+    pagination,
 
-    // Role checking
-    isAdmin,
-    isSuperAdmin,
-    canManageAny,
-
-    // Constants for direct access
-    PERMISSIONS,
-    PERMISSION_GROUPS
+    // Actions
+    fetchPermissions,
+    createPermission,
+    updatePermission,
+    deletePermission,
+    getPermission,
+    getPermissionGroups,
+    clearError,
+    refresh
   };
 };
-
-export default usePermissions;
