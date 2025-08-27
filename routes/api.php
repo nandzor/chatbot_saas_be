@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\RoleManagementController;
 use App\Http\Controllers\Api\V1\PermissionManagementController;
 use App\Http\Controllers\Api\V1\OrganizationManagementController;
+use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -336,6 +337,50 @@ Route::prefix('v1')->group(function () {
                     return response()->json(['message' => 'Shared resources - flexible access']);
                 });
             });
+
+        // ====================================================================
+        // KNOWLEDGE BASE MANAGEMENT (With Permission Middleware)
+        // ====================================================================
+
+        Route::prefix('knowledge-base')
+            ->middleware(['permission:knowledge.view', 'organization'])
+            ->group(function () {
+
+            // Basic CRUD operations
+            Route::get('/', [KnowledgeBaseController::class, 'index']);
+            Route::get('/search', [KnowledgeBaseController::class, 'search']);
+            Route::get('/slug/{slug}', [KnowledgeBaseController::class, 'showBySlug']);
+
+            // Individual knowledge base item operations
+            Route::prefix('{id}')->group(function () {
+                Route::get('/', [KnowledgeBaseController::class, 'show']);
+                Route::get('/related', [KnowledgeBaseController::class, 'related']);
+                Route::post('/mark-helpful', [KnowledgeBaseController::class, 'markHelpful']);
+                Route::post('/mark-not-helpful', [KnowledgeBaseController::class, 'markNotHelpful']);
+            });
+
+            // Routes requiring additional permissions
+            Route::middleware(['permission:knowledge.create'])->post('/', [KnowledgeBaseController::class, 'store']);
+
+            Route::middleware(['permission:knowledge.update'])->group(function () {
+                Route::put('/{id}', [KnowledgeBaseController::class, 'update']);
+                Route::patch('/{id}', [KnowledgeBaseController::class, 'update']);
+            });
+
+            Route::middleware(['permission:knowledge.delete'])->delete('/{id}', [KnowledgeBaseController::class, 'destroy']);
+
+            // Publishing and approval workflows
+            Route::middleware(['permission:knowledge.publish'])->post('/{id}/publish', [KnowledgeBaseController::class, 'publish']);
+
+            Route::middleware(['permission:knowledge.approve'])->group(function () {
+                Route::post('/{id}/approve', [KnowledgeBaseController::class, 'approve']);
+                Route::post('/{id}/reject', [KnowledgeBaseController::class, 'reject']);
+            });
+
+            // Category and tag filtering
+            Route::get('/category/{categoryId}', [KnowledgeBaseController::class, 'byCategory']);
+            Route::get('/tag/{tagId}', [KnowledgeBaseController::class, 'byTag']);
+        });
 
         // ====================================================================
         // TEST ROUTES FOR MIDDLEWARE PERMISSION SYSTEM
