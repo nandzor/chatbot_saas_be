@@ -1,0 +1,673 @@
+{
+	"info": {
+		"_postman_id": "knowledge-base-api-collection",
+		"name": "Knowledge Base API",
+		"description": "Complete CRUD API for Knowledge Base management in Chatbot SaaS platform",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "knowledge-base-api"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"{{password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Login to get JWT token for API access"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for API access"
+		},
+		{
+			"name": "Knowledge Base - List & Search",
+			"item": [
+				{
+					"name": "Get All Knowledge Base Items",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base?per_page=15&page=1&sort_by=created_at&sort_order=desc",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base"],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "sort_by",
+									"value": "created_at",
+									"description": "Sort field (title, created_at, updated_at, published_at, view_count, helpful_count, priority, quality_score)"
+								},
+								{
+									"key": "sort_order",
+									"value": "desc",
+									"description": "Sort order (asc, desc)"
+								},
+								{
+									"key": "category_id",
+									"value": "",
+									"description": "Filter by category ID",
+									"disabled": true
+								},
+								{
+									"key": "content_type",
+									"value": "",
+									"description": "Filter by content type (article, guide, tutorial, qa_collection, faq, documentation, reference)",
+									"disabled": true
+								},
+								{
+									"key": "language",
+									"value": "",
+									"description": "Filter by language",
+									"disabled": true
+								},
+								{
+									"key": "is_public",
+									"value": "",
+									"description": "Filter by public status (true/false)",
+									"disabled": true
+								},
+								{
+									"key": "is_featured",
+									"value": "",
+									"description": "Filter by featured status (true/false)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all knowledge base items with pagination and filtering"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Knowledge Base Items",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/search?query=laravel&limit=20&content_type=article&language=english",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "search"],
+							"query": [
+								{
+									"key": "query",
+									"value": "laravel",
+									"description": "Search query (required)"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Maximum number of results"
+								},
+								{
+									"key": "content_type",
+									"value": "article",
+									"description": "Filter by content type",
+									"disabled": true
+								},
+								{
+									"key": "language",
+									"value": "english",
+									"description": "Filter by language",
+									"disabled": true
+								},
+								{
+									"key": "is_public",
+									"value": "true",
+									"description": "Filter by public status",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Search knowledge base items with filters"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Items by Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/category/{{category_id}}?per_page=15&sort_by=created_at&sort_order=desc",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "category", "{{category_id}}"],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "sort_by",
+									"value": "created_at",
+									"description": "Sort field"
+								},
+								{
+									"key": "sort_order",
+									"value": "desc",
+									"description": "Sort order"
+								}
+							]
+						},
+						"description": "Get knowledge base items filtered by category"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Items by Tag",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/tag/{{tag_id}}?per_page=15&sort_by=created_at&sort_order=desc",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "tag", "{{tag_id}}"],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "sort_by",
+									"value": "created_at",
+									"description": "Sort field"
+								},
+								{
+									"key": "sort_order",
+									"value": "desc",
+									"description": "Sort order"
+								}
+							]
+						},
+						"description": "Get knowledge base items filtered by tag"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for listing and searching knowledge base items"
+		},
+		{
+			"name": "Knowledge Base - CRUD Operations",
+			"item": [
+				{
+					"name": "Get Knowledge Base Item by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}"]
+						},
+						"description": "Get a specific knowledge base item by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Knowledge Base Item by Slug",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/slug/{{knowledge_item_slug}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "slug", "{{knowledge_item_slug}}"]
+						},
+						"description": "Get a knowledge base item by slug"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Knowledge Base Item",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"category_id\": \"{{category_id}}\",\n    \"title\": \"Getting Started with Laravel\",\n    \"description\": \"A comprehensive guide to getting started with Laravel framework\",\n    \"content_type\": \"article\",\n    \"content\": \"<h1>Getting Started with Laravel</h1><p>Laravel is a web application framework with expressive, elegant syntax...</p>\",\n    \"summary\": \"Learn the basics of Laravel framework and build your first application\",\n    \"excerpt\": \"Complete guide to Laravel framework\",\n    \"tags\": [\"laravel\", \"php\", \"framework\", \"web-development\"],\n    \"keywords\": [\"laravel\", \"php\", \"framework\", \"tutorial\"],\n    \"language\": \"english\",\n    \"difficulty_level\": \"intermediate\",\n    \"priority\": \"medium\",\n    \"estimated_read_time\": 15,\n    \"meta_title\": \"Getting Started with Laravel - Complete Guide\",\n    \"meta_description\": \"Learn Laravel framework from scratch with this comprehensive guide\",\n    \"featured_image_url\": \"https://example.com/images/laravel-guide.jpg\",\n    \"is_featured\": false,\n    \"is_public\": true,\n    \"is_searchable\": true,\n    \"is_ai_trainable\": true,\n    \"requires_approval\": true,\n    \"workflow_status\": \"draft\",\n    \"approval_status\": \"pending\",\n    \"qa_items\": [\n        {\n            \"question\": \"What is Laravel?\",\n            \"answer\": \"Laravel is a free, open-source PHP web framework used for building web applications.\",\n            \"question_variations\": [\"Tell me about Laravel\", \"What is the Laravel framework?\"],\n            \"answer_variations\": [\"Laravel is a PHP framework for web development.\", \"It's a modern PHP framework.\"],\n            \"context\": \"Framework introduction\",\n            \"intent\": \"information\",\n            \"confidence_level\": \"high\",\n            \"keywords\": [\"laravel\", \"framework\", \"php\"],\n            \"search_keywords\": [\"laravel\", \"framework\", \"php\", \"web\"],\n            \"trigger_phrases\": [\"what is\", \"tell me about\", \"explain\"],\n            \"order_index\": 1,\n            \"is_primary\": true,\n            \"is_active\": true\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base"]
+						},
+						"description": "Create a new knowledge base item"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Knowledge Base Item",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Updated: Getting Started with Laravel\",\n    \"description\": \"Updated comprehensive guide to getting started with Laravel framework\",\n    \"content\": \"<h1>Updated: Getting Started with Laravel</h1><p>Laravel is a web application framework with expressive, elegant syntax...</p><p>This guide has been updated with the latest features.</p>\",\n    \"summary\": \"Updated guide to Laravel framework basics\",\n    \"tags\": [\"laravel\", \"php\", \"framework\", \"web-development\", \"updated\"],\n    \"is_featured\": true,\n    \"workflow_status\": \"review\",\n    \"qa_items\": [\n        {\n            \"question\": \"What is Laravel?\",\n            \"answer\": \"Laravel is a free, open-source PHP web framework used for building web applications with elegant syntax.\",\n            \"question_variations\": [\"Tell me about Laravel\", \"What is the Laravel framework?\", \"Explain Laravel\"],\n            \"answer_variations\": [\"Laravel is a PHP framework for web development.\", \"It's a modern PHP framework with elegant syntax.\"],\n            \"context\": \"Framework introduction\",\n            \"intent\": \"information\",\n            \"confidence_level\": \"high\",\n            \"keywords\": [\"laravel\", \"framework\", \"php\"],\n            \"search_keywords\": [\"laravel\", \"framework\", \"php\", \"web\", \"development\"],\n            \"trigger_phrases\": [\"what is\", \"tell me about\", \"explain\", \"describe\"],\n            \"order_index\": 1,\n            \"is_primary\": true,\n            \"is_active\": true\n        },\n        {\n            \"question\": \"How to install Laravel?\",\n            \"answer\": \"You can install Laravel using Composer: composer create-project laravel/laravel example-app\",\n            \"question_variations\": [\"How do I install Laravel?\", \"Laravel installation steps\"],\n            \"answer_variations\": [\"Install Laravel via Composer.\", \"Use composer create-project command.\"],\n            \"context\": \"Installation\",\n            \"intent\": \"how-to\",\n            \"confidence_level\": \"high\",\n            \"keywords\": [\"install\", \"composer\", \"setup\"],\n            \"search_keywords\": [\"install\", \"laravel\", \"composer\", \"setup\"],\n            \"trigger_phrases\": [\"how to\", \"install\", \"setup\"],\n            \"order_index\": 2,\n            \"is_primary\": false,\n            \"is_active\": true\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}"]
+						},
+						"description": "Update an existing knowledge base item"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Knowledge Base Item",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}"]
+						},
+						"description": "Delete a knowledge base item (soft delete)"
+					},
+					"response": []
+				}
+			],
+			"description": "Basic CRUD operations for knowledge base items"
+		},
+		{
+			"name": "Knowledge Base - Workflow & Approval",
+			"item": [
+				{
+					"name": "Publish Knowledge Base Item",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/publish",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}", "publish"]
+						},
+						"description": "Publish a knowledge base item (changes workflow_status to 'published')"
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Knowledge Base Item",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"comment\": \"Content is accurate and well-written. Approved for publication.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}", "approve"]
+						},
+						"description": "Approve a knowledge base item (changes approval_status to 'approved')"
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Knowledge Base Item",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Content needs more technical details and examples. Please revise and resubmit.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}", "reject"]
+						},
+						"description": "Reject a knowledge base item (changes approval_status to 'rejected')"
+					},
+					"response": []
+				}
+			],
+			"description": "Workflow and approval management endpoints"
+		},
+		{
+			"name": "Knowledge Base - Feedback & Analytics",
+			"item": [
+				{
+					"name": "Get Related Items",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/related?limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}", "related"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5",
+									"description": "Number of related items to return"
+								}
+							]
+						},
+						"description": "Get related knowledge base items"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Item as Helpful",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/mark-helpful",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}", "mark-helpful"]
+						},
+						"description": "Mark a knowledge base item as helpful (increments helpful_count)"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Item as Not Helpful",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/mark-not-helpful",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "knowledge-base", "{{knowledge_item_id}}", "mark-not-helpful"]
+						},
+						"description": "Mark a knowledge base item as not helpful (increments not_helpful_count)"
+					},
+					"response": []
+				}
+			],
+			"description": "Feedback and analytics endpoints"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set default headers for all requests",
+					"pm.request.headers.add({\n    key: 'Accept',\n    value: 'application/json'\n});\n\n// Add request timestamp for logging",
+					"pm.request.headers.add({\n    key: 'X-Request-Timestamp',\n    value: new Date().toISOString()\n});"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Common test script for all requests",
+					"pm.test(\"Status code is 200 or 201\", function () {\n    pm.expect(pm.response.code).to.be.oneOf([200, 201]);\n});\n\npm.test(\"Response has required structure\", function () {\n    const responseJson = pm.response.json();\n    pm.expect(responseJson).to.have.property('success');\n    pm.expect(responseJson).to.have.property('message');\n    pm.expect(responseJson).to.have.property('data');\n});\n\npm.test(\"Response time is less than 2000ms\", function () {\n    pm.expect(pm.response.responseTime).to.be.below(2000);\n});\n\n// Store response data for subsequent requests",
+					"if (pm.response.code === 200 || pm.response.code === 201) {\n    const responseJson = pm.response.json();\n    \n    // Store knowledge item ID if present\n    if (responseJson.data && responseJson.data.id) {\n        pm.environment.set('knowledge_item_id', responseJson.data.id);\n    }\n    \n    // Store knowledge item slug if present\n    if (responseJson.data && responseJson.data.slug) {\n        pm.environment.set('knowledge_item_slug', responseJson.data.slug);\n    }\n    \n    // Store category ID if present\n    if (responseJson.data && responseJson.data.category_id) {\n        pm.environment.set('category_id', responseJson.data.category_id);\n    }\n}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string",
+			"description": "Base URL for the API"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string",
+			"description": "JWT token for authentication"
+		},
+		{
+			"key": "email",
+			"value": "admin@example.com",
+			"type": "string",
+			"description": "User email for login"
+		},
+		{
+			"key": "password",
+			"value": "password123",
+			"type": "string",
+			"description": "User password for login"
+		},
+		{
+			"key": "knowledge_item_id",
+			"value": "",
+			"type": "string",
+			"description": "Knowledge base item ID (auto-populated)"
+		},
+		{
+			"key": "knowledge_item_slug",
+			"value": "",
+			"type": "string",
+			"description": "Knowledge base item slug (auto-populated)"
+		},
+		{
+			"key": "category_id",
+			"value": "",
+			"type": "string",
+			"description": "Category ID (auto-populated)"
+		},
+		{
+			"key": "tag_id",
+			"value": "",
+			"type": "string",
+			"description": "Tag ID for filtering"
+		}
+	]
+}
