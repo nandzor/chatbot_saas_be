@@ -729,7 +729,8 @@ class KnowledgeBaseService extends BaseService
      */
     protected function getCurrentOrganizationId(): string
     {
-        return $this->getCurrentUser()->organization_id;
+        $user = $this->getCurrentUser();
+        return $user->organization_id ?? '';
     }
 
     /**
