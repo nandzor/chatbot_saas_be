@@ -67,16 +67,6 @@ Route::prefix('v1')->group(function () {
                 // TODO: Implement profile update
                 return response()->json(['message' => 'Profile update endpoint - to be implemented']);
             });
-
-            Route::post('/change-password', function () {
-                // TODO: Implement password change
-                return response()->json(['message' => 'Change password endpoint - to be implemented']);
-            });
-
-            Route::post('/logout', function () {
-                // TODO: Implement logout
-                return response()->json(['message' => 'Logout endpoint - to be implemented']);
-            });
         });
 
         // ====================================================================
