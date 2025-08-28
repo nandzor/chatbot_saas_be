@@ -8,9 +8,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
+use App\Traits\Api\ApiResponseTrait;
 
 class OrganizationAccessMiddleware
 {
+    use ApiResponseTrait;
     /**
      * Handle an incoming request.
      *
@@ -174,13 +176,7 @@ class OrganizationAccessMiddleware
      */
     protected function unauthorizedResponse(string $message): JsonResponse
     {
-        return response()->json([
-            'success' => false,
-            'message' => $message,
-            'error_code' => 'UNAUTHORIZED',
-            'status_code' => 401,
-            'timestamp' => now()->toISOString(),
-        ], 401);
+        return $this->unauthorizedResponse($message);
     }
 
     /**
@@ -196,13 +192,6 @@ class OrganizationAccessMiddleware
             'request_method' => $context['method'],
         ];
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Organization access denied',
-            'error_code' => 'ORGANIZATION_ACCESS_DENIED',
-            'details' => $details,
-            'status_code' => 403,
-            'timestamp' => now()->toISOString(),
-        ], 403);
+        return $this->errorResponse('Organization access denied', $details, 403, 'ORGANIZATION_ACCESS_DENIED');
     }
 }

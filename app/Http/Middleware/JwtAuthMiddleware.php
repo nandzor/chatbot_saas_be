@@ -13,9 +13,12 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use App\Traits\Api\ApiResponseTrait;
 
 class JwtAuthMiddleware
 {
+    use ApiResponseTrait;
+
     protected AuthService $authService;
 
     public function __construct(AuthService $authService)
@@ -139,11 +142,6 @@ class JwtAuthMiddleware
      */
     protected function unauthorizedResponse(string $message, string $code = 'UNAUTHORIZED'): JsonResponse
     {
-        return response()->json([
-            'success' => false,
-            'message' => $message,
-            'error_code' => $code,
-            'timestamp' => now()->toISOString(),
-        ], 401);
+        return $this->errorResponse($message, null, 401, $code);
     }
 }

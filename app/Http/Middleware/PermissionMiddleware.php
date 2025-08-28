@@ -10,9 +10,12 @@ use App\Services\PermissionService;
 use App\Exceptions\PermissionDeniedException;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
+use App\Traits\Api\ApiResponseTrait;
 
 class PermissionMiddleware
 {
+    use ApiResponseTrait;
+
     /**
      * The permission management service.
      */
@@ -256,13 +259,7 @@ class PermissionMiddleware
      */
     protected function unauthorizedResponse(string $message): JsonResponse
     {
-        return response()->json([
-            'success' => false,
-            'message' => $message,
-            'error_code' => 'UNAUTHORIZED',
-            'status_code' => 401,
-            'timestamp' => now()->toISOString(),
-        ], 401);
+        return $this->unauthorizedResponse($message);
     }
 
     /**
@@ -280,13 +277,6 @@ class PermissionMiddleware
             $details['base_resource'] = $parsedPermissions['base_resource'];
         }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Access denied',
-            'error_code' => 'PERMISSION_DENIED',
-            'details' => $details,
-            'status_code' => 403,
-            'timestamp' => now()->toISOString(),
-        ], 403);
+        return $this->errorResponse('Access denied', $details, 403, 'PERMISSION_DENIED');
     }
 }

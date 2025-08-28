@@ -6,9 +6,12 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use App\Traits\Api\ApiResponseTrait;
 
 class AdminOnly
 {
+    use ApiResponseTrait;
+
     /**
      * Handle an incoming request.
      *
@@ -19,20 +22,12 @@ class AdminOnly
         $user = Auth::user();
 
         if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-                'errors' => ['error' => 'User not authenticated']
-            ], 401);
+            return $this->unauthorizedResponse('User not authenticated');
         }
 
         // Check if user has admin role
         if (!in_array($user->role, ['super_admin', 'org_admin'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Forbidden',
-                'errors' => ['error' => 'Insufficient permissions. Admin access required.']
-            ], 403);
+            return $this->forbiddenResponse('Insufficient permissions. Admin access required.');
         }
 
         return $next($request);
