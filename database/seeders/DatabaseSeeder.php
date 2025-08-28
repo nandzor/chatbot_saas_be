@@ -23,6 +23,9 @@ class DatabaseSeeder extends Seeder
 
             // Knowledge Base Seeder
             KnowledgeBaseSeeder::class,
+
+            // Payment Transaction Seeder
+            PaymentTransactionSeeder::class,
         ]);
     }
 }

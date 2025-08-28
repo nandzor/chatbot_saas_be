@@ -82,8 +82,9 @@ class SubscriptionPlanController extends BaseApiController
             $plans = $this->subscriptionPlanService->getPlansByTier($tier);
 
             return $this->successResponse(
+                "Daftar paket tier {$tier} berhasil diambil",
                 $plans,
-                "Daftar paket tier {$tier} berhasil diambil"
+
             );
         } catch (\Exception $e) {
             Log::error('Error fetching subscription plans by tier', [
