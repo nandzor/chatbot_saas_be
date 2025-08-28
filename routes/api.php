@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\RoleManagementController;
 use App\Http\Controllers\Api\V1\PermissionManagementController;
 use App\Http\Controllers\Api\V1\OrganizationManagementController;
 use App\Http\Controllers\Api\V1\KnowledgeBaseController;
+use App\Http\Controllers\Api\V1\SubscriptionPlanController;
 
 /*
 |--------------------------------------------------------------------------
@@ -271,6 +272,34 @@ Route::prefix('v1')->group(function () {
                 Route::middleware(['permission:organizations.add_user'])->post('/users', [OrganizationManagementController::class, 'addUser']);
                 Route::middleware(['permission:organizations.remove_user'])->delete('/users/{userId}', [OrganizationManagementController::class, 'removeUser']);
             });
+        });
+
+        // ====================================================================
+        // SUBSCRIPTION PLAN MANAGEMENT (With Permission Middleware)
+        // ====================================================================
+
+        Route::prefix('subscription-plans')
+            ->middleware(['permission:subscription_plans.view'])
+            ->group(function () {
+
+            // Basic CRUD operations
+            Route::get('/', [SubscriptionPlanController::class, 'index']);
+            Route::get('/popular', [SubscriptionPlanController::class, 'popular']);
+            Route::get('/tier/{tier}', [SubscriptionPlanController::class, 'byTier']);
+            Route::get('/custom', [SubscriptionPlanController::class, 'custom']);
+            Route::get('/statistics', [SubscriptionPlanController::class, 'statistics']);
+
+            // Individual plan operations
+            Route::prefix('{subscription_plan}')->group(function () {
+                Route::get('/', [SubscriptionPlanController::class, 'show']);
+                Route::middleware(['permission:subscription_plans.update'])->put('/', [SubscriptionPlanController::class, 'update']);
+                Route::middleware(['permission:subscription_plans.delete'])->delete('/', [SubscriptionPlanController::class, 'destroy']);
+                Route::middleware(['permission:subscription_plans.update'])->patch('/toggle-popular', [SubscriptionPlanController::class, 'togglePopular']);
+            });
+
+            // Routes requiring additional permissions
+            Route::middleware(['permission:subscription_plans.create'])->post('/', [SubscriptionPlanController::class, 'store']);
+            Route::middleware(['permission:subscription_plans.update'])->patch('/sort-order', [SubscriptionPlanController::class, 'updateSortOrder']);
         });
 
         // ====================================================================
