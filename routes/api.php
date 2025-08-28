@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\PermissionManagementController;
 
 use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
+use App\Http\Controllers\Api\V1\PaymentTransactionController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 
 /*
@@ -275,6 +276,31 @@ Route::prefix('v1')->group(function () {
             // Routes requiring additional permissions
             Route::middleware(['permission:subscription_plans.create'])->post('/', [SubscriptionPlanController::class, 'store']);
             Route::middleware(['permission:subscription_plans.update'])->patch('/sort-order', [SubscriptionPlanController::class, 'updateSortOrder']);
+        });
+
+                // ====================================================================
+        // PAYMENT TRANSACTION HISTORY (Super Admin Only)
+        // ====================================================================
+
+        Route::prefix('payment-transactions')
+            ->middleware(['super.admin'])
+            ->group(function () {
+            // Main transaction endpoints
+            Route::get('/', [PaymentTransactionController::class, 'index']);
+            Route::get('/statistics', [PaymentTransactionController::class, 'statistics']);
+            Route::get('/export', [PaymentTransactionController::class, 'export']);
+
+            // Individual transaction
+            Route::get('/{id}', [PaymentTransactionController::class, 'show']);
+
+            // Filtered endpoints
+            Route::get('/status/{status}', [PaymentTransactionController::class, 'byStatus']);
+            Route::get('/payment-method/{method}', [PaymentTransactionController::class, 'byPaymentMethod']);
+            Route::get('/payment-gateway/{gateway}', [PaymentTransactionController::class, 'byPaymentGateway']);
+
+            // History endpoints
+            Route::get('/plan/{planId}/history', [PaymentTransactionController::class, 'planHistory']);
+            Route::get('/organization/{organizationId}/history', [PaymentTransactionController::class, 'organizationHistory']);
         });
 
         // ====================================================================
