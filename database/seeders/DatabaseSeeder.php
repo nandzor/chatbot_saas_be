@@ -20,6 +20,9 @@ class DatabaseSeeder extends Seeder
 
             // Other seeders
             ChatbotSaasSeeder::class,
+
+            // Knowledge Base Seeder
+            KnowledgeBaseSeeder::class,
         ]);
     }
 }
