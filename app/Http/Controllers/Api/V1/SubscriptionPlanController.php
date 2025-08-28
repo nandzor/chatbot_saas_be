@@ -233,8 +233,9 @@ class SubscriptionPlanController extends BaseApiController
             }
 
             return $this->successResponse(
-                null,
-                'Paket berlangganan berhasil dihapus'
+                'Paket berlangganan berhasil dihapus',
+                null
+
             );
         } catch (\Exception $e) {
             Log::error('Error deleting subscription plan', [
@@ -307,8 +308,9 @@ class SubscriptionPlanController extends BaseApiController
             }
 
             return $this->successResponse(
-                null,
-                'Urutan paket berlangganan berhasil diperbarui'
+                'Urutan paket berlangganan berhasil diperbarui',
+                null
+
             );
         } catch (\Exception $e) {
             Log::error('Error updating subscription plan sort order', [
@@ -333,8 +335,9 @@ class SubscriptionPlanController extends BaseApiController
             $stats = $this->subscriptionPlanService->getPlanStatistics();
 
             return $this->successResponse(
-                $stats,
-                'Statistik paket berlangganan berhasil diambil'
+                'Statistik paket berlangganan berhasil diambil',
+                $stats
+
             );
         } catch (\Exception $e) {
             Log::error('Error fetching subscription plan statistics', [

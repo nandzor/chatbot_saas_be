@@ -5,9 +5,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\RoleManagementController;
 use App\Http\Controllers\Api\V1\PermissionManagementController;
-use App\Http\Controllers\Api\V1\OrganizationManagementController;
+
 use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
+use App\Http\Controllers\Api\V1\OrganizationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -246,33 +247,7 @@ Route::prefix('v1')->group(function () {
 
         // ====================================================================
         // ORGANIZATION MANAGEMENT (With Permission Middleware)
-        // ====================================================================
 
-        Route::prefix('organizations')
-            ->middleware(['permission:organizations.view', 'organization'])
-            ->group(function () {
-
-            // Basic operations
-            Route::get('/', [OrganizationManagementController::class, 'index']);
-            Route::get('/statistics', [OrganizationManagementController::class, 'statistics']);
-
-            // Individual organization operations
-            Route::prefix('{id}')->group(function () {
-                Route::get('/', [OrganizationManagementController::class, 'show']);
-            });
-
-            // Routes requiring additional permissions
-            Route::middleware(['permission:organizations.create'])->post('/', [OrganizationManagementController::class, 'store']);
-            Route::middleware(['permission:organizations.update'])->put('/{id}', [OrganizationManagementController::class, 'update']);
-            Route::middleware(['permission:organizations.delete'])->delete('/{id}', [OrganizationManagementController::class, 'destroy']);
-
-            // Organization users management
-            Route::prefix('{id}')->group(function () {
-                Route::get('/users', [OrganizationManagementController::class, 'users']);
-                Route::middleware(['permission:organizations.add_user'])->post('/users', [OrganizationManagementController::class, 'addUser']);
-                Route::middleware(['permission:organizations.remove_user'])->delete('/users/{userId}', [OrganizationManagementController::class, 'removeUser']);
-            });
-        });
 
         // ====================================================================
         // SUBSCRIPTION PLAN MANAGEMENT (With Permission Middleware)
@@ -300,6 +275,42 @@ Route::prefix('v1')->group(function () {
             // Routes requiring additional permissions
             Route::middleware(['permission:subscription_plans.create'])->post('/', [SubscriptionPlanController::class, 'store']);
             Route::middleware(['permission:subscription_plans.update'])->patch('/sort-order', [SubscriptionPlanController::class, 'updateSortOrder']);
+        });
+
+        // ====================================================================
+        // ORGANIZATION MANAGEMENT (With Permission Middleware)
+        // ====================================================================
+
+        Route::prefix('organizations')
+            ->middleware(['permission:organizations.view'])
+            ->group(function () {
+
+            // Basic CRUD operations
+            Route::get('/', [OrganizationController::class, 'index']);
+            Route::get('/active', [OrganizationController::class, 'active']);
+            Route::get('/trial', [OrganizationController::class, 'trial']);
+            Route::get('/expired-trial', [OrganizationController::class, 'expiredTrial']);
+            Route::get('/business-type/{businessType}', [OrganizationController::class, 'byBusinessType']);
+            Route::get('/industry/{industry}', [OrganizationController::class, 'byIndustry']);
+            Route::get('/company-size/{companySize}', [OrganizationController::class, 'byCompanySize']);
+            Route::get('/statistics', [OrganizationController::class, 'statistics']);
+
+            // Individual organization operations
+            Route::prefix('{organization}')->group(function () {
+                Route::get('/', [OrganizationController::class, 'show']);
+                Route::middleware(['permission:organizations.update'])->put('/', [OrganizationController::class, 'update']);
+                Route::middleware(['permission:organizations.delete'])->delete('/', [OrganizationController::class, 'destroy']);
+                Route::get('/users', [OrganizationController::class, 'users']);
+                Route::middleware(['permission:organizations.manage_users'])->post('/users', [OrganizationController::class, 'addUser']);
+                Route::middleware(['permission:organizations.manage_users'])->delete('/users/{userId}', [OrganizationController::class, 'removeUser']);
+                Route::middleware(['permission:organizations.update'])->patch('/subscription', [OrganizationController::class, 'updateSubscription']);
+            });
+
+            // Organization by code
+            Route::get('/code/{orgCode}', [OrganizationController::class, 'showByCode']);
+
+            // Routes requiring additional permissions
+            Route::middleware(['permission:organizations.create'])->post('/', [OrganizationController::class, 'store']);
         });
 
         // ====================================================================
