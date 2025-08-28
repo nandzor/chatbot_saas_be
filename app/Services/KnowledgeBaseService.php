@@ -42,8 +42,10 @@ class KnowledgeBaseService extends BaseService
             $query->with($relations);
         }
 
-        // Apply organization filter
-        $query->where('organization_id', $this->getCurrentOrganizationId());
+        if (Auth::user()->role !== 'super_admin') {
+            // Apply organization filter for non-super admins
+            $query->where('organization_id', $this->getCurrentOrganizationId());
+        }
 
         // Apply filters
         $this->applyKnowledgeFilters($query, $filters);
