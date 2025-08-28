@@ -24,6 +24,9 @@ return new class extends Migration
 
             // Unique constraints for business logic
             $table->unique(['knowledge_item_id', 'tag_id'], 'knowledge_base_item_tags_item_tag_unique');
+
+            // Timestamps
+            $table->timestamps();
         });
     }
 
