@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
 use App\Http\Controllers\Api\V1\PaymentTransactionController;
 use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\BotPersonalityController;
 
 /*
 |--------------------------------------------------------------------------
@@ -437,6 +438,21 @@ Route::prefix('v1')->group(function () {
             Route::get('/category/{categoryId}', [KnowledgeBaseController::class, 'byCategory']);
             Route::get('/tag/{tagId}', [KnowledgeBaseController::class, 'byTag']);
         });
+
+        // ====================================================================
+        // BOT PERSONALITIES (org_admin-only, organization scoped)
+        // ====================================================================
+
+        Route::prefix('bot-personalities')
+            ->middleware(['admin.only', 'organization'])
+            ->group(function () {
+                Route::get('/', [BotPersonalityController::class, 'index']);
+                Route::post('/', [BotPersonalityController::class, 'store']);
+                Route::get('/{id}', [BotPersonalityController::class, 'show']);
+                Route::put('/{id}', [BotPersonalityController::class, 'update']);
+                Route::patch('/{id}', [BotPersonalityController::class, 'update']);
+                Route::delete('/{id}', [BotPersonalityController::class, 'destroy']);
+            });
 
         // ====================================================================
         // TEST ROUTES FOR MIDDLEWARE PERMISSION SYSTEM
