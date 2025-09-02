@@ -642,7 +642,7 @@ class UserService extends BaseService
         $allPermissions = $rolePermissions->merge($directPermissions)->unique('id');
 
         // Apply filters
-        if (isset($filters['category'])) {
+        if (isset($filters['category']) && $filters['category'] !== 'all') {
             $allPermissions = $allPermissions->filter(function ($permission) use ($filters) {
                 return $permission->category === $filters['category'];
             });
