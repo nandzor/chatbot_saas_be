@@ -268,6 +268,26 @@ class UserManagementService {
   }
 
   /**
+   * Get user permissions
+   */
+  async getUserPermissions(id, filters = {}) {
+    try {
+      console.log('🔍 UserManagementService: Fetching permissions for user:', id, 'with filters:', filters);
+      const response = await api.get(`/v1/users/${id}/permissions`, { params: filters });
+      console.log('🔍 UserManagementService: Permissions response:', response.data);
+
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      console.error('❌ UserManagementService: Failed to get user permissions:', error);
+      return this.handleError(error, 'Failed to fetch user permissions');
+    }
+  }
+
+  /**
    * Check if email exists
    */
   async checkEmailExists(email, excludeUserId = null) {

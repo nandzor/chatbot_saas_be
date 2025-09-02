@@ -580,4 +580,48 @@ class UserController extends BaseApiController
             );
         }
     }
+
+    /**
+     * Get user permissions.
+     */
+    public function permissions(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = $this->userService->getById($id);
+
+            if (!$user) {
+                return $this->handleResourceNotFound('User', $id);
+            }
+
+            $filters = $request->only(['category', 'active_only']);
+            $permissions = $this->userService->getUserPermissions($id, $filters);
+
+            $this->logApiAction('user_permissions_viewed', [
+                'user_id' => $id,
+                'viewed_by' => $this->getCurrentUser()?->id,
+                'filters' => $filters,
+                'permission_count' => count($permissions)
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_permissions_viewed',
+                'User permissions retrieved successfully',
+                [
+                    'permissions' => $permissions,
+                    'total_count' => count($permissions),
+                    'categories' => collect($permissions)->groupBy('category')->map->count(),
+                ],
+                200
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'user_permissions_error',
+                'Failed to retrieve user permissions',
+                $e->getMessage(),
+                500,
+                'USER_PERMISSIONS_ERROR'
+            );
+        }
+    }
 }

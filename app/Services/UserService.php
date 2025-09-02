@@ -603,4 +603,106 @@ class UserService extends BaseService
 
         return empty($parts) ? 'Unknown' : implode(', ', $parts);
     }
+
+    /**
+     * Get user permissions (from roles and direct assignments).
+     */
+    public function getUserPermissions(string $userId, array $filters = []): array
+    {
+        $user = $this->getById($userId);
+
+        if (!$user) {
+            return [];
+        }
+
+        // Get permissions from roles
+        $rolePermissions = collect();
+        if ($user->relationLoaded('roles')) {
+            $rolePermissions = $user->roles->flatMap(function ($role) {
+                return $role->permissions ?? collect();
+            });
+        } else {
+            $rolePermissions = $user->roles()->with('permissions')->get()
+                ->flatMap(function ($role) {
+                    return $role->permissions ?? collect();
+                });
+        }
+
+        // Get direct permissions from user.permissions field (JSON array)
+        $directPermissions = collect();
+        if ($user->permissions && is_array($user->permissions)) {
+            // Get permission details for direct permissions
+            $permissionCodes = $user->permissions;
+            $directPermissions = \App\Models\Permission::whereIn('code', $permissionCodes)
+                ->where('status', 'active')
+                ->get();
+        }
+
+        // Merge and deduplicate permissions
+        $allPermissions = $rolePermissions->merge($directPermissions)->unique('id');
+
+        // Apply filters
+        if (isset($filters['category'])) {
+            $allPermissions = $allPermissions->filter(function ($permission) use ($filters) {
+                return $permission->category === $filters['category'];
+            });
+        }
+
+        if (isset($filters['active_only']) && $filters['active_only']) {
+            $allPermissions = $allPermissions->filter(function ($permission) {
+                return $permission->status === 'active';
+            });
+        }
+
+        // Format response
+        return $allPermissions->map(function ($permission) use ($user) {
+            $isDirectPermission = $user->permissions && is_array($user->permissions) &&
+                                 in_array($permission->code, $user->permissions);
+
+            return [
+                'id' => $permission->id,
+                'name' => $permission->name,
+                'code' => $permission->code,
+                'display_name' => $permission->display_name,
+                'description' => $permission->description,
+                'category' => $permission->category,
+                'group_name' => $permission->group_name,
+                'resource' => $permission->resource,
+                'action' => $permission->action,
+                'scope' => $permission->scope,
+                'is_dangerous' => $permission->is_dangerous,
+                'requires_approval' => $permission->requires_approval,
+                'is_direct' => $isDirectPermission,
+                'is_inherited' => !$isDirectPermission,
+                'risk_level' => $this->getRiskLevel($permission),
+                'is_active' => $permission->status === 'active',
+                'created_at' => $permission->created_at,
+                'updated_at' => $permission->updated_at,
+            ];
+        })->values()->toArray();
+    }
+
+    /**
+     * Get risk level for permission.
+     */
+    private function getRiskLevel($permission): string
+    {
+        if ($permission->is_dangerous) {
+            return 'critical';
+        }
+
+        if ($permission->requires_approval) {
+            return 'high';
+        }
+
+        if (in_array($permission->action, ['delete', 'manage', 'execute'])) {
+            return 'high';
+        }
+
+        if (in_array($permission->action, ['update', 'approve', 'publish'])) {
+            return 'medium';
+        }
+
+        return 'low';
+    }
 }

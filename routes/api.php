@@ -173,6 +173,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/', [UserController::class, 'show']);
                 Route::get('/activity', [UserController::class, 'activity']);
                 Route::get('/sessions', [UserController::class, 'sessions']);
+                Route::get('/permissions', [UserController::class, 'permissions']);
             });
 
             // Routes requiring additional permissions

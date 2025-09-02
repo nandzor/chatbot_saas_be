@@ -51,6 +51,7 @@ import {
   Skeleton
 } from '@/components/ui';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import UserPermissionsTab from '@/components/UserPermissionsTab';
 
 const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelete }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -66,13 +67,7 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState(null);
 
-  // Mock data for demonstration
-  const mockPermissions = [
-    { id: 1, name: 'User Management', code: 'users.manage', category: 'user_management', risk_level: 'high', is_active: true },
-    { id: 2, name: 'Role Management', code: 'roles.manage', category: 'role_management', risk_level: 'critical', is_active: true },
-    { id: 3, name: 'System Administration', code: 'system.admin', category: 'system_management', risk_level: 'critical', is_active: true },
-    { id: 4, name: 'Dashboard Access', code: 'dashboard.view', category: 'general', risk_level: 'low', is_active: true }
-  ];
+
 
   const mockActivity = [
     { id: 1, action: 'User logged in', timestamp: '2024-01-25 14:30:00', ip: '192.168.1.50', user_agent: 'Chrome 120.0.0.0', location: 'San Francisco, CA' },
@@ -222,35 +217,7 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
     }
   };
 
-  const getPermissionCategoryIcon = (category) => {
-    switch (category) {
-      case 'user_management':
-        return Users;
-      case 'role_management':
-        return ShieldIcon;
-      case 'system_management':
-        return Settings;
-      case 'general':
-        return Eye;
-      default:
-        return Settings;
-    }
-  };
 
-  const getRiskLevelColor = (riskLevel) => {
-    switch (riskLevel) {
-      case 'critical':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'high':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
 
   const StatusIcon = getStatusInfo(user.status).icon;
   const RoleIcon = getRoleInfo(user.role).icon;
@@ -497,49 +464,7 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
 
               {/* Permissions Tab */}
               <TabsContent value="permissions" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="w-5 h-5" />
-                      User Permissions
-                    </CardTitle>
-                    <CardDescription>
-                      {mockPermissions.length} permissions currently assigned to this user
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {mockPermissions.map((permission) => {
-                        const CategoryIcon = getPermissionCategoryIcon(permission.category);
-
-                        return (
-                          <div key={permission.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <CategoryIcon className="w-4 h-4 text-blue-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-gray-900">{permission.name}</h4>
-                                <p className="text-sm text-gray-500 font-mono">{permission.code}</p>
-                                <p className="text-xs text-gray-400">{permission.category}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <Badge className={`${getRiskLevelColor(permission.risk_level)} border`}>
-                                {permission.risk_level.charAt(0).toUpperCase() + permission.risk_level.slice(1)}
-                              </Badge>
-                              <div className="mt-1">
-                                <Badge className={permission.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                                  {permission.is_active ? 'Active' : 'Inactive'}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                <UserPermissionsTab userId={user?.id} user={user} />
               </TabsContent>
 
               {/* Sessions Tab */}

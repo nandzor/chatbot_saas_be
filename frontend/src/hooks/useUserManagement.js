@@ -286,6 +286,26 @@ export const useUserManagement = () => {
     }
   }, []);
 
+  // Get user permissions
+  const getUserPermissions = useCallback(async (id, filters = {}) => {
+    try {
+      console.log('🔍 useUserManagement: Getting permissions for user ID:', id, 'with filters:', filters);
+      const response = await userManagementService.getUserPermissions(id, filters);
+      console.log('🔍 useUserManagement: Permissions service response:', response);
+
+      if (response.success) {
+        console.log('🔍 useUserManagement: Permissions data:', response.data);
+        return { success: true, data: response.data };
+      } else {
+        console.error('❌ useUserManagement: Permissions service failed:', response.message);
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      console.error('❌ useUserManagement: Permissions error:', err);
+      return { success: false, error: 'Failed to fetch user permissions' };
+    }
+  }, []);
+
   // Check email availability
   const checkEmailExists = useCallback(async (email, excludeUserId = null) => {
     try {
@@ -372,6 +392,7 @@ export const useUserManagement = () => {
     getUserStatistics,
     getUserActivity,
     getUserSessions,
+    getUserPermissions,
     checkEmailExists,
     checkUsernameExists,
 
