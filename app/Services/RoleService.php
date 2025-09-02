@@ -28,8 +28,23 @@ class RoleService extends BaseService
      */
     public function getRoles(Request $request): LengthAwarePaginator
     {
-        $query = Role::with(['permissions', 'users'])
-            ->withCount(['users', 'permissions']);
+        $query = Role::with(['permissions'])
+            ->withCount([
+                'users as users_count',
+                'permissions as permissions_count'
+            ]);
+
+        // Add custom select to get current_users from active users
+        $query->addSelect([
+            'current_users' => DB::table('user_roles')
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('user_roles.role_id', 'roles.id')
+                ->where('user_roles.is_active', true)
+                ->where(function ($q) {
+                    $q->whereNull('user_roles.effective_until')
+                      ->orWhere('user_roles.effective_until', '>', now());
+                })
+        ]);
 
         // Apply filters
         if ($request->filled('search')) {

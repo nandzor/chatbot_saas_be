@@ -571,7 +571,7 @@ const RoleList = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {roles.reduce((sum, role) => sum + (role.current_users || 0), 0)}
+                    {roles.reduce((sum, role) => sum + (role.current_users || role.users_count || 0), 0)}
                   </p>
                 </div>
               </div>
@@ -689,7 +689,7 @@ const RoleList = () => {
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-600">Current:</span>
                               <span className="text-sm font-medium text-gray-900">
-                                {role.current_users || 0}
+                                {role.current_users || role.users_count || 0}
                               </span>
                             </div>
                             {role.max_users && (
@@ -705,7 +705,7 @@ const RoleList = () => {
                                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                 style={{
                                   width: role.max_users
-                                    ? `${((role.current_users || 0) / role.max_users) * 100}%`
+                                    ? `${((role.current_users || role.users_count || 0) / role.max_users) * 100}%`
                                     : '100%'
                                 }}
                               ></div>
