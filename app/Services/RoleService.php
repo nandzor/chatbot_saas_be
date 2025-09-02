@@ -67,7 +67,9 @@ class RoleService extends BaseService
     public function getRoleWithDetails(string $id): ?Role
     {
         return Role::with([
-            'permissions',
+            'permissions' => function ($query) {
+                $query->wherePivot('is_granted', true);
+            },
             'users' => function ($query) {
                 $query->with('organization');
             }
@@ -423,5 +425,84 @@ class RoleService extends BaseService
         }
 
         return compact('errors', 'warnings');
+    }
+
+    /**
+     * Get permissions assigned to a role
+     */
+    public function getRolePermissions(string $roleId): array
+    {
+        $role = Role::with('permissions')->find($roleId);
+
+        if (!$role) {
+            return [];
+        }
+
+        return $role->permissions->map(function ($permission) {
+            return [
+                'id' => $permission->id,
+                'name' => $permission->name,
+                'code' => $permission->code,
+                'description' => $permission->description,
+                'category' => $permission->category,
+                'resource' => $permission->resource,
+                'action' => $permission->action,
+                'is_system_permission' => $permission->is_system_permission,
+                'is_visible' => $permission->is_visible,
+                'risk_level' => $permission->risk_level,
+                'created_at' => $permission->created_at,
+                'updated_at' => $permission->updated_at,
+                'pivot' => [
+                    'is_granted' => $permission->pivot->is_granted ?? true,
+                    'is_inherited' => $permission->pivot->is_inherited ?? false,
+                    'granted_at' => $permission->pivot->granted_at ?? null,
+                    'granted_by' => $permission->pivot->granted_by ?? null,
+                ]
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Update permissions for a role
+     */
+    public function updateRolePermissions(string $roleId, array $permissionIds): bool
+    {
+        try {
+            $role = Role::find($roleId);
+
+            if (!$role) {
+                return false;
+            }
+
+            // Sync permissions with the role
+            $role->permissions()->sync(
+                collect($permissionIds)->mapWithKeys(function ($permissionId) {
+                    return [$permissionId => [
+                        'is_granted' => true,
+                        'is_inherited' => false,
+                        'granted_at' => now(),
+                        'granted_by' => auth()->id(),
+                    ]];
+                })->toArray()
+            );
+
+            // Log the action
+            Log::info('Role permissions updated', [
+                'role_id' => $roleId,
+                'permission_count' => count($permissionIds),
+                'updated_by' => auth()->id()
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update role permissions', [
+                'role_id' => $roleId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return false;
+        }
     }
 }

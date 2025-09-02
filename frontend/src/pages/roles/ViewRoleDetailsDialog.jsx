@@ -19,7 +19,12 @@ import {
   BarChart3,
   Clock,
   Hash,
-  Loader2
+  Loader2,
+  RefreshCw,
+  TrendingUp,
+  Activity,
+  UserCheck,
+  UserX
 } from 'lucide-react';
 import { roleManagementService } from '@/services/RoleManagementService';
 import { toast } from 'react-hot-toast';
@@ -35,16 +40,20 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  Skeleton
+  Skeleton,
+  Separator
 } from '@/components/ui';
 
 const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelete }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [roleDetails, setRoleDetails] = useState(null);
   const [permissions, setPermissions] = useState([]);
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [error, setError] = useState(null);
 
   // Load role details when dialog opens
   useEffect(() => {
@@ -59,56 +68,113 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
 
     try {
       setLoading(true);
+      setError(null);
 
-      // Load role details
+      // Load role details with permissions and users count
       const roleResponse = await roleManagementService.getRole(role.id);
       if (roleResponse.success) {
         setRoleDetails(roleResponse.data);
+
+        // Load permissions if available in response
+        if (roleResponse.data?.permissions) {
+          setPermissions(roleResponse.data.permissions);
+        } else {
+          // Load permissions separately if not included
+          await loadPermissions();
+        }
+
+        // Load assigned users
+        await loadAssignedUsers();
+
+        // Generate activity data
+        generateActivityData(roleResponse.data);
       } else {
+        setError('Failed to load role details');
         toast.error('Failed to load role details');
       }
 
-      // Load permissions (if available in the API response)
-      if (roleResponse.data?.permissions) {
-        setPermissions(roleResponse.data.permissions);
-      }
-
-      // Load assigned users
-      try {
-        const usersResponse = await roleManagementService.getUsersByRole(role.id);
-        if (usersResponse.success) {
-          setAssignedUsers(usersResponse.data || []);
-        }
-      } catch (error) {
-        console.warn('Could not load assigned users:', error);
-        setAssignedUsers([]);
-      }
-
-      // Load activity (mock for now, can be replaced with real API when available)
-      setActivity([
-        {
-          id: 1,
-          action: 'Role details viewed',
-          user: 'Current User',
-          timestamp: new Date().toLocaleString(),
-          details: 'Role details accessed via dashboard'
-        },
-        {
-          id: 2,
-          action: 'Role created',
-          user: roleDetails?.metadata?.created_by || 'System',
-          timestamp: roleDetails?.created_at ? new Date(roleDetails.created_at).toLocaleString() : 'Unknown',
-          details: `Role created via ${roleDetails?.metadata?.created_via || 'system'}`
-        }
-      ]);
-
     } catch (error) {
       console.error('Error loading role details:', error);
+      setError(error.message || 'Failed to load role details');
       toast.error('Failed to load role details');
     } finally {
       setLoading(false);
     }
   }, [role]);
+
+  // Load permissions for the role
+  const loadPermissions = useCallback(async () => {
+    if (!role?.id) return;
+
+    try {
+      setPermissionsLoading(true);
+      const permissionsResponse = await roleManagementService.getRolePermissions(role.id);
+      if (permissionsResponse.success) {
+        setPermissions(permissionsResponse.data || []);
+      }
+    } catch (error) {
+      console.warn('Could not load permissions:', error);
+      setPermissions([]);
+    } finally {
+      setPermissionsLoading(false);
+    }
+  }, [role]);
+
+  // Load assigned users for the role
+  const loadAssignedUsers = useCallback(async () => {
+    if (!role?.id) return;
+
+    try {
+      setUsersLoading(true);
+      const usersResponse = await roleManagementService.getUsersByRole(role.id);
+      if (usersResponse.success) {
+        setAssignedUsers(usersResponse.data || []);
+      }
+    } catch (error) {
+      console.warn('Could not load assigned users:', error);
+      setAssignedUsers([]);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [role]);
+
+  // Generate activity data based on role information
+  const generateActivityData = useCallback((roleData) => {
+    const activities = [
+      {
+        id: 1,
+        action: 'Role details viewed',
+        user: 'Current User',
+        timestamp: new Date().toLocaleString(),
+        details: 'Role details accessed via dashboard',
+        type: 'view'
+      }
+    ];
+
+    if (roleData?.created_at) {
+      activities.push({
+        id: 2,
+        action: 'Role created',
+        user: roleData.metadata?.created_by || 'System',
+        timestamp: new Date(roleData.created_at).toLocaleString(),
+        details: `Role created via ${roleData.metadata?.created_via || 'system'}`,
+        type: 'create'
+      });
+    }
+
+    if (roleData?.updated_at && roleData.updated_at !== roleData.created_at) {
+      activities.push({
+        id: 3,
+        action: 'Role updated',
+        user: roleData.metadata?.updated_by || 'System',
+        timestamp: new Date(roleData.updated_at).toLocaleString(),
+        details: 'Role information was modified',
+        type: 'update'
+      });
+    }
+
+    setActivity(activities);
+  }, []);
 
   const handleClose = useCallback(() => {
     onClose();
@@ -118,7 +184,31 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
     setAssignedUsers([]);
     setActivity([]);
     setActiveTab('overview');
+    setError(null);
   }, [onClose]);
+
+  // Handle tab change and load data accordingly
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+
+    // Load data based on active tab
+    if (tab === 'permissions' && permissions.length === 0) {
+      loadPermissions();
+    } else if (tab === 'users' && assignedUsers.length === 0) {
+      loadAssignedUsers();
+    }
+  }, [permissions.length, assignedUsers.length, loadPermissions, loadAssignedUsers]);
+
+  // Refresh data
+  const handleRefresh = useCallback(() => {
+    if (activeTab === 'permissions') {
+      loadPermissions();
+    } else if (activeTab === 'users') {
+      loadAssignedUsers();
+    } else {
+      loadRoleDetails();
+    }
+  }, [activeTab, loadPermissions, loadAssignedUsers, loadRoleDetails]);
 
   const handleEdit = useCallback(() => {
     onEdit(roleDetails || role);
@@ -139,6 +229,32 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
 
   // Use roleDetails if available, otherwise fall back to role prop
   const displayRole = roleDetails || role;
+
+  // Error state
+  if (error && !roleDetails) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Role</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <div className="flex gap-3 justify-center">
+                <Button variant="outline" onClick={handleClose}>
+                  Close
+                </Button>
+                <Button onClick={loadRoleDetails}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getScopeInfo = (scope) => {
     switch (scope) {
@@ -194,7 +310,7 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center gap-3">
             <div
               className="w-12 h-12 rounded-lg flex items-center justify-center"
@@ -205,9 +321,22 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
             <div>
               <h2 className="text-xl font-semibold text-gray-900">{displayRole.name}</h2>
               <p className="text-sm text-gray-600 font-mono">{displayRole.code}</p>
+              {displayRole.description && (
+                <p className="text-xs text-gray-500 mt-1">{displayRole.description}</p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             {!displayRole.is_system_role && (
               <>
                 <Button
@@ -253,12 +382,34 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
         {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
           <div className="p-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="permissions">Permissions</TabsTrigger>
-                <TabsTrigger value="users">Users</TabsTrigger>
-                <TabsTrigger value="activity">Activity</TabsTrigger>
+                <TabsTrigger value="overview" className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="permissions" className="flex items-center gap-2">
+                  <Key className="w-4 h-4" />
+                  Permissions
+                  {permissions.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-xs">
+                      {permissions.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="users" className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Users
+                  {assignedUsers.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-xs">
+                      {assignedUsers.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  Activity
+                </TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
@@ -345,45 +496,48 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
                   </CardContent>
                 </Card>
 
-                {/* User Statistics */}
+                {/* Role Statistics */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5" />
-                      User Statistics
+                      <TrendingUp className="w-5 h-5" />
+                      Role Statistics
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{displayRole.current_users || 0}</div>
-                        <div className="text-sm text-gray-500">Current Users</div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {displayRole.users_count || assignedUsers.length || 0}
+                        </div>
+                        <div className="text-sm text-gray-500">Assigned Users</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">
-                          {displayRole.max_users || '∞'}
-                        </div>
-                        <div className="text-sm text-gray-500">Max Users</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
                           {displayRole.permissions_count || permissions.length || 0}
                         </div>
                         <div className="text-sm text-gray-500">Permissions</div>
                       </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {displayRole.level || 1}
+                        </div>
+                        <div className="text-sm text-gray-500">Level</div>
+                      </div>
                     </div>
 
-                    {displayRole.max_users && (
+                    {/* User Assignment Progress */}
+                    {displayRole.max_users && displayRole.max_users !== '∞' && (
                       <div className="mt-4">
                         <div className="flex justify-between text-sm text-gray-600 mb-1">
                           <span>User Capacity</span>
-                          <span>{(displayRole.current_users || 0)} / {displayRole.max_users}</span>
+                          <span>{(displayRole.users_count || 0)} / {displayRole.max_users}</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                             style={{
-                              width: `${((displayRole.current_users || 0) / displayRole.max_users) * 100}%`
+                              width: `${Math.min(((displayRole.users_count || 0) / displayRole.max_users) * 100, 100)}%`
                             }}
                           ></div>
                         </div>
@@ -450,19 +604,46 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
               <TabsContent value="permissions" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Key className="w-5 h-5" />
-                      Assigned Permissions
-                    </CardTitle>
-                    <CardDescription>
-                      {permissions.length} permissions assigned to this role
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Key className="w-5 h-5" />
+                          Assigned Permissions
+                        </CardTitle>
+                        <CardDescription>
+                          {permissionsLoading ? 'Loading permissions...' : `${permissions.length} permissions assigned to this role`}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadPermissions}
+                        disabled={permissionsLoading}
+                        className="flex items-center gap-2"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${permissionsLoading ? 'animate-spin' : ''}`} />
+                        Refresh
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    {permissions.length > 0 ? (
+                    {permissionsLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                            <Skeleton className="w-8 h-8 rounded-lg" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-4 w-3/4" />
+                              <Skeleton className="h-3 w-1/2" />
+                            </div>
+                            <Skeleton className="h-6 w-16 rounded-full" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : permissions.length > 0 ? (
                       <div className="space-y-3">
                         {permissions.map((permission) => (
-                          <div key={permission.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                          <div key={permission.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
                                 <Key className="w-4 h-4 text-gray-600" />
@@ -473,16 +654,24 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
                                 <p className="text-xs text-gray-400">{permission.category || 'General'}</p>
                               </div>
                             </div>
-                            <Badge className={`${getRiskLevelColor(permission.risk_level || 'medium')} border`}>
-                              {(permission.risk_level || 'medium').charAt(0).toUpperCase() + (permission.risk_level || 'medium').slice(1)}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge className={`${getRiskLevelColor(permission.risk_level || 'medium')} border`}>
+                                {(permission.risk_level || 'medium').charAt(0).toUpperCase() + (permission.risk_level || 'medium').slice(1)}
+                              </Badge>
+                              {permission.is_system_permission && (
+                                <Badge variant="outline" className="text-xs">
+                                  System
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <Key className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                        <p>No permissions assigned to this role</p>
+                        <p className="text-lg font-medium mb-2">No permissions assigned</p>
+                        <p className="text-sm">This role doesn't have any permissions assigned yet.</p>
                       </div>
                     )}
                   </CardContent>
@@ -493,41 +682,88 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
               <TabsContent value="users" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5" />
-                      Assigned Users
-                    </CardTitle>
-                    <CardDescription>
-                      {assignedUsers.length} users currently assigned to this role
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="w-5 h-5" />
+                          Assigned Users
+                        </CardTitle>
+                        <CardDescription>
+                          {usersLoading ? 'Loading users...' : `${assignedUsers.length} users currently assigned to this role`}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadAssignedUsers}
+                        disabled={usersLoading}
+                        className="flex items-center gap-2"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
+                        Refresh
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    {assignedUsers.length > 0 ? (
+                    {usersLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                            <Skeleton className="w-8 h-8 rounded-full" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-4 w-3/4" />
+                              <Skeleton className="h-3 w-1/2" />
+                            </div>
+                            <Skeleton className="h-6 w-16 rounded-full" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : assignedUsers.length > 0 ? (
                       <div className="space-y-3">
                         {assignedUsers.map((user) => (
-                          <div key={user.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                          <div key={user.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                                 <User className="w-4 h-4 text-gray-600" />
                               </div>
                               <div>
-                                <h4 className="font-medium text-gray-900">{user.name || user.email}</h4>
+                                <h4 className="font-medium text-gray-900">{user.name || user.full_name || user.email}</h4>
                                 <p className="text-sm text-gray-500">{user.email}</p>
-                                <p className="text-xs text-gray-400">
-                                  Assigned: {user.pivot?.created_at ? new Date(user.pivot.created_at).toLocaleDateString() : 'Unknown'}
-                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {user.organization && (
+                                    <span className="text-xs text-gray-400">
+                                      {user.organization.name || user.organization}
+                                    </span>
+                                  )}
+                                  {user.pivot?.created_at && (
+                                    <>
+                                      <span className="text-xs text-gray-400">•</span>
+                                      <span className="text-xs text-gray-400">
+                                        Assigned: {new Date(user.pivot.created_at).toLocaleDateString()}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            <Badge className={user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                              {(user.status || 'active').charAt(0).toUpperCase() + (user.status || 'active').slice(1)}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge className={user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                                {user.status === 'active' ? (
+                                  <UserCheck className="w-3 h-3 mr-1" />
+                                ) : (
+                                  <UserX className="w-3 h-3 mr-1" />
+                                )}
+                                {(user.status || 'active').charAt(0).toUpperCase() + (user.status || 'active').slice(1)}
+                              </Badge>
+                            </div>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                        <p>No users assigned to this role</p>
+                        <p className="text-lg font-medium mb-2">No users assigned</p>
+                        <p className="text-sm">This role doesn't have any users assigned yet.</p>
                       </div>
                     )}
                   </CardContent>
@@ -539,7 +775,7 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5" />
+                      <Activity className="w-5 h-5" />
                       Role Activity
                     </CardTitle>
                     <CardDescription>
@@ -549,10 +785,23 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
                   <CardContent>
                     {activity.length > 0 ? (
                       <div className="space-y-3">
-                        {activity.map((activityItem) => (
-                          <div key={activityItem.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-1">
-                              <Clock className="w-4 h-4 text-blue-600" />
+                        {activity.map((activityItem, index) => (
+                          <div key={activityItem.id || index} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mt-1 ${
+                              activityItem.type === 'create' ? 'bg-green-100' :
+                              activityItem.type === 'update' ? 'bg-blue-100' :
+                              activityItem.type === 'delete' ? 'bg-red-100' :
+                              'bg-gray-100'
+                            }`}>
+                              {activityItem.type === 'create' ? (
+                                <CheckCircle className="w-4 h-4 text-green-600" />
+                              ) : activityItem.type === 'update' ? (
+                                <Edit className="w-4 h-4 text-blue-600" />
+                              ) : activityItem.type === 'delete' ? (
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              ) : (
+                                <Clock className="w-4 h-4 text-gray-600" />
+                              )}
                             </div>
                             <div className="flex-1">
                               <h4 className="font-medium text-gray-900">{activityItem.action}</h4>
@@ -568,8 +817,9 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500">
-                        <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                        <p>No activity recorded for this role</p>
+                        <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg font-medium mb-2">No activity recorded</p>
+                        <p className="text-sm">No recent activity has been recorded for this role.</p>
                       </div>
                     )}
                   </CardContent>

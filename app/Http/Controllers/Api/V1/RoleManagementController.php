@@ -374,6 +374,98 @@ class RoleManagementController extends BaseApiController
     }
 
     /**
+     * Get permissions assigned to a specific role.
+     */
+    public function getPermissions(string $roleId): JsonResponse
+    {
+        try {
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            $role = $this->roleService->getRoleWithDetails($roleId);
+
+            if (!$role) {
+                return $this->notFoundResponse('Role not found');
+            }
+
+            $permissions = $this->roleService->getRolePermissions($roleId);
+
+            return $this->successResponse('Role permissions retrieved successfully', $permissions);
+
+        } catch (\Exception $e) {
+            Log::error('Get role permissions error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to retrieve role permissions',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Update permissions for a role.
+     */
+    public function updatePermissions(Request $request, string $roleId): JsonResponse
+    {
+        try {
+            // Validate roleId parameter
+            if (empty($roleId)) {
+                return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            $role = $this->roleService->getRoleWithDetails($roleId);
+
+            if (!$role) {
+                return $this->notFoundResponse('Role not found');
+            }
+
+            $validated = $request->validate([
+                'permission_ids' => 'required|array',
+                'permission_ids.*' => 'string|exists:permissions,id'
+            ]);
+
+            $success = $this->roleService->updateRolePermissions($roleId, $validated['permission_ids']);
+
+            if ($success) {
+                // Log the update action
+                $this->logApiAction('role_permissions_updated', [
+                    'role_id' => $roleId,
+                    'permission_count' => count($validated['permission_ids']),
+                    'updated_by' => $this->getCurrentUser()?->id
+                ]);
+
+                return $this->successResponse('Role permissions updated successfully');
+            }
+
+            return $this->errorResponse('Failed to update role permissions');
+
+        } catch (ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Update role permissions error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to update role permissions',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
      * Get role statistics.
      */
     public function statistics(): JsonResponse

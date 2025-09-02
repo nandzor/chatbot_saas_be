@@ -207,7 +207,7 @@ const RoleDetailsModal = ({ role, onClose }) => {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-gray-500">No permissions assigned to this role.</p>
+                    <p className="text-gray-500">No s.</p>
                   </div>
                 )}
               </div>

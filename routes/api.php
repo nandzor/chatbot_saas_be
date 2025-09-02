@@ -208,6 +208,7 @@ Route::prefix('v1')->group(function () {
             Route::prefix('{id}')->group(function () {
                 Route::get('/', [RoleManagementController::class, 'show']);
                 Route::get('/users', [RoleManagementController::class, 'getUsers']);
+                Route::get('/permissions', [RoleManagementController::class, 'getPermissions']);
             });
 
             // Routes requiring additional permissions
@@ -216,6 +217,7 @@ Route::prefix('v1')->group(function () {
             Route::middleware(['permission:roles.delete'])->delete('/{id}', [RoleManagementController::class, 'destroy']);
             Route::middleware(['permission:roles.assign'])->post('/assign', [RoleManagementController::class, 'assignRole']);
             Route::middleware(['permission:roles.revoke'])->post('/revoke', [RoleManagementController::class, 'revokeRole']);
+            Route::middleware(['permission:roles.update'])->put('/{id}/permissions', [RoleManagementController::class, 'updatePermissions']);
         });
 
         // ====================================================================
