@@ -1,0 +1,58 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+# JavaScript, TypeScript, JSX, TSX
+[*.{js,jsx,ts,tsx}]
+indent_size = 2
+
+# JSON files
+[*.json]
+indent_size = 2
+
+# CSS, SCSS, Sass
+[*.{css,scss,sass}]
+indent_size = 2
+
+# HTML files
+[*.html]
+indent_size = 2
+
+# Vue files
+[*.vue]
+indent_size = 2
+
+# Config files
+[*.{yml,yaml}]
+indent_size = 2
+
+[package.json]
+indent_size = 2
+
+[*.config.{js,ts}]
+indent_size = 2
+
+# Vite config
+[vite.config.{js,ts}]
+indent_size = 2
+
+# ESLint config
+[.eslintrc.{js,json}]
+indent_size = 2
+
+# Prettier config
+[.prettierrc.{js,json}]
+indent_size = 2
+
+# Environment files
+[.env*]
+indent_size = 2

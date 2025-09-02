@@ -29,7 +29,8 @@ class UserController extends BaseApiController
             $search = $this->getSearchParams($request);
             $sort = $this->getSortParams($request, ['full_name', 'email', 'created_at', 'status'], 'created_at');
 
-            $users = $this->userService->getAll(
+            // Use getAllUsers method which properly handles search
+            $users = $this->userService->getAllUsers(
                 $request,
                 $filters,
                 ['organization', 'roles'],

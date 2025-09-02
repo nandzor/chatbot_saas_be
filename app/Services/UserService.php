@@ -310,15 +310,15 @@ class UserService extends BaseService
         $query = User::query();
 
         // Apply filters
-        if (isset($filters['status'])) {
+        if (isset($filters['status']) && $filters['status'] !== 'all') {
             $query->where('status', $filters['status']);
         }
 
-        if (isset($filters['role'])) {
+        if (isset($filters['role']) && $filters['role'] !== 'all') {
             $query->where('role', $filters['role']);
         }
 
-        if (isset($filters['organization_id'])) {
+        if (isset($filters['organization_id']) && $filters['organization_id'] !== 'all') {
             $query->where('organization_id', $filters['organization_id']);
         }
 

@@ -17,7 +17,8 @@ import {
   UserCheck,
   Settings,
   Download,
-  Upload
+  Upload,
+  X
 } from 'lucide-react';
 import {
   Button,
@@ -278,17 +279,6 @@ const UserManagement = () => {
 
 
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (filterTimeoutRef.current) {
-        clearTimeout(filterTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // No need for local loadUsers function - using the hook's loadUsers
-
   // Debounce filter changes
   const filterTimeoutRef = useRef(null);
 
@@ -304,6 +294,15 @@ const UserManagement = () => {
       updateFilters({ [field]: value });
     }, DEBOUNCE_DELAY);
   }, [updateFilters]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (filterTimeoutRef.current) {
+        clearTimeout(filterTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle pagination
   const handlePageChange = useCallback((page) => {
@@ -461,11 +460,46 @@ const UserManagement = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
+                    type="text"
                     placeholder="Search users..."
                     value={filters.search}
-                    onChange={(e) => handleFilterChange('search', e.target.value)}
-                    className="pl-10"
+                    onChange={(e) => {
+                      e.preventDefault();
+                      handleFilterChange('search', e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return false;
+                      }
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return false;
+                      }
+                    }}
+                    className="pl-10 pr-10"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
                   />
+                  {filters.search && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFilterChange('search', '');
+                      }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -531,6 +565,42 @@ const UserManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Filter Actions */}
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">
+                  {Object.values(filters).some(filter => filter !== 'all' && filter !== '')
+                    ? 'Filters applied'
+                    : 'No filters applied'
+                  }
+                </span>
+                {Object.values(filters).some(filter => filter !== 'all' && filter !== '') && (
+                  <Badge variant="secondary" className="text-xs">
+                    {Object.values(filters).filter(filter => filter !== 'all' && filter !== '').length} active
+                  </Badge>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateFilters({
+                    search: '',
+                    status: 'all',
+                    role: 'all',
+                    organization: 'all',
+                    department: 'all'
+                  });
+                }}
+                className="text-gray-600"
+              >
+                Clear All Filters
+              </Button>
             </div>
           </CardContent>
         </Card>
