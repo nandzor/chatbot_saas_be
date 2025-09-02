@@ -80,49 +80,11 @@ class UserResource extends JsonResource
                 });
             }),
 
-            // Role information (if RBAC is loaded)
-            'roles' => $this->whenLoaded('roles', function () {
-                return $this->roles->map(function ($role) {
-                    return [
-                        'id' => $role->id,
-                        'name' => $role->name,
-                        'code' => $role->code,
-                        'display_name' => $role->display_name,
-                        'level' => $role->level,
-                        'scope' => $role->pivot->scope ?? null,
-                        'is_primary' => $role->pivot->is_primary ?? false,
-                    ];
-                });
-            }),
+            // Role information
+            'roles' => $this->getRolesData(),
 
             // Permissions - use codes for frontend compatibility
-            'permissions' => function () {
-                try {
-                    // Get permissions from user's permissions field (array of codes)
-                    $directPermissions = $this->permissions ?? [];
-
-                    // Get permissions from roles if available
-                    $rolePermissions = [];
-                    if (method_exists($this->resource, 'getAllPermissions')) {
-                        $rolePermissions = $this->getAllPermissions()
-                                               ->pluck('code')
-                                               ->toArray();
-                    }
-
-                    // If no role permissions found, try to get from loaded roles
-                    if (empty($rolePermissions) && $this->relationLoaded('roles')) {
-                        $rolePermissions = $this->roles->flatMap(function ($role) {
-                            return $role->permissions->pluck('code')->toArray();
-                        })->toArray();
-                    }
-
-                    // Merge and return unique permission codes
-                    $allPermissions = array_merge($directPermissions, $rolePermissions);
-                    return array_values(array_unique($allPermissions));
-                } catch (\Exception $e) {
-                    return $this->permissions ?? [];
-                }
-            },
+            'permissions' => $this->getPermissionsData(),
 
             // Timestamps
             'created_at' => $this->created_at?->toISOString(),
@@ -190,5 +152,85 @@ class UserResource extends JsonResource
 
         // Only admin users can delete other users
         return in_array($currentUser->role, ['super_admin', 'org_admin']);
+    }
+
+    /**
+     * Get roles data for the user.
+     */
+    protected function getRolesData(): array
+    {
+        try {
+            // If roles are already loaded, use them
+            if ($this->relationLoaded('roles')) {
+                return $this->roles->map(function ($role) {
+                    return [
+                        'id' => $role->id,
+                        'name' => $role->name,
+                        'code' => $role->code,
+                        'display_name' => $role->display_name,
+                        'level' => $role->level,
+                        'scope' => $role->pivot->scope ?? null,
+                        'is_primary' => $role->pivot->is_primary ?? false,
+                    ];
+                })->toArray();
+            }
+
+            // Otherwise, load roles on demand
+            $roles = $this->resource->roles()->get();
+            return $roles->map(function ($role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'code' => $role->code,
+                    'display_name' => $role->display_name,
+                    'level' => $role->level,
+                    'scope' => $role->pivot->scope ?? null,
+                    'is_primary' => $role->pivot->is_primary ?? false,
+                ];
+            })->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Get permissions data for the user.
+     */
+    protected function getPermissionsData(): array
+    {
+        try {
+            // Get direct permissions from user's permissions field
+            $directPermissions = $this->permissions ?? [];
+
+            // Get permissions from roles
+            $rolePermissions = [];
+
+            // If roles are loaded with permissions, use them
+            if ($this->relationLoaded('roles')) {
+                $rolePermissions = $this->roles->flatMap(function ($role) {
+                    if ($role->relationLoaded('permissions')) {
+                        return $role->permissions->pluck('code')->toArray();
+                    }
+                    return [];
+                })->toArray();
+            }
+
+            // If no role permissions found, load them on demand
+            if (empty($rolePermissions)) {
+                $rolePermissions = $this->resource->roles()
+                    ->with('permissions')
+                    ->get()
+                    ->flatMap(function ($role) {
+                        return $role->permissions->pluck('code')->toArray();
+                    })
+                    ->toArray();
+            }
+
+            // Merge and return unique permission codes
+            $allPermissions = array_merge($directPermissions, $rolePermissions);
+            return array_values(array_unique($allPermissions));
+        } catch (\Exception $e) {
+            return $this->permissions ?? [];
+        }
     }
 }
