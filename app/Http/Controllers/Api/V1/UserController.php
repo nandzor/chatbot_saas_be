@@ -478,6 +478,42 @@ class UserController extends BaseApiController
     }
 
     /**
+     * Get user sessions.
+     */
+    public function sessions(string $id): JsonResponse
+    {
+        try {
+            $user = $this->userService->getById($id);
+
+            if (!$user) {
+                return $this->handleResourceNotFound('User', $id);
+            }
+
+            $sessions = $this->userService->getUserSessions($id);
+
+            $this->logApiAction('user_sessions_viewed', [
+                'viewed_by' => $this->getCurrentUser()?->id,
+                'user_id' => $id
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_sessions_viewed',
+                'User sessions retrieved successfully',
+                $sessions
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'user_sessions_error',
+                'Failed to retrieve user sessions',
+                $e->getMessage(),
+                500,
+                'USER_SESSIONS_ERROR'
+            );
+        }
+    }
+
+    /**
      * Check if email exists.
      */
     public function checkEmail(Request $request): JsonResponse

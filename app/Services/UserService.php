@@ -493,4 +493,114 @@ class UserService extends BaseService
             'updated_at' => $user->updated_at,
         ];
     }
+
+    /**
+     * Get user sessions.
+     */
+    public function getUserSessions(string $userId): array
+    {
+        $user = $this->getById($userId);
+
+        if (!$user) {
+            return [];
+        }
+
+        $sessions = $user->userSessions()
+            ->orderBy('last_activity_at', 'desc')
+            ->get()
+            ->map(function ($session) {
+                return [
+                    'id' => $session->id,
+                    'session_token' => $session->session_token,
+                    'ip_address' => $session->ip_address,
+                    'user_agent' => $session->user_agent,
+                    'device_info' => $session->device_info,
+                    'location_info' => $session->location_info,
+                    'is_active' => $session->is_active,
+                    'last_activity_at' => $session->last_activity_at,
+                    'expires_at' => $session->expires_at,
+                    'created_at' => $session->created_at,
+                    'status' => $session->isValid() ? 'active' : ($session->isExpired() ? 'expired' : 'inactive'),
+                    'device_type' => $this->getDeviceType($session->user_agent),
+                    'browser_info' => $this->getBrowserInfo($session->user_agent),
+                    'location' => $this->formatLocation($session->location_info),
+                ];
+            })
+            ->toArray();
+
+        return [
+            'sessions' => $sessions,
+            'total_sessions' => count($sessions),
+            'active_sessions' => count(array_filter($sessions, fn($s) => $s['status'] === 'active')),
+            'expired_sessions' => count(array_filter($sessions, fn($s) => $s['status'] === 'expired')),
+        ];
+    }
+
+    /**
+     * Get device type from user agent.
+     */
+    private function getDeviceType(?string $userAgent): string
+    {
+        if (!$userAgent) return 'Unknown';
+
+        $ua = strtolower($userAgent);
+        if (strpos($ua, 'mobile') !== false || strpos($ua, 'android') !== false || strpos($ua, 'iphone') !== false) {
+            return 'Mobile';
+        }
+        if (strpos($ua, 'tablet') !== false || strpos($ua, 'ipad') !== false) {
+            return 'Tablet';
+        }
+        return 'Desktop';
+    }
+
+    /**
+     * Get browser information from user agent.
+     */
+    private function getBrowserInfo(?string $userAgent): array
+    {
+        if (!$userAgent) return ['name' => 'Unknown', 'version' => 'Unknown'];
+
+        $ua = strtolower($userAgent);
+        $browser = 'Unknown';
+        $version = 'Unknown';
+
+        if (strpos($ua, 'chrome') !== false) {
+            $browser = 'Chrome';
+            preg_match('/chrome\/(\d+)/', $ua, $matches);
+            $version = $matches[1] ?? 'Unknown';
+        } elseif (strpos($ua, 'firefox') !== false) {
+            $browser = 'Firefox';
+            preg_match('/firefox\/(\d+)/', $ua, $matches);
+            $version = $matches[1] ?? 'Unknown';
+        } elseif (strpos($ua, 'safari') !== false) {
+            $browser = 'Safari';
+            preg_match('/version\/(\d+)/', $ua, $matches);
+            $version = $matches[1] ?? 'Unknown';
+        } elseif (strpos($ua, 'edge') !== false) {
+            $browser = 'Edge';
+            preg_match('/edge\/(\d+)/', $ua, $matches);
+            $version = $matches[1] ?? 'Unknown';
+        }
+
+        return [
+            'name' => $browser,
+            'version' => $version,
+            'full_ua' => $userAgent
+        ];
+    }
+
+    /**
+     * Format location information.
+     */
+    private function formatLocation(?array $locationInfo): string
+    {
+        if (!$locationInfo) return 'Unknown';
+
+        $parts = [];
+        if (isset($locationInfo['city'])) $parts[] = $locationInfo['city'];
+        if (isset($locationInfo['region'])) $parts[] = $locationInfo['region'];
+        if (isset($locationInfo['country'])) $parts[] = $locationInfo['country'];
+
+        return empty($parts) ? 'Unknown' : implode(', ', $parts);
+    }
 }

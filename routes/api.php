@@ -172,6 +172,7 @@ Route::prefix('v1')->group(function () {
             Route::prefix('{id}')->group(function () {
                 Route::get('/', [UserController::class, 'show']);
                 Route::get('/activity', [UserController::class, 'activity']);
+                Route::get('/sessions', [UserController::class, 'sessions']);
             });
 
             // Routes requiring additional permissions

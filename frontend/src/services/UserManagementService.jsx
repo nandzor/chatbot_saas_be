@@ -244,6 +244,22 @@ class UserManagementService {
   }
 
   /**
+   * Get user sessions
+   */
+  async getUserSessions(id) {
+    try {
+      const response = await api.get(`/v1/users/${id}/sessions`);
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to fetch user sessions');
+    }
+  }
+
+  /**
    * Check if email exists
    */
   async checkEmailExists(email, excludeUserId = null) {

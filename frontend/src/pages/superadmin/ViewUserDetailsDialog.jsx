@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   X,
   Users,
@@ -47,11 +47,24 @@ import {
   Tabs,
   TabsContent,
   TabsList,
-  TabsTrigger
+  TabsTrigger,
+  Skeleton
 } from '@/components/ui';
+import { useUserManagement } from '@/hooks/useUserManagement';
 
 const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelete }) => {
   const [activeTab, setActiveTab] = useState('overview');
+    const { getUserActivity, getUserSessions } = useUserManagement();
+
+  // Activity data state
+  const [activityData, setActivityData] = useState(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState(null);
+
+  // Sessions data state
+  const [sessionsData, setSessionsData] = useState(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState(null);
 
   // Mock data for demonstration
   const mockPermissions = [
@@ -101,6 +114,60 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
     onDelete(user);
     onClose();
   }, [onDelete, user, onClose]);
+
+  // Load user activity data
+  const loadUserActivity = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      setActivityLoading(true);
+      setActivityError(null);
+      const result = await getUserActivity(user.id);
+
+      if (result.success) {
+        setActivityData(result.data);
+      } else {
+        setActivityError(result.error || 'Failed to load user activity');
+      }
+    } catch (err) {
+      setActivityError('Failed to load user activity');
+      console.error('Failed to load user activity:', err);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [user?.id, getUserActivity]);
+
+  // Load user sessions data
+  const loadUserSessions = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      setSessionsLoading(true);
+      setSessionsError(null);
+      const result = await getUserSessions(user.id);
+
+      if (result.success) {
+        setSessionsData(result.data);
+      } else {
+        setSessionsError(result.error || 'Failed to load user sessions');
+      }
+    } catch (err) {
+      setSessionsError('Failed to load user sessions');
+      console.error('Failed to load user sessions:', err);
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, [user?.id, getUserSessions]);
+
+  // Load data when tabs are selected
+  useEffect(() => {
+    if (activeTab === 'activity' && user?.id && !activityData && !activityLoading) {
+      loadUserActivity();
+    }
+    if (activeTab === 'sessions' && user?.id && !sessionsData && !sessionsLoading) {
+      loadUserSessions();
+    }
+  }, [activeTab, user?.id, activityData, activityLoading, sessionsData, sessionsLoading, loadUserActivity, loadUserSessions]);
 
   if (!isOpen || !user) return null;
 
@@ -460,37 +527,102 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Activity className="w-5 h-5" />
-                      Active Sessions
+                      User Sessions
                     </CardTitle>
                     <CardDescription>
-                      {mockSessions.filter(s => s.status === 'active').length} active sessions
+                      {sessionsData ? `${sessionsData.active_sessions} active sessions` : 'Loading sessions...'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {mockSessions.map((session) => (
-                        <div key={session.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <Activity className="w-4 h-4 text-gray-600" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-gray-900">{session.device}</h4>
-                              <p className="text-sm text-gray-500">IP: {session.ip}</p>
-                              <p className="text-xs text-gray-400">Location: {session.location}</p>
-                            </div>
+                    {sessionsLoading ? (
+                      <div className="space-y-4">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                      </div>
+                    ) : sessionsError ? (
+                      <div className="text-center py-8">
+                        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Sessions</h3>
+                        <p className="text-gray-600 mb-4">{sessionsError}</p>
+                        <Button onClick={loadUserSessions} variant="outline">
+                          Try Again
+                        </Button>
+                      </div>
+                    ) : sessionsData && sessionsData.sessions ? (
+                      <div className="space-y-6">
+                        {/* Sessions Summary */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="text-center p-4 bg-blue-50 rounded-lg">
+                            <div className="text-2xl font-bold text-blue-600">{sessionsData.total_sessions}</div>
+                            <div className="text-sm text-gray-500">Total Sessions</div>
                           </div>
-                          <div className="text-right">
-                            <Badge className={session.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                              {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
-                            </Badge>
-                            <p className="text-xs text-gray-400 mt-1">
-                              Last: {new Date(session.last_activity).toLocaleString()}
-                            </p>
+                          <div className="text-center p-4 bg-green-50 rounded-lg">
+                            <div className="text-2xl font-bold text-green-600">{sessionsData.active_sessions}</div>
+                            <div className="text-sm text-gray-500">Active Sessions</div>
+                          </div>
+                          <div className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-2xl font-bold text-gray-600">{sessionsData.expired_sessions}</div>
+                            <div className="text-sm text-gray-500">Expired Sessions</div>
                           </div>
                         </div>
-                      ))}
-                    </div>
+
+                        {/* Sessions List */}
+                        <div className="space-y-3">
+                          {sessionsData.sessions.map((session) => (
+                            <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                  <Activity className="w-5 h-5 text-gray-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-medium text-gray-900">
+                                      {session.browser_info.name} {session.browser_info.version}
+                                    </h4>
+                                    <Badge className="text-xs">
+                                      {session.device_type}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-sm text-gray-500 space-y-1">
+                                    <p>IP: {session.ip_address || 'N/A'}</p>
+                                    <p>Location: {session.location}</p>
+                                    <p>User Agent: {session.browser_info.full_ua}</p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <Badge className={
+                                  session.status === 'active' ? 'bg-green-100 text-green-800' :
+                                  session.status === 'expired' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }>
+                                  {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                                </Badge>
+                                <div className="mt-2 text-xs text-gray-500">
+                                  <p>Created: {new Date(session.created_at).toLocaleDateString()}</p>
+                                  {session.last_activity_at && (
+                                    <p>Last Activity: {new Date(session.last_activity_at).toLocaleString()}</p>
+                                  )}
+                                  {session.expires_at && (
+                                    <p>Expires: {new Date(session.expires_at).toLocaleString()}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Sessions Found</h3>
+                        <p className="text-gray-600 mb-4">No session information available for this user.</p>
+                        <Button onClick={loadUserSessions} variant="outline">
+                          Load Sessions
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -504,30 +636,158 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
                       User Activity
                     </CardTitle>
                     <CardDescription>
-                      Recent activity and actions performed by this user
+                      Account activity and security information for this user
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {mockActivity.map((activity) => (
-                        <div key={activity.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-1">
-                            <Activity className="w-4 h-4 text-blue-600" />
+                    {activityLoading ? (
+                      <div className="space-y-4">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                      </div>
+                    ) : activityError ? (
+                      <div className="text-center py-8">
+                        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Activity</h3>
+                        <p className="text-gray-600 mb-4">{activityError}</p>
+                        <Button onClick={loadUserActivity} variant="outline">
+                          Try Again
+                        </Button>
+                      </div>
+                    ) : activityData ? (
+                      <div className="space-y-6">
+                        {/* Account Status */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="text-sm font-medium text-gray-600">Total Logins</span>
+                            <span className="text-lg font-semibold text-gray-900">{activityData.login_count || 0}</span>
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{activity.action}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-400">IP: {activity.ip}</span>
-                              <span className="text-xs text-gray-400">•</span>
-                              <span className="text-xs text-gray-400">{activity.location}</span>
-                              <span className="text-xs text-gray-400">•</span>
-                              <span className="text-xs text-gray-400">{new Date(activity.timestamp).toLocaleString()}</span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">{activity.user_agent}</p>
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="text-sm font-medium text-gray-600">Failed Attempts</span>
+                            <span className="text-lg font-semibold text-gray-900">{activityData.failed_login_attempts || 0}</span>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="text-sm font-medium text-gray-600">Active Sessions</span>
+                            <span className="text-lg font-semibold text-gray-900">{activityData.active_sessions || 0}</span>
                           </div>
                         </div>
-                      ))}
-                    </div>
+
+                        {/* Login Information */}
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-gray-900">Login Information</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-3 border border-gray-200 rounded-lg">
+                              <label className="text-sm font-medium text-gray-500">Last Login</label>
+                              <p className="text-sm text-gray-900 mt-1">
+                                {activityData.last_login_at ? new Date(activityData.last_login_at).toLocaleString() : 'Never'}
+                              </p>
+                              {activityData.last_login_at && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {(() => {
+                                    const date = new Date(activityData.last_login_at);
+                                    const now = new Date();
+                                    const diffInSeconds = Math.floor((now - date) / 1000);
+
+                                    if (diffInSeconds < 60) return 'Just now';
+                                    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+                                    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+                                    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+                                    return date.toLocaleDateString();
+                                  })()}
+                                </p>
+                              )}
+                            </div>
+                            <div className="p-3 border border-gray-200 rounded-lg">
+                              <label className="text-sm font-medium text-gray-500">Last Login IP</label>
+                              <p className="text-sm font-mono text-gray-900 mt-1">{activityData.last_login_ip || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Account Timeline */}
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-gray-900">Account Timeline</h4>
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">Account Created</p>
+                                <p className="text-xs text-gray-500">
+                                  {activityData.created_at ? new Date(activityData.created_at).toLocaleString() : 'Unknown'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {activityData.last_login_at && (
+                              <div className="flex items-start gap-3">
+                                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">Last Login</p>
+                                  <p className="text-xs text-gray-500">{new Date(activityData.last_login_at).toLocaleString()}</p>
+                                  {activityData.last_login_ip && (
+                                    <p className="text-xs text-gray-400">IP: {activityData.last_login_ip}</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {activityData.updated_at && activityData.updated_at !== activityData.created_at && (
+                              <div className="flex items-start gap-3">
+                                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">Last Updated</p>
+                                  <p className="text-xs text-gray-500">{new Date(activityData.updated_at).toLocaleString()}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {activityData.failed_login_attempts > 0 && (
+                              <div className="flex items-start gap-3">
+                                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">Failed Login Attempts</p>
+                                  <p className="text-xs text-gray-500">{activityData.failed_login_attempts} failed attempts</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Security Status */}
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-gray-900">Security Status</h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600">Account Status:</span>
+                            {activityData.is_locked ? (
+                              <Badge className="bg-red-100 text-red-800">
+                                <XCircle className="w-3 h-3 mr-1" />
+                                Locked
+                              </Badge>
+                            ) : activityData.failed_login_attempts > 0 ? (
+                              <Badge className="bg-yellow-100 text-yellow-800">
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                Failed Attempts
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-green-100 text-green-800">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Activity Data</h3>
+                        <p className="text-gray-600 mb-4">No activity information available for this user.</p>
+                        <Button onClick={loadUserActivity} variant="outline">
+                          Load Activity
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

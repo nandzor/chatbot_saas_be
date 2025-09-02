@@ -266,6 +266,21 @@ export const useUserManagement = () => {
     }
   }, []);
 
+  // Get user sessions
+  const getUserSessions = useCallback(async (id) => {
+    try {
+      const response = await userManagementService.getUserSessions(id);
+
+      if (response.success) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      return { success: false, error: 'Failed to fetch user sessions' };
+    }
+  }, []);
+
   // Check email availability
   const checkEmailExists = useCallback(async (email, excludeUserId = null) => {
     try {
@@ -351,6 +366,7 @@ export const useUserManagement = () => {
     searchUsers,
     getUserStatistics,
     getUserActivity,
+    getUserSessions,
     checkEmailExists,
     checkUsernameExists,
 
