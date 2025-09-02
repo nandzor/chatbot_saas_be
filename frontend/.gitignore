@@ -49,7 +49,7 @@ Desktop.ini
 # Documentation
 README.md
 CHANGELOG.md
-*.md
+md
 
 
 # Test files
