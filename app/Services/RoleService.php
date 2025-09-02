@@ -30,8 +30,7 @@ class RoleService extends BaseService
     {
         $query = Role::with(['permissions'])
             ->withCount([
-                'users as users_count',
-                'permissions as permissions_count'
+                'users as users_count'
             ]);
 
         // Add custom select to get current_users from active users
@@ -43,7 +42,11 @@ class RoleService extends BaseService
                 ->where(function ($q) {
                     $q->whereNull('user_roles.effective_until')
                       ->orWhere('user_roles.effective_until', '>', now());
-                })
+                }),
+            'permissions_count' => DB::table('role_permissions')
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('role_permissions.role_id', 'roles.id')
+                ->where('role_permissions.is_granted', true)
         ]);
 
         // Apply filters
@@ -89,7 +92,13 @@ class RoleService extends BaseService
                 $query->with('organization');
             }
         ])
-        ->withCount(['users', 'permissions'])
+        ->withCount(['users'])
+        ->addSelect([
+            'permissions_count' => DB::table('role_permissions')
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('role_permissions.role_id', 'roles.id')
+                ->where('role_permissions.is_granted', true)
+        ])
         ->find($id);
     }
 
