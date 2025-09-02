@@ -264,6 +264,14 @@ const UserManagement = () => {
     updatePagination
   } = useUserManagement();
 
+  // Force reload users when component mounts
+  useEffect(() => {
+    if (users.length === 0 && !loading) {
+      console.log('🔍 UserManagement: Force loading users on mount');
+      loadUsers(true);
+    }
+  }, [users.length, loading, loadUsers]);
+
   // Custom hooks
   const { statistics, loading: statisticsLoading } = useStatistics();
   const userActions = useUserActions(users, { createUser, updateUser, deleteUser, cloneUser });
@@ -394,6 +402,15 @@ const UserManagement = () => {
             <p className="text-gray-600">Manage system users, roles, and permissions</p>
           </div>
           <div className="flex items-center gap-3 mt-4 sm:mt-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadUsers(true)}
+              disabled={loading}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              {loading ? 'Loading...' : 'Refresh'}
+            </Button>
             <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
               Export
@@ -521,10 +538,20 @@ const UserManagement = () => {
         {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Users ({users.length})</CardTitle>
-            <CardDescription>
-              Manage system users and their access permissions
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Users ({users.length})</CardTitle>
+                <CardDescription>
+                  Manage system users and their access permissions
+                </CardDescription>
+              </div>
+              {loading && (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Loading users...
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">

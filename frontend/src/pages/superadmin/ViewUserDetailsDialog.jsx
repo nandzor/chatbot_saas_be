@@ -117,21 +117,29 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
 
   // Load user activity data
   const loadUserActivity = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('🔍 ViewUserDetailsDialog: No user ID provided for activity loading');
+      return;
+    }
 
     try {
+      console.log('🔍 ViewUserDetailsDialog: Starting to load activity for user:', user.id);
       setActivityLoading(true);
       setActivityError(null);
+
       const result = await getUserActivity(user.id);
+      console.log('🔍 ViewUserDetailsDialog: Activity API result:', result);
 
       if (result.success) {
+        console.log('🔍 ViewUserDetailsDialog: Activity data received:', result.data);
         setActivityData(result.data);
       } else {
+        console.error('❌ ViewUserDetailsDialog: Activity API failed:', result.error);
         setActivityError(result.error || 'Failed to load user activity');
       }
     } catch (err) {
+      console.error('❌ ViewUserDetailsDialog: Activity loading error:', err);
       setActivityError('Failed to load user activity');
-      console.error('Failed to load user activity:', err);
     } finally {
       setActivityLoading(false);
     }
@@ -162,12 +170,25 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
   // Load data when tabs are selected
   useEffect(() => {
     if (activeTab === 'activity' && user?.id && !activityData && !activityLoading) {
+      console.log('🔍 ViewUserDetailsDialog: Loading activity for user:', user.id);
       loadUserActivity();
     }
     if (activeTab === 'sessions' && user?.id && !sessionsData && !sessionsLoading) {
+      console.log('🔍 ViewUserDetailsDialog: Loading sessions for user:', user.id);
       loadUserSessions();
     }
   }, [activeTab, user?.id, activityData, activityLoading, sessionsData, sessionsLoading, loadUserActivity, loadUserSessions]);
+
+  // Reset data when user changes
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🔍 ViewUserDetailsDialog: User changed, resetting data');
+      setActivityData(null);
+      setSessionsData(null);
+      setActivityError(null);
+      setSessionsError(null);
+    }
+  }, [user?.id]);
 
   if (!isOpen || !user) return null;
 
@@ -545,9 +566,14 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
                         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Sessions</h3>
                         <p className="text-gray-600 mb-4">{sessionsError}</p>
-                        <Button onClick={loadUserSessions} variant="outline">
-                          Try Again
-                        </Button>
+                        <div className="flex gap-2 justify-center">
+                          <Button onClick={loadUserSessions} variant="outline" disabled={sessionsLoading}>
+                            {sessionsLoading ? 'Loading...' : 'Try Again'}
+                          </Button>
+                          <Button onClick={() => setSessionsError(null)} variant="ghost">
+                            Dismiss
+                          </Button>
+                        </div>
                       </div>
                     ) : sessionsData && sessionsData.sessions ? (
                       <div className="space-y-6">
@@ -631,13 +657,27 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
               <TabsContent value="activity" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="w-5 h-5" />
-                      User Activity
-                    </CardTitle>
-                    <CardDescription>
-                      Account activity and security information for this user
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Activity className="w-5 h-5" />
+                          User Activity
+                        </CardTitle>
+                        <CardDescription>
+                          Account activity and security information for this user
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadUserActivity}
+                        disabled={activityLoading}
+                        className="flex items-center gap-2"
+                      >
+                        <Settings className="w-4 h-4" />
+                        {activityLoading ? 'Loading...' : 'Refresh'}
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {activityLoading ? (
@@ -651,9 +691,14 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
                         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Activity</h3>
                         <p className="text-gray-600 mb-4">{activityError}</p>
-                        <Button onClick={loadUserActivity} variant="outline">
-                          Try Again
-                        </Button>
+                        <div className="flex gap-2 justify-center">
+                          <Button onClick={loadUserActivity} variant="outline" disabled={activityLoading}>
+                            {activityLoading ? 'Loading...' : 'Try Again'}
+                          </Button>
+                          <Button onClick={() => setActivityError(null)} variant="ghost">
+                            Dismiss
+                          </Button>
+                        </div>
                       </div>
                     ) : activityData ? (
                       <div className="space-y-6">
@@ -661,15 +706,21 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <span className="text-sm font-medium text-gray-600">Total Logins</span>
-                            <span className="text-lg font-semibold text-gray-900">{activityData.login_count || 0}</span>
+                            <span className="text-lg font-semibold text-gray-900">
+                              {activityData.login_count !== undefined ? activityData.login_count : 0}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <span className="text-sm font-medium text-gray-600">Failed Attempts</span>
-                            <span className="text-lg font-semibold text-gray-900">{activityData.failed_login_attempts || 0}</span>
+                            <span className="text-lg font-semibold text-gray-900">
+                              {activityData.failed_login_attempts !== undefined ? activityData.failed_login_attempts : 0}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <span className="text-sm font-medium text-gray-600">Active Sessions</span>
-                            <span className="text-lg font-semibold text-gray-900">{activityData.active_sessions || 0}</span>
+                            <span className="text-lg font-semibold text-gray-900">
+                              {activityData.active_sessions !== undefined ? activityData.active_sessions : 0}
+                            </span>
                           </div>
                         </div>
 
@@ -777,15 +828,35 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
                             )}
                           </div>
                         </div>
+
+                        {/* Debug Info */}
+                        <div className="mt-6 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-2">Debug Info:</p>
+                          <p className="text-xs text-gray-600">User ID: {user?.id}</p>
+                          <p className="text-xs text-gray-600">Data loaded: {activityData ? 'Yes' : 'No'}</p>
+                          <p className="text-xs text-gray-600">Raw data: {JSON.stringify(activityData, null, 2)}</p>
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8">
                         <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">No Activity Data</h3>
                         <p className="text-gray-600 mb-4">No activity information available for this user.</p>
-                        <Button onClick={loadUserActivity} variant="outline">
-                          Load Activity
-                        </Button>
+                        <div className="flex gap-2 justify-center">
+                          <Button onClick={loadUserActivity} variant="outline" disabled={activityLoading}>
+                            {activityLoading ? 'Loading...' : 'Load Activity'}
+                          </Button>
+                          <Button onClick={() => setActivityError(null)} variant="ghost">
+                            Dismiss
+                          </Button>
+                        </div>
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-2">Debug Info:</p>
+                          <p className="text-xs text-gray-600">User ID: {user?.id}</p>
+                          <p className="text-xs text-gray-600">Loading: {activityLoading ? 'Yes' : 'No'}</p>
+                          <p className="text-xs text-gray-600">Has Data: {activityData ? 'Yes' : 'No'}</p>
+                          <p className="text-xs text-gray-600">Error: {activityError || 'None'}</p>
+                        </div>
                       </div>
                     )}
                   </CardContent>

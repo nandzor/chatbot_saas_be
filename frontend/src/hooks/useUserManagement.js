@@ -254,14 +254,19 @@ export const useUserManagement = () => {
   // Get user activity
   const getUserActivity = useCallback(async (id) => {
     try {
+      console.log('🔍 useUserManagement: Getting activity for user ID:', id);
       const response = await userManagementService.getUserActivity(id);
+      console.log('🔍 useUserManagement: Activity service response:', response);
 
       if (response.success) {
+        console.log('🔍 useUserManagement: Activity data:', response.data);
         return { success: true, data: response.data };
       } else {
+        console.error('❌ useUserManagement: Activity service failed:', response.message);
         return { success: false, error: response.message };
       }
     } catch (err) {
+      console.error('❌ useUserManagement: Activity error:', err);
       return { success: false, error: 'Failed to fetch user activity' };
     }
   }, []);

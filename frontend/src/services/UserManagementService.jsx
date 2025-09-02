@@ -232,13 +232,17 @@ class UserManagementService {
    */
   async getUserActivity(id) {
     try {
+      console.log('🔍 UserManagementService: Fetching activity for user:', id);
       const response = await api.get(`/v1/users/${id}/activity`);
+      console.log('🔍 UserManagementService: Activity response:', response.data);
+
       return {
         success: true,
         data: response.data.data,
         message: response.data.message
       };
     } catch (error) {
+      console.error('❌ UserManagementService: Failed to get user activity:', error);
       return this.handleError(error, 'Failed to fetch user activity');
     }
   }
@@ -248,13 +252,17 @@ class UserManagementService {
    */
   async getUserSessions(id) {
     try {
+      console.log('🔍 UserManagementService: Fetching sessions for user:', id);
       const response = await api.get(`/v1/users/${id}/sessions`);
+      console.log('🔍 UserManagementService: Sessions response:', response.data);
+
       return {
         success: true,
         data: response.data.data,
         message: response.data.message
       };
     } catch (error) {
+      console.error('❌ UserManagementService: Failed to get user sessions:', error);
       return this.handleError(error, 'Failed to fetch user sessions');
     }
   }
