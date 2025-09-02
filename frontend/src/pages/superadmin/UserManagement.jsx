@@ -100,23 +100,21 @@ const UserManagement = () => {
     verifiedUsers: 0
   });
 
-  // Refs to prevent multiple API calls
+  // Refs to prevent double loading (React StrictMode)
   const statisticsLoaded = useRef(false);
   const statisticsLoading = useRef(false);
-  const componentMounted = useRef(false);
 
   // Load statistics on component mount (only once)
   useEffect(() => {
     let isMounted = true;
 
     const loadStatistics = async () => {
-      // Prevent multiple simultaneous calls (including React StrictMode double mounting)
-      if (statisticsLoading.current || statisticsLoaded.current || componentMounted.current) {
-        console.log('🔍 UserManagement: Skipping statistics load - already loaded, loading, or component mounted');
+      // Prevent double loading in React StrictMode
+      if (statisticsLoading.current || statisticsLoaded.current) {
+        console.log('🔍 UserManagement: Skipping statistics load - already loaded or loading');
         return;
       }
 
-      componentMounted.current = true;
       statisticsLoading.current = true;
       console.log('🔍 UserManagement: Loading statistics...');
 
@@ -126,11 +124,11 @@ const UserManagement = () => {
           setStatistics({
             totalUsers: result.data.total_users || 0,
             activeUsers: result.data.active_users || 0,
-            pendingUsers: result.data.pending_users || 0,
+            pendingUsers: result.data.pending_users || result.data.unverified_users || 0,
             verifiedUsers: result.data.verified_users || 0
           });
           statisticsLoaded.current = true;
-          console.log('✅ UserManagement: Statistics loaded successfully');
+          console.log('✅ UserManagement: Statistics loaded successfully', result.data);
         }
       } catch (error) {
         console.error('❌ UserManagement: Failed to load statistics:', error);
@@ -268,49 +266,62 @@ const UserManagement = () => {
     }
   }, [selectedUser, updateUser]);
 
-  // Get status info
-  const getStatusInfo = (status) => {
-    switch (status) {
-      case 'active':
-        return { icon: CheckCircle, color: 'bg-green-100 text-green-800', label: 'Active' };
-      case 'inactive':
-        return { icon: XCircle, color: 'bg-gray-100 text-gray-800', label: 'Inactive' };
-      case 'pending':
-        return { icon: Clock, color: 'bg-yellow-100 text-yellow-800', label: 'Pending' };
-      case 'suspended':
-        return { icon: AlertCircle, color: 'bg-red-100 text-red-800', label: 'Suspended' };
-      default:
-        return { icon: Settings, color: 'bg-gray-100 text-gray-800', label: status };
+  // Memoized status and role info functions
+  const getStatusInfo = useCallback((status) => {
+    const statusMap = {
+      active: { icon: CheckCircle, color: 'bg-green-100 text-green-800', label: 'Active' },
+      inactive: { icon: XCircle, color: 'bg-gray-100 text-gray-800', label: 'Inactive' },
+      pending: { icon: Clock, color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+      suspended: { icon: AlertCircle, color: 'bg-red-100 text-red-800', label: 'Suspended' }
+    };
+    return statusMap[status] || { icon: Settings, color: 'bg-gray-100 text-gray-800', label: status };
+  }, []);
+
+  const getRoleInfo = useCallback((role) => {
+    const roleMap = {
+      super_admin: { icon: Shield, color: 'bg-red-100 text-red-800', label: 'Super Admin' },
+      org_admin: { icon: Building2, color: 'bg-blue-100 text-blue-800', label: 'Org Admin' },
+      agent: { icon: Users, color: 'bg-green-100 text-green-800', label: 'Agent' },
+      client: { icon: UserCheck, color: 'bg-purple-100 text-purple-800', label: 'Client' }
+    };
+    return roleMap[role] || { icon: Settings, color: 'bg-gray-100 text-gray-800', label: role };
+  }, []);
+
+  // Memoized statistics cards to prevent unnecessary re-renders
+  const statisticsCards = useMemo(() => [
+    {
+      title: 'Total Users',
+      value: statistics.totalUsers,
+      icon: Users,
+      color: 'blue',
+      bgColor: 'bg-blue-100',
+      iconColor: 'text-blue-600'
+    },
+    {
+      title: 'Active Users',
+      value: statistics.activeUsers,
+      icon: CheckCircle,
+      color: 'green',
+      bgColor: 'bg-green-100',
+      iconColor: 'text-green-600'
+    },
+    {
+      title: 'Pending Users',
+      value: statistics.pendingUsers,
+      icon: Clock,
+      color: 'yellow',
+      bgColor: 'bg-yellow-100',
+      iconColor: 'text-yellow-600'
+    },
+    {
+      title: 'Verified Users',
+      value: statistics.verifiedUsers,
+      icon: Shield,
+      color: 'purple',
+      bgColor: 'bg-purple-100',
+      iconColor: 'text-purple-600'
     }
-  };
-
-  // Get role info
-  const getRoleInfo = (role) => {
-    switch (role) {
-      case 'super_admin':
-        return { icon: Shield, color: 'bg-red-100 text-red-800', label: 'Super Admin' };
-      case 'org_admin':
-        return { icon: Building2, color: 'bg-blue-100 text-blue-800', label: 'Org Admin' };
-      case 'agent':
-        return { icon: Users, color: 'bg-green-100 text-green-800', label: 'Agent' };
-      case 'client':
-        return { icon: UserCheck, color: 'bg-purple-100 text-purple-800', label: 'Client' };
-      default:
-        return { icon: Settings, color: 'bg-gray-100 text-gray-800', label: role };
-    }
-  };
-
-  // Statistics are now loaded from the API and stored in state
-
-  // Debug logging
-  console.log('🔍 UserManagement Component: Current state:', {
-    users: users,
-    usersLength: users.length,
-    loading: loading,
-    error: error,
-    pagination: pagination,
-    filters: filters
-  });
+  ], [statistics]);
 
   if (loading) {
     return (
@@ -374,61 +385,24 @@ const UserManagement = () => {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{statistics.totalUsers}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{statistics.activeUsers}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pending Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{statistics.pendingUsers}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Shield className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Verified Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{statistics.verifiedUsers}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {statisticsCards.map((card, index) => {
+            const IconComponent = card.icon;
+            return (
+              <Card key={index}>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className={`p-2 ${card.bgColor} rounded-lg`}>
+                      <IconComponent className={`w-6 h-6 ${card.iconColor}`} />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">{card.title}</p>
+                      <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Filters */}
@@ -538,8 +512,10 @@ const UserManagement = () => {
                 <tbody>
                   {users.length > 0 ? (
                     users.map((user) => {
-                      const StatusIcon = getStatusInfo(user.status).icon;
-                      const RoleIcon = getRoleInfo(user.role).icon;
+                      const statusInfo = getStatusInfo(user.status);
+                      const roleInfo = getRoleInfo(user.role);
+                      const StatusIcon = statusInfo.icon;
+                      const RoleIcon = roleInfo.icon;
 
                       return (
                         <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -558,9 +534,9 @@ const UserManagement = () => {
 
                           <td className="py-4 px-4">
                             <div className="flex items-center">
-                              <Badge className={getRoleInfo(user.role).color}>
+                              <Badge className={roleInfo.color}>
                                 <RoleIcon className="w-3 h-3 mr-1" />
-                                {getRoleInfo(user.role).label}
+                                {roleInfo.label}
                               </Badge>
                             </div>
                           </td>
@@ -574,9 +550,9 @@ const UserManagement = () => {
 
                           <td className="py-4 px-4">
                             <div className="flex items-center">
-                              <Badge className={getStatusInfo(user.status).color}>
+                              <Badge className={statusInfo.color}>
                                 <StatusIcon className="w-3 h-3 mr-1" />
-                                {getStatusInfo(user.status).label}
+                                {statusInfo.label}
                               </Badge>
                             </div>
                           </td>

@@ -234,14 +234,12 @@ export const useUserManagement = () => {
     }
   }, []);
 
-  // Get user statistics
+  // Get user statistics (memoized to prevent unnecessary re-renders)
   const getUserStatistics = useCallback(async () => {
     try {
-      console.log('🔍 useUserManagement: Getting user statistics...');
       const response = await userManagementService.getUserStatistics();
 
       if (response.success) {
-        console.log('✅ useUserManagement: Statistics retrieved successfully');
         return { success: true, data: response.data };
       } else {
         console.error('❌ useUserManagement: Statistics API failed:', response.message);
@@ -251,7 +249,7 @@ export const useUserManagement = () => {
       console.error('❌ useUserManagement: Statistics error:', err);
       return { success: false, error: 'Failed to fetch user statistics' };
     }
-  }, []);
+  }, []); // Empty dependency array - this function should be stable
 
   // Get user activity
   const getUserActivity = useCallback(async (id) => {
