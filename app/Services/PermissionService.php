@@ -525,7 +525,7 @@ class PermissionService extends BaseService
     /**
      * Clear permission cache for a user
      */
-    public function clearUserPermissionCache(string $userId, string $organizationId): void
+    public function clearUserPermissionCache(string $userId, ?string $organizationId): void
     {
         $cacheKey = $this->getUserPermissionsCacheKey($userId, $organizationId);
         Cache::forget($cacheKey);
@@ -534,13 +534,22 @@ class PermissionService extends BaseService
     /**
      * Clear permission cache for an organization
      */
-    public function clearPermissionCache(string $organizationId): void
+    public function clearPermissionCache(?string $organizationId): void
     {
-        // Clear all user permission caches for the organization
-        $users = User::where('organization_id', $organizationId)->pluck('id');
+        if ($organizationId !== null) {
+            // Clear all user permission caches for the organization
+            $users = User::where('organization_id', $organizationId)->pluck('id');
 
-        foreach ($users as $userId) {
-            $this->clearUserPermissionCache($userId, $organizationId);
+            foreach ($users as $userId) {
+                $this->clearUserPermissionCache($userId, $organizationId);
+            }
+        } else {
+            // Clear global permission caches for all users
+            $users = User::all()->pluck('id');
+
+            foreach ($users as $userId) {
+                $this->clearUserPermissionCache($userId, null);
+            }
         }
     }
 
@@ -597,30 +606,60 @@ class PermissionService extends BaseService
     /**
      * Fetch user permissions from database
      */
-    private function fetchUserPermissions(string $userId, string $organizationId): Collection
+    private function fetchUserPermissions(string $userId, ?string $organizationId): Collection
     {
-        return Permission::select('permissions.*')
+        $query = Permission::select([
+                        'permissions.id',
+                        'permissions.organization_id',
+                        'permissions.name',
+                        'permissions.code',
+                        'permissions.display_name',
+                        'permissions.description',
+                        'permissions.resource',
+                        'permissions.action',
+                        'permissions.scope',
+                        'permissions.category',
+                        'permissions.group_name',
+                        'permissions.is_system_permission',
+                        'permissions.is_dangerous',
+                        'permissions.requires_approval',
+                        'permissions.sort_order',
+                        'permissions.is_visible',
+                        'permissions.status',
+                        'permissions.created_at',
+                        'permissions.updated_at'
+                    ])
                         ->join('role_permissions', 'permissions.id', '=', 'role_permissions.permission_id')
                         ->join('user_roles', 'role_permissions.role_id', '=', 'user_roles.role_id')
+                        ->join('roles', 'user_roles.role_id', '=', 'roles.id')
                         ->where('user_roles.user_id', $userId)
-                        ->where('user_roles.organization_id', $organizationId)
                         ->where('user_roles.is_active', true)
                         ->where('role_permissions.is_granted', true)
                         ->where('permissions.status', 'active')
+                        ->where('roles.status', 'active')
                         ->where(function ($query) {
                             $query->whereNull('user_roles.effective_until')
                                   ->orWhere('user_roles.effective_until', '>', now());
-                        })
-                        ->distinct()
-                        ->get();
+                        });
+
+        // Handle organization-specific or global permissions
+        if ($organizationId !== null) {
+            $query->where('roles.organization_id', $organizationId);
+        } else {
+            // For global permissions, we need to get permissions from global roles
+            $query->whereNull('roles.organization_id');
+        }
+
+        return $query->distinct()->get();
     }
 
     /**
      * Get user permissions cache key
      */
-    private function getUserPermissionsCacheKey(string $userId, string $organizationId): string
+    private function getUserPermissionsCacheKey(string $userId, ?string $organizationId): string
     {
-        return self::USER_PERMISSIONS_CACHE_PREFIX . ":{$organizationId}:{$userId}";
+        $orgId = $organizationId ?? 'global';
+        return self::USER_PERMISSIONS_CACHE_PREFIX . ":{$orgId}:{$userId}";
     }
 
     /**
