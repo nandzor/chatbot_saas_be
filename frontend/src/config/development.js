@@ -4,28 +4,28 @@ export const devConfig = {
   enableDebugLogs: true,
   enablePerformanceMonitoring: true,
   enableErrorTracking: true,
-  
+
   // Development features
   enableHotReload: true,
   enableReactDevTools: true,
   enableWhyDidYouRender: false,
-  
+
   // API settings
-  apiBaseUrl: 'http://localhost:8000',
+  apiBaseUrl: 'http://localhost:9000',
   apiTimeout: 10000,
-  
+
   // Feature flags
   enableAnalytics: false,
   enableDebugPanel: true,
-  
+
   // Logging
   logLevel: 'debug',
   enableConsoleGrouping: true,
-  
+
   // Performance
   enableLazyLoading: false,
   enableCodeSplitting: true,
-  
+
   // Error handling
   enableErrorBoundaries: true,
   enableErrorReporting: true,
@@ -39,7 +39,7 @@ export const devUtils = {
     if (devConfig.enableDebugLogs) {
       const timestamp = new Date().toISOString();
       const prefix = `[DEV ${timestamp}]`;
-      
+
       switch (level) {
         case 'error':
           console.error(prefix, message, data);
@@ -55,7 +55,7 @@ export const devUtils = {
       }
     }
   },
-  
+
   // Performance measurement
   measurePerformance: (name, fn) => {
     if (devConfig.enablePerformanceMonitoring) {
@@ -67,7 +67,7 @@ export const devUtils = {
     }
     return fn();
   },
-  
+
   // Error tracking
   trackError: (error, context = {}) => {
     if (devConfig.enableErrorTracking) {

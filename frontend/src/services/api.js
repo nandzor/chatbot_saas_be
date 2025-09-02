@@ -1,29 +1,35 @@
 import axios from 'axios';
 
-// Create axios instance
+// Create axios instance with default config
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api',
-  timeout: 10000,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:9000/api',
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
 });
 
-// Request interceptor
+// Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    // Add auth tokens
-    const jwtToken = localStorage.getItem('jwt_token');
-    const sanctumToken = localStorage.getItem('sanctum_token');
+    // Get token from localStorage - check multiple possible keys
+    const token = localStorage.getItem('jwt_token') ||
+                  localStorage.getItem('auth_token') ||
+                  localStorage.getItem('access_token');
 
-    if (jwtToken) {
-      config.headers.Authorization = `Bearer ${jwtToken}`;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
+    // Add Sanctum token as fallback
+    const sanctumToken = localStorage.getItem('sanctum_token');
     if (sanctumToken) {
       config.headers['X-Sanctum-Token'] = sanctumToken;
     }
+
+    // Add request timestamp for debugging
+    config.metadata = { startTime: new Date() };
 
     return config;
   },
@@ -32,54 +38,64 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
+    // Log successful requests in development
+    if (import.meta.env.DEV) {
+      const duration = new Date() - response.config.metadata.startTime;
+      console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} (${duration}ms)`);
+    }
+
     return response;
   },
-  async (error) => {
-    const originalRequest = error.config;
+  (error) => {
+    // Log errors in development
+    if (import.meta.env.DEV) {
+      const duration = error.config?.metadata ? new Date() - error.config.metadata.startTime : 0;
+      console.error(`❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} (${duration}ms)`, error.response?.data || error.message);
+    }
 
-    // Handle 401 errors (unauthorized)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+    // Handle common error cases
+    if (error.response) {
+      const { status, data } = error.response;
 
-      try {
-        // Try to refresh token
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          const refreshResponse = await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api'}/auth/refresh`,
-            { refresh_token: refreshToken }
-          );
-
-          if (refreshResponse.data.success) {
-            // Update tokens
-            const { access_token, refresh_token } = refreshResponse.data.data;
-            localStorage.setItem('jwt_token', access_token);
-            localStorage.setItem('refresh_token', refresh_token);
-
-            // Retry original request
-            originalRequest.headers.Authorization = `Bearer ${access_token}`;
-            return api(originalRequest);
-          }
-        }
-      } catch (refreshError) {
-        // Refresh failed, redirect to login
+      // Handle authentication errors
+      if (status === 401) {
+        // Clear stored tokens - check all possible keys
         localStorage.removeItem('jwt_token');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('sanctum_token');
-        localStorage.removeItem('user');
-        
+        localStorage.removeItem('chatbot_user');
+
+        // Redirect to login if not already there
         if (window.location.pathname !== '/auth/login') {
           window.location.href = '/auth/login';
         }
       }
+
+      // Handle validation errors
+      if (status === 422 && data.errors) {
+        // Validation errors are handled by the calling component
+        return Promise.reject(error);
+      }
+
+      // Handle server errors
+      if (status >= 500) {
+        console.error('Server error:', data);
+      }
+    } else if (error.request) {
+      // Network error
+      console.error('Network error:', error.message);
+    } else {
+      // Other error
+      console.error('Error:', error.message);
     }
 
     return Promise.reject(error);
   }
 );
 
-export { api };
 export default api;

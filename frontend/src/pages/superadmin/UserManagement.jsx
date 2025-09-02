@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Users,
   UserPlus,
@@ -65,233 +65,118 @@ import {
 import CreateUserDialog from './CreateUserDialog';
 import ViewUserDetailsDialog from './ViewUserDetailsDialog';
 import EditUserDialog from './EditUserDialog';
+import { useUserManagement } from '../../hooks/useUserManagement';
 
 const UserManagement = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10
-  });
-  const [filters, setFilters] = useState({
-    search: '',
-    status: 'all',
-    role: 'all',
-    organization: 'all',
-    department: 'all'
-  });
+  // Use the custom hook for user management
+  const {
+    users,
+    loading,
+    error,
+    pagination,
+    filters,
+    loadUsers,
+    createUser,
+    updateUser,
+    deleteUser,
+    toggleUserStatus,
+    cloneUser,
+    getUserStatistics,
+    updateFilters,
+    updatePagination
+  } = useUserManagement();
+
+  // Local state for UI
   const [selectedUser, setSelectedUser] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [statistics, setStatistics] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    pendingUsers: 0,
+    verifiedUsers: 0
+  });
 
-  // Mock data for demonstration
-  const mockUsers = useMemo(() => [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      phone: '+1-555-0123',
-      avatar: null,
-      status: 'active',
-      role: 'super_admin',
-      organization: 'TechCorp Inc.',
-      department: 'IT',
-      position: 'Chief Technology Officer',
-      location: 'San Francisco, CA',
-      timezone: 'America/Los_Angeles',
-      last_login: '2024-01-25 14:30:00',
-      created_at: '2023-01-15 10:00:00',
-      updated_at: '2024-01-25 14:30:00',
-      is_verified: true,
-      is_2fa_enabled: true,
-      login_count: 156,
-      permissions: ['users.manage', 'roles.manage', 'system.admin'],
-      metadata: {
-        employee_id: 'EMP001',
-        hire_date: '2023-01-15',
-        manager: 'CEO',
-        cost_center: 'IT-001'
-      }
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      phone: '+1-555-0124',
-      avatar: null,
-      status: 'active',
-      role: 'org_admin',
-      organization: 'TechCorp Inc.',
-      department: 'HR',
-      position: 'HR Director',
-      location: 'New York, NY',
-      timezone: 'America/New_York',
-      last_login: '2024-01-24 09:15:00',
-      created_at: '2023-03-20 14:30:00',
-      updated_at: '2024-01-24 09:15:00',
-      is_verified: true,
-      is_2fa_enabled: false,
-      login_count: 89,
-      permissions: ['users.view', 'hr.manage'],
-      metadata: {
-        employee_id: 'EMP002',
-        hire_date: '2023-03-20',
-        manager: 'COO',
-        cost_center: 'HR-001'
-      }
-    },
-    {
-      id: 3,
-      name: 'Bob Johnson',
-      email: 'bob.johnson@example.com',
-      phone: '+1-555-0125',
-      avatar: null,
-      status: 'inactive',
-      role: 'agent',
-      organization: 'TechCorp Inc.',
-      department: 'Support',
-      position: 'Support Specialist',
-      location: 'Austin, TX',
-      timezone: 'America/Chicago',
-      last_login: '2024-01-20 16:45:00',
-      created_at: '2023-06-10 11:00:00',
-      updated_at: '2024-01-20 16:45:00',
-      is_verified: true,
-      is_2fa_enabled: false,
-      login_count: 45,
-      permissions: ['support.view', 'tickets.manage'],
-      metadata: {
-        employee_id: 'EMP003',
-        hire_date: '2023-06-10',
-        manager: 'Support Manager',
-        cost_center: 'SUP-001'
-      }
-    },
-    {
-      id: 4,
-      name: 'Alice Brown',
-      email: 'alice.brown@example.com',
-      phone: '+1-555-0126',
-      avatar: null,
-      status: 'active',
-      role: 'client',
-      organization: 'ClientCorp Ltd.',
-      department: 'Marketing',
-      position: 'Marketing Manager',
-      location: 'London, UK',
-      timezone: 'Europe/London',
-      last_login: '2024-01-25 12:00:00',
-      created_at: '2023-08-15 09:00:00',
-      updated_at: '2024-01-25 12:00:00',
-      is_verified: true,
-      is_2fa_enabled: true,
-      login_count: 67,
-      permissions: ['dashboard.view', 'reports.view'],
-      metadata: {
-        client_id: 'CLI001',
-        contract_start: '2023-08-15',
-        account_manager: 'John Doe',
-        subscription_plan: 'Enterprise'
-      }
-    },
-    {
-      id: 5,
-      name: 'Charlie Wilson',
-      email: 'charlie.wilson@example.com',
-      phone: '+1-555-0127',
-      avatar: null,
-      status: 'pending',
-      role: 'agent',
-      organization: 'TechCorp Inc.',
-      department: 'Sales',
-      position: 'Sales Representative',
-      location: 'Chicago, IL',
-      timezone: 'America/Chicago',
-      last_login: null,
-      created_at: '2024-01-20 15:00:00',
-      updated_at: '2024-01-20 15:00:00',
-      is_verified: false,
-      is_2fa_enabled: false,
-      login_count: 0,
-      permissions: ['sales.view'],
-      metadata: {
-        employee_id: 'EMP004',
-        hire_date: '2024-01-20',
-        manager: 'Sales Manager',
-        cost_center: 'SAL-001'
-      }
-    }
-  ], []);
+  // Refs to prevent multiple API calls
+  const statisticsLoaded = useRef(false);
+  const statisticsLoading = useRef(false);
+  const componentMounted = useRef(false);
 
-  // Load users
-  const loadUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      // TODO: Implement actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Apply filters
-      let filteredUsers = [...mockUsers];
-
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
-        filteredUsers = filteredUsers.filter(user =>
-          user.name.toLowerCase().includes(searchTerm) ||
-          user.email.toLowerCase().includes(searchTerm) ||
-          user.organization.toLowerCase().includes(searchTerm)
-        );
-      }
-
-      if (filters.status !== 'all') {
-        filteredUsers = filteredUsers.filter(user => user.status === filters.status);
-      }
-
-      if (filters.role !== 'all') {
-        filteredUsers = filteredUsers.filter(user => user.role === filters.role);
-      }
-
-      if (filters.organization !== 'all') {
-        filteredUsers = filteredUsers.filter(user => user.organization === filters.organization);
-      }
-
-      if (filters.department !== 'all') {
-        filteredUsers = filteredUsers.filter(user => user.department === filters.department);
-      }
-
-      setUsers(filteredUsers);
-      setPagination(prev => ({
-        ...prev,
-        totalItems: filteredUsers.length,
-        totalPages: Math.ceil(filteredUsers.length / prev.itemsPerPage)
-      }));
-    } catch (error) {
-      setError('Failed to load users');
-      console.error('Error loading users:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
-
-  // Load users on component mount and filter changes
+  // Load statistics on component mount (only once)
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    let isMounted = true;
 
-  // Handle filter changes
-  const handleFilterChange = useCallback((field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+    const loadStatistics = async () => {
+      // Prevent multiple simultaneous calls (including React StrictMode double mounting)
+      if (statisticsLoading.current || statisticsLoaded.current || componentMounted.current) {
+        console.log('🔍 UserManagement: Skipping statistics load - already loaded, loading, or component mounted');
+        return;
+      }
+
+      componentMounted.current = true;
+      statisticsLoading.current = true;
+      console.log('🔍 UserManagement: Loading statistics...');
+
+      try {
+        const result = await getUserStatistics();
+        if (isMounted && result.success) {
+          setStatistics({
+            totalUsers: result.data.total_users || 0,
+            activeUsers: result.data.active_users || 0,
+            pendingUsers: result.data.pending_users || 0,
+            verifiedUsers: result.data.verified_users || 0
+          });
+          statisticsLoaded.current = true;
+          console.log('✅ UserManagement: Statistics loaded successfully');
+        }
+      } catch (error) {
+        console.error('❌ UserManagement: Failed to load statistics:', error);
+      } finally {
+        statisticsLoading.current = false;
+      }
+    };
+
+    loadStatistics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array to run only once
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (filterTimeoutRef.current) {
+        clearTimeout(filterTimeoutRef.current);
+      }
+    };
   }, []);
+
+  // No need for local loadUsers function - using the hook's loadUsers
+
+  // Debounce filter changes
+  const filterTimeoutRef = useRef(null);
+
+  // Handle filter changes with debouncing
+  const handleFilterChange = useCallback((field, value) => {
+    // Clear existing timeout
+    if (filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current);
+    }
+
+    // Set new timeout for debouncing
+    filterTimeoutRef.current = setTimeout(() => {
+      updateFilters({ [field]: value });
+    }, 300); // 300ms debounce
+  }, [updateFilters]);
 
   // Handle pagination
   const handlePageChange = useCallback((page) => {
-    setPagination(prev => ({ ...prev, currentPage: page }));
-  }, []);
+    updatePagination({ currentPage: page });
+  }, [updatePagination]);
 
   // Handle user actions
   const handleCreateUser = useCallback(() => {
@@ -308,10 +193,24 @@ const UserManagement = () => {
     setShowDetailsModal(true);
   }, []);
 
-  const handleCloneUser = useCallback((user) => {
-    // TODO: Implement user cloning
-    alert(`Cloning user: ${user.name}`);
-  }, []);
+  const handleCloneUser = useCallback(async (user) => {
+    const newEmail = prompt(`Enter new email for cloned user (${user.name}):`);
+    if (!newEmail) return;
+
+    try {
+      setActionLoading(true);
+      const result = await cloneUser(user.id, newEmail);
+
+      if (result.success) {
+        setShowDeleteConfirm(false);
+        setSelectedUser(null);
+      }
+    } catch (error) {
+      console.error('Failed to clone user:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  }, [cloneUser]);
 
   const handleDeleteUser = useCallback((user) => {
     setSelectedUser(user);
@@ -323,76 +222,51 @@ const UserManagement = () => {
 
     try {
       setActionLoading(true);
-      // TODO: Implement actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await deleteUser(selectedUser.id);
 
-      setUsers(prev => prev.filter(user => user.id !== selectedUser.id));
-      setShowDeleteConfirm(false);
-      setSelectedUser(null);
-
-      alert(`User "${selectedUser.name}" has been deleted successfully`);
+      if (result.success) {
+        setShowDeleteConfirm(false);
+        setSelectedUser(null);
+      }
     } catch (error) {
-      alert(`Failed to delete user: ${error.message}`);
+      console.error('Failed to delete user:', error);
     } finally {
       setActionLoading(false);
     }
-  }, [selectedUser]);
+  }, [selectedUser, deleteUser]);
 
   const handleCreateUserSubmit = useCallback(async (userData) => {
     try {
       setActionLoading(true);
-      // TODO: Implement actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await createUser(userData);
 
-      // Create new user with generated ID
-      const newUser = {
-        ...userData,
-        id: Math.max(...users.map(u => u.id)) + 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        last_login: null,
-        login_count: 0,
-        permissions: userData.permissions || [],
-        metadata: {
-          ...userData.metadata,
-          employee_id: `EMP${String(Math.max(...users.map(u => parseInt(u.metadata?.employee_id?.replace('EMP', '') || '0'))) + 1).padStart(3, '0')}`
-        }
-      };
-
-      setUsers(prev => [newUser, ...prev]);
-      setShowCreateModal(false);
-
-      // Show success message
-      alert(`User "${newUser.name}" has been created successfully`);
+      if (result.success) {
+        setShowCreateModal(false);
+      }
     } catch (error) {
-      alert(`Failed to create user: ${error.message}`);
+      console.error('Failed to create user:', error);
     } finally {
       setActionLoading(false);
     }
-  }, [users]);
+  }, [createUser]);
 
   const handleEditUserSubmit = useCallback(async (userData) => {
+    if (!selectedUser) return;
+
     try {
       setActionLoading(true);
-      // TODO: Implement actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await updateUser(selectedUser.id, userData);
 
-      setUsers(prev => prev.map(user =>
-        user.id === selectedUser.id
-          ? { ...user, ...userData, updated_at: new Date().toISOString() }
-          : user
-      ));
-
-      setShowEditModal(false);
-      setSelectedUser(null);
-
-      alert(`User "${userData.name}" has been updated successfully`);
+      if (result.success) {
+        setShowEditModal(false);
+        setSelectedUser(null);
+      }
     } catch (error) {
-      alert(`Failed to update user: ${error.message}`);
+      console.error('Failed to update user:', error);
     } finally {
       setActionLoading(false);
     }
-  }, [selectedUser]);
+  }, [selectedUser, updateUser]);
 
   // Get status info
   const getStatusInfo = (status) => {
@@ -426,15 +300,17 @@ const UserManagement = () => {
     }
   };
 
-  // Calculate statistics
-  const statistics = useMemo(() => {
-    const totalUsers = users.length;
-    const activeUsers = users.filter(user => user.status === 'active').length;
-    const pendingUsers = users.filter(user => user.status === 'pending').length;
-    const verifiedUsers = users.filter(user => user.is_verified).length;
+  // Statistics are now loaded from the API and stored in state
 
-    return { totalUsers, activeUsers, pendingUsers, verifiedUsers };
-  }, [users]);
+  // Debug logging
+  console.log('🔍 UserManagement Component: Current state:', {
+    users: users,
+    usersLength: users.length,
+    loading: loading,
+    error: error,
+    pagination: pagination,
+    filters: filters
+  });
 
   if (loading) {
     return (
@@ -462,7 +338,7 @@ const UserManagement = () => {
                 <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Users</h3>
                 <p className="text-gray-600 mb-4">{error}</p>
-                <Button onClick={loadUsers}>Try Again</Button>
+                <Button onClick={() => window.location.reload()}>Try Again</Button>
               </div>
             </CardContent>
           </Card>
@@ -660,103 +536,124 @@ const UserManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => {
-                    const StatusIcon = getStatusInfo(user.status).icon;
-                    const RoleIcon = getRoleInfo(user.role).icon;
+                  {users.length > 0 ? (
+                    users.map((user) => {
+                      const StatusIcon = getStatusInfo(user.status).icon;
+                      const RoleIcon = getRoleInfo(user.role).icon;
 
-                    return (
-                      <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-4 px-4">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                              <Users className="w-5 h-5 text-gray-600" />
-                            </div>
-                            <div className="ml-3">
-                              <p className="font-medium text-gray-900">{user.name}</p>
-                              <p className="text-sm text-gray-500">{user.email}</p>
-                              <p className="text-xs text-gray-400">{user.position}</p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <div className="flex items-center">
-                            <Badge className={getRoleInfo(user.role).color}>
-                              <RoleIcon className="w-3 h-3 mr-1" />
-                              {getRoleInfo(user.role).label}
-                            </Badge>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <div>
-                            <p className="text-sm text-gray-900">{user.organization}</p>
-                            <p className="text-xs text-gray-500">{user.department}</p>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <div className="flex items-center">
-                            <Badge className={getStatusInfo(user.status).color}>
-                              <StatusIcon className="w-3 h-3 mr-1" />
-                              {getStatusInfo(user.status).label}
-                            </Badge>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <div className="text-sm text-gray-900">
-                            {user.last_login ? (
-                              <div>
-                                <p>{new Date(user.last_login).toLocaleDateString()}</p>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(user.last_login).toLocaleTimeString()}
-                                </p>
+                      return (
+                        <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-4 px-4">
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Users className="w-5 h-5 text-gray-600" />
                               </div>
-                            ) : (
-                              <span className="text-gray-400">Never</span>
-                            )}
-                          </div>
-                        </td>
+                              <div className="ml-3">
+                                <p className="font-medium text-gray-900">{user.name}</p>
+                                <p className="text-sm text-gray-500">{user.email}</p>
+                                <p className="text-xs text-gray-400">{user.position}</p>
+                              </div>
+                            </div>
+                          </td>
 
-                        <td className="py-4 px-4">
-                          <TooltipProvider>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleViewDetails(user)}>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit User
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleCloneUser(user)}>
-                                  <Copy className="w-4 h-4 mr-2" />
-                                  Clone User
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteUser(user)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete User
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TooltipProvider>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          <td className="py-4 px-4">
+                            <div className="flex items-center">
+                              <Badge className={getRoleInfo(user.role).color}>
+                                <RoleIcon className="w-3 h-3 mr-1" />
+                                {getRoleInfo(user.role).label}
+                              </Badge>
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <div>
+                              <p className="text-sm text-gray-900">{user.organization}</p>
+                              <p className="text-xs text-gray-500">{user.department}</p>
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <div className="flex items-center">
+                              <Badge className={getStatusInfo(user.status).color}>
+                                <StatusIcon className="w-3 h-3 mr-1" />
+                                {getStatusInfo(user.status).label}
+                              </Badge>
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <div className="text-sm text-gray-900">
+                              {user.last_login ? (
+                                <div>
+                                  <p>{new Date(user.last_login).toLocaleDateString()}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(user.last_login).toLocaleTimeString()}
+                                  </p>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">Never</span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <TooltipProvider>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleViewDetails(user)}>
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit User
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleCloneUser(user)}>
+                                    <Copy className="w-4 h-4 mr-2" />
+                                    Clone User
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteUser(user)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete User
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TooltipProvider>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="py-12 text-center">
+                        <div className="flex flex-col items-center">
+                          <Users className="w-12 h-12 text-gray-400 mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                          <p className="text-gray-500 mb-4">
+                            {Object.values(filters).some(filter => filter !== 'all' && filter !== '')
+                              ? 'Try adjusting your filters to see more results.'
+                              : 'Get started by creating your first user.'
+                            }
+                          </p>
+                          <Button onClick={handleCreateUser} className="bg-blue-600 hover:bg-blue-700">
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Create User
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

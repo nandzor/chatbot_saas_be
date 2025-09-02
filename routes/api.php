@@ -164,9 +164,14 @@ Route::prefix('v1')->group(function () {
             Route::get('/search', [UserController::class, 'search']);
             Route::get('/statistics', [UserController::class, 'statistics']);
 
+            // Utility endpoints
+            Route::post('/check-email', [UserController::class, 'checkEmail']);
+            Route::post('/check-username', [UserController::class, 'checkUsername']);
+
             // Individual user operations
             Route::prefix('{id}')->group(function () {
                 Route::get('/', [UserController::class, 'show']);
+                Route::get('/activity', [UserController::class, 'activity']);
             });
 
             // Routes requiring additional permissions
@@ -176,6 +181,7 @@ Route::prefix('v1')->group(function () {
                 Route::put('/{id}', [UserController::class, 'update']);
                 Route::patch('/{id}', [UserController::class, 'update']);
                 Route::patch('/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+                Route::post('/{id}/clone', [UserController::class, 'clone']);
             });
 
             Route::middleware(['permission:users.delete'])->delete('/{id}', [UserController::class, 'destroy']);

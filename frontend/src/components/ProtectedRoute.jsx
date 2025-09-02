@@ -5,10 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
  * Protected Route Component
  * Wraps routes that require authentication
  */
-export const ProtectedRoute = ({ 
-  children, 
+export const ProtectedRoute = ({
+  children,
   fallback = <div>Loading...</div>,
-  redirectTo = '/login'
+  redirectTo = '/auth/login'
 }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -31,8 +31,8 @@ export const ProtectedRoute = ({
  * Public Route Component
  * Redirects authenticated users away from public routes (like login)
  */
-export const PublicRoute = ({ 
-  children, 
+export const PublicRoute = ({
+  children,
   redirectTo = '/dashboard'
 }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -56,8 +56,8 @@ export const PublicRoute = ({
  * Role-based Protected Route
  * Protects routes based on user roles/permissions
  */
-export const RoleProtectedRoute = ({ 
-  children, 
+export const RoleProtectedRoute = ({
+  children,
   requiredRoles = [],
   requiredPermissions = [],
   fallback = <div>Access Denied</div>,
@@ -72,7 +72,7 @@ export const RoleProtectedRoute = ({
 
   // Check authentication first
   if (!isAuthenticated) {
-    window.location.href = '/login';
+    window.location.href = '/auth/login';
     return null;
   }
 

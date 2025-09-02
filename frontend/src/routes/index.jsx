@@ -13,6 +13,7 @@ import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
 import ResetPassword from '@/pages/auth/ResetPassword';
+import SuperAdminLogin from '@/pages/auth/SuperAdminLogin';
 
 // Dashboard Pages
 import Dashboard from '@/pages/dashboard/Dashboard';
@@ -92,6 +93,12 @@ export const router = createBrowserRouter([
         ],
       },
 
+      // SuperAdmin Auth Routes
+      {
+        path: '/superadmin/login',
+        element: <SuperAdminLogin />,
+      },
+
       // Dashboard Routes (Organization Admin/Manager)
       {
         path: '/dashboard',
@@ -155,10 +162,31 @@ export const router = createBrowserRouter([
           { index: true, element: <SuperAdminDashboard /> },
           { path: 'financials', element: <Financials /> },
           { path: 'clients', element: <ClientManagement /> },
-          { path: 'users', element: <UserManagement /> },
+          {
+            path: 'users',
+            element: (
+              <RoleBasedRoute requiredRole="super_admin">
+                <UserManagement />
+              </RoleBasedRoute>
+            )
+          },
           { path: 'system', element: <SystemSettings /> },
-          { path: 'system/roles', element: <RoleList /> },
-          { path: 'system/permissions', element: <PermissionList /> },
+          {
+            path: 'system/roles',
+            element: (
+              <RoleBasedRoute requiredRole="super_admin">
+                <RoleList />
+              </RoleBasedRoute>
+            )
+          },
+          {
+            path: 'system/permissions',
+            element: (
+              <RoleBasedRoute requiredRole="super_admin">
+                <PermissionList />
+              </RoleBasedRoute>
+            )
+          },
 
           // Client Success & Management Routes
           { path: 'client-health', element: <ClientHealthDashboard /> },

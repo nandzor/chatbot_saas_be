@@ -62,7 +62,7 @@ class AuthService {
           } catch (refreshError) {
             // Refresh failed, redirect to login
             this.logout();
-            window.location.href = '/login';
+            window.location.href = '/auth/login';
             return Promise.reject(refreshError);
           }
         }

@@ -389,4 +389,159 @@ class UserController extends BaseApiController
             );
         }
     }
+
+    /**
+     * Clone user.
+     */
+    public function clone(Request $request, string $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email|unique:users,email',
+                'overrides' => 'sometimes|array'
+            ]);
+
+            $user = $this->userService->getById($id);
+
+            if (!$user) {
+                return $this->handleResourceNotFound('User', $id);
+            }
+
+            /** @var \App\Models\User $user */
+            $clonedUser = $this->userService->cloneUser(
+                $user,
+                $request->get('email'),
+                $request->get('overrides', [])
+            );
+
+            $this->logApiAction('user_cloned', [
+                'original_user_id' => $id,
+                'cloned_user_id' => $clonedUser->id,
+                'new_email' => $request->get('email'),
+                'cloned_by' => $this->getCurrentUser()?->id
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_cloned',
+                'User cloned successfully',
+                new UserResource($clonedUser),
+                201
+            );
+
+        } catch (ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'user_clone_error',
+                'Failed to clone user',
+                $e->getMessage(),
+                500,
+                'USER_CLONE_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Get user activity summary.
+     */
+    public function activity(string $id): JsonResponse
+    {
+        try {
+            $user = $this->userService->getById($id);
+
+            if (!$user) {
+                return $this->handleResourceNotFound('User', $id);
+            }
+
+            $activity = $this->userService->getUserActivitySummary($id);
+
+            $this->logApiAction('user_activity_viewed', [
+                'user_id' => $id,
+                'viewed_by' => $this->getCurrentUser()?->id
+            ]);
+
+            return $this->successResponseWithLog(
+                'user_activity_viewed',
+                'User activity retrieved successfully',
+                $activity
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'user_activity_error',
+                'Failed to retrieve user activity',
+                $e->getMessage(),
+                500,
+                'USER_ACTIVITY_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Check if email exists.
+     */
+    public function checkEmail(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'exclude_user_id' => 'sometimes|string'
+            ]);
+
+            $exists = $this->userService->emailExists(
+                $request->get('email'),
+                $request->get('exclude_user_id')
+            );
+
+            return $this->successResponse(
+                'Email availability checked',
+                ['email' => $request->get('email'), 'exists' => $exists]
+            );
+
+        } catch (ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'email_check_error',
+                'Failed to check email availability',
+                $e->getMessage(),
+                500,
+                'EMAIL_CHECK_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Check if username exists.
+     */
+    public function checkUsername(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'username' => 'required|string|min:3|max:50',
+                'exclude_user_id' => 'sometimes|string'
+            ]);
+
+            $exists = $this->userService->usernameExists(
+                $request->get('username'),
+                $request->get('exclude_user_id')
+            );
+
+            return $this->successResponse(
+                'Username availability checked',
+                ['username' => $request->get('username'), 'exists' => $exists]
+            );
+
+        } catch (ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'username_check_error',
+                'Failed to check username availability',
+                $e->getMessage(),
+                500,
+                'USERNAME_CHECK_ERROR'
+            );
+        }
+    }
 }

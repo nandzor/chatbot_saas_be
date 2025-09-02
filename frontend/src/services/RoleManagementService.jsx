@@ -1,4 +1,4 @@
-import { api } from './api';
+import api from './api';
 
 class RoleManagementService {
   constructor() {
@@ -272,7 +272,7 @@ class RoleManagementService {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      
+
       Object.keys(options).forEach(key => {
         formData.append(key, options[key]);
       });
