@@ -205,15 +205,24 @@ class UserManagementService {
    */
   async getUserStatistics() {
     try {
+      console.log('🔍 UserManagementService: Fetching statistics from /v1/users/statistics');
       const response = await api.get('/v1/users/statistics');
+
+      console.log('🔍 UserManagementService: Raw API response:', response);
+      console.log('🔍 UserManagementService: Response data:', response.data);
+      console.log('🔍 UserManagementService: Response data.data:', response.data.data);
+
+      const statisticsData = response.data.data || response.data;
+      console.log('🔍 UserManagementService: Final statistics data:', statisticsData);
 
       return {
         success: true,
-        data: response.data.data || response.data,
+        data: statisticsData,
         message: response.data.message || 'Statistics retrieved successfully'
       };
     } catch (error) {
       console.error('❌ UserManagementService: Failed to get statistics:', error);
+      console.error('❌ UserManagementService: Error response:', error.response);
       return this.handleError(error, 'Failed to fetch user statistics');
     }
   }

@@ -3,35 +3,19 @@ import {
   Users,
   UserPlus,
   Search,
-  Filter,
   MoreHorizontal,
   Edit,
   Trash2,
   Eye,
   Copy,
-  Mail,
-  Phone,
   Building2,
   Shield,
-  Calendar,
   CheckCircle,
   XCircle,
   AlertCircle,
   Clock,
-  Globe,
   UserCheck,
   Settings,
-  Key,
-  Database,
-  FileText,
-  MessageSquare,
-  BarChart3,
-  CreditCard,
-  Webhook,
-  Workflow,
-  Bot,
-  Zap,
-  Plus,
   Download,
   Upload
 } from 'lucide-react';
@@ -65,7 +49,201 @@ import {
 import CreateUserDialog from './CreateUserDialog';
 import ViewUserDetailsDialog from './ViewUserDetailsDialog';
 import EditUserDialog from './EditUserDialog';
-import { useUserManagement } from '../../hooks/useUserManagement';
+import { useUserManagement } from '@/hooks/useUserManagement';
+import userManagementService from '@/services/UserManagementService';
+
+// Constants
+const DEBOUNCE_DELAY = 300;
+const INITIAL_STATISTICS = {
+  totalUsers: 0,
+  activeUsers: 0,
+  pendingUsers: 0,
+  verifiedUsers: 0
+};
+
+const STATUS_MAP = {
+  active: { icon: CheckCircle, color: 'bg-green-100 text-green-800', label: 'Active' },
+  inactive: { icon: XCircle, color: 'bg-gray-100 text-gray-800', label: 'Inactive' },
+  pending: { icon: Clock, color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+  suspended: { icon: AlertCircle, color: 'bg-red-100 text-red-800', label: 'Suspended' }
+};
+
+const ROLE_MAP = {
+  super_admin: { icon: Shield, color: 'bg-red-100 text-red-800', label: 'Super Admin' },
+  org_admin: { icon: Building2, color: 'bg-blue-100 text-blue-800', label: 'Org Admin' },
+  agent: { icon: Users, color: 'bg-green-100 text-green-800', label: 'Agent' },
+  client: { icon: UserCheck, color: 'bg-purple-100 text-purple-800', label: 'Client' }
+};
+
+const DEFAULT_STATUS_INFO = { icon: Settings, color: 'bg-gray-100 text-gray-800', label: 'Unknown' };
+
+// Custom hook for statistics management
+const useStatistics = () => {
+  const [statistics, setStatistics] = useState(INITIAL_STATISTICS);
+  const [loading, setLoading] = useState(true);
+  const loaded = useRef(false);
+  const loadingRef = useRef(false);
+
+  const loadStatistics = useCallback(async () => {
+    if (loadingRef.current || loaded.current) {
+      console.log('🔍 Statistics: Skipping load - already loaded or loading');
+      return;
+    }
+
+    loadingRef.current = true;
+    setLoading(true);
+    console.log('🔍 Statistics: Loading statistics...');
+
+    try {
+      const result = await userManagementService.getUserStatistics();
+      console.log('🔍 Statistics: Raw API result:', result);
+      console.log('🔍 Statistics: Result data structure:', result.data);
+
+      if (result.success) {
+        const statisticsData = {
+          totalUsers: result.data.total_users || 0,
+          activeUsers: result.data.active_users || 0,
+          pendingUsers: result.data.inactive_users || result.data.unverified_users || 0,
+          verifiedUsers: result.data.verified_users || 0
+        };
+
+        console.log('🔍 Statistics: Mapped statistics:', statisticsData);
+        setStatistics(statisticsData);
+        loaded.current = true;
+        console.log('✅ Statistics: Loaded successfully', result.data);
+      } else {
+        console.error('❌ Statistics: API call failed:', result);
+      }
+    } catch (error) {
+      console.error('❌ Statistics: Failed to load:', error);
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStatistics();
+  }, [loadStatistics]);
+
+  return { statistics, loading, loadStatistics };
+};
+
+// Custom hook for user actions
+const useUserActions = (users, { createUser, updateUser, deleteUser, cloneUser }) => {
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const handleCreateUser = useCallback(() => {
+    setShowCreateModal(true);
+  }, []);
+
+  const handleEditUser = useCallback((user) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  }, []);
+
+  const handleViewDetails = useCallback((user) => {
+    setSelectedUser(user);
+    setShowDetailsModal(true);
+  }, []);
+
+  const handleCloneUser = useCallback(async (user) => {
+    const newEmail = prompt(`Enter new email for cloned user (${user.name}):`);
+    if (!newEmail) return;
+
+    try {
+      setActionLoading(true);
+      const result = await cloneUser(user.id, newEmail);
+      if (result.success) {
+        setShowDeleteConfirm(false);
+        setSelectedUser(null);
+      }
+    } catch (error) {
+      console.error('Failed to clone user:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  }, [cloneUser]);
+
+  const handleDeleteUser = useCallback((user) => {
+    setSelectedUser(user);
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const confirmDeleteUser = useCallback(async () => {
+    if (!selectedUser) return;
+
+    try {
+      setActionLoading(true);
+      const result = await deleteUser(selectedUser.id);
+      if (result.success) {
+        setShowDeleteConfirm(false);
+        setSelectedUser(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  }, [selectedUser, deleteUser]);
+
+  const handleCreateUserSubmit = useCallback(async (userData) => {
+    try {
+      setActionLoading(true);
+      const result = await createUser(userData);
+      if (result.success) {
+        setShowCreateModal(false);
+      }
+    } catch (error) {
+      console.error('Failed to create user:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  }, [createUser]);
+
+  const handleEditUserSubmit = useCallback(async (userData) => {
+    if (!selectedUser) return;
+
+    try {
+      setActionLoading(true);
+      const result = await updateUser(selectedUser.id, userData);
+      if (result.success) {
+        setShowEditModal(false);
+        setSelectedUser(null);
+      }
+    } catch (error) {
+      console.error('Failed to update user:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  }, [selectedUser, updateUser]);
+
+  return {
+    selectedUser,
+    showCreateModal,
+    showEditModal,
+    showDetailsModal,
+    showDeleteConfirm,
+    actionLoading,
+    setShowCreateModal,
+    setShowEditModal,
+    setShowDetailsModal,
+    setShowDeleteConfirm,
+    handleCreateUser,
+    handleEditUser,
+    handleViewDetails,
+    handleCloneUser,
+    handleDeleteUser,
+    confirmDeleteUser,
+    handleCreateUserSubmit,
+    handleEditUserSubmit
+  };
+};
 
 const UserManagement = () => {
   // Use the custom hook for user management
@@ -86,63 +264,11 @@ const UserManagement = () => {
     updatePagination
   } = useUserManagement();
 
-  // Local state for UI
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [statistics, setStatistics] = useState({
-    totalUsers: 0,
-    activeUsers: 0,
-    pendingUsers: 0,
-    verifiedUsers: 0
-  });
+  // Custom hooks
+  const { statistics, loading: statisticsLoading } = useStatistics();
+  const userActions = useUserActions(users, { createUser, updateUser, deleteUser, cloneUser });
 
-  // Refs to prevent double loading (React StrictMode)
-  const statisticsLoaded = useRef(false);
-  const statisticsLoading = useRef(false);
 
-  // Load statistics on component mount (only once)
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadStatistics = async () => {
-      // Prevent double loading in React StrictMode
-      if (statisticsLoading.current || statisticsLoaded.current) {
-        console.log('🔍 UserManagement: Skipping statistics load - already loaded or loading');
-        return;
-      }
-
-      statisticsLoading.current = true;
-      console.log('🔍 UserManagement: Loading statistics...');
-
-      try {
-        const result = await getUserStatistics();
-        if (isMounted && result.success) {
-          setStatistics({
-            totalUsers: result.data.total_users || 0,
-            activeUsers: result.data.active_users || 0,
-            pendingUsers: result.data.pending_users || result.data.unverified_users || 0,
-            verifiedUsers: result.data.verified_users || 0
-          });
-          statisticsLoaded.current = true;
-          console.log('✅ UserManagement: Statistics loaded successfully', result.data);
-        }
-      } catch (error) {
-        console.error('❌ UserManagement: Failed to load statistics:', error);
-      } finally {
-        statisticsLoading.current = false;
-      }
-    };
-
-    loadStatistics();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Empty dependency array to run only once
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -168,7 +294,7 @@ const UserManagement = () => {
     // Set new timeout for debouncing
     filterTimeoutRef.current = setTimeout(() => {
       updateFilters({ [field]: value });
-    }, 300); // 300ms debounce
+    }, DEBOUNCE_DELAY);
   }, [updateFilters]);
 
   // Handle pagination
@@ -176,115 +302,15 @@ const UserManagement = () => {
     updatePagination({ currentPage: page });
   }, [updatePagination]);
 
-  // Handle user actions
-  const handleCreateUser = useCallback(() => {
-    setShowCreateModal(true);
-  }, []);
 
-  const handleEditUser = useCallback((user) => {
-    setSelectedUser(user);
-    setShowEditModal(true);
-  }, []);
-
-  const handleViewDetails = useCallback((user) => {
-    setSelectedUser(user);
-    setShowDetailsModal(true);
-  }, []);
-
-  const handleCloneUser = useCallback(async (user) => {
-    const newEmail = prompt(`Enter new email for cloned user (${user.name}):`);
-    if (!newEmail) return;
-
-    try {
-      setActionLoading(true);
-      const result = await cloneUser(user.id, newEmail);
-
-      if (result.success) {
-        setShowDeleteConfirm(false);
-        setSelectedUser(null);
-      }
-    } catch (error) {
-      console.error('Failed to clone user:', error);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [cloneUser]);
-
-  const handleDeleteUser = useCallback((user) => {
-    setSelectedUser(user);
-    setShowDeleteConfirm(true);
-  }, []);
-
-  const confirmDeleteUser = useCallback(async () => {
-    if (!selectedUser) return;
-
-    try {
-      setActionLoading(true);
-      const result = await deleteUser(selectedUser.id);
-
-      if (result.success) {
-        setShowDeleteConfirm(false);
-        setSelectedUser(null);
-      }
-    } catch (error) {
-      console.error('Failed to delete user:', error);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [selectedUser, deleteUser]);
-
-  const handleCreateUserSubmit = useCallback(async (userData) => {
-    try {
-      setActionLoading(true);
-      const result = await createUser(userData);
-
-      if (result.success) {
-        setShowCreateModal(false);
-      }
-    } catch (error) {
-      console.error('Failed to create user:', error);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [createUser]);
-
-  const handleEditUserSubmit = useCallback(async (userData) => {
-    if (!selectedUser) return;
-
-    try {
-      setActionLoading(true);
-      const result = await updateUser(selectedUser.id, userData);
-
-      if (result.success) {
-        setShowEditModal(false);
-        setSelectedUser(null);
-      }
-    } catch (error) {
-      console.error('Failed to update user:', error);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [selectedUser, updateUser]);
 
   // Memoized status and role info functions
   const getStatusInfo = useCallback((status) => {
-    const statusMap = {
-      active: { icon: CheckCircle, color: 'bg-green-100 text-green-800', label: 'Active' },
-      inactive: { icon: XCircle, color: 'bg-gray-100 text-gray-800', label: 'Inactive' },
-      pending: { icon: Clock, color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-      suspended: { icon: AlertCircle, color: 'bg-red-100 text-red-800', label: 'Suspended' }
-    };
-    return statusMap[status] || { icon: Settings, color: 'bg-gray-100 text-gray-800', label: status };
+    return STATUS_MAP[status] || { ...DEFAULT_STATUS_INFO, label: status };
   }, []);
 
   const getRoleInfo = useCallback((role) => {
-    const roleMap = {
-      super_admin: { icon: Shield, color: 'bg-red-100 text-red-800', label: 'Super Admin' },
-      org_admin: { icon: Building2, color: 'bg-blue-100 text-blue-800', label: 'Org Admin' },
-      agent: { icon: Users, color: 'bg-green-100 text-green-800', label: 'Agent' },
-      client: { icon: UserCheck, color: 'bg-purple-100 text-purple-800', label: 'Client' }
-    };
-    return roleMap[role] || { icon: Settings, color: 'bg-gray-100 text-gray-800', label: role };
+    return ROLE_MAP[role] || { ...DEFAULT_STATUS_INFO, label: role };
   }, []);
 
   // Memoized statistics cards to prevent unnecessary re-renders
@@ -376,7 +402,7 @@ const UserManagement = () => {
               <Upload className="w-4 h-4 mr-2" />
               Import
             </Button>
-            <Button onClick={handleCreateUser} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={userActions.handleCreateUser} className="bg-blue-600 hover:bg-blue-700">
               <UserPlus className="w-4 h-4 mr-2" />
               Create User
             </Button>
@@ -396,7 +422,11 @@ const UserManagement = () => {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                      <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                      {statisticsLoading ? (
+                        <Skeleton className="h-8 w-16 mt-1" />
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -583,21 +613,21 @@ const UserManagement = () => {
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => handleViewDetails(user)}>
+                                  <DropdownMenuItem onClick={() => userActions.handleViewDetails(user)}>
                                     <Eye className="w-4 h-4 mr-2" />
                                     View Details
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                  <DropdownMenuItem onClick={() => userActions.handleEditUser(user)}>
                                     <Edit className="w-4 h-4 mr-2" />
                                     Edit User
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleCloneUser(user)}>
+                                  <DropdownMenuItem onClick={() => userActions.handleCloneUser(user)}>
                                     <Copy className="w-4 h-4 mr-2" />
                                     Clone User
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
-                                    onClick={() => handleDeleteUser(user)}
+                                    onClick={() => userActions.handleDeleteUser(user)}
                                     className="text-red-600"
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
@@ -622,7 +652,7 @@ const UserManagement = () => {
                               : 'Get started by creating your first user.'
                             }
                           </p>
-                          <Button onClick={handleCreateUser} className="bg-blue-600 hover:bg-blue-700">
+                          <Button onClick={userActions.handleCreateUser} className="bg-blue-600 hover:bg-blue-700">
                             <UserPlus className="w-4 h-4 mr-2" />
                             Create User
                           </Button>
@@ -670,33 +700,33 @@ const UserManagement = () => {
 
         {/* Create User Dialog */}
         <CreateUserDialog
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={handleCreateUserSubmit}
-          loading={actionLoading}
+          isOpen={userActions.showCreateModal}
+          onClose={() => userActions.setShowCreateModal(false)}
+          onSubmit={userActions.handleCreateUserSubmit}
+          loading={userActions.actionLoading}
         />
 
         {/* Edit User Dialog */}
         <EditUserDialog
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          user={selectedUser}
-          onSubmit={handleEditUserSubmit}
-          loading={actionLoading}
+          isOpen={userActions.showEditModal}
+          onClose={() => userActions.setShowEditModal(false)}
+          user={userActions.selectedUser}
+          onSubmit={userActions.handleEditUserSubmit}
+          loading={userActions.actionLoading}
         />
 
         {/* View User Details Dialog */}
         <ViewUserDetailsDialog
-          isOpen={showDetailsModal}
-          onClose={() => setShowDetailsModal(false)}
-          user={selectedUser}
-          onEdit={handleEditUser}
-          onClone={handleCloneUser}
-          onDelete={handleDeleteUser}
+          isOpen={userActions.showDetailsModal}
+          onClose={() => userActions.setShowDetailsModal(false)}
+          user={userActions.selectedUser}
+          onEdit={userActions.handleEditUser}
+          onClone={userActions.handleCloneUser}
+          onDelete={userActions.handleDeleteUser}
         />
 
         {/* Delete Confirmation Modal */}
-        {showDeleteConfirm && selectedUser && (
+        {userActions.showDeleteConfirm && userActions.selectedUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <div className="flex items-center gap-3 mb-4">
@@ -707,24 +737,24 @@ const UserManagement = () => {
               </div>
 
               <p className="text-gray-600 mb-6">
-                Are you sure you want to delete the user <strong>"{selectedUser.name}"</strong>?
+                Are you sure you want to delete the user <strong>"{userActions.selectedUser.name}"</strong>?
                 This action cannot be undone and will remove all access permissions.
               </p>
 
               <div className="flex gap-3 justify-end">
                 <Button
                   variant="outline"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={actionLoading}
+                  onClick={() => userActions.setShowDeleteConfirm(false)}
+                  disabled={userActions.actionLoading}
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={confirmDeleteUser}
-                  disabled={actionLoading}
+                  onClick={userActions.confirmDeleteUser}
+                  disabled={userActions.actionLoading}
                 >
-                  {actionLoading ? 'Deleting...' : 'Delete User'}
+                  {userActions.actionLoading ? 'Deleting...' : 'Delete User'}
                 </Button>
               </div>
             </div>
