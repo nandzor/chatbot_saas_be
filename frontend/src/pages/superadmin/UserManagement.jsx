@@ -654,14 +654,10 @@ const UserManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>
-                  Users ({hookPagination.totalItems || users.length || 0} items)
+                  Users
                 </CardTitle>
                 <CardDescription>
                   Manage system users and their access permissions
-                  <span className="ml-2 text-xs text-gray-500">
-                    • Page {hookPagination.currentPage || 1} of {hookPagination.totalPages || 1}
-                    {users.length > 0 && ` • ${users.length} items`}
-                  </span>
                 </CardDescription>
               </div>
               <div className="flex items-center gap-4">

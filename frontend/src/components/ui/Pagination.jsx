@@ -41,7 +41,6 @@ const Pagination = forwardRef(({
   showFirstLast = true,
   showPrevNext = true,
   showPageNumbers = true,
-  showProgress = false,
 
   // States
   loading = false,
@@ -94,9 +93,8 @@ const Pagination = forwardRef(({
   const pageInfo = useMemo(() => {
     const startItem = totalItems > 0 ? ((currentPage - 1) * perPage) + 1 : 0;
     const endItem = Math.min(currentPage * perPage, totalItems);
-    const progress = totalPages > 0 ? Math.round((currentPage / totalPages) * 100) : 0;
-    return { startItem, endItem, progress };
-  }, [currentPage, perPage, totalItems, totalPages]);
+    return { startItem, endItem };
+  }, [currentPage, perPage, totalItems]);
 
   // Memoized visible pages
   const visiblePages = useMemo(() => {
@@ -195,20 +193,6 @@ const Pagination = forwardRef(({
         <div className={cn('text-gray-700', currentSize.text)}>
           Showing {pageInfo.startItem} to {pageInfo.endItem} of {totalItems} results
         </div>
-
-        {showProgress && totalPages > 1 && (
-          <div className="flex items-center space-x-2">
-            <div className="w-16 bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${pageInfo.progress}%` }}
-              />
-            </div>
-            <span className={cn('text-gray-500', currentSize.text)}>
-              {pageInfo.progress}%
-            </span>
-          </div>
-        )}
       </div>
     );
   };
