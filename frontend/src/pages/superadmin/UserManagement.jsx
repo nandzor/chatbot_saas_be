@@ -53,6 +53,11 @@ import EditUserDialog from './EditUserDialog';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import userManagementService from '@/services/UserManagementService';
 
+// Import Pagination Library
+import {
+  Pagination
+} from '@/pagination';
+
 // Constants
 const DEBOUNCE_DELAY = 300;
 const INITIAL_STATISTICS = {
@@ -247,12 +252,12 @@ const useUserActions = (users, { createUser, updateUser, deleteUser, cloneUser }
 };
 
 const UserManagement = () => {
-  // Use the custom hook for user management
+  // Use the custom hook for user management with its built-in pagination
   const {
     users,
-    loading,
+    loading: originalLoading,
     error,
-    pagination,
+    pagination: hookPagination,
     filters,
     loadUsers,
     createUser,
@@ -262,22 +267,12 @@ const UserManagement = () => {
     cloneUser,
     getUserStatistics,
     updateFilters,
-    updatePagination
+    updatePagination: updateHookPagination
   } = useUserManagement();
-
-  // Force reload users when component mounts
-  useEffect(() => {
-    if (users.length === 0 && !loading) {
-      console.log('🔍 UserManagement: Force loading users on mount');
-      loadUsers(true);
-    }
-  }, [users.length, loading, loadUsers]);
 
   // Custom hooks
   const { statistics, loading: statisticsLoading } = useStatistics();
   const userActions = useUserActions(users, { createUser, updateUser, deleteUser, cloneUser });
-
-
 
   // Debounce filter changes
   const filterTimeoutRef = useRef(null);
@@ -292,8 +287,10 @@ const UserManagement = () => {
     // Set new timeout for debouncing
     filterTimeoutRef.current = setTimeout(() => {
       updateFilters({ [field]: value });
+      // Reset to first page when filters change
+      updateHookPagination({ currentPage: 1 });
     }, DEBOUNCE_DELAY);
-  }, [updateFilters]);
+  }, [updateFilters, updateHookPagination]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -304,10 +301,14 @@ const UserManagement = () => {
     };
   }, []);
 
-  // Handle pagination
+  // Enhanced pagination handlers
   const handlePageChange = useCallback((page) => {
-    updatePagination({ currentPage: page });
-  }, [updatePagination]);
+    updateHookPagination({ currentPage: page });
+  }, [updateHookPagination]);
+
+  const handlePerPageChange = useCallback((perPage) => {
+    updateHookPagination({ itemsPerPage: perPage });
+  }, [updateHookPagination]);
 
 
 
@@ -356,7 +357,7 @@ const UserManagement = () => {
     }
   ], [statistics]);
 
-  if (loading) {
+  if (originalLoading) {
     return (
       <div className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -404,11 +405,13 @@ const UserManagement = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => loadUsers(true)}
-              disabled={loading}
+              onClick={() => {
+                loadUsers(true);
+              }}
+              disabled={originalLoading}
             >
               <Settings className="w-4 h-4 mr-2" />
-              {loading ? 'Loading...' : 'Refresh'}
+              {originalLoading ? 'Loading...' : 'Refresh'}
             </Button>
             <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
@@ -569,38 +572,78 @@ const UserManagement = () => {
 
             {/* Filter Actions */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">
-                  {Object.values(filters).some(filter => filter !== 'all' && filter !== '')
-                    ? 'Filters applied'
-                    : 'No filters applied'
-                  }
-                </span>
-                {Object.values(filters).some(filter => filter !== 'all' && filter !== '') && (
-                  <Badge variant="secondary" className="text-xs">
-                    {Object.values(filters).filter(filter => filter !== 'all' && filter !== '').length} active
-                  </Badge>
-                )}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">
+                    {Object.values(filters).some(filter => filter !== 'all' && filter !== '')
+                      ? 'Filters applied'
+                      : 'No filters applied'
+                    }
+                  </span>
+                  {Object.values(filters).some(filter => filter !== 'all' && filter !== '') && (
+                    <Badge variant="secondary" className="text-xs">
+                      {Object.values(filters).filter(filter => filter !== 'all' && filter !== '').length} active
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span>Per page:</span>
+                  <Select
+                    value={(hookPagination.itemsPerPage || 10).toString()}
+                    onValueChange={(value) => handlePerPageChange(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-20 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="200">200</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  updateFilters({
-                    search: '',
-                    status: 'all',
-                    role: 'all',
-                    organization: 'all',
-                    department: 'all'
-                  });
-                }}
-                className="text-gray-600"
-              >
-                Clear All Filters
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    updateHookPagination({ currentPage: 1 });
+                    updateFilters({
+                      search: '',
+                      status: 'all',
+                      role: 'all',
+                      organization: 'all',
+                      department: 'all'
+                    });
+                  }}
+                  className="text-gray-600"
+                >
+                  Reset All
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateFilters({
+                      search: '',
+                      status: 'all',
+                      role: 'all',
+                      organization: 'all',
+                      department: 'all'
+                    });
+                  }}
+                  className="text-gray-600"
+                >
+                  Clear Filters
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -610,17 +653,48 @@ const UserManagement = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Users ({users.length})</CardTitle>
+                <CardTitle>
+                  Users ({hookPagination.totalItems || users.length || 0} items)
+                </CardTitle>
                 <CardDescription>
                   Manage system users and their access permissions
+                  <span className="ml-2 text-xs text-gray-500">
+                    • Page {hookPagination.currentPage || 1} of {hookPagination.totalPages || 1}
+                    {users.length > 0 && ` • ${users.length} items`}
+                  </span>
                 </CardDescription>
               </div>
-              {loading && (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  Loading users...
-                </div>
-              )}
+              <div className="flex items-center gap-4">
+                {originalLoading && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    Loading users...
+                  </div>
+                )}
+                {(hookPagination.totalPages || 1) > 1 && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePageChange((hookPagination.currentPage || 1) - 1)}
+                      disabled={(hookPagination.currentPage || 1) <= 1 || originalLoading}
+                    >
+                      ←
+                    </Button>
+                    <span className="text-xs">
+                      {hookPagination.currentPage || 1} / {hookPagination.totalPages || 1}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePageChange((hookPagination.currentPage || 1) + 1)}
+                      disabled={(hookPagination.currentPage || 1) >= (hookPagination.totalPages || 1) || originalLoading}
+                    >
+                      →
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -761,37 +835,24 @@ const UserManagement = () => {
               </table>
             </div>
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6">
-                <p className="text-sm text-gray-700">
-                  Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to{' '}
-                  {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of{' '}
-                  {pagination.totalItems} results
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    disabled={pagination.currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-gray-700">
-                    Page {pagination.currentPage} of {pagination.totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    disabled={pagination.currentPage === pagination.totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
+            {/* Enhanced Pagination */}
+            <div className="mt-6">
+              <Pagination
+                currentPage={hookPagination.currentPage || 1}
+                totalPages={hookPagination.totalPages || 1}
+                totalItems={hookPagination.totalItems || users.length}
+                perPage={hookPagination.itemsPerPage || 10}
+                onPageChange={handlePageChange}
+                onPerPageChange={handlePerPageChange}
+                variant="table"
+                size="sm"
+                loading={originalLoading}
+                showProgress={true}
+                perPageOptions={[10, 25, 50, 100, 200]}
+                maxVisiblePages={7}
+                className="border-t pt-4"
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -856,6 +917,23 @@ const UserManagement = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Performance Metrics (Development Only) */}
+        {import.meta.env.DEV && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-sm">Pagination Performance Metrics</CardTitle>
+              <CardDescription className="text-xs">
+                Development mode - Performance monitoring for pagination
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center text-gray-500 text-sm">
+                Performance metrics removed - using lightweight pagination library
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
