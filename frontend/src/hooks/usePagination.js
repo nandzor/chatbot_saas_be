@@ -122,8 +122,7 @@ export const usePagination = (options = {}) => {
       isLastPage: current_page === last_page,
       hasData: total > 0,
 
-      // Progress info
-      progress: total > 0 ? Math.round((current_page / last_page) * 100) : 0,
+      // Items info
       itemsShown: endItem - startItem + 1,
 
       // Page ranges

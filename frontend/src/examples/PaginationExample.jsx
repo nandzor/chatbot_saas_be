@@ -263,7 +263,6 @@ const PaginationExample = () => {
                 <div>Current Page: {paginationInfo.currentPage}</div>
                 <div>Total Pages: {paginationInfo.totalPages}</div>
                 <div>Items Shown: {paginationInfo.itemsShown}</div>
-                <div>Progress: {paginationInfo.progress}%</div>
               </div>
             </div>
             <div>
@@ -388,7 +387,6 @@ const PaginationExample = () => {
                   onPageChange={advancedPagination.changePage}
                   onPerPageChange={advancedPagination.changePerPage}
                   variant="full"
-                  showProgress={true}
                   loading={loading}
                   perPageOptions={[10, 25, 50, 100, 200]}
                 />

@@ -34,7 +34,6 @@ export const calculatePaginationInfo = ({
     hasPrevPage: validCurrentPage > 1,
     isFirstPage: validCurrentPage === 1,
     isLastPage: validCurrentPage === totalPages,
-    progress: totalPages > 0 ? Math.round((validCurrentPage / totalPages) * 100) : 0,
     itemsShown: endItem - startItem + 1
   };
 };
@@ -275,14 +274,13 @@ export const calculatePaginationStats = (pagination) => {
  */
 export const formatPaginationDisplay = (pagination, options = {}) => {
   const {
-    showProgress = false,
     showItemsShown = true,
     showPercentage = false,
     locale = 'en-US'
   } = options;
 
   const stats = calculatePaginationStats(pagination);
-  const { startItem, endItem, totalItems, currentPage, totalPages, progress, itemsShown } = stats;
+  const { startItem, endItem, totalItems, currentPage, totalPages, itemsShown } = stats;
 
   const formats = {
     // Basic info
@@ -297,7 +295,6 @@ export const formatPaginationDisplay = (pagination, options = {}) => {
     currentPage: `Page ${currentPage.toLocaleString(locale)} of ${totalPages.toLocaleString(locale)}`,
 
     // Progress info
-    progress: showProgress ? `${progress}%` : null,
     percentage: showPercentage ? `${Math.round((currentPage / totalPages) * 100)}%` : null,
 
     // Items info

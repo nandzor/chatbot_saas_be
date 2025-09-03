@@ -843,7 +843,6 @@ const UserManagement = () => {
                 variant="table"
                 size="sm"
                 loading={originalLoading}
-                showProgress={true}
                 perPageOptions={[10, 25, 50, 100, 200]}
                 maxVisiblePages={7}
                 className="border-t pt-4"
