@@ -15,6 +15,11 @@ class ApiResponseMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Enable query logging for API routes to track database queries
+        if ($request->is('api/*')) {
+            DB::enableQueryLog();
+        }
+
         $response = $next($request);
 
         // Only process JSON responses for API routes
@@ -83,10 +88,14 @@ class ApiResponseMiddleware
             if (!app()->environment('production')) {
                 $data = $response->getData(true);
                 if (is_array($data)) {
+                    // Get query count - ensure query log is enabled and get count
+                    $queryLog = DB::getQueryLog();
+                    $queriesCount = is_array($queryLog) ? count($queryLog) : 0;
+
                     $data['meta'] = array_merge($data['meta'] ?? [], [
                         'execution_time_ms' => $executionTime,
                         'memory_usage_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
-                        'queries_count' => DB::getQueryLog() ? count(DB::getQueryLog()) : 0,
+                        'queries_count' => $queriesCount,
                     ]);
                     $response->setData($data);
                 }
