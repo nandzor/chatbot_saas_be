@@ -28,55 +28,177 @@ class RoleService extends BaseService
      */
     public function getRoles(Request $request): LengthAwarePaginator
     {
-        $query = Role::with(['permissions'])
-            ->withCount([
-                'users as users_count'
-            ]);
+        // Build optimized raw SQL query with efficient JOINs and subqueries
+        $perPage = $request->get('per_page', 15);
+        $page = $request->get('page', 1);
+        $offset = ($page - 1) * $perPage;
 
-        // Add custom select to get current_users from active users
-        $query->addSelect([
-            'current_users' => DB::table('user_roles')
-                ->selectRaw('COUNT(*)')
-                ->whereColumn('user_roles.role_id', 'roles.id')
-                ->where('user_roles.is_active', true)
-                ->where(function ($q) {
-                    $q->whereNull('user_roles.effective_until')
-                      ->orWhere('user_roles.effective_until', '>', now());
-                }),
-            'permissions_count' => DB::table('role_permissions')
-                ->selectRaw('COUNT(*)')
-                ->whereColumn('role_permissions.role_id', 'roles.id')
-                ->where('role_permissions.is_granted', true)
-        ]);
+        // Build WHERE conditions dynamically
+        $whereConditions = [];
+        $bindings = [];
 
-        // Apply filters
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('display_name', 'like', "%{$search}%");
-            });
+            $whereConditions[] = "(r.name ILIKE ? OR r.code ILIKE ? OR r.display_name ILIKE ?)";
+            $bindings = array_merge($bindings, ["%{$search}%", "%{$search}%", "%{$search}%"]);
         }
 
         if ($request->filled('scope')) {
-            $query->where('scope', $request->scope);
+            $whereConditions[] = "r.scope = ?";
+            $bindings[] = $request->scope;
         }
 
         if ($request->filled('is_system_role')) {
-            $query->where('is_system_role', $request->boolean('is_system_role'));
+            $whereConditions[] = "r.is_system_role = ?";
+            $bindings[] = $request->boolean('is_system_role');
         }
 
         if ($request->filled('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
+            $whereConditions[] = "r.status = ?";
+            $bindings[] = $request->boolean('is_active') ? 'active' : 'inactive';
         }
 
-        // Apply sorting
+        $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+
+        // Build ORDER BY clause
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
+        $orderBy = "ORDER BY r.{$sortBy} {$sortOrder}";
 
-        return $query->paginate($request->get('per_page', 15));
+        // Main query with efficient JOINs and subqueries including permission data
+        $sql = "
+            SELECT
+                r.*,
+                COALESCE(ur_counts.users_count, 0) as users_count,
+                COALESCE(rp_counts.permissions_count, 0) as permissions_count,
+                COALESCE(ur_active.current_users, 0) as current_users
+            FROM roles r
+            LEFT JOIN (
+                SELECT
+                    role_id,
+                    COUNT(*) as users_count
+                FROM user_roles
+                GROUP BY role_id
+            ) ur_counts ON r.id = ur_counts.role_id
+            LEFT JOIN (
+                SELECT
+                    role_id,
+                    COUNT(*) as permissions_count
+                FROM role_permissions
+                WHERE is_granted = true
+                GROUP BY role_id
+            ) rp_counts ON r.id = rp_counts.role_id
+            LEFT JOIN (
+                SELECT
+                    role_id,
+                    COUNT(*) as current_users
+                FROM user_roles
+                WHERE is_active = true
+                AND (effective_until IS NULL OR effective_until > NOW())
+                GROUP BY role_id
+            ) ur_active ON r.id = ur_active.role_id
+            {$whereClause}
+            {$orderBy}
+            LIMIT ? OFFSET ?
+        ";
+
+        // Add pagination bindings
+        $bindings[] = $perPage;
+        $bindings[] = $offset;
+
+                // Execute the query
+        $roles = DB::select($sql, $bindings);
+
+        // Fetch permissions for all roles in a single query for efficiency
+        $roleIds = collect($roles)->pluck('id')->toArray();
+        $permissionsData = [];
+
+        if (!empty($roleIds)) {
+            $permissionsSql = "
+                SELECT
+                    rp.role_id,
+                    p.id,
+                    p.name,
+                    p.code,
+                    p.display_name,
+                    p.description,
+                    p.category,
+                    p.resource,
+                    p.action,
+                    p.is_system_permission,
+                    p.is_dangerous,
+                    p.requires_approval,
+                    p.is_visible,
+                    p.sort_order,
+                    p.metadata,
+                    rp.is_granted,
+                    rp.is_inherited,
+                    rp.granted_at,
+                    rp.granted_by
+                FROM role_permissions rp
+                INNER JOIN permissions p ON rp.permission_id = p.id
+                WHERE rp.role_id IN (" . str_repeat('?,', count($roleIds) - 1) . "?)
+                AND rp.is_granted = true
+                ORDER BY rp.role_id, p.category, p.name
+            ";
+
+            $permissionsResult = DB::select($permissionsSql, $roleIds);
+
+            // Group permissions by role_id
+            foreach ($permissionsResult as $permission) {
+                $permissionsData[$permission->role_id][] = [
+                    'id' => $permission->id,
+                    'name' => $permission->name,
+                    'code' => $permission->code,
+                    'display_name' => $permission->display_name,
+                    'description' => $permission->description,
+                    'category' => $permission->category,
+                    'resource' => $permission->resource,
+                    'action' => $permission->action,
+                    'is_system_permission' => $permission->is_system_permission,
+                    'is_dangerous' => $permission->is_dangerous,
+                    'requires_approval' => $permission->requires_approval,
+                    'is_visible' => $permission->is_visible,
+                    'sort_order' => $permission->sort_order,
+                    'metadata' => json_decode($permission->metadata, true) ?: [],
+                    'is_granted' => $permission->is_granted,
+                    'is_inherited' => $permission->is_inherited,
+                    'granted_at' => $permission->granted_at,
+                    'granted_by' => $permission->granted_by
+                ];
+            }
+        }
+
+        // Attach permissions to each role
+        $roles = collect($roles)->map(function ($role) use ($permissionsData) {
+            $role->permissions = $permissionsData[$role->id] ?? [];
+            return $role;
+        });
+
+        // Get total count for pagination (without pagination bindings)
+        $countBindings = array_slice($bindings, 0, -2);
+        $countSql = "
+            SELECT COUNT(*) as total
+            FROM roles r
+            {$whereClause}
+        ";
+
+        $totalResult = DB::select($countSql, $countBindings);
+        $total = $totalResult[0]->total;
+
+        // Create paginator manually
+        $rolesCollection = collect($roles);
+
+        return new LengthAwarePaginator(
+            $rolesCollection,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'pageName' => 'page',
+            ]
+        );
     }
 
     /**
@@ -505,7 +627,7 @@ class RoleService extends BaseService
                         'is_granted' => true,
                         'is_inherited' => false,
                         'granted_at' => now(),
-                        'granted_by' => auth()->id(),
+                        'granted_by' => Auth::id(),
                     ]];
                 })->toArray()
             );
@@ -514,7 +636,7 @@ class RoleService extends BaseService
             Log::info('Role permissions updated', [
                 'role_id' => $roleId,
                 'permission_count' => count($permissionIds),
-                'updated_by' => auth()->id()
+                'updated_by' => Auth::id()
             ]);
 
             return true;
