@@ -175,19 +175,8 @@ class UserResource extends JsonResource
                 })->toArray();
             }
 
-            // Otherwise, load roles on demand
-            $roles = $this->resource->roles()->get();
-            return $roles->map(function ($role) {
-                return [
-                    'id' => $role->id,
-                    'name' => $role->name,
-                    'code' => $role->code,
-                    'display_name' => $role->display_name,
-                    'level' => $role->level,
-                    'scope' => $role->pivot->scope ?? null,
-                    'is_primary' => $role->pivot->is_primary ?? false,
-                ];
-            })->toArray();
+            // Return empty array to avoid N+1 queries
+            return [];
         } catch (\Exception $e) {
             return [];
         }
@@ -213,17 +202,6 @@ class UserResource extends JsonResource
                     }
                     return [];
                 })->toArray();
-            }
-
-            // If no role permissions found, load them on demand
-            if (empty($rolePermissions)) {
-                $rolePermissions = $this->resource->roles()
-                    ->with('permissions')
-                    ->get()
-                    ->flatMap(function ($role) {
-                        return $role->permissions->pluck('code')->toArray();
-                    })
-                    ->toArray();
             }
 
             // Merge and return unique permission codes

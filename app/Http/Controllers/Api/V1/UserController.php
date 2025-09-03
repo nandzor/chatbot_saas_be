@@ -33,7 +33,7 @@ class UserController extends BaseApiController
             $users = $this->userService->getAllUsers(
                 $request,
                 $filters,
-                ['organization', 'roles'],
+                ['organization', 'roles.permissions'],
                 ['id', 'full_name', 'email', 'status', 'organization_id', 'created_at']
             );
 
