@@ -69,6 +69,8 @@ export const useUserManagement = () => {
         setUsers(Array.isArray(usersData) ? usersData : []);
         setPagination(prev => ({
           ...prev,
+          currentPage: paginationData.current_page || paginationData.currentPage || 1,
+          itemsPerPage: paginationData.per_page || paginationData.itemsPerPage || 10,
           totalItems: paginationData.total || paginationData.totalItems || 0,
           totalPages: paginationData.last_page || paginationData.totalPages || 1
         }));

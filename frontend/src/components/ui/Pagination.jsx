@@ -10,101 +10,50 @@ import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue }
 import { cn } from '@/lib/utils';
 
 /**
- * Enhanced Pagination Component with Multiple Variants
+ * Simple and Functional Pagination Component
  *
  * Features:
- * - Multiple display variants (compact, full, minimal, table)
+ * - Clean, simple implementation
+ * - Multiple variants (compact, full, minimal, table)
  * - Accessibility support
  * - Loading states
- * - Customizable styling
  * - Responsive design
- * - Keyboard navigation
  */
-
-// Constants
-const SIZE_CLASSES = {
-  sm: {
-    button: 'h-8 px-2 text-xs',
-    pageButton: 'w-7 h-7 text-xs',
-    icon: 'w-3 h-3',
-    text: 'text-xs'
-  },
-  default: {
-    button: 'h-9 px-3 text-sm',
-    pageButton: 'w-8 h-8 text-sm',
-    icon: 'w-4 h-4',
-    text: 'text-sm'
-  },
-  lg: {
-    button: 'h-10 px-4 text-base',
-    pageButton: 'w-10 h-10 text-base',
-    icon: 'w-5 h-5',
-    text: 'text-base'
-  }
-};
-
-const DEFAULT_PROPS = {
-  currentPage: 1,
-  totalPages: 1,
-  totalItems: 0,
-  perPage: 15,
-  perPageOptions: [10, 15, 25, 50, 100],
-  maxVisiblePages: 5,
-  variant: 'full',
-  size: 'default',
-  showPerPageSelector: true,
-  showPageInfo: true,
-  showFirstLast: true,
-  showPrevNext: true,
-  showPageNumbers: true,
-  showProgress: false,
-  loading: false,
-  disabled: false,
-  className: '',
-  pageInfoClassName: '',
-  controlsClassName: '',
-  ariaLabel: 'Pagination navigation'
-};
 
 const Pagination = forwardRef(({
   // Core props
-  currentPage,
-  totalPages,
-  totalItems,
-  perPage,
+  currentPage = 1,
+  totalPages = 1,
+  totalItems = 0,
+  perPage = 10,
   onPageChange,
   onPerPageChange,
 
   // Configuration
-  perPageOptions,
-  maxVisiblePages,
-  variant,
-  size,
+  perPageOptions = [10, 15, 25, 50, 100],
+  maxVisiblePages = 5,
+  variant = 'full',
+  size = 'default',
 
   // Display options
-  showPerPageSelector,
-  showPageInfo,
-  showFirstLast,
-  showPrevNext,
-  showPageNumbers,
-  showProgress,
+  showPerPageSelector = true,
+  showPageInfo = true,
+  showFirstLast = true,
+  showPrevNext = true,
+  showPageNumbers = true,
+  showProgress = false,
 
   // States
-  loading,
-  disabled,
+  loading = false,
+  disabled = false,
 
   // Styling
-  className,
-  pageInfoClassName,
-  controlsClassName,
+  className = '',
+  pageInfoClassName = '',
+  controlsClassName = '',
 
   // Accessibility
-  ariaLabel,
-
-  // Custom renderers
-  renderPageInfo,
-  renderPerPageSelector,
-  renderPageButton,
+  ariaLabel = 'Pagination navigation',
 
   // Event handlers
   onFirstPage,
@@ -114,49 +63,50 @@ const Pagination = forwardRef(({
 
   ...props
 }, ref) => {
-  // Merge with defaults
-  const config = { ...DEFAULT_PROPS, ...props };
-  const {
-    currentPage: page,
-    totalPages: total,
-    totalItems: items,
-    perPage: perPageSize,
-    variant: variantType,
-    size: sizeType,
-    showPerPageSelector: showPerPage,
-    showPageInfo: showInfo,
-    showFirstLast: showFirst,
-    showPrevNext: showPrev,
-    showPageNumbers: showNumbers,
-    showProgress: showProg,
-    loading: isLoading,
-    disabled: isDisabled,
-    className: clsName,
-    pageInfoClassName: pageInfoCls,
-    controlsClassName: controlsCls,
-    ariaLabel: aria
-  } = config;
+  // Size classes
+  const sizeClasses = {
+    sm: {
+      button: 'h-8 px-2 text-xs',
+      pageButton: 'w-7 h-7 text-xs',
+      icon: 'w-3 h-3',
+      text: 'text-xs'
+    },
+    default: {
+      button: 'h-9 px-3 text-sm',
+      pageButton: 'w-8 h-8 text-sm',
+      icon: 'w-4 h-4',
+      text: 'text-sm'
+    },
+    lg: {
+      button: 'h-10 px-4 text-base',
+      pageButton: 'w-10 h-10 text-base',
+      icon: 'w-5 h-5',
+      text: 'text-base'
+    }
+  };
+
+  const currentSize = sizeClasses[size];
 
   // Don't render if only one page and no page info
-  if (total <= 1 && !showInfo) return null;
+  if (totalPages <= 1 && !showPageInfo) return null;
 
   // Memoized calculations
   const pageInfo = useMemo(() => {
-    const startItem = items > 0 ? ((page - 1) * perPageSize) + 1 : 0;
-    const endItem = Math.min(page * perPageSize, items);
-    const progress = total > 0 ? Math.round((page / total) * 100) : 0;
+    const startItem = totalItems > 0 ? ((currentPage - 1) * perPage) + 1 : 0;
+    const endItem = Math.min(currentPage * perPage, totalItems);
+    const progress = totalPages > 0 ? Math.round((currentPage / totalPages) * 100) : 0;
     return { startItem, endItem, progress };
-  }, [page, perPageSize, items, total]);
+  }, [currentPage, perPage, totalItems, totalPages]);
 
   // Memoized visible pages
   const visiblePages = useMemo(() => {
-    if (total <= maxVisiblePages) {
-      return Array.from({ length: total }, (_, i) => i + 1);
+    if (totalPages <= maxVisiblePages) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
 
     const halfVisible = Math.floor(maxVisiblePages / 2);
-    let startPage = Math.max(1, page - halfVisible);
-    let endPage = Math.min(total, startPage + maxVisiblePages - 1);
+    let startPage = Math.max(1, currentPage - halfVisible);
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
     if (endPage - startPage < maxVisiblePages - 1) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
@@ -172,53 +122,46 @@ const Pagination = forwardRef(({
 
     result.push(...pages);
 
-    if (endPage < total) {
-      if (endPage < total - 1) result.push('...');
-      result.push(total);
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) result.push('...');
+      result.push(totalPages);
     }
 
     return result;
-  }, [page, total, maxVisiblePages]);
+  }, [currentPage, totalPages, maxVisiblePages]);
 
   // Event handlers
-  const handlers = useMemo(() => ({
-    first: () => onFirstPage?.() || onPageChange?.(1),
-    last: () => onLastPage?.() || onPageChange?.(total),
-    prev: () => onPrevPage?.() || onPageChange?.(page - 1),
-    next: () => onNextPage?.() || onPageChange?.(page + 1)
-  }), [onFirstPage, onLastPage, onPrevPage, onNextPage, onPageChange, page, total]);
+  const handlePageChange = (page) => {
+    if (onPageChange && typeof onPageChange === 'function' && page >= 1 && page <= totalPages) {
+      console.log('🔍 Pagination: Changing page to:', page);
+      onPageChange(page);
+    }
+  };
 
-  const currentSize = SIZE_CLASSES[sizeType];
+  const handlePerPageChange = (newPerPage) => {
+    if (onPerPageChange && typeof onPerPageChange === 'function') {
+      console.log('🔍 Pagination: Changing per page to:', newPerPage);
+      onPerPageChange(newPerPage);
+    }
+  };
 
-  // Reusable button component
-  const PaginationButton = ({
-    onClick,
-    disabled: btnDisabled,
-    children,
-    icon: Icon,
-    label,
-    variant = "outline",
-    showText = false
-  }) => (
+  // Navigation button component
+  const NavButton = ({ onClick, disabled: btnDisabled, children, icon: Icon, label, variant = "outline" }) => (
     <Button
       variant={variant}
-      size={sizeType}
+      size={size}
       onClick={onClick}
-      disabled={isDisabled || isLoading || btnDisabled}
+      disabled={disabled || loading || btnDisabled}
       className={cn(currentSize.button, 'flex items-center gap-1')}
       aria-label={label}
     >
       {Icon && <Icon className={currentSize.icon} />}
-      {showText && children}
+      {children}
     </Button>
   );
 
   // Page number button
   const PageButton = ({ pageNum, isActive = false }) => {
-    if (renderPageButton) {
-      return renderPageButton({ page: pageNum, isActive, onClick: () => onPageChange(pageNum) });
-    }
-
     if (pageNum === '...') {
       return (
         <span key="ellipsis" className="px-2 text-gray-500">
@@ -231,9 +174,9 @@ const Pagination = forwardRef(({
       <Button
         key={pageNum}
         variant={isActive ? "default" : "outline"}
-        size={sizeType}
-        onClick={() => onPageChange(pageNum)}
-        disabled={isDisabled || isLoading}
+        size={size}
+        onClick={() => handlePageChange(pageNum)}
+        disabled={disabled || loading}
         className={cn(currentSize.pageButton, 'p-0')}
         aria-label={`Go to page ${pageNum}`}
         aria-current={isActive ? 'page' : undefined}
@@ -245,25 +188,15 @@ const Pagination = forwardRef(({
 
   // Page info component
   const PageInfo = () => {
-    if (renderPageInfo) {
-      return renderPageInfo({
-        startItem: pageInfo.startItem,
-        endItem: pageInfo.endItem,
-        totalItems: items,
-        currentPage: page,
-        totalPages: total
-      });
-    }
-
-    if (!showInfo) return null;
+    if (!showPageInfo) return null;
 
     return (
-      <div className={cn('flex items-center space-x-4', pageInfoCls)}>
+      <div className={cn('flex items-center space-x-4', pageInfoClassName)}>
         <div className={cn('text-gray-700', currentSize.text)}>
-          Showing {pageInfo.startItem} to {pageInfo.endItem} of {items} results
+          Showing {pageInfo.startItem} to {pageInfo.endItem} of {totalItems} results
         </div>
 
-        {showProg && total > 1 && (
+        {showProgress && totalPages > 1 && (
           <div className="flex items-center space-x-2">
             <div className="w-16 bg-gray-200 rounded-full h-2">
               <div
@@ -282,19 +215,15 @@ const Pagination = forwardRef(({
 
   // Per page selector component
   const PerPageSelector = () => {
-    if (renderPerPageSelector) {
-      return renderPerPageSelector({ perPage: perPageSize, perPageOptions, onPerPageChange });
-    }
-
-    if (!showPerPage || !onPerPageChange) return null;
+    if (!showPerPageSelector || !onPerPageChange) return null;
 
     return (
       <div className="flex items-center space-x-2">
         <span className={cn('text-gray-500', currentSize.text)}>Per page:</span>
         <Select
-          value={perPageSize.toString()}
-          onValueChange={(value) => onPerPageChange(parseInt(value))}
-          disabled={isDisabled || isLoading}
+          value={perPage.toString()}
+          onValueChange={(value) => handlePerPageChange(parseInt(value))}
+          disabled={disabled || loading}
         >
           <SelectTrigger className={cn('w-20', currentSize.button)}>
             <SelectValue />
@@ -312,53 +241,47 @@ const Pagination = forwardRef(({
   };
 
   // Navigation controls component
-  const NavigationControls = ({ showFirst, showPrev, showNext, showLast, showNumbers, gap = 'gap-1' }) => (
-    <div className={cn('flex items-center', gap, controlsCls)}>
-      {showFirst && (
-        <PaginationButton
-          onClick={handlers.first}
-          disabled={page === 1}
+  const NavigationControls = () => (
+    <div className={cn('flex items-center gap-1', controlsClassName)}>
+      {showFirstLast && (
+        <NavButton
+          onClick={() => onFirstPage?.() || handlePageChange(1)}
+          disabled={currentPage === 1}
           icon={ChevronsLeft}
           label="Go to first page"
         />
       )}
 
-      {showPrev && (
-        <PaginationButton
-          onClick={handlers.prev}
-          disabled={page === 1}
+      {showPrevNext && (
+        <NavButton
+          onClick={() => onPrevPage?.() || handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
           icon={ChevronLeft}
           label="Go to previous page"
-          showText={variantType === 'minimal' || variantType === 'table'}
-        >
-          Previous
-        </PaginationButton>
+        />
       )}
 
-      {showNumbers && (
+      {showPageNumbers && (
         <div className="flex items-center gap-1">
           {visiblePages.map(pageNum => (
-            <PageButton key={pageNum} pageNum={pageNum} isActive={pageNum === page} />
+            <PageButton key={pageNum} pageNum={pageNum} isActive={pageNum === currentPage} />
           ))}
         </div>
       )}
 
-      {showNext && (
-        <PaginationButton
-          onClick={handlers.next}
-          disabled={page === total}
+      {showPrevNext && (
+        <NavButton
+          onClick={() => onNextPage?.() || handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
           icon={ChevronRight}
           label="Go to next page"
-          showText={variantType === 'minimal' || variantType === 'table'}
-        >
-          Next
-        </PaginationButton>
+        />
       )}
 
-      {showLast && (
-        <PaginationButton
-          onClick={handlers.last}
-          disabled={page === total}
+      {showFirstLast && (
+        <NavButton
+          onClick={() => onLastPage?.() || handlePageChange(totalPages)}
+          disabled={currentPage === totalPages}
           icon={ChevronsRight}
           label="Go to last page"
         />
@@ -366,39 +289,30 @@ const Pagination = forwardRef(({
     </div>
   );
 
-  // Variant-specific layouts
+  // Render based on variant
   const renderVariant = () => {
-    const commonProps = { className: clsName, ref, ...props };
+    const commonProps = { className, ref, ...props };
 
-    switch (variantType) {
+    switch (variant) {
       case 'compact':
         return (
           <div className={cn('flex items-center justify-between')} {...commonProps}>
             <PageInfo />
             <div className="flex items-center gap-1">
               <span className={cn('px-3 text-gray-700', currentSize.text)}>
-                {page} of {total}
+                {currentPage} of {totalPages}
               </span>
             </div>
-            <NavigationControls
-              showFirst={showFirst}
-              showPrev={showPrev}
-              showNext={showPrev}
-              showLast={showFirst}
-            />
+            <NavigationControls />
           </div>
         );
 
       case 'minimal':
         return (
           <div className={cn('flex items-center justify-center gap-2')} {...commonProps}>
-            <NavigationControls
-              showPrev={showPrev}
-              showNext={showPrev}
-              showNumbers={false}
-            />
+            <NavigationControls />
             <span className={cn('px-3 text-gray-700', currentSize.text)}>
-              Page {page} of {total}
+              Page {currentPage} of {totalPages}
             </span>
           </div>
         );
@@ -410,11 +324,7 @@ const Pagination = forwardRef(({
               <PageInfo />
               <PerPageSelector />
             </div>
-            <NavigationControls
-              showPrev={showPrev}
-              showNext={showPrev}
-              showNumbers={showNumbers}
-            />
+            <NavigationControls />
           </div>
         );
 
@@ -425,14 +335,7 @@ const Pagination = forwardRef(({
               <PageInfo />
               <PerPageSelector />
             </div>
-            <NavigationControls
-              showFirst={showFirst}
-              showPrev={showPrev}
-              showNext={showPrev}
-              showLast={showFirst}
-              showNumbers={showNumbers}
-              gap="gap-2"
-            />
+            <NavigationControls />
           </div>
         );
     }
@@ -441,7 +344,7 @@ const Pagination = forwardRef(({
   return (
     <nav
       role="navigation"
-      aria-label={aria}
+      aria-label={ariaLabel}
       aria-live="polite"
     >
       {renderVariant()}

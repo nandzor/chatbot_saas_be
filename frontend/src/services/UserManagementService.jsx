@@ -15,12 +15,22 @@ class UserManagementService {
       console.log('✅ UserManagementService: Users retrieved successfully:', response.data);
 
       console.log('🔍 UserManagementService: Raw API response:', response.data);
+      console.log('🔍 UserManagementService: Response structure check:', {
+        hasData: !!response.data.data,
+        hasPagination: !!response.data.pagination,
+        hasTotal: !!response.data.total,
+        dataKeys: Object.keys(response.data)
+      });
 
       // Handle different response structures from backend
       const responseData = response.data;
       let usersData, paginationData;
 
-      if (responseData.data) {
+      if (responseData.data && responseData.pagination) {
+        // Custom pagination response with nested pagination object
+        usersData = responseData.data;
+        paginationData = responseData.pagination;
+      } else if (responseData.data && responseData.total) {
         // Standard Laravel pagination response
         usersData = responseData.data;
         paginationData = {
