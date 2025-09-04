@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ command, mode }) => {
   const isProduction = command === 'build' || mode === 'production';
-  
+
   return {
     plugins: [react()],
     base: isProduction ? '/chatbot-saas/' : '/',
@@ -25,6 +25,7 @@ export default defineConfig(({ command, mode }) => {
         '@/data': fileURLToPath(new URL('./src/data', import.meta.url)),
         '@/routes': fileURLToPath(new URL('./src/routes', import.meta.url)),
         '@/layouts': fileURLToPath(new URL('./src/layouts', import.meta.url)),
+        '@/services': fileURLToPath(new URL('./src/services', import.meta.url)),
       },
     },
     server: {
