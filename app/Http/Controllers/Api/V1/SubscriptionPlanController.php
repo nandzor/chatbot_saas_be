@@ -269,6 +269,9 @@ class SubscriptionPlanController extends BaseApiController
 
             $status = $plan->is_popular ? 'ditandai sebagai populer' : 'dihapus dari populer';
 
+            // Clear popular plans cache when popularity changes
+            $this->subscriptionPlanService->clearPopularPlansCache();
+
             return $this->successResponse(
                 "Paket berlangganan berhasil {$status}",
                 $plan

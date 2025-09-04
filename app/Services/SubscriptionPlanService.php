@@ -58,8 +58,27 @@ class SubscriptionPlanService extends BaseService
     public function getPopularPlans(): Collection
     {
         return Cache::remember('subscription_plans_popular', 3600, function () {
-            return $this->getModel()->popular()->ordered()->get();
+            $popularPlans = $this->getModel()->popular()->ordered()->get();
+
+            // If no popular plans found, return the first 3 active plans as fallback
+            if ($popularPlans->isEmpty()) {
+                $popularPlans = $this->getModel()
+                    ->where('status', 'active')
+                    ->ordered()
+                    ->limit(3)
+                    ->get();
+            }
+
+            return $popularPlans;
         });
+    }
+
+    /**
+     * Clear popular plans cache
+     */
+    public function clearPopularPlansCache(): void
+    {
+        Cache::forget('subscription_plans_popular');
     }
 
     /**
