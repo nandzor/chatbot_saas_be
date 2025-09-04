@@ -119,18 +119,6 @@ const SubscriptionPlansTab = ({
                   </Badge>
                 </div>
               )}
-
-              {/* Highlights */}
-              {plan.highlights && plan.highlights.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {plan.highlights.map((highlight, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs font-medium bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-                      {highlight}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
               {/* Pricing Section */}
               <div className="text-center space-y-2 p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100">
                 <div className="text-4xl font-bold text-gray-900">
