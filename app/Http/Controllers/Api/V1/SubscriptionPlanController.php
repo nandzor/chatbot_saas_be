@@ -83,8 +83,7 @@ class SubscriptionPlanController extends BaseApiController
 
             return $this->successResponse(
                 "Daftar paket tier {$tier} berhasil diambil",
-                $plans,
-
+                $plans
             );
         } catch (\Exception $e) {
             Log::error('Error fetching subscription plans by tier', [
@@ -109,8 +108,8 @@ class SubscriptionPlanController extends BaseApiController
             $plans = $this->subscriptionPlanService->getCustomPlans();
 
             return $this->successResponse(
-                $plans,
-                'Daftar paket kustom berhasil diambil'
+                'Daftar paket kustom berhasil diambil',
+                $plans
             );
         } catch (\Exception $e) {
             Log::error('Error fetching custom subscription plans', [
@@ -141,8 +140,8 @@ class SubscriptionPlanController extends BaseApiController
             }
 
             return $this->successResponse(
-                $plan,
-                'Detail paket berlangganan berhasil diambil'
+                'Detail paket berlangganan berhasil diambil',
+                $plan
             );
         } catch (\Exception $e) {
             Log::error('Error fetching subscription plan', [
@@ -169,6 +168,7 @@ class SubscriptionPlanController extends BaseApiController
             return $this->createdResponse(
                 $plan,
                 'Paket berlangganan berhasil dibuat'
+
             );
         } catch (\Exception $e) {
             Log::error('Error creating subscription plan', [
@@ -200,8 +200,8 @@ class SubscriptionPlanController extends BaseApiController
             }
 
             return $this->successResponse(
-                $plan,
-                'Paket berlangganan berhasil diperbarui'
+                'Paket berlangganan berhasil diperbarui',
+                $plan
             );
         } catch (\Exception $e) {
             Log::error('Error updating subscription plan', [
@@ -270,8 +270,8 @@ class SubscriptionPlanController extends BaseApiController
             $status = $plan->is_popular ? 'ditandai sebagai populer' : 'dihapus dari populer';
 
             return $this->successResponse(
-                $plan,
-                "Paket berlangganan berhasil {$status}"
+                "Paket berlangganan berhasil {$status}",
+                $plan
             );
         } catch (\Exception $e) {
             Log::error('Error toggling subscription plan popularity', [
