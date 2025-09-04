@@ -112,9 +112,6 @@ class CreateSubscriptionPlanRequest extends BaseRequest
                 'nullable',
                 'array'
             ],
-            'features.*' => [
-                'boolean'
-            ],
             'trial_days' => [
                 'nullable',
                 'integer',

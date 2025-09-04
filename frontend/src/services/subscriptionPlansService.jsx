@@ -104,7 +104,8 @@ class SubscriptionPlansService {
   async createPlan(planData) {
     try {
       const response = await api.post(this.baseUrl, planData);
-      return response.data;
+      const raw = response?.data?.data ?? response?.data ?? null;
+      return this.transformBackendPlan(raw);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -116,7 +117,8 @@ class SubscriptionPlansService {
   async updatePlan(id, planData) {
     try {
       const response = await api.put(`${this.baseUrl}/${id}`, planData);
-      return response.data;
+      const raw = response?.data?.data ?? response?.data ?? null;
+      return this.transformBackendPlan(raw);
     } catch (error) {
       throw this.handleError(error);
     }

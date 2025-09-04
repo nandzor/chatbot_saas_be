@@ -155,11 +155,11 @@ const SubscriptionPlansTab = ({
               {/* Usage Limits */}
               <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50 rounded-lg">
                 <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">{plan.maxAgents}</div>
+                  <div className="text-lg font-bold text-blue-600">{(plan.maxAgents ?? 0).toLocaleString()}</div>
                   <div className="text-xs text-gray-600">Agent</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">{plan.maxMonthlyMessages.toLocaleString()}</div>
+                  <div className="text-lg font-bold text-blue-600">{Number((plan.maxMonthlyMessages ?? plan.maxMessagesPerMonth) ?? 0).toLocaleString()}</div>
                   <div className="text-xs text-gray-600">Pesan/Bulan</div>
                 </div>
               </div>
@@ -170,15 +170,15 @@ const SubscriptionPlansTab = ({
                   <p className="text-sm font-semibold text-gray-800">Fitur Unggulan:</p>
                 </div>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  {plan.features.slice(0, 6).map((feature, index) => (
+                  {(Array.isArray(plan.features) ? plan.features : []).slice(0, 6).map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
-                  {plan.features.length > 6 && (
+                  {(Array.isArray(plan.features) ? plan.features : []).length > 6 && (
                     <li className="text-xs text-blue-600 font-medium">
-                      +{plan.features.length - 6} fitur lainnya...
+                      +{(plan.features || []).length - 6} fitur lainnya...
                     </li>
                   )}
                 </ul>

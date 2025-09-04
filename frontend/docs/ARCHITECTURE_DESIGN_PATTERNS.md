@@ -107,7 +107,7 @@ src/
 ├── services/              # Business logic services
 │   ├── api.js            # Axios configuration
 │   ├── authService.js    # Authentication service
-│   ├── subscriptionPlansService.js # Subscription plans API
+│   ├── subscriptionPlansService.jsx # Subscription plans API
 │   └── RoleManagementService.jsx   # Role management API
 ├── styles/                # Global styles and CSS modules
 │   └── globals.css       # Global Tailwind styles
@@ -877,7 +877,7 @@ features/superadmin/
 
 #### Service Layer
 ```javascript
-// subscriptionPlansService.js
+// subscriptionPlansService.jsx
 class SubscriptionPlansService {
   async getSubscriptionPlans(params = {}) {
     try {

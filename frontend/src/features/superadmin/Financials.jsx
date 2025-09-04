@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import PlanModal from './PlanModal';
 import FinancialsOverview from './FinancialsOverview';
 import SubscriptionPlansTab from './SubscriptionPlansTab';
 import TransactionsTab from './TransactionsTab';
 import { subscriptionPlansData, subscriptionPlansMetadata } from '@/data/sampleData';
-import subscriptionPlansService from '@/services/subscriptionPlansService.js';
+import subscriptionPlansService from '@/services/subscriptionPlansService.jsx';
 
 const Financials = () => {
   const [activeTab, setActiveTab] = useState('plans');
@@ -17,7 +17,8 @@ const Financials = () => {
   const [metadata, setMetadata] = useState(subscriptionPlansMetadata);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load subscription plans data on component mount
+  // Load subscription plans data on component mount (avoid double-call in StrictMode)
+  const hasFetchedRef = useRef(false);
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -40,7 +41,10 @@ const Financials = () => {
       }
     };
 
-    loadData();
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      loadData();
+    }
   }, []);
 
   // Sample transactions data
@@ -105,21 +109,27 @@ const Financials = () => {
         // Update existing plan
         console.log('Updating existing plan:', editingPlan.id, planData);
         const updatedPlan = await subscriptionPlansService.updatePlan(editingPlan.id, planData);
-        setSubscriptionPlans(prevPlans =>
-          prevPlans.map(plan =>
-            plan.id === editingPlan.id ? updatedPlan : plan
-          )
-        );
+        setSubscriptionPlans(prevPlans => {
+          const next = prevPlans.map(plan => (plan.id === editingPlan.id ? updatedPlan : plan));
+          return next;
+        });
       } else {
         // Create new plan
         console.log('Creating new plan:', planData);
         const newPlan = await subscriptionPlansService.createPlan(planData);
-        setSubscriptionPlans(prevPlans => [...prevPlans, newPlan]);
+        setSubscriptionPlans(prevPlans => {
+          const next = [...prevPlans, newPlan];
+          return next;
+        });
       }
 
-      // Reload metadata
-      const updatedMetadata = await subscriptionPlansService.getMetadata();
-      setMetadata(updatedMetadata);
+      // Optionally refresh from BE to ensure latest data
+      try {
+        const freshPlans = await subscriptionPlansService.getSubscriptionPlans();
+        setSubscriptionPlans(Array.isArray(freshPlans) ? freshPlans : []);
+      } catch (e) {
+        console.warn('Refresh plans failed, keep local state');
+      }
 
       // Close modal and reset states
       setIsModalOpen(false);
