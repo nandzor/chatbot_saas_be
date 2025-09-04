@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Button,
   Badge,
@@ -32,8 +32,8 @@ import {
 } from '@/components/ui';
 import PlanModal from './PlanModal';
 import { subscriptionPlansData, subscriptionPlansMetadata } from '@/data/sampleData';
-import subscriptionPlansService from '@/api/subscriptionPlansService';
-import { 
+import subscriptionPlansService from '@/services/subscriptionPlansService';
+import {
   CreditCard,
   DollarSign,
   Plus,
@@ -143,7 +143,7 @@ const Financials = () => {
       'refunded': 'default',
       'pending': 'yellow'
     };
-    
+
     const labels = {
       'success': 'Success',
       'failed': 'Failed',
@@ -165,14 +165,14 @@ const Financials = () => {
 
   const handleSavePlan = async (planData) => {
     console.log('Saving plan:', planData);
-    
+
     try {
       if (editingPlan) {
         // Update existing plan
         console.log('Updating existing plan:', editingPlan.id, planData);
         const updatedPlan = await subscriptionPlansService.updatePlan(editingPlan.id, planData);
-        setSubscriptionPlans(prevPlans => 
-          prevPlans.map(plan => 
+        setSubscriptionPlans(prevPlans =>
+          prevPlans.map(plan =>
             plan.id === editingPlan.id ? updatedPlan : plan
           )
         );
@@ -182,11 +182,11 @@ const Financials = () => {
         const newPlan = await subscriptionPlansService.createPlan(planData);
         setSubscriptionPlans(prevPlans => [...prevPlans, newPlan]);
       }
-      
+
       // Reload metadata
       const updatedMetadata = await subscriptionPlansService.getMetadata();
       setMetadata(updatedMetadata);
-      
+
       // Close modal and reset states
       setIsModalOpen(false);
       setEditingPlan(null);
@@ -380,14 +380,14 @@ const Financials = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Description */}
                       {plan.description && (
                         <div className="text-sm text-gray-600 leading-relaxed">
                           {plan.description}
                         </div>
                       )}
-                      
+
                       {/* Usage Limits */}
                       <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50 rounded-lg">
                         <div className="text-center">
@@ -504,7 +504,7 @@ const Financials = () => {
                               View Details
                             </DropdownMenuItem>
                             {transaction.status === 'success' && (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-red-600"
                                 onClick={() => handleTransactionAction('refund', transaction.id)}
                               >
