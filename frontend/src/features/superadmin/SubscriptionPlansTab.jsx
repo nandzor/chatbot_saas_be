@@ -38,24 +38,7 @@ const SubscriptionPlansTab = ({
     }).format(amount || 0);
   };
 
-  // Helper function to ensure plan data is valid
-  const getSafePlan = (plan) => {
-    return {
-      id: plan?.id || '',
-      name: plan?.name || 'Unknown Plan',
-      tier: plan?.tier || 'basic',
-      priceMonthly: plan?.priceMonthly || 0,
-      priceYearly: plan?.priceYearly || 0,
-      maxAgents: plan?.maxAgents || 0,
-      maxMessagesPerMonth: plan?.maxMessagesPerMonth || 0,
-      features: Array.isArray(plan?.features) ? plan.features : [],
-      highlights: Array.isArray(plan?.highlights) ? plan.highlights : [],
-      description: plan?.description || '',
-      activeSubscriptions: plan?.activeSubscriptions || 0,
-      totalRevenue: plan?.totalRevenue || 0,
-      isActive: plan?.isActive || false
-    };
-  };
+  // Data sudah ditransformasikan di service → gunakan langsung dari props
 
   // Ensure subscriptionPlans is always an array
   const safeSubscriptionPlans = Array.isArray(subscriptionPlans) ? subscriptionPlans : [];
@@ -85,12 +68,10 @@ const SubscriptionPlansTab = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {safeSubscriptionPlans.map((plan) => {
-          const safePlan = getSafePlan(plan);
-          return (
-          <Card key={safePlan.id} className={`relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 ${
-            safePlan.tier === 'enterprise' ? 'border-2 border-purple-500 shadow-lg' :
-            safePlan.tier === 'professional' ? 'border-2 border-blue-500 shadow-md' :
+        {safeSubscriptionPlans.map((plan) => (
+          <Card key={plan.id} className={`relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 ${
+            plan.tier === 'enterprise' ? 'border-2 border-purple-500 shadow-lg' :
+            plan.tier === 'professional' ? 'border-2 border-blue-500 shadow-md' :
             'border-2 border-green-500'
           }`}>
             <CardHeader className="pb-4">
@@ -98,15 +79,15 @@ const SubscriptionPlansTab = ({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${
-                      safePlan.tier === 'enterprise' ? 'bg-purple-500' :
-                      safePlan.tier === 'professional' ? 'bg-blue-500' :
+                      plan.tier === 'enterprise' ? 'bg-purple-500' :
+                      plan.tier === 'professional' ? 'bg-blue-500' :
                       'bg-green-500'
                     }`}></div>
-                    <CardTitle className="text-2xl font-bold">{safePlan.name}</CardTitle>
+                    <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
                   </div>
                   <CardDescription className="capitalize text-base">
-                    {safePlan.tier === 'enterprise' ? 'Solusi Enterprise' :
-                     safePlan.tier === 'professional' ? 'Untuk Bisnis' :
+                    {plan.tier === 'enterprise' ? 'Solusi Enterprise' :
+                     plan.tier === 'professional' ? 'Untuk Bisnis' :
                      'Untuk UMKM'}
                   </CardDescription>
                 </div>
@@ -131,7 +112,7 @@ const SubscriptionPlansTab = ({
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Popular Badge */}
-              {safePlan.highlights?.includes('Terpopuler') && (
+              {plan.highlights?.includes('Terpopuler') && (
                 <div className="absolute top-4 right-4 z-10">
                   <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 animate-pulse">
                     ⭐ Terpopuler
@@ -140,9 +121,9 @@ const SubscriptionPlansTab = ({
               )}
 
               {/* Highlights */}
-              {safePlan.highlights && safePlan.highlights.length > 0 && (
+              {plan.highlights && plan.highlights.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {safePlan.highlights.map((highlight, index) => (
+                  {plan.highlights.map((highlight, index) => (
                     <Badge key={index} variant="secondary" className="text-xs font-medium bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
                       {highlight}
                     </Badge>
@@ -153,36 +134,35 @@ const SubscriptionPlansTab = ({
               {/* Pricing Section */}
               <div className="text-center space-y-2 p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100">
                 <div className="text-4xl font-bold text-gray-900">
-                  {formatCurrency(safePlan.priceMonthly)}
+                  {formatCurrency(plan.priceMonthly)}
                   <span className="text-lg font-normal text-gray-500">/bulan</span>
                 </div>
-                {safePlan.priceYearly && (
+                {plan.priceYearly && (
                   <div className="text-sm text-green-600 font-medium">
-                    💰 {formatCurrency(safePlan.priceYearly)}/tahun
+                    💰 {formatCurrency(plan.priceYearly)}/tahun
                     <span className="text-xs text-gray-500 ml-1">(hemat 2 bulan)</span>
                   </div>
                 )}
               </div>
 
               {/* Description */}
-              {safePlan.description && (
+              {plan.description && (
                 <div className="text-sm text-gray-600 leading-relaxed">
-                  {safePlan.description}
+                  {plan.description}
                 </div>
               )}
 
               {/* Usage Limits */}
               <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50 rounded-lg">
                 <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">{safePlan.maxAgents}</div>
+                  <div className="text-lg font-bold text-blue-600">{plan.maxAgents}</div>
                   <div className="text-xs text-gray-600">Agent</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">{safePlan.maxMessagesPerMonth.toLocaleString()}</div>
+                  <div className="text-lg font-bold text-blue-600">{plan.maxMonthlyMessages.toLocaleString()}</div>
                   <div className="text-xs text-gray-600">Pesan/Bulan</div>
                 </div>
               </div>
-
               {/* Features */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -190,15 +170,15 @@ const SubscriptionPlansTab = ({
                   <p className="text-sm font-semibold text-gray-800">Fitur Unggulan:</p>
                 </div>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  {safePlan.features.slice(0, 6).map((feature, index) => (
+                  {plan.features.slice(0, 6).map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
-                  {safePlan.features.length > 6 && (
+                  {plan.features.length > 6 && (
                     <li className="text-xs text-blue-600 font-medium">
-                      +{safePlan.features.length - 6} fitur lainnya...
+                      +{plan.features.length - 6} fitur lainnya...
                     </li>
                   )}
                 </ul>
@@ -206,8 +186,8 @@ const SubscriptionPlansTab = ({
 
               {/* CTA Button */}
               <Button className={`w-full py-3 font-semibold ${
-                safePlan.tier === 'enterprise' ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700' :
-                safePlan.tier === 'professional' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' :
+                plan.tier === 'enterprise' ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700' :
+                plan.tier === 'professional' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' :
                 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
               }`}>
                 🚀 Pilih Paket Ini
@@ -217,17 +197,16 @@ const SubscriptionPlansTab = ({
               <div className="pt-4 border-t border-gray-200 space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Pelanggan Aktif</span>
-                  <span className="font-medium text-gray-700">{safePlan.activeSubscriptions}</span>
+                  <span className="font-medium text-gray-700">{plan.activeSubscriptions}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Revenue Bulanan</span>
-                  <span className="font-medium text-gray-700">{formatCurrency(safePlan.totalRevenue)}</span>
+                  <span className="font-medium text-gray-700">{formatCurrency(plan.totalRevenue)}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
-          );
-        })}
+        ))}
       </div>
     </div>
   );

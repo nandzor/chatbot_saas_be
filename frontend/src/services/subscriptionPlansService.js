@@ -7,19 +7,81 @@ class SubscriptionPlansService {
   }
 
   /**
+   * Transform backend subscription plan shape to frontend shape used by UI
+   */
+  transformBackendPlan(plan) {
+    if (!plan) return null;
+
+    const monthlyPrice = plan?.pricing?.monthly?.price;
+    const yearlyPrice = plan?.pricing?.yearly?.price;
+
+    const currency = plan?.pricing?.monthly?.currency || plan?.pricing?.yearly?.currency || 'IDR';
+
+    const toNumber = (val, fallback = 0) => {
+      if (val === null || val === undefined) return fallback;
+      const n = typeof val === 'string' ? parseFloat(val) : Number(val);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    return {
+      id: plan.id || '',
+      name: plan.display_name || plan.name || 'Unknown Plan',
+      tier: plan.tier || 'basic',
+      description: plan.description || '',
+
+      // Pricing normalized to numeric values
+      priceMonthly: toNumber(monthlyPrice, 0),
+      priceYearly: toNumber(yearlyPrice, 0),
+      currency,
+
+      // Limits mapping
+      maxAgents: toNumber(plan?.limits?.max_agents, 0),
+      maxChannels: toNumber(plan?.limits?.max_channels, 0),
+      maxKnowledgeArticles: toNumber(plan?.limits?.max_knowledge_articles, 0),
+      maxMonthlyMessages: toNumber(plan?.limits?.max_monthly_messages, 0),
+      maxMonthlyAiRequests: toNumber(plan?.limits?.max_monthly_ai_requests, 0),
+      maxStorageGb: toNumber(plan?.limits?.max_storage_gb, 0),
+      maxApiCallsPerDay: toNumber(plan?.limits?.max_api_calls_per_day, 0),
+
+      // Features and flags
+      features: Array.isArray(plan?.features) ? plan.features : [],
+      trialDays: toNumber(plan?.trial_days, 0),
+      isPopular: Boolean(plan?.is_popular),
+      isCustom: Boolean(plan?.is_custom),
+      sortOrder: toNumber(plan?.sort_order, 0),
+      status: plan?.status || 'inactive',
+      isActive: plan?.status === 'active',
+
+      // UI helpers
+      highlights: plan?.is_popular ? ['Terpopuler'] : [],
+
+      // Stats (backend may not provide; default to 0)
+      activeSubscriptions: toNumber(plan?.active_subscriptions, 0),
+      totalRevenue: toNumber(plan?.total_revenue, 0),
+
+      createdAt: plan?.created_at || null,
+      updatedAt: plan?.updated_at || null,
+    };
+  }
+
+  /**
    * Get all subscription plans with pagination and filters
    */
   async getSubscriptionPlans(params = {}) {
     try {
       const response = await api.get(this.baseUrl, { params });
-      // Ensure we return an array
-      return Array.isArray(response.data) ? response.data :
-             Array.isArray(response.data?.data) ? response.data.data :
-             subscriptionPlansData;
+      // Extract array from various shapes
+      const raw = Array.isArray(response.data)
+        ? response.data
+        : (Array.isArray(response.data?.data) ? response.data.data : null);
+
+      const source = raw || subscriptionPlansData;
+      // Map to FE shape
+      return source.map((p) => this.transformBackendPlan(p)).filter(Boolean);
     } catch (error) {
       // Fallback to sample data if API is not available
       console.warn('API not available, using sample data:', error.message);
-      return subscriptionPlansData;
+      return subscriptionPlansData.map((p) => this.transformBackendPlan(p)).filter(Boolean);
     }
   }
 
@@ -29,7 +91,8 @@ class SubscriptionPlansService {
   async getPlan(id) {
     try {
       const response = await api.get(`${this.baseUrl}/${id}`);
-      return response.data;
+      const raw = response?.data?.data ?? response?.data ?? null;
+      return this.transformBackendPlan(raw);
     } catch (error) {
       throw this.handleError(error);
     }
