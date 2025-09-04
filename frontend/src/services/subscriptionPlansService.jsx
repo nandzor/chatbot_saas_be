@@ -65,6 +65,46 @@ class SubscriptionPlansService {
   }
 
   /**
+   * Build backend payload (snake_case, flat) from FE form/plan
+   */
+  buildBackendPayload(input) {
+    const toStringNum = (val) => {
+      if (val === null || val === undefined || val === '') return '0.00';
+      const n = typeof val === 'string' ? parseFloat(val) : Number(val);
+      return Number.isFinite(n) ? n.toFixed(2) : '0.00';
+    };
+
+    const toInt = (val, fb = 0) => {
+      const n = typeof val === 'string' ? parseInt(val, 10) : Number(val);
+      return Number.isFinite(n) ? n : fb;
+    };
+
+    return {
+      name: input?.name ?? '',
+      display_name: input?.display_name ?? input?.name ?? '',
+      description: input?.description ?? '',
+      tier: input?.tier ?? 'basic',
+      price_monthly: toStringNum(input?.priceMonthly ?? input?.price_monthly),
+      price_quarterly: toStringNum(input?.priceQuarterly ?? input?.price_quarterly),
+      price_yearly: toStringNum(input?.priceYearly ?? input?.price_yearly),
+      currency: input?.currency ?? 'IDR',
+      max_agents: toInt(input?.maxAgents ?? input?.max_agents),
+      max_channels: toInt(input?.maxChannels ?? input?.max_channels),
+      max_knowledge_articles: toInt(input?.maxKnowledgeArticles ?? input?.max_knowledge_articles),
+      max_monthly_messages: toInt(input?.maxMonthlyMessages ?? input?.maxMessagesPerMonth ?? input?.max_monthly_messages),
+      max_monthly_ai_requests: toInt(input?.maxMonthlyAiRequests ?? input?.max_monthly_ai_requests),
+      max_storage_gb: (input?.maxStorageGb ?? input?.max_storage_gb ?? 0).toString(),
+      max_api_calls_per_day: toInt(input?.maxApiCallsPerDay ?? input?.max_api_calls_per_day),
+      features: Array.isArray(input?.features) ? input.features : [],
+      trial_days: toInt(input?.trialDays ?? input?.trial_days),
+      is_popular: Boolean(input?.isPopular ?? input?.is_popular),
+      is_custom: Boolean(input?.isCustom ?? input?.is_custom),
+      sort_order: toInt(input?.sortOrder ?? input?.sort_order),
+      status: input?.status ?? (input?.isActive ? 'active' : 'inactive'),
+    };
+  }
+
+  /**
    * Get all subscription plans with pagination and filters
    */
   async getSubscriptionPlans(params = {}) {
@@ -103,7 +143,8 @@ class SubscriptionPlansService {
    */
   async createPlan(planData) {
     try {
-      const response = await api.post(this.baseUrl, planData);
+      const payload = this.buildBackendPayload(planData);
+      const response = await api.post(this.baseUrl, payload);
       const raw = response?.data?.data ?? response?.data ?? null;
       return this.transformBackendPlan(raw);
     } catch (error) {
@@ -116,7 +157,8 @@ class SubscriptionPlansService {
    */
   async updatePlan(id, planData) {
     try {
-      const response = await api.put(`${this.baseUrl}/${id}`, planData);
+      const payload = this.buildBackendPayload(planData);
+      const response = await api.put(`${this.baseUrl}/${id}`, payload);
       const raw = response?.data?.data ?? response?.data ?? null;
       return this.transformBackendPlan(raw);
     } catch (error) {

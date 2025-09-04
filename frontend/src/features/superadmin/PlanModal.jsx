@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -21,7 +21,7 @@ import {
   Alert,
   AlertDescription
 } from '@/components/ui';
-import { 
+import {
   Save,
   X,
   Plus,
@@ -40,11 +40,19 @@ import {
 const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     name: '',
+    display_name: '',
     tier: 'basic',
     priceMonthly: 0,
+    priceQuarterly: 0,
     priceYearly: 0,
+    currency: 'IDR',
     maxAgents: 1,
+    maxChannels: 0,
+    maxKnowledgeArticles: 0,
     maxMessagesPerMonth: 100,
+    maxMonthlyAiRequests: 0,
+    maxStorageGb: 0,
+    maxApiCallsPerDay: 0,
     features: [],
     isActive: true,
     description: '',
@@ -63,11 +71,19 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
     if (plan) {
       setFormData({
         name: plan.name || '',
+        display_name: plan.name || '',
         tier: plan.tier || 'basic',
         priceMonthly: plan.priceMonthly || 0,
+        priceQuarterly: plan.priceQuarterly || 0,
         priceYearly: plan.priceYearly || 0,
+        currency: plan.currency || 'IDR',
         maxAgents: plan.maxAgents || 1,
-        maxMessagesPerMonth: plan.maxMessagesPerMonth || 100,
+        maxChannels: plan.maxChannels || 0,
+        maxKnowledgeArticles: plan.maxKnowledgeArticles || 0,
+        maxMessagesPerMonth: plan.maxMonthlyMessages || plan.maxMessagesPerMonth || 100,
+        maxMonthlyAiRequests: plan.maxMonthlyAiRequests || 0,
+        maxStorageGb: plan.maxStorageGb || 0,
+        maxApiCallsPerDay: plan.maxApiCallsPerDay || 0,
         features: plan.features || [],
         isActive: plan.isActive !== undefined ? plan.isActive : true,
         description: plan.description || '',
@@ -79,11 +95,19 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
       // Reset form for new plan
       setFormData({
         name: '',
+        display_name: '',
         tier: 'basic',
         priceMonthly: 0,
+        priceQuarterly: 0,
         priceYearly: 0,
+        currency: 'IDR',
         maxAgents: 1,
+        maxChannels: 0,
+        maxKnowledgeArticles: 0,
         maxMessagesPerMonth: 100,
+        maxMonthlyAiRequests: 0,
+        maxStorageGb: 0,
+        maxApiCallsPerDay: 0,
         features: [],
         isActive: true,
         description: '',
@@ -120,13 +144,13 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       // Calculate yearly price if not set
       const finalData = {
@@ -223,7 +247,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                 {plan ? 'Edit Paket Berlangganan' : 'Buat Paket Baru'}
               </DialogTitle>
               <DialogDescription className="text-base">
-                {plan 
+                {plan
                   ? 'Perbarui detail dan fitur paket berlangganan'
                   : 'Buat paket berlangganan baru untuk pelanggan Anda'
                 }
@@ -240,7 +264,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
               <DollarSign className="w-6 h-6" />
               Informasi Dasar
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="name" className="text-sm font-medium">
@@ -302,7 +326,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
               <DollarSign className="w-6 h-6" />
               Harga & Billing
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="priceMonthly" className="text-sm font-medium">
@@ -344,6 +368,37 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   Kosongkan untuk kalkulasi otomatis (10 bulan bayar untuk 12 bulan)
                 </p>
               </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="priceQuarterly" className="text-sm font-medium">
+                  Harga 3 Bulan (Rp)
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
+                  <Input
+                    id="priceQuarterly"
+                    type="number"
+                    value={formData.priceQuarterly}
+                    onChange={(e) => setFormData(prev => ({ ...prev, priceQuarterly: parseInt(e.target.value) || 0 }))}
+                    placeholder="Opsional"
+                    className="pl-12"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="currency" className="text-sm font-medium">
+                  Mata Uang
+                </Label>
+                <Select value={formData.currency} onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="IDR">IDR (Rupiah)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Popular Plan Toggle */}
@@ -373,7 +428,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
               <Users className="w-6 h-6" />
               Batasan Penggunaan
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="maxAgents" className="text-sm font-medium">
@@ -410,6 +465,72 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   Batas pesan yang dapat dikirim per bulan
                 </p>
               </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="maxChannels" className="text-sm font-medium">
+                  Maksimal Channel
+                </Label>
+                <Input
+                  id="maxChannels"
+                  type="number"
+                  value={formData.maxChannels}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxChannels: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="maxKnowledgeArticles" className="text-sm font-medium">
+                  Maksimal Artikel Knowledge
+                </Label>
+                <Input
+                  id="maxKnowledgeArticles"
+                  type="number"
+                  value={formData.maxKnowledgeArticles}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxKnowledgeArticles: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="maxMonthlyAiRequests" className="text-sm font-medium">
+                  Maksimal AI Requests/Bulan
+                </Label>
+                <Input
+                  id="maxMonthlyAiRequests"
+                  type="number"
+                  value={formData.maxMonthlyAiRequests}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxMonthlyAiRequests: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="maxStorageGb" className="text-sm font-medium">
+                  Storage (GB)
+                </Label>
+                <Input
+                  id="maxStorageGb"
+                  type="number"
+                  step="0.01"
+                  value={formData.maxStorageGb}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxStorageGb: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="maxApiCallsPerDay" className="text-sm font-medium">
+                  Maksimal API Calls/Hari
+                </Label>
+                <Input
+                  id="maxApiCallsPerDay"
+                  type="number"
+                  value={formData.maxApiCallsPerDay}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxApiCallsPerDay: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                />
+              </div>
             </div>
           </div>
 
@@ -421,7 +542,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
               <Zap className="w-6 h-6" />
               Fitur & Kemampuan
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex gap-3">
                 <Input
@@ -466,7 +587,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
               <Star className="w-6 h-6" />
               Highlight & Promosi
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex gap-3">
                 <Input
@@ -511,7 +632,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
               <Settings className="w-6 h-6" />
               Status & Konfigurasi
             </h3>
-            
+
             <div className="space-y-6">
               <div className="flex items-center space-x-3">
                 <Switch
@@ -526,7 +647,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   {formData.isActive ? 'Aktif' : 'Tidak Aktif'}
                 </Badge>
               </div>
-              
+
               {!formData.isActive && (
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
