@@ -41,7 +41,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     name: '',
     display_name: '',
-    tier: 'basic',
+    tier: 'starter',
     priceMonthly: 0,
     priceQuarterly: 0,
     priceYearly: 0,
@@ -72,7 +72,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
       setFormData({
         name: plan.name || '',
         display_name: plan.name || '',
-        tier: plan.tier || 'basic',
+        tier: plan.tier || 'starter',
         priceMonthly: plan.priceMonthly || 0,
         priceQuarterly: plan.priceQuarterly || 0,
         priceYearly: plan.priceYearly || 0,
@@ -96,7 +96,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
       setFormData({
         name: '',
         display_name: '',
-        tier: 'basic',
+        tier: 'starter',
         priceMonthly: 0,
         priceQuarterly: 0,
         priceYearly: 0,
@@ -211,29 +211,29 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
 
   const getTierColor = (tier) => {
     const colors = {
-      basic: 'bg-green-100 text-green-800 border-green-200',
+      starter: 'bg-green-100 text-green-800 border-green-200',
       professional: 'bg-blue-100 text-blue-800 border-blue-200',
       enterprise: 'bg-purple-100 text-purple-800 border-purple-200'
     };
-    return colors[tier] || colors.basic;
+    return colors[tier] || colors.starter;
   };
 
   const getTierIcon = (tier) => {
     const icons = {
-      basic: <Users className="w-4 h-4" />,
+      starter: <Users className="w-4 h-4" />,
       professional: <Zap className="w-4 h-4" />,
       enterprise: <Crown className="w-4 h-4" />
     };
-    return icons[tier] || icons.basic;
+    return icons[tier] || icons.starter;
   };
 
   const getTierDescription = (tier) => {
     const descriptions = {
-      basic: 'Untuk UMKM dan startup',
+      starter: 'Untuk UMKM dan startup',
       professional: 'Untuk bisnis yang berkembang',
       enterprise: 'Solusi enterprise lengkap'
     };
-    return descriptions[tier] || descriptions.basic;
+    return descriptions[tier] || descriptions.starter;
   };
 
   return (
@@ -289,7 +289,7 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="basic">Basic</SelectItem>
+                    <SelectItem value="starter">Starter</SelectItem>
                     <SelectItem value="professional">Professional</SelectItem>
                     <SelectItem value="enterprise">Enterprise</SelectItem>
                   </SelectContent>
@@ -337,8 +337,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   <Input
                     id="priceMonthly"
                     type="number"
-                    value={formData.priceMonthly}
-                    onChange={(e) => setFormData(prev => ({ ...prev, priceMonthly: parseInt(e.target.value) || 0 }))}
+                    value={formData.priceMonthly || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, priceMonthly: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                     placeholder="0"
                     className={`pl-12 ${errors.priceMonthly ? 'border-red-500 focus:border-red-500' : ''}`}
                   />
@@ -358,8 +358,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   <Input
                     id="priceYearly"
                     type="number"
-                    value={formData.priceYearly}
-                    onChange={(e) => setFormData(prev => ({ ...prev, priceYearly: parseInt(e.target.value) || 0 }))}
+                    value={formData.priceYearly || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, priceYearly: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                     placeholder="Auto-calculated (20% discount)"
                     className="pl-12"
                   />
@@ -378,8 +378,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   <Input
                     id="priceQuarterly"
                     type="number"
-                    value={formData.priceQuarterly}
-                    onChange={(e) => setFormData(prev => ({ ...prev, priceQuarterly: parseInt(e.target.value) || 0 }))}
+                    value={formData.priceQuarterly || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, priceQuarterly: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                     placeholder="Opsional"
                     className="pl-12"
                   />
@@ -437,8 +437,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                 <Input
                   id="maxAgents"
                   type="number"
-                  value={formData.maxAgents}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxAgents: parseInt(e.target.value) || 1 }))}
+                  value={formData.maxAgents || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxAgents: e.target.value === '' ? '' : parseInt(e.target.value) || 1 }))}
                   placeholder="1"
                   className={errors.maxAgents ? 'border-red-500 focus:border-red-500' : ''}
                 />
@@ -455,8 +455,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                 <Input
                   id="maxMessagesPerMonth"
                   type="number"
-                  value={formData.maxMessagesPerMonth}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxMessagesPerMonth: parseInt(e.target.value) || 100 }))}
+                  value={formData.maxMessagesPerMonth || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxMessagesPerMonth: e.target.value === '' ? '' : parseInt(e.target.value) || 100 }))}
                   placeholder="100"
                   className={errors.maxMessagesPerMonth ? 'border-red-500 focus:border-red-500' : ''}
                 />
@@ -473,8 +473,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                 <Input
                   id="maxChannels"
                   type="number"
-                  value={formData.maxChannels}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxChannels: parseInt(e.target.value) || 0 }))}
+                  value={formData.maxChannels || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxChannels: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                   placeholder="0"
                 />
               </div>
@@ -486,8 +486,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                 <Input
                   id="maxKnowledgeArticles"
                   type="number"
-                  value={formData.maxKnowledgeArticles}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxKnowledgeArticles: parseInt(e.target.value) || 0 }))}
+                  value={formData.maxKnowledgeArticles || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxKnowledgeArticles: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                   placeholder="0"
                 />
               </div>
@@ -499,8 +499,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                 <Input
                   id="maxMonthlyAiRequests"
                   type="number"
-                  value={formData.maxMonthlyAiRequests}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxMonthlyAiRequests: parseInt(e.target.value) || 0 }))}
+                  value={formData.maxMonthlyAiRequests || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxMonthlyAiRequests: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                   placeholder="0"
                 />
               </div>
@@ -513,8 +513,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   id="maxStorageGb"
                   type="number"
                   step="0.01"
-                  value={formData.maxStorageGb}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxStorageGb: parseFloat(e.target.value) || 0 }))}
+                  value={formData.maxStorageGb || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxStorageGb: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 }))}
                   placeholder="0.00"
                 />
               </div>
@@ -526,8 +526,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                 <Input
                   id="maxApiCallsPerDay"
                   type="number"
-                  value={formData.maxApiCallsPerDay}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxApiCallsPerDay: parseInt(e.target.value) || 0 }))}
+                  value={formData.maxApiCallsPerDay || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maxApiCallsPerDay: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                   placeholder="0"
                 />
               </div>
@@ -664,8 +664,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                 <Input
                   id="sortOrder"
                   type="number"
-                  value={formData.sortOrder}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
+                  value={formData.sortOrder || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                   placeholder="0"
                   className="w-32"
                 />

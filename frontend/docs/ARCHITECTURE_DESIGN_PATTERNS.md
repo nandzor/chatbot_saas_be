@@ -741,11 +741,84 @@ export default defineConfig(({ command, mode }) => {
 - **Safe HTML rendering** with DOMPurify
 - **Escape user content** in JSX
 
+## Notification/Toast Patterns
+
+### Goals
+- Konsisten menampilkan notifikasi sukses, info, warning, dan error di seluruh aplikasi.
+- Memisahkan logika presentasi (toast) dari logic bisnis (service/komponen).
+- Mendukung i18n (EN/ID) dan format pesan standar dari BE.
+
+### Standar Respons BE → FE
+- Gunakan shape standar: `{ success: boolean, message: string, data?: any, code?: string }`.
+- Pada FE, selalu tampilkan `message` saat sukses/gagal, dengan fallback generik jika kosong.
+
+
+
 ## Testing Strategy
 
 ### 1. Testing Pyramid
 - **Unit tests** for components and utilities
-- **Integration tests** for feature workflows
+- **Integration tests** for feature workflows### Helper Notifikasi
+Pusatkan pemanggilan toast dalam helper agar dapat diganti tanpa menyentuh semua komponen.
+
+```javascript
+// utils/notify.js
+import { toast } from '@/components/ui/Toaster';
+
+export const notifySuccess = (message, options = {}) => {
+  toast({ title: message || 'Berhasil', variant: 'success', ...options });
+};
+
+export const notifyError = (message, options = {}) => {
+  toast({ title: message || 'Terjadi kesalahan', variant: 'destructive', ...options });
+};
+
+export const notifyInfo = (message, options = {}) => {
+  toast({ title: message || 'Info', variant: 'default', ...options });
+};
+```
+
+### Pola di Service
+- Service tidak memanggil toast secara langsung (tetap pure). Service mengembalikan `data` dan `message`.
+
+```javascript
+// services/SomeService.jsx
+async function updateSomething(payload) {
+  const res = await api.put('/v1/something', payload);
+  return { data: res.data?.data ?? res.data, message: res.data?.message };
+}
+```
+
+### Pola di Komponen
+- Komponen/hook memanggil helper untuk menampilkan toast berdasarkan hasil service.
+
+```javascript
+import { notifySuccess, notifyError } from '@/utils/notify';
+
+const handleSave = async () => {
+  try {
+    const { data, message } = await someService.updateSomething(formData);
+    // update state lokal...
+    notifySuccess(message || 'Perubahan berhasil disimpan');
+  } catch (err) {
+    const msg = err?.message || err?.data?.message || 'Gagal menyimpan perubahan';
+    notifyError(msg);
+  }
+};
+```
+
+### Error Boundary & Network Error
+- Error JS tak terduga → ErrorBoundary menampilkan halaman fallback + toast error generik.
+- Network error (timeout/offline) → tangkap di caller, gunakan `notifyError('Koneksi jaringan bermasalah')`.
+
+### i18n
+- Bungkus string pesan lewat context i18n: `t('saved_successfully')`.
+- Untuk pesan BE, tampilkan apa adanya. Jika kosong, gunakan fallback `t('generic_error')`.
+
+### Ringkasan Prinsip
+- Service: pure, tanpa side-effect UI.
+- Komponen/Hook: menampilkan toast berdasarkan hasil service.
+- Helper: satu pintu untuk standar tampilan (varian, durasi, posisi, ikon).
 - **E2E tests** for critical user journeys
 
 ### 2. Testing Tools

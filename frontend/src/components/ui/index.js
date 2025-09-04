@@ -59,3 +59,7 @@ export { default as DataWrapper, DataWrapperWithHeader } from './DataWrapper';
 export { default as DataContainer, DataContainerWithHeader } from './DataContainer';
 export { default as DataPanel, DataPanelWithActions } from './DataPanel';
 export { default as DataBox, DataBoxWithActions } from './DataBox';
+
+// Toast components
+export { default as Toaster } from './Toaster';
+export { useToast, toast } from './use-toast';

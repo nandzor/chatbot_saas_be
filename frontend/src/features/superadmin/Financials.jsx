@@ -6,6 +6,8 @@ import SubscriptionPlansTab from './SubscriptionPlansTab';
 import TransactionsTab from './TransactionsTab';
 import { subscriptionPlansData, subscriptionPlansMetadata } from '@/data/sampleData';
 import subscriptionPlansService from '@/services/subscriptionPlansService.jsx';
+import { notifySuccess, notifyError, notifyInfo } from '@/utils/notify';
+import { Toaster } from '@/components/ui';
 
 const Financials = () => {
   const [activeTab, setActiveTab] = useState('plans');
@@ -23,19 +25,30 @@ const Financials = () => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const [plans, planMetadata] = await Promise.all([
+        const [plansResult, planMetadata] = await Promise.all([
           subscriptionPlansService.getSubscriptionPlans(),
           subscriptionPlansService.getMetadata()
         ]);
+
+        // Handle new service response format
+        const plans = plansResult?.data || plansResult || [];
+        const message = plansResult?.message;
+
         // Ensure plans is always an array
         console.log('Loaded plans:', plans, 'Is array:', Array.isArray(plans));
         setSubscriptionPlans(Array.isArray(plans) ? plans : []);
         setMetadata(planMetadata);
+
+        // Show info notification if using sample data
+        if (message && message.includes('sample')) {
+          notifyInfo(message);
+        }
       } catch (error) {
         console.error('Error loading subscription plans:', error);
         // Fallback to sample data
         setSubscriptionPlans(subscriptionPlansData);
         setMetadata(subscriptionPlansMetadata);
+        notifyError('Gagal memuat data paket berlangganan');
       } finally {
         setIsLoading(false);
       }
@@ -108,24 +121,35 @@ const Financials = () => {
       if (editingPlan) {
         // Update existing plan
         console.log('Updating existing plan:', editingPlan.id, planData);
-        const updatedPlan = await subscriptionPlansService.updatePlan(editingPlan.id, planData);
+        const result = await subscriptionPlansService.updatePlan(editingPlan.id, planData);
+        const updatedPlan = result.data || result;
+
         setSubscriptionPlans(prevPlans => {
           const next = prevPlans.map(plan => (plan.id === editingPlan.id ? updatedPlan : plan));
           return next;
         });
+
+        // Show success notification
+        notifySuccess(result.message || 'Paket berlangganan berhasil diperbarui');
       } else {
         // Create new plan
         console.log('Creating new plan:', planData);
-        const newPlan = await subscriptionPlansService.createPlan(planData);
+        const result = await subscriptionPlansService.createPlan(planData);
+        const newPlan = result.data || result;
+
         setSubscriptionPlans(prevPlans => {
           const next = [...prevPlans, newPlan];
           return next;
         });
+
+        // Show success notification
+        notifySuccess(result.message || 'Paket berlangganan berhasil dibuat');
       }
 
       // Optionally refresh from BE to ensure latest data
       try {
-        const freshPlans = await subscriptionPlansService.getSubscriptionPlans();
+        const freshPlansResult = await subscriptionPlansService.getSubscriptionPlans();
+        const freshPlans = freshPlansResult?.data || freshPlansResult || [];
         setSubscriptionPlans(Array.isArray(freshPlans) ? freshPlans : []);
       } catch (e) {
         console.warn('Refresh plans failed, keep local state');
@@ -136,6 +160,10 @@ const Financials = () => {
       setEditingPlan(null);
     } catch (error) {
       console.error('Error saving plan:', error);
+      const errorMessage = error?.response?.data?.message ||
+                          error?.message ||
+                          'Gagal menyimpan paket berlangganan';
+      notifyError(errorMessage);
     }
   };
 
@@ -203,6 +231,9 @@ const Financials = () => {
         onClose={handleCloseModal}
         onSave={handleSavePlan}
       />
+
+      {/* Toast Notifications */}
+      <Toaster />
     </div>
   );
 };

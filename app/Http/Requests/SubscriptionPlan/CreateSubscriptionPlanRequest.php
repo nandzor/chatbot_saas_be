@@ -40,7 +40,7 @@ class CreateSubscriptionPlanRequest extends BaseRequest
             'tier' => [
                 'required',
                 'string',
-                'in:basic,professional,enterprise,custom'
+                'in:trial,starter,professional,enterprise,custom'
             ],
             'price_monthly' => [
                 'required',
@@ -58,7 +58,7 @@ class CreateSubscriptionPlanRequest extends BaseRequest
                 'nullable',
                 'numeric',
                 'min:0',
-                'max:999999.99'
+                'max:9999999.99'
             ],
             'currency' => [
                 'required',
@@ -146,7 +146,7 @@ class CreateSubscriptionPlanRequest extends BaseRequest
     {
         return [
             'name.unique' => 'Nama paket berlangganan sudah ada.',
-            'tier.in' => 'Tier harus salah satu dari: basic, professional, enterprise, custom.',
+            'tier.in' => 'Tier harus salah satu dari: trial, starter, professional, enterprise, custom.',
             'currency.in' => 'Mata uang harus salah satu dari: USD, IDR, EUR, GBP.',
             'price_monthly.min' => 'Harga bulanan tidak boleh negatif.',
             'max_agents.min' => 'Jumlah maksimal agent minimal 1.',

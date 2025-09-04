@@ -1,4 +1,5 @@
 import api from './api';
+import { toFixedString, toInt } from '@/utils/number';
 import { subscriptionPlansData, subscriptionPlansMetadata } from '@/data/sampleData';
 
 class SubscriptionPlansService {
@@ -17,16 +18,12 @@ class SubscriptionPlansService {
 
     const currency = plan?.pricing?.monthly?.currency || plan?.pricing?.yearly?.currency || 'IDR';
 
-    const toNumber = (val, fallback = 0) => {
-      if (val === null || val === undefined) return fallback;
-      const n = typeof val === 'string' ? parseFloat(val) : Number(val);
-      return Number.isFinite(n) ? n : fallback;
-    };
+    const toNumber = (val, fallback = 0) => toInt(val, fallback);
 
     return {
       id: plan.id || '',
       name: plan.display_name || plan.name || 'Unknown Plan',
-      tier: plan.tier || 'basic',
+      tier: plan.tier || 'starter',
       description: plan.description || '',
 
       // Pricing normalized to numeric values
@@ -68,22 +65,13 @@ class SubscriptionPlansService {
    * Build backend payload (snake_case, flat) from FE form/plan
    */
   buildBackendPayload(input) {
-    const toStringNum = (val) => {
-      if (val === null || val === undefined || val === '') return '0.00';
-      const n = typeof val === 'string' ? parseFloat(val) : Number(val);
-      return Number.isFinite(n) ? n.toFixed(2) : '0.00';
-    };
-
-    const toInt = (val, fb = 0) => {
-      const n = typeof val === 'string' ? parseInt(val, 10) : Number(val);
-      return Number.isFinite(n) ? n : fb;
-    };
+    const toStringNum = (val) => toFixedString(val, 2);
 
     return {
       name: input?.name ?? '',
       display_name: input?.display_name ?? input?.name ?? '',
       description: input?.description ?? '',
-      tier: input?.tier ?? 'basic',
+      tier: input?.tier ?? 'starter',
       price_monthly: toStringNum(input?.priceMonthly ?? input?.price_monthly),
       price_quarterly: toStringNum(input?.priceQuarterly ?? input?.price_quarterly),
       price_yearly: toStringNum(input?.priceYearly ?? input?.price_yearly),
@@ -117,11 +105,21 @@ class SubscriptionPlansService {
 
       const source = raw || subscriptionPlansData;
       // Map to FE shape
-      return source.map((p) => this.transformBackendPlan(p)).filter(Boolean);
+      const data = source.map((p) => this.transformBackendPlan(p)).filter(Boolean);
+
+      return {
+        data,
+        message: response.data?.message || 'Data berhasil dimuat'
+      };
     } catch (error) {
       // Fallback to sample data if API is not available
       console.warn('API not available, using sample data:', error.message);
-      return subscriptionPlansData.map((p) => this.transformBackendPlan(p)).filter(Boolean);
+      const data = subscriptionPlansData.map((p) => this.transformBackendPlan(p)).filter(Boolean);
+
+      return {
+        data,
+        message: 'Menggunakan data sample'
+      };
     }
   }
 
@@ -146,7 +144,12 @@ class SubscriptionPlansService {
       const payload = this.buildBackendPayload(planData);
       const response = await api.post(this.baseUrl, payload);
       const raw = response?.data?.data ?? response?.data ?? null;
-      return this.transformBackendPlan(raw);
+      const data = this.transformBackendPlan(raw);
+
+      return {
+        data,
+        message: response.data?.message || 'Paket berlangganan berhasil dibuat'
+      };
     } catch (error) {
       throw this.handleError(error);
     }
@@ -160,7 +163,12 @@ class SubscriptionPlansService {
       const payload = this.buildBackendPayload(planData);
       const response = await api.put(`${this.baseUrl}/${id}`, payload);
       const raw = response?.data?.data ?? response?.data ?? null;
-      return this.transformBackendPlan(raw);
+      const data = this.transformBackendPlan(raw);
+
+      return {
+        data,
+        message: response.data?.message || 'Paket berlangganan berhasil diperbarui'
+      };
     } catch (error) {
       throw this.handleError(error);
     }
@@ -172,7 +180,10 @@ class SubscriptionPlansService {
   async deletePlan(id) {
     try {
       const response = await api.delete(`${this.baseUrl}/${id}`);
-      return response.data;
+      return {
+        data: response.data,
+        message: response.data?.message || 'Paket berlangganan berhasil dihapus'
+      };
     } catch (error) {
       throw this.handleError(error);
     }
