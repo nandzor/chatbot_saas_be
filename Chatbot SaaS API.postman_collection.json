@@ -1,0 +1,5250 @@
+{
+	"info": {
+		"_postman_id": "2fa4441e-347e-49d6-a028-bc81a4108c16",
+		"name": "Chatbot SaaS API",
+		"description": "Complete API collection for Chatbot SaaS Backend with unified authentication (JWT + Sanctum), user management, chatbot operations, and admin panel",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "41750365",
+		"_collection_link": "https://serba-mulia-31.postman.co/workspace/Chatbot-AI-Agent-Multi-Tenant-S~418f0dba-6af7-45a8-be82-716d6ab71d4f/collection/41750365-2fa4441e-347e-49d6-a028-bc81a4108c16?action=share&source=collection_link&creator=41750365"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Menguraikan (parse) body respons yang berbentuk JSON\r",
+									"const responseData = pm.response.json();\r",
+									"\r",
+									"// Mengambil nilai access_token dari dalam objek 'data'\r",
+									"const accessToken = responseData.data.access_token;\r",
+									"const refreshToken = responseData.data.refresh_token;\r",
+									"const sanctumToken = responseData.data.sanctum_token;\r",
+									"const organizationId = responseData.data.user?.organization?.id || \"\";\r",
+									"\r",
+									"// Menyimpan nilai accessToken ke dalam environment variable bernama \"jwt_token\"\r",
+									"pm.environment.set(\"jwt_token\", accessToken);\r",
+									"pm.environment.set(\"refresh_token\", refreshToken);\r",
+									"pm.environment.set(\"sanctum_token\", sanctumToken);\r",
+									"pm.environment.set(\"organization_id\", organizationId);\r",
+									"\r",
+									"// (Opsional) Menampilkan di console untuk memastikan token berhasil disimpan\r",
+									"console.log(\"Token JWT berhasil disimpan:\", accessToken);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"superadmin@chatbot-saas.com\",\n  \"password\": \"SuperAdmin123!\"\n}\n\n//organization Admin\n// {\n//   \"email\": \"admin@test.com\",\n//   \"password\": \"Password123!\"\n// }\n\n"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login dengan email dan password untuk mendapatkan JWT token, Sanctum token, dan refresh token"
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"organization_name\": \"Acme Corp\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Registrasi user baru dengan informasi lengkap"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh JWT token menggunakan refresh token"
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{jwt_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"validate"
+							]
+						},
+						"description": "Validasi JWT token"
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@DEMO001.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/forgot-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "Request reset password via email"
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"cEH8tSmyLgn6MkO6Ex5ZGtwC2yBsxZHgmKyw2necNI2aMeVad4C88piRHHky9Yzm\",\n  \"email\": \"admin@DEMO001.com\",\n  \"password\": \"admin123\",\n  \"password_confirmation\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "Reset password dengan token dari email"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints untuk autentikasi dan manajemen user"
+		},
+		{
+			"name": "User Me",
+			"item": [
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Mendapatkan informasi user yang sedang login"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe Updated\",\n  \"phone\": \"+6281234567890\",\n  \"address\": \"Jl. Contoh No. 123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Update profil user yang sedang login"
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"current_password\": \"oldpassword123\",\n  \"new_password\": \"newpassword123\",\n  \"new_password_confirmation\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/change-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"change-password"
+							]
+						},
+						"description": "Ganti password user"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout dari device saat ini"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout All Devices",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout-all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout-all"
+							]
+						},
+						"description": "Logout dari semua device"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Sessions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/sessions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"sessions"
+							]
+						},
+						"description": "Mendapatkan daftar session aktif user"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints untuk manajemen profil dan session user"
+		},
+		{
+			"name": "Role Permission",
+			"item": [
+				{
+					"name": "📋 Permissions",
+					"item": [
+						{
+							"name": "Get All Permissions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions?page=1&per_page=15",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "per_page",
+											"value": "15"
+										}
+									]
+								},
+								"description": "Retrieve all permissions for the authenticated user's organization. Supports filtering by category, resource, scope, and status."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Permission by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/{{permission_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"{{permission_id}}"
+									]
+								},
+								"description": "Retrieve a specific permission by its ID. Returns detailed information including relationships and computed fields."
+							},
+							"response": []
+						},
+						{
+							"name": "Create New Permission",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Delete Users\",\n  \"code\": \"delete_users\",\n  \"display_name\": \"Delete Users\",\n  \"description\": \"Allow users to delete other user accounts\",\n  \"resource\": \"users\",\n  \"action\": \"delete\",\n  \"scope\": \"organization\",\n  \"category\": \"user_management\",\n  \"is_dangerous\": true,\n  \"requires_approval\": true,\n  \"sort_order\": 100,\n  \"is_visible\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions"
+									]
+								},
+								"description": "Create a new permission. All fields are validated and the permission is automatically assigned to the current organization."
+							},
+							"response": []
+						},
+						{
+							"name": "Update Permission",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"display_name\": \"Updated Permission Name\",\n  \"description\": \"Updated description for this permission\",\n  \"sort_order\": 150,\n  \"is_visible\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/{{permission_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"{{permission_id}}"
+									]
+								},
+								"description": "Update an existing permission. System permissions cannot be modified. Only non-system permissions can be updated."
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Permission",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/{{permission_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"{{permission_id}}"
+									]
+								},
+								"description": "Delete a permission. System permissions and permissions assigned to roles cannot be deleted."
+							},
+							"response": []
+						}
+					],
+					"description": "Core CRUD operations for managing permissions within an organization."
+				},
+				{
+					"name": "📁 Permission Groups",
+					"item": [
+						{
+							"name": "Get All Permission Groups",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/groups",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"groups"
+									]
+								},
+								"description": "Retrieve all permission groups for the organization. Includes hierarchical structure and permission counts."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Permission Group",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"User Management\",\n  \"code\": \"user_management\",\n  \"display_name\": \"User Management\",\n  \"description\": \"Permissions related to user management operations\",\n  \"category\": \"administration\",\n  \"parent_group_id\": null,\n  \"icon\": \"users\",\n  \"color\": \"#3B82F6\",\n  \"sort_order\": 10,\n  \"permission_ids\": [\"{{permission_id_1}}\", \"{{permission_id_2}}\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/groups",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"groups"
+									]
+								},
+								"description": "Create a new permission group. Can optionally include permissions and have a parent group for hierarchical organization."
+							},
+							"response": []
+						}
+					],
+					"description": "Manage permission groups for better organization and categorization of permissions."
+				},
+				{
+					"name": "👥 Role Permissions",
+					"item": [
+						{
+							"name": "Get Role Permissions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/roles/{{role_id}}/permissions",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"roles",
+										"{{role_id}}",
+										"permissions"
+									]
+								},
+								"description": "Retrieve all permissions assigned to a specific role. Shows granted permissions with their details."
+							},
+							"response": []
+						},
+						{
+							"name": "Assign Permissions to Role",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"permission_ids\": [\n    \"{{permission_id_1}}\",\n    \"{{permission_id_2}}\",\n    \"{{permission_id_3}}\"\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/roles/{{role_id}}/permissions",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"roles",
+										"{{role_id}}",
+										"permissions"
+									]
+								},
+								"description": "Assign multiple permissions to a role. This will replace all existing permissions for the role with the new set."
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Permissions from Role",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"permission_ids\": [\n    \"{{permission_id_1}}\",\n    \"{{permission_id_2}}\"\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/roles/{{role_id}}/permissions",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"roles",
+										"{{role_id}}",
+										"permissions"
+									]
+								},
+								"description": "Remove specific permissions from a role. Only the specified permissions will be removed."
+							},
+							"response": []
+						}
+					],
+					"description": "Manage permission assignments to roles for effective access control."
+				},
+				{
+					"name": "👤 User Permissions",
+					"item": [
+						{
+							"name": "Get User Permissions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/users/permissions",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"users",
+										"permissions"
+									]
+								},
+								"description": "Retrieve all permissions for the currently authenticated user. Shows effective permissions from all assigned roles."
+							},
+							"response": []
+						},
+						{
+							"name": "Check User Permission",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"resource\": \"users\",\n  \"action\": \"delete\",\n  \"scope\": \"organization\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/permissions/users/check-permission",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"permissions",
+										"users",
+										"check-permission"
+									]
+								},
+								"description": "Check if the current user has a specific permission. Useful for frontend permission checks and conditional UI rendering."
+							},
+							"response": []
+						}
+					],
+					"description": "User-specific permission operations for checking access rights and retrieving user permissions."
+				},
+				{
+					"name": "\\👤 Role Management",
+					"item": [
+						{
+							"name": "Get All Roles",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles?page=1&per_page=15",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number for pagination"
+										},
+										{
+											"key": "per_page",
+											"value": "15",
+											"description": "Number of items per page"
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Search term for role name",
+											"disabled": true
+										},
+										{
+											"key": "scope",
+											"value": "",
+											"description": "Filter by scope (global, organization, user)",
+											"disabled": true
+										},
+										{
+											"key": "is_system_role",
+											"value": "",
+											"description": "Filter by system role (true/false)",
+											"disabled": true
+										},
+										{
+											"key": "organization_id",
+											"value": "",
+											"description": "Filter by organization ID",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get paginated list of roles with filters and search. Requires 'roles.view' permission."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Role by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles/{{role_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles",
+										"{{role_id}}"
+									]
+								},
+								"description": "Get specific role details with users and permissions. Requires 'roles.view' permission."
+							},
+							"response": []
+						},
+						{
+							"name": "Create New Role",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Senior Developer\",\n    \"code\": \"senior_developer\",\n    \"display_name\": \"Senior Developer\",\n    \"description\": \"Senior level developer role with advanced permissions\",\n    \"level\": 5,\n    \"scope\": \"organization\",\n    \"is_active\": true,\n    \"is_system_role\": false,\n    \"permission_ids\": [1, 2, 3],\n    \"metadata\": {\n        \"department\": \"Engineering\",\n        \"experience_level\": \"Senior\"\n    }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles"
+									]
+								},
+								"description": "Create a new role. Requires 'roles.create' permission.\n\nRequired fields:\n- name: Role name (unique)\n- code: Role code (unique, lowercase with underscores)\n- display_name: Display name\n- level: Role level (1-100)\n- scope: Role scope (global, organization, department, team, personal)\n\nOptional fields:\n- description: Role description\n- is_active: Whether role is active\n- is_system_role: Whether it's a system role\n- permission_ids: Array of permission IDs\n- metadata: Additional metadata"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Role",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Updated Senior Developer\",\n    \"code\": \"updated_senior_developer\",\n    \"display_name\": \"Updated Senior Developer\",\n    \"description\": \"Updated description for senior developer role\",\n    \"level\": 6,\n    \"scope\": \"organization\",\n    \"is_active\": true,\n    \"permission_ids\": [1, 2, 3, 4],\n    \"metadata\": {\n        \"department\": \"Engineering\",\n        \"experience_level\": \"Senior\",\n        \"updated_at\": \"2024-01-15\"\n    }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles/{{role_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles",
+										"{{role_id}}"
+									]
+								},
+								"description": "Update an existing role. Requires 'roles.update' permission.\n\nAll fields are optional for updates:\n- name: Role name (unique)\n- code: Role code (unique, lowercase with underscores)\n- display_name: Display name\n- description: Role description\n- level: Role level (1-100)\n- scope: Role scope (global, organization, department, team, personal)\n- is_active: Whether role is active\n- permission_ids: Array of permission IDs\n- metadata: Additional metadata"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Role",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles/{{role_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles",
+										"{{role_id}}"
+									]
+								},
+								"description": "Delete a role. Requires 'roles.delete' permission."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Available Roles",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles/available",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles",
+										"available"
+									]
+								},
+								"description": "Get available roles for assignment (non-system roles, non-global scope). Requires 'roles.view' permission."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Role Statistics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles/statistics",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles",
+										"statistics"
+									]
+								},
+								"description": "Get role statistics including total roles, system roles, custom roles, etc. Requires 'roles.view' permission."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Users by Role",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles/{{role_id}}/users",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles",
+										"{{role_id}}",
+										"users"
+									]
+								},
+								"description": "Get all users assigned to a specific role. Requires 'roles.view' permission."
+							},
+							"response": []
+						},
+						{
+							"name": "Assign Role to User",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"user_id\": 1,\n    \"role_id\": 2\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles/assign",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles",
+										"assign"
+									]
+								},
+								"description": "Assign a role to a user. Requires 'roles.assign' permission.\n\nRequired fields:\n- user_id: ID of the user\n- role_id: ID of the role to assign"
+							},
+							"response": []
+						},
+						{
+							"name": "Revoke Role from User",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"user_id\": 1,\n    \"role_id\": 2\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/roles/revoke",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"roles",
+										"revoke"
+									]
+								},
+								"description": "Revoke a role from a user. Requires 'roles.revoke' permission.\n\nRequired fields:\n- user_id: ID of the user\n- role_id: ID of the role to revoke"
+							},
+							"response": []
+						}
+					],
+					"description": "Complete Role Management API endpoints"
+				}
+			],
+			"description": "Complete permission management system including CRUD operations, grouping, role assignments, and user permission checks."
+		},
+		{
+			"name": "User Management (SuperAdminAdmin)",
+			"item": [
+				{
+					"name": "List Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users?page=1&per_page=20&search=&status=active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "20"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "status",
+									"value": "active"
+								}
+							]
+						},
+						"description": "Mendapatkan daftar users dengan pagination dan filter"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/search?query=super&type=name&organization_id={{organization_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "super"
+								},
+								{
+									"key": "type",
+									"value": "name"
+								},
+								{
+									"key": "organization_id",
+									"value": "{{organization_id}}"
+								}
+							]
+						},
+						"description": "Search users berdasarkan kriteria tertentu"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/statistics?period=30d&organization_id={{organization_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"statistics"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "30d"
+								},
+								{
+									"key": "organization_id",
+									"value": "{{organization_id}}"
+								}
+							]
+						},
+						"description": "Mendapatkan statistik users"
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"user\",\n  \"organization_id\": \"{{organization_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							]
+						},
+						"description": "Membuat user baru"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						},
+						"description": "Mendapatkan detail user berdasarkan ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Permissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/permissions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"permissions"
+							]
+						},
+						"description": "Mendapatkan detail user berdasarkan ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Jane Doe Updated\",\n  \"email\": \"jane.updated@example.com\",\n  \"role\": \"admin\",\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						},
+						"description": "Update informasi user"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						},
+						"description": "Hapus user"
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Update Users",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_ids\": [\"{{user_id}}\", \"user_id_2\"],\n  \"updates\": {\n    \"status\": \"inactive\",\n    \"role\": \"user\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/bulk-update",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"bulk-update"
+							]
+						},
+						"description": "Update multiple users sekaligus"
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle User Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/toggle-status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"toggle-status"
+							]
+						},
+						"description": "Toggle status user (active/inactive)"
+					},
+					"response": []
+				},
+				{
+					"name": "Restore User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/restore",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"restore"
+							]
+						},
+						"description": "Restore user yang sudah dihapus"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints untuk manajemen users (admin only)"
+		},
+		{
+			"name": "Organization",
+			"item": [
+				{
+					"name": "👥 Organization Users",
+					"item": [
+						{
+							"name": "📋 Get Organization Users",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/users",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"organizations",
+										"{{organization_id}}",
+										"users"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "➕ Add User to Organization",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"role_id\": \"{{role_id}}\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/users",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"organizations",
+										"{{organization_id}}",
+										"users"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "➖ Remove User from Organization",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/users/{{user_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"organizations",
+										"{{organization_id}}",
+										"users",
+										"{{user_id}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "🔍 Filter & Search",
+					"item": [
+						{
+							"name": "🏢 Organizations by Business Type",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/organizations/business-type/technology",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"organizations",
+										"business-type",
+										"technology"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "🏭 Organizations by Industry",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/organizations/industry/software",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"organizations",
+										"industry",
+										"software"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "👥 Organizations by Company Size",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/organizations/company-size/50-100",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"organizations",
+										"company-size",
+										"50-100"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "📋 List Organizations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations?page=1&per_page=15&status=active&sort_by=created_at&sort_order=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "15"
+								},
+								{
+									"key": "status",
+									"value": "active"
+								},
+								{
+									"key": "sort_by",
+									"value": "created_at"
+								},
+								{
+									"key": "sort_order",
+									"value": "desc"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Active Organizations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"active"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🆓 Trial Organizations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/trial",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"trial"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "⏰ Expired Trial Organizations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/expired-trial",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"expired-trial"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "📊 Organization Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"statistics"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🔍 Get Organization by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"{{organization_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🔍 Get Organization by Code",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/code/{{organization_code}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"code",
+								"{{organization_code}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "➕ Create Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('organization_id', response.data.id);",
+									"    }",
+									"    if (response.data && response.data.org_code) {",
+									"        pm.environment.set('organization_code', response.data.org_code);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"TechCorp Indonesia\",\n  \"display_name\": \"TechCorp\",\n  \"email\": \"contact@techcorp.id\",\n  \"phone\": \"+62-21-1234-5678\",\n  \"address\": \"Jl. Sudirman No. 123, Jakarta Pusat\",\n  \"website\": \"https://techcorp.id\",\n  \"business_type\": \"technology\",\n  \"industry\": \"software\",\n  \"company_size\": \"50-100\",\n  \"timezone\": \"Asia/Jakarta\",\n  \"locale\": \"id\",\n  \"currency\": \"IDR\",\n  \"description\": \"Perusahaan teknologi terkemuka di Indonesia\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "✏️ Update Organization",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"TechCorp Indonesia Updated\",\n  \"display_name\": \"TechCorp Updated\",\n  \"phone\": \"+62-21-9876-5432\",\n  \"address\": \"Jl. Thamrin No. 456, Jakarta Pusat\",\n  \"business_type\": \"technology\",\n  \"industry\": \"software\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"{{organization_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🗑️ Delete Organization",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"{{organization_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "💳 Update Organization Subscription",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subscription_plan_id\": \"{{subscription_plan_id}}\",\n  \"billing_cycle\": \"monthly\",\n  \"trial_ends_at\": \"2024-12-31T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/subscription",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"{{organization_id}}",
+								"subscription"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Subscription Plan",
+			"item": [
+				{
+					"name": "📋 List Subscription Plans",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans?page=1&per_page=15&status=active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "15"
+								},
+								{
+									"key": "tier",
+									"value": "basic",
+									"disabled": true
+								},
+								{
+									"key": "is_popular",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "active"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "⭐ Popular Plans",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/popular",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"popular"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🏷️ Plans by Tier",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/tier/basic",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"tier",
+								"basic"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🎨 Custom Plans",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/custom",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"custom"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "📊 Plan Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"statistics"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🔍 Get Plan by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/{{subscription_plan_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"{{subscription_plan_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "➕ Create Subscription Plan",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('subscription_plan_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"premium-plan\",\n  \"display_name\": \"Premium Plan\",\n  \"description\": \"Paket premium dengan fitur lengkap\",\n  \"tier\": \"professional\",\n  \"price_monthly\": 500000,\n  \"price_quarterly\": 1350000,\n  \"price_yearly\": 4800000,\n  \"currency\": \"IDR\",\n  \"max_agents\": 10,\n  \"max_channels\": 5,\n  \"max_knowledge_articles\": 1000,\n  \"max_monthly_messages\": 100000,\n  \"max_monthly_ai_requests\": 50000,\n  \"max_storage_gb\": 50,\n  \"max_api_calls_per_day\": 10000,\n  \"features\": [\n    \"advanced_analytics\",\n    \"custom_branding\",\n    \"priority_support\",\n    \"api_access\"\n  ],\n  \"trial_days\": 14,\n  \"is_popular\": true,\n  \"is_custom\": false,\n  \"sort_order\": 2,\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "✏️ Update Subscription Plan",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"display_name\": \"Premium Plan Updated\",\n  \"description\": \"Paket premium yang telah diperbarui\",\n  \"price_monthly\": 550000,\n  \"max_agents\": 15,\n  \"features\": [\n    \"advanced_analytics\",\n    \"custom_branding\",\n    \"priority_support\",\n    \"api_access\",\n    \"white_label\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/{{subscription_plan_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"{{subscription_plan_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🗑️ Delete Subscription Plan",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/{{subscription_plan_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"{{subscription_plan_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "⭐ Toggle Plan Popularity",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/{{subscription_plan_id}}/toggle-popular",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"{{subscription_plan_id}}",
+								"toggle-popular"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "📋 Update Sort Order",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sort_data\": [\n    {\n      \"id\": \"{{subscription_plan_id}}\",\n      \"sort_order\": 1\n    },\n    {\n      \"id\": \"{{subscription_plan_id_2}}\",\n      \"sort_order\": 2\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscription-plans/sort-order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscription-plans",
+								"sort-order"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Knowledge Base",
+			"item": [
+				{
+					"name": "Knowledge Base - List & Search",
+					"item": [
+						{
+							"name": "Get All Knowledge Base Items",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/?sort_by=created_at&sort_order=desc&per_page=15",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										""
+									],
+									"query": [
+										{
+											"key": "sort_by",
+											"value": "created_at",
+											"description": "Sort field (title, created_at, updated_at, published_at, view_count, helpful_count, priority, quality_score)"
+										},
+										{
+											"key": "sort_order",
+											"value": "desc",
+											"description": "Sort order (asc, desc)"
+										},
+										{
+											"key": "category_id",
+											"value": "",
+											"description": "Filter by category ID",
+											"disabled": true
+										},
+										{
+											"key": "content_type",
+											"value": "",
+											"description": "Filter by content type (article, guide, tutorial, qa_collection, faq, documentation, reference)",
+											"disabled": true
+										},
+										{
+											"key": "language",
+											"value": "",
+											"description": "Filter by language",
+											"disabled": true
+										},
+										{
+											"key": "is_public",
+											"value": "",
+											"description": "Filter by public status (true/false)",
+											"disabled": true
+										},
+										{
+											"key": "is_featured",
+											"value": "",
+											"description": "Filter by featured status (true/false)",
+											"disabled": true
+										},
+										{
+											"key": "per_page",
+											"value": "15"
+										}
+									]
+								},
+								"description": "Get all knowledge base items with pagination and filtering"
+							},
+							"response": []
+						},
+						{
+							"name": "Search Knowledge Base Items",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/search?query=test&limit=20",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"search"
+									],
+									"query": [
+										{
+											"key": "query",
+											"value": "test",
+											"description": "Search query (required)"
+										},
+										{
+											"key": "limit",
+											"value": "20",
+											"description": "Maximum number of results"
+										},
+										{
+											"key": "content_type",
+											"value": "article",
+											"description": "Filter by content type",
+											"disabled": true
+										},
+										{
+											"key": "language",
+											"value": "english",
+											"description": "Filter by language",
+											"disabled": true
+										},
+										{
+											"key": "is_public",
+											"value": "true",
+											"description": "Filter by public status",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Search knowledge base items with filters"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Items by Category",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/category/{{category_id}}?per_page=15&sort_by=created_at&sort_order=desc",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"category",
+										"{{category_id}}"
+									],
+									"query": [
+										{
+											"key": "per_page",
+											"value": "15",
+											"description": "Number of items per page"
+										},
+										{
+											"key": "sort_by",
+											"value": "created_at",
+											"description": "Sort field"
+										},
+										{
+											"key": "sort_order",
+											"value": "desc",
+											"description": "Sort order"
+										}
+									]
+								},
+								"description": "Get knowledge base items filtered by category"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Items by Tag",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/tag/{{tag_id}}?per_page=15&sort_by=created_at&sort_order=desc",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"tag",
+										"{{tag_id}}"
+									],
+									"query": [
+										{
+											"key": "per_page",
+											"value": "15",
+											"description": "Number of items per page"
+										},
+										{
+											"key": "sort_by",
+											"value": "created_at",
+											"description": "Sort field"
+										},
+										{
+											"key": "sort_order",
+											"value": "desc",
+											"description": "Sort order"
+										}
+									]
+								},
+								"description": "Get knowledge base items filtered by tag"
+							},
+							"response": []
+						}
+					],
+					"description": "Endpoints for listing and searching knowledge base items"
+				},
+				{
+					"name": "Knowledge Base - CRUD Operations",
+					"item": [
+						{
+							"name": "Get Knowledge Base Item by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}"
+									]
+								},
+								"description": "Get a specific knowledge base item by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Knowledge Base Item by Slug",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/slug/{{knowledge_item_slug}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"slug",
+										"{{knowledge_item_slug}}"
+									]
+								},
+								"description": "Get a knowledge base item by slug"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Knowledge Base Item",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"category_id\": \"{{category_id}}\",\n    \"title\": \"Getting Started with Laravel\",\n    \"description\": \"A comprehensive guide to getting started with Laravel framework\",\n    \"content_type\": \"article\",\n    \"content\": \"<h1>Getting Started with Laravel</h1><p>Laravel is a web application framework with expressive, elegant syntax...</p>\",\n    \"summary\": \"Learn the basics of Laravel framework and build your first application\",\n    \"excerpt\": \"Complete guide to Laravel framework\",\n    \"tags\": [\"laravel\", \"php\", \"framework\", \"web-development\"],\n    \"keywords\": [\"laravel\", \"php\", \"framework\", \"tutorial\"],\n    \"language\": \"english\",\n    \"difficulty_level\": \"intermediate\",\n    \"priority\": \"medium\",\n    \"estimated_read_time\": 15,\n    \"meta_title\": \"Getting Started with Laravel - Complete Guide\",\n    \"meta_description\": \"Learn Laravel framework from scratch with this comprehensive guide\",\n    \"featured_image_url\": \"https://example.com/images/laravel-guide.jpg\",\n    \"is_featured\": false,\n    \"is_public\": true,\n    \"is_searchable\": true,\n    \"is_ai_trainable\": true,\n    \"requires_approval\": true,\n    \"workflow_status\": \"draft\",\n    \"approval_status\": \"pending\",\n    \"qa_items\": [\n        {\n            \"question\": \"What is Laravel?\",\n            \"answer\": \"Laravel is a free, open-source PHP web framework used for building web applications.\",\n            \"question_variations\": [\"Tell me about Laravel\", \"What is the Laravel framework?\"],\n            \"answer_variations\": [\"Laravel is a PHP framework for web development.\", \"It's a modern PHP framework.\"],\n            \"context\": \"Framework introduction\",\n            \"intent\": \"information\",\n            \"confidence_level\": \"high\",\n            \"keywords\": [\"laravel\", \"framework\", \"php\"],\n            \"search_keywords\": [\"laravel\", \"framework\", \"php\", \"web\"],\n            \"trigger_phrases\": [\"what is\", \"tell me about\", \"explain\"],\n            \"order_index\": 1,\n            \"is_primary\": true,\n            \"is_active\": true\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base"
+									]
+								},
+								"description": "Create a new knowledge base item"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Knowledge Base Item",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"title\": \"Updated: Getting Started with Laravel\",\n    \"description\": \"Updated comprehensive guide to getting started with Laravel framework\",\n    \"content\": \"<h1>Updated: Getting Started with Laravel</h1><p>Laravel is a web application framework with expressive, elegant syntax...</p><p>This guide has been updated with the latest features.</p>\",\n    \"summary\": \"Updated guide to Laravel framework basics\",\n    \"tags\": [\"laravel\", \"php\", \"framework\", \"web-development\", \"updated\"],\n    \"is_featured\": true,\n    \"workflow_status\": \"review\",\n    \"qa_items\": [\n        {\n            \"question\": \"What is Laravel?\",\n            \"answer\": \"Laravel is a free, open-source PHP web framework used for building web applications with elegant syntax.\",\n            \"question_variations\": [\"Tell me about Laravel\", \"What is the Laravel framework?\", \"Explain Laravel\"],\n            \"answer_variations\": [\"Laravel is a PHP framework for web development.\", \"It's a modern PHP framework with elegant syntax.\"],\n            \"context\": \"Framework introduction\",\n            \"intent\": \"information\",\n            \"confidence_level\": \"high\",\n            \"keywords\": [\"laravel\", \"framework\", \"php\"],\n            \"search_keywords\": [\"laravel\", \"framework\", \"php\", \"web\", \"development\"],\n            \"trigger_phrases\": [\"what is\", \"tell me about\", \"explain\", \"describe\"],\n            \"order_index\": 1,\n            \"is_primary\": true,\n            \"is_active\": true\n        },\n        {\n            \"question\": \"How to install Laravel?\",\n            \"answer\": \"You can install Laravel using Composer: composer create-project laravel/laravel example-app\",\n            \"question_variations\": [\"How do I install Laravel?\", \"Laravel installation steps\"],\n            \"answer_variations\": [\"Install Laravel via Composer.\", \"Use composer create-project command.\"],\n            \"context\": \"Installation\",\n            \"intent\": \"how-to\",\n            \"confidence_level\": \"high\",\n            \"keywords\": [\"install\", \"composer\", \"setup\"],\n            \"search_keywords\": [\"install\", \"laravel\", \"composer\", \"setup\"],\n            \"trigger_phrases\": [\"how to\", \"install\", \"setup\"],\n            \"order_index\": 2,\n            \"is_primary\": false,\n            \"is_active\": true\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}"
+									]
+								},
+								"description": "Update an existing knowledge base item"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Knowledge Base Item",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}"
+									]
+								},
+								"description": "Delete a knowledge base item (soft delete)"
+							},
+							"response": []
+						}
+					],
+					"description": "Basic CRUD operations for knowledge base items"
+				},
+				{
+					"name": "Knowledge Base - Workflow & Approval",
+					"item": [
+						{
+							"name": "Publish Knowledge Base Item",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/publish",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}",
+										"publish"
+									]
+								},
+								"description": "Publish a knowledge base item (changes workflow_status to 'published')"
+							},
+							"response": []
+						},
+						{
+							"name": "Approve Knowledge Base Item",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"comment\": \"Content is accurate and well-written. Approved for publication.\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/approve",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}",
+										"approve"
+									]
+								},
+								"description": "Approve a knowledge base item (changes approval_status to 'approved')"
+							},
+							"response": []
+						},
+						{
+							"name": "Reject Knowledge Base Item",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"reason\": \"Content needs more technical details and examples. Please revise and resubmit.\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/reject",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}",
+										"reject"
+									]
+								},
+								"description": "Reject a knowledge base item (changes approval_status to 'rejected')"
+							},
+							"response": []
+						}
+					],
+					"description": "Workflow and approval management endpoints"
+				},
+				{
+					"name": "Knowledge Base - Feedback & Analytics",
+					"item": [
+						{
+							"name": "Get Related Items",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/related?limit=5",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}",
+										"related"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "5",
+											"description": "Number of related items to return"
+										}
+									]
+								},
+								"description": "Get related knowledge base items"
+							},
+							"response": []
+						},
+						{
+							"name": "Mark Item as Helpful",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/mark-helpful",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}",
+										"mark-helpful"
+									]
+								},
+								"description": "Mark a knowledge base item as helpful (increments helpful_count)"
+							},
+							"response": []
+						},
+						{
+							"name": "Mark Item as Not Helpful",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/knowledge-base/{{knowledge_item_id}}/mark-not-helpful",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"knowledge-base",
+										"{{knowledge_item_id}}",
+										"mark-not-helpful"
+									]
+								},
+								"description": "Mark a knowledge base item as not helpful (increments not_helpful_count)"
+							},
+							"response": []
+						}
+					],
+					"description": "Feedback and analytics endpoints"
+				}
+			]
+		},
+		{
+			"name": "Chatbot Operations",
+			"item": [
+				{
+					"name": "List Chatbots",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chatbots",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chatbots"
+							]
+						},
+						"description": "Mendapatkan daftar chatbot milik user"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Chatbot",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Customer Service Bot\",\n  \"description\": \"Bot untuk layanan pelanggan\",\n  \"type\": \"customer_service\",\n  \"settings\": {\n    \"language\": \"id\",\n    \"timezone\": \"Asia/Jakarta\",\n    \"response_timeout\": 30\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/chatbots",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chatbots"
+							]
+						},
+						"description": "Membuat chatbot baru"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Chatbot",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chatbots/{{chatbot_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chatbots",
+								"{{chatbot_id}}"
+							]
+						},
+						"description": "Mendapatkan detail chatbot berdasarkan ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Chatbot",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Customer Service Bot Updated\",\n  \"description\": \"Bot untuk layanan pelanggan yang sudah diupdate\",\n  \"settings\": {\n    \"language\": \"id\",\n    \"timezone\": \"Asia/Jakarta\",\n    \"response_timeout\": 45\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/chatbots/{{chatbot_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chatbots",
+								"{{chatbot_id}}"
+							]
+						},
+						"description": "Update informasi chatbot"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Chatbot",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chatbots/{{chatbot_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chatbots",
+								"{{chatbot_id}}"
+							]
+						},
+						"description": "Hapus chatbot"
+					},
+					"response": []
+				},
+				{
+					"name": "Train Chatbot",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"training_data\": [\n    {\n      \"question\": \"Apa layanan yang tersedia?\",\n      \"answer\": \"Kami menyediakan layanan customer service 24/7\"\n    },\n    {\n      \"question\": \"Bagaimana cara menghubungi support?\",\n      \"answer\": \"Anda bisa menghubungi kami melalui chat ini atau email support@example.com\"\n    }\n  ],\n  \"model_type\": \"gpt-3.5-turbo\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/chatbots/{{chatbot_id}}/train",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chatbots",
+								"{{chatbot_id}}",
+								"train"
+							]
+						},
+						"description": "Training chatbot dengan data baru"
+					},
+					"response": []
+				},
+				{
+					"name": "Chat with Bot",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Halo, saya ingin bertanya tentang layanan yang tersedia\",\n  \"conversation_id\": \"{{conversation_id}}\",\n  \"context\": {\n    \"user_id\": \"{{user_id}}\",\n    \"session_id\": \"{{session_id}}\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/chatbots/{{chatbot_id}}/chat",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chatbots",
+								"{{chatbot_id}}",
+								"chat"
+							]
+						},
+						"description": "Chat dengan chatbot"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints untuk operasi chatbot (CRUD, training, chat)"
+		},
+		{
+			"name": "Conversations",
+			"item": [
+				{
+					"name": "List Conversations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations?page=1&per_page=20&status=active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "20"
+								},
+								{
+									"key": "status",
+									"value": "active"
+								}
+							]
+						},
+						"description": "Mendapatkan daftar conversation dengan pagination dan filter"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Conversation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"chatbot_id\": \"{{chatbot_id}}\",\n  \"title\": \"Pertanyaan tentang layanan\",\n  \"metadata\": {\n    \"source\": \"web\",\n    \"user_agent\": \"Mozilla/5.0...\",\n    \"ip_address\": \"192.168.1.1\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations"
+							]
+						},
+						"description": "Membuat conversation baru"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Conversation",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								"{{conversation_id}}"
+							]
+						},
+						"description": "Mendapatkan detail conversation dan history chat"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Saya ingin bertanya tentang layanan premium\",\n  \"type\": \"user\",\n  \"metadata\": {\n    \"timestamp\": \"{{timestamp}}\",\n    \"platform\": \"web\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/messages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								"{{conversation_id}}",
+								"messages"
+							]
+						},
+						"description": "Kirim pesan dalam conversation"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints untuk manajemen conversation dan chat history"
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Dashboard Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/dashboard?period=30d&organization_id={{organization_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analytics",
+								"dashboard"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "30d"
+								},
+								{
+									"key": "organization_id",
+									"value": "{{organization_id}}"
+								}
+							]
+						},
+						"description": "Mendapatkan data analytics dashboard"
+					},
+					"response": []
+				},
+				{
+					"name": "Usage Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/usage?start_date=2024-01-01&end_date=2024-12-31&metric=conversations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analytics",
+								"usage"
+							],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2024-12-31"
+								},
+								{
+									"key": "metric",
+									"value": "conversations"
+								}
+							]
+						},
+						"description": "Analytics penggunaan sistem"
+					},
+					"response": []
+				},
+				{
+					"name": "Performance Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/performance?metric=response_time&period=7d",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analytics",
+								"performance"
+							],
+							"query": [
+								{
+									"key": "metric",
+									"value": "response_time"
+								},
+								{
+									"key": "period",
+									"value": "7d"
+								}
+							]
+						},
+						"description": "Analytics performa sistem"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints untuk analytics dan reporting"
+		},
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"health"
+							]
+						},
+						"description": "Health check endpoint untuk monitoring sistem"
+					},
+					"response": []
+				}
+			],
+			"description": "System endpoints untuk monitoring dan health check"
+		},
+		{
+			"name": "SuperAdmin Panel",
+			"item": [
+				{
+					"name": "Admin Dashboard Overview",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/dashboard/overview",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"dashboard",
+								"overview"
+							]
+						},
+						"description": "Admin dashboard overview dengan system statistics"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin System Logs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/dashboard/logs?level=error&organization_id={{organization_id}}&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"dashboard",
+								"logs"
+							],
+							"query": [
+								{
+									"key": "level",
+									"value": "error"
+								},
+								{
+									"key": "organization_id",
+									"value": "{{organization_id}}"
+								},
+								{
+									"key": "per_page",
+									"value": "15"
+								}
+							]
+						},
+						"description": "Admin system logs dengan filtering"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin User Management",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users?page=1&per_page=20&search=&status=active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "20"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "status",
+									"value": "active"
+								}
+							]
+						},
+						"description": "Admin user management dengan advanced filtering"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Export Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/export?format=csv&organization_id={{organization_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"export"
+							],
+							"query": [
+								{
+									"key": "format",
+									"value": "csv"
+								},
+								{
+									"key": "organization_id",
+									"value": "{{organization_id}}"
+								}
+							]
+						},
+						"description": "Export users data dalam berbagai format"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Bulk User Actions",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"deactivate\",\n  \"user_ids\": [\"{{user_id}}\", \"user_id_2\"],\n  \"reason\": \"Policy violation\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/bulk-action",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"bulk-action"
+							]
+						},
+						"description": "Bulk actions untuk multiple users"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Force Logout User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/force-logout/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"force-logout",
+								"{{user_id}}"
+							]
+						},
+						"description": "Force logout user dari semua device (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Lock User Account",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/lock-user/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"lock-user",
+								"{{user_id}}"
+							]
+						},
+						"description": "Lock user account (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Unlock User Account",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/unlock-user/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"unlock-user",
+								"{{user_id}}"
+							]
+						},
+						"description": "Unlock user account (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Revoke Session",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/sessions/{{session_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"sessions",
+								"{{session_id}}"
+							]
+						},
+						"description": "Revoke specific user session (admin only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Admin panel endpoints untuk super admin dan system management"
+		},
+		{
+			"name": "Payment Transaction",
+			"item": [
+				{
+					"name": "Get All Transactions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions?page=1&per_page=15&sort_by=created_at&sort_direction=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page (max 100)"
+								},
+								{
+									"key": "sort_by",
+									"value": "created_at",
+									"description": "Sort field: created_at, updated_at, amount, status"
+								},
+								{
+									"key": "sort_direction",
+									"value": "desc",
+									"description": "Sort direction: asc, desc"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term",
+									"disabled": true
+								},
+								{
+									"key": "organization_id",
+									"value": "",
+									"description": "Filter by organization ID",
+									"disabled": true
+								},
+								{
+									"key": "plan_id",
+									"value": "",
+									"description": "Filter by subscription plan ID",
+									"disabled": true
+								},
+								{
+									"key": "payment_method",
+									"value": "",
+									"description": "Filter by payment method",
+									"disabled": true
+								},
+								{
+									"key": "payment_gateway",
+									"value": "",
+									"description": "Filter by payment gateway",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status",
+									"disabled": true
+								},
+								{
+									"key": "amount_min",
+									"value": "",
+									"description": "Minimum amount",
+									"disabled": true
+								},
+								{
+									"key": "amount_max",
+									"value": "",
+									"description": "Maximum amount",
+									"disabled": true
+								},
+								{
+									"key": "currency",
+									"value": "",
+									"description": "Filter by currency",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Mendapatkan daftar semua transaksi pembayaran dengan pagination dan filtering"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions/{{transaction_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions",
+								"{{transaction_id}}"
+							]
+						},
+						"description": "Mendapatkan detail transaksi berdasarkan ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions",
+								"statistics"
+							],
+							"query": [
+								{
+									"key": "organization_id",
+									"value": "",
+									"description": "Filter by organization ID",
+									"disabled": true
+								},
+								{
+									"key": "plan_id",
+									"value": "",
+									"description": "Filter by subscription plan ID",
+									"disabled": true
+								},
+								{
+									"key": "payment_method",
+									"value": "",
+									"description": "Filter by payment method",
+									"disabled": true
+								},
+								{
+									"key": "payment_gateway",
+									"value": "",
+									"description": "Filter by payment gateway",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status",
+									"disabled": true
+								},
+								{
+									"key": "amount_min",
+									"value": "",
+									"description": "Minimum amount",
+									"disabled": true
+								},
+								{
+									"key": "amount_max",
+									"value": "",
+									"description": "Maximum amount",
+									"disabled": true
+								},
+								{
+									"key": "currency",
+									"value": "",
+									"description": "Filter by currency",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Mendapatkan statistik transaksi pembayaran"
+					},
+					"response": []
+				},
+				{
+					"name": "Export Transactions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions/export?format=csv",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions",
+								"export"
+							],
+							"query": [
+								{
+									"key": "format",
+									"value": "csv",
+									"description": "Export format: csv, json, xlsx"
+								},
+								{
+									"key": "organization_id",
+									"value": "",
+									"description": "Filter by organization ID",
+									"disabled": true
+								},
+								{
+									"key": "plan_id",
+									"value": "",
+									"description": "Filter by subscription plan ID",
+									"disabled": true
+								},
+								{
+									"key": "payment_method",
+									"value": "",
+									"description": "Filter by payment method",
+									"disabled": true
+								},
+								{
+									"key": "payment_gateway",
+									"value": "",
+									"description": "Filter by payment gateway",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status",
+									"disabled": true
+								},
+								{
+									"key": "amount_min",
+									"value": "",
+									"description": "Minimum amount",
+									"disabled": true
+								},
+								{
+									"key": "amount_max",
+									"value": "",
+									"description": "Maximum amount",
+									"disabled": true
+								},
+								{
+									"key": "currency",
+									"value": "",
+									"description": "Filter by currency",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Export data transaksi ke format CSV, JSON, atau XLSX"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transactions by Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions/status/{{status}}?page=1&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions",
+								"status",
+								"{{status}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page (max 100)"
+								},
+								{
+									"key": "organization_id",
+									"value": "",
+									"description": "Filter by organization ID",
+									"disabled": true
+								},
+								{
+									"key": "plan_id",
+									"value": "",
+									"description": "Filter by subscription plan ID",
+									"disabled": true
+								},
+								{
+									"key": "payment_method",
+									"value": "",
+									"description": "Filter by payment method",
+									"disabled": true
+								},
+								{
+									"key": "payment_gateway",
+									"value": "",
+									"description": "Filter by payment gateway",
+									"disabled": true
+								},
+								{
+									"key": "amount_min",
+									"value": "",
+									"description": "Minimum amount",
+									"disabled": true
+								},
+								{
+									"key": "amount_max",
+									"value": "",
+									"description": "Maximum amount",
+									"disabled": true
+								},
+								{
+									"key": "currency",
+									"value": "",
+									"description": "Filter by currency",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Mendapatkan transaksi berdasarkan status (completed, pending, failed, cancelled, refunded)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transactions by Payment Method",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions/payment-method/{{payment_method}}?page=1&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions",
+								"payment-method",
+								"{{payment_method}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page (max 100)"
+								},
+								{
+									"key": "organization_id",
+									"value": "",
+									"description": "Filter by organization ID",
+									"disabled": true
+								},
+								{
+									"key": "plan_id",
+									"value": "",
+									"description": "Filter by subscription plan ID",
+									"disabled": true
+								},
+								{
+									"key": "payment_gateway",
+									"value": "",
+									"description": "Filter by payment gateway",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status",
+									"disabled": true
+								},
+								{
+									"key": "amount_min",
+									"value": "",
+									"description": "Minimum amount",
+									"disabled": true
+								},
+								{
+									"key": "amount_max",
+									"value": "",
+									"description": "Maximum amount",
+									"disabled": true
+								},
+								{
+									"key": "currency",
+									"value": "",
+									"description": "Filter by currency",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Mendapatkan transaksi berdasarkan metode pembayaran (credit_card, bank_transfer, e_wallet, etc.)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transactions by Payment Gateway",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions/payment-gateway/{{payment_gateway}}?page=1&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions",
+								"payment-gateway",
+								"{{payment_gateway}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page (max 100)"
+								},
+								{
+									"key": "organization_id",
+									"value": "",
+									"description": "Filter by organization ID",
+									"disabled": true
+								},
+								{
+									"key": "plan_id",
+									"value": "",
+									"description": "Filter by subscription plan ID",
+									"disabled": true
+								},
+								{
+									"key": "payment_method",
+									"value": "",
+									"description": "Filter by payment method",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status",
+									"disabled": true
+								},
+								{
+									"key": "amount_min",
+									"value": "",
+									"description": "Minimum amount",
+									"disabled": true
+								},
+								{
+									"key": "amount_max",
+									"value": "",
+									"description": "Maximum amount",
+									"disabled": true
+								},
+								{
+									"key": "currency",
+									"value": "",
+									"description": "Filter by currency",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Mendapatkan transaksi berdasarkan payment gateway (midtrans, xendit, stripe, etc.)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Plan Transaction History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions/plan/{{plan_id}}/history?page=1&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions",
+								"plan",
+								"{{plan_id}}",
+								"history"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page (max 100)"
+								},
+								{
+									"key": "organization_id",
+									"value": "",
+									"description": "Filter by organization ID",
+									"disabled": true
+								},
+								{
+									"key": "payment_method",
+									"value": "",
+									"description": "Filter by payment method",
+									"disabled": true
+								},
+								{
+									"key": "payment_gateway",
+									"value": "",
+									"description": "Filter by payment gateway",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status",
+									"disabled": true
+								},
+								{
+									"key": "amount_min",
+									"value": "",
+									"description": "Minimum amount",
+									"disabled": true
+								},
+								{
+									"key": "amount_max",
+									"value": "",
+									"description": "Maximum amount",
+									"disabled": true
+								},
+								{
+									"key": "currency",
+									"value": "",
+									"description": "Filter by currency",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Mendapatkan riwayat transaksi untuk subscription plan tertentu"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Organization Transaction History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-transactions/organization/{{organization_id}}/history?page=1&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment-transactions",
+								"organization",
+								"{{organization_id}}",
+								"history"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page (max 100)"
+								},
+								{
+									"key": "plan_id",
+									"value": "",
+									"description": "Filter by subscription plan ID",
+									"disabled": true
+								},
+								{
+									"key": "payment_method",
+									"value": "",
+									"description": "Filter by payment method",
+									"disabled": true
+								},
+								{
+									"key": "payment_gateway",
+									"value": "",
+									"description": "Filter by payment gateway",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status",
+									"disabled": true
+								},
+								{
+									"key": "amount_min",
+									"value": "",
+									"description": "Minimum amount",
+									"disabled": true
+								},
+								{
+									"key": "amount_max",
+									"value": "",
+									"description": "Maximum amount",
+									"disabled": true
+								},
+								{
+									"key": "currency",
+									"value": "",
+									"description": "Filter by currency",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Mendapatkan riwayat transaksi untuk organization tertentu"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set timestamp for requests",
+					"pm.globals.set('timestamp', new Date().toISOString());",
+					"",
+					"// Auto-refresh token if expired",
+					"const token = pm.globals.get('jwt_token');",
+					"if (token) {",
+					"    try {",
+					"        const payload = JSON.parse(atob(token.split('.')[1]));",
+					"        const expiry = payload.exp * 1000;",
+					"        if (Date.now() >= expiry) {",
+					"            console.log('Token expired, please refresh');",
+					"        }",
+					"    } catch (e) {",
+					"        console.log('Invalid token format');",
+					"    }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Common test scripts",
+					"pm.test('Status code is 200', function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"pm.test('Response has success property', function () {",
+					"    const jsonData = pm.response.json();",
+					"    pm.expect(jsonData).to.have.property('success');",
+					"});",
+					"",
+					"pm.test('Response time is less than 2000ms', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+					"});",
+					"",
+					"// Store response data to variables if needed",
+					"if (pm.response.code === 200) {",
+					"    const jsonData = pm.response.json();",
+					"    if (jsonData.data && jsonData.data.token) {",
+					"        pm.globals.set('jwt_token', jsonData.data.token);",
+					"    }",
+					"    if (jsonData.data && jsonData.data.refresh_token) {",
+					"        pm.globals.set('refresh_token', jsonData.data.refresh_token);",
+					"    }",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string",
+			"description": "Base URL untuk development environment"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string",
+			"description": "JWT token untuk autentikasi"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string",
+			"description": "Refresh token untuk renew JWT"
+		},
+		{
+			"key": "chatbot_id",
+			"value": "",
+			"type": "string",
+			"description": "ID chatbot untuk testing"
+		},
+		{
+			"key": "conversation_id",
+			"value": "",
+			"type": "string",
+			"description": "ID conversation untuk testing"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string",
+			"description": "ID user untuk testing"
+		},
+		{
+			"key": "organization_id",
+			"value": "",
+			"type": "string",
+			"description": "ID organization untuk testing"
+		},
+		{
+			"key": "session_id",
+			"value": "",
+			"type": "string",
+			"description": "ID session untuk testing"
+		}
+	]
+}
