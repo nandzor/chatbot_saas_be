@@ -1,0 +1,474 @@
+{
+  "name": "AI Agent WhatsApp Workflow",
+  "nodes": [
+    {
+      "id": "webhook_trigger",
+      "name": "WhatsApp Message Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 100],
+      "parameters": {
+        "path": "kb-webhook/{knowledge_base_id}",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {
+          "noResponseBody": false
+        }
+      },
+      "webhookId": "kb-webhook-123"
+    },
+    {
+      "id": "data_processor",
+      "name": "Process Message Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [300, 100],
+      "parameters": {
+        "functionCode": "// Extract and enrich data from webhook\nconst webhookData = $input.first().json;\n\n// Parse session to get organization info\nconst sessionParts = webhookData.session ? webhookData.session.split('_') : [];\nconst extractedOrgId = sessionParts[2] || 'unknown';\n\n// Build enriched context\nconst enrichedData = {\n  // Original message data\n  session_id: webhookData.session,\n  from: webhookData.from,\n  message: webhookData.text || webhookData.message,\n  timestamp: webhookData.timestamp || new Date().toISOString(),\n  message_id: webhookData.messageId || webhookData.id,\n  \n  // Extracted context\n  organization_id: extractedOrgId,\n  knowledge_base_id: webhookData.knowledge_base_id || 'default',\n  \n  // AI context\n  user_message: webhookData.text || webhookData.message,\n  user_phone: webhookData.from,\n  current_time: new Date().toISOString(),\n  user_timezone: 'Asia/Jakarta',\n  \n  // Conversation context\n  conversation_history: [],\n  user_preferences: {},\n  \n  // Metadata\n  workflow_id: 'ai-agent-workflow',\n  execution_id: $execution.id,\n  node_id: 'data_processor'\n};\n\nreturn { json: enrichedData };"
+      }
+    },
+    {
+      "id": "kb_search",
+      "name": "Search Knowledge Base",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 100],
+      "parameters": {
+        "url": "{{$env.LARAVEL_APP_URL}}/api/v1/knowledge-base/search",
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{$json.user_message}}"
+            },
+            {
+              "name": "organization_id",
+              "value": "={{$json.organization_id}}"
+            },
+            {
+              "name": "limit",
+              "value": "5"
+            },
+            {
+              "name": "include_content",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "conversation_history",
+      "name": "Get Conversation History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 300],
+      "parameters": {
+        "url": "{{$env.LARAVEL_APP_URL}}/api/v1/conversations/history",
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "session_id",
+              "value": "={{$json.session_id}}"
+            },
+            {
+              "name": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      }
+    },
+    {
+      "id": "prompt_builder",
+      "name": "Build System Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [700, 200],
+      "parameters": {
+        "functionCode": "// Get data from previous nodes\nconst kbResults = $('kb_search').first().json.data || [];\nconst conversationHistory = $('conversation_history').first().json.data || [];\nconst userMessage = $('data_processor').first().json.user_message;\nconst organizationId = $('data_processor').first().json.organization_id;\nconst userPhone = $('data_processor').first().json.user_phone;\n\n// Build knowledge base context\nlet kbContext = '';\nif (kbResults.length > 0) {\n  kbContext = '\\n\\n📚 Pengetahuan yang tersedia:\\n';\n  kbResults.forEach((item, index) => {\n    kbContext += `${index + 1}. **${item.title}**\\n   ${item.excerpt || item.description}\\n   Kategori: ${item.category || 'General'}\\n   Relevansi: ${Math.round((item.relevance_score || 0) * 100)}%\\n\\n`;\n  });\n}\n\n// Build conversation context\nlet convContext = '';\nif (conversationHistory.length > 0) {\n  convContext = '\\n\\n💬 Riwayat Percakapan:\\n';\n  conversationHistory.slice(-5).forEach((msg, index) => {\n    const sender = msg.sender === 'customer' ? 'Customer' : 'Agent';\n    convContext += `${sender}: ${msg.message}\\n`;\n  });\n}\n\n// Build system prompt\nconst systemPrompt = `Anda adalah asisten AI untuk customer service yang profesional dan ramah. Berikut adalah panduan untuk menjawab pertanyaan customer:\n\n🎯 **PANDUAN RESPON:**\n1. Selalu gunakan bahasa Indonesia yang sopan dan profesional\n2. Berikan jawaban yang jelas, terstruktur, dan mudah dipahami\n3. Gunakan emoji dengan bijak untuk membuat respons lebih ramah\n4. Jika ada informasi yang tidak tersedia, minta customer untuk menghubungi tim support\n5. Selalu akhiri dengan menanyakan apakah ada yang bisa dibantu lagi\n6. Gunakan format yang rapi dengan bullet points atau numbering\n\n📊 **INFORMASI CONTEXT:**\n- Organization ID: ${organizationId}\n- Customer Phone: ${userPhone}\n- Waktu: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}\n- Pertanyaan: ${userMessage}${kbContext}${convContext}\n\n🎨 **FORMAT RESPON:**\n- Gunakan heading dengan **bold**\n- Gunakan bullet points (•) atau numbering (1. 2. 3.)\n- Gunakan emoji yang relevan\n- Akhiri dengan signature yang ramah\n\nJawablah dengan format yang rapi dan mudah dibaca.`;\n\nreturn {\n  json: {\n    system_prompt: systemPrompt,\n    user_message: userMessage,\n    knowledge_base_results: kbResults,\n    conversation_history: conversationHistory,\n    organization_id: organizationId,\n    user_phone: userPhone\n  }\n};"
+      }
+    },
+    {
+      "id": "ai_processor",
+      "name": "AI Response Generation",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 200],
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "={{$json.system_prompt}}"
+            },
+            {
+              "role": "user",
+              "content": "={{$json.user_message}}"
+            }
+          ]
+        },
+        "temperature": 0.7,
+        "maxTokens": 500,
+        "options": {
+          "presencePenalty": 0.1,
+          "frequencyPenalty": 0.1
+        }
+      }
+    },
+    {
+      "id": "response_formatter",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1100, 200],
+      "parameters": {
+        "functionCode": "// Get AI response\nconst aiResponse = $input.first().json.choices[0].message.content;\nconst userPhone = $('data_processor').first().json.user_phone;\nconst sessionId = $('data_processor').first().json.session_id;\nconst organizationId = $('data_processor').first().json.organization_id;\nconst messageId = $('data_processor').first().json.message_id;\n\n// Clean up response\nlet formattedResponse = aiResponse.trim();\n\n// Add metadata if not present\nif (!formattedResponse.includes('Tim Support')) {\n  formattedResponse += '\\n\\n💬 Jika ada pertanyaan lain, silakan hubungi Tim Support kami.';\n}\n\n// Add execution metadata\nconst executionMetadata = {\n  workflow_id: 'ai-agent-workflow',\n  execution_id: $execution.id,\n  node_id: 'response_formatter',\n  timestamp: new Date().toISOString(),\n  processing_time: Date.now() - new Date($('data_processor').first().json.timestamp).getTime()\n};\n\n// Prepare WAHA payload\nconst wahaPayload = {\n  session: sessionId,\n  to: userPhone,\n  text: formattedResponse,\n  timestamp: new Date().toISOString(),\n  metadata: {\n    organization_id: organizationId,\n    message_id: messageId,\n    response_type: 'ai_generated',\n    execution_metadata: executionMetadata\n  }\n};\n\n// Prepare analytics payload\nconst analyticsPayload = {\n  workflow_id: 'ai-agent-workflow',\n  execution_id: $execution.id,\n  organization_id: organizationId,\n  session_id: sessionId,\n  user_phone: userPhone,\n  metrics: {\n    processing_time: executionMetadata.processing_time,\n    response_length: formattedResponse.length,\n    kb_results_count: $('kb_search').first().json.data ? $('kb_search').first().json.data.length : 0,\n    conversation_history_count: $('conversation_history').first().json.data ? $('conversation_history').first().json.data.length : 0\n  },\n  timestamp: new Date().toISOString()\n};\n\nreturn {\n  json: {\n    ...wahaPayload,\n    analytics: analyticsPayload\n  }\n};"
+      }
+    },
+    {
+      "id": "waha_send",
+      "name": "Send WhatsApp Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1300, 200],
+      "parameters": {
+        "url": "{{$env.WAHA_BASE_URL}}/api/sendText",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "session",
+              "value": "={{$json.session}}"
+            },
+            {
+              "name": "to",
+              "value": "={{$json.to}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.text}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "enabled": true,
+            "maxRetries": 3,
+            "retryDelay": 1000
+          }
+        }
+      }
+    },
+    {
+      "id": "conversation_logger",
+      "name": "Log Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1300, 400],
+      "parameters": {
+        "url": "{{$env.LARAVEL_APP_URL}}/api/v1/conversations/log",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "session_id",
+              "value": "={{$('data_processor').first().json.session_id}}"
+            },
+            {
+              "name": "customer_message",
+              "value": "={{$('data_processor').first().json.user_message}}"
+            },
+            {
+              "name": "agent_response",
+              "value": "={{$json.text}}"
+            },
+            {
+              "name": "organization_id",
+              "value": "={{$('data_processor').first().json.organization_id}}"
+            },
+            {
+              "name": "knowledge_base_used",
+              "value": "={{$('kb_search').first().json.data}}"
+            },
+            {
+              "name": "ai_metadata",
+              "value": "={{$json.metadata}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "analytics_logger",
+      "name": "Log Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1500, 300],
+      "parameters": {
+        "url": "{{$env.LARAVEL_APP_URL}}/api/v1/analytics/workflow-execution",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "={{$json.analytics.workflow_id}}"
+            },
+            {
+              "name": "execution_id",
+              "value": "={{$json.analytics.execution_id}}"
+            },
+            {
+              "name": "organization_id",
+              "value": "={{$json.analytics.organization_id}}"
+            },
+            {
+              "name": "session_id",
+              "value": "={{$json.analytics.session_id}}"
+            },
+            {
+              "name": "user_phone",
+              "value": "={{$json.analytics.user_phone}}"
+            },
+            {
+              "name": "metrics",
+              "value": "={{$json.analytics.metrics}}"
+            },
+            {
+              "name": "event_type",
+              "value": "workflow_execution"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{$json.analytics.timestamp}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      }
+    },
+    {
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [700, 500],
+      "parameters": {
+        "functionCode": "// Handle errors gracefully\nconst error = $input.first().json.error || 'Unknown error';\nconst userPhone = $('data_processor').first().json.user_phone;\nconst sessionId = $('data_processor').first().json.session_id;\nconst organizationId = $('data_processor').first().json.organization_id;\nconst originalMessage = $('data_processor').first().json.message;\n\n// Log error with context\nconsole.error('AI Agent Workflow error:', {\n  error: error,\n  session_id: sessionId,\n  organization_id: organizationId,\n  user_phone: userPhone,\n  original_message: originalMessage,\n  timestamp: new Date().toISOString(),\n  workflow_id: 'ai-agent-workflow',\n  execution_id: $execution.id\n});\n\n// Determine error type and response\nlet fallbackMessage = '';\nlet errorType = 'unknown';\n\nif (error.includes('timeout') || error.includes('TIMEOUT')) {\n  errorType = 'timeout';\n  fallbackMessage = `⏰ Maaf, sistem sedang sibuk. Tim support kami akan segera menghubungi Anda.\\n\\n🆔 Error ID: ${Date.now()}\\n\\nTerima kasih atas kesabaran Anda.`;\n} else if (error.includes('unauthorized') || error.includes('401')) {\n  errorType = 'auth';\n  fallbackMessage = `🔐 Terjadi masalah autentikasi. Tim support kami akan segera menghubungi Anda.\\n\\n🆔 Error ID: ${Date.now()}\\n\\nTerima kasih atas kesabaran Anda.`;\n} else if (error.includes('rate limit') || error.includes('429')) {\n  errorType = 'rate_limit';\n  fallbackMessage = `🚦 Terlalu banyak permintaan. Silakan coba lagi dalam beberapa menit.\\n\\n🆔 Error ID: ${Date.now()}\\n\\nTerima kasih atas kesabaran Anda.`;\n} else if (error.includes('network') || error.includes('connection')) {\n  errorType = 'network';\n  fallbackMessage = `🌐 Terjadi masalah koneksi. Tim support kami akan segera menghubungi Anda.\\n\\n🆔 Error ID: ${Date.now()}\\n\\nTerima kasih atas kesabaran Anda.`;\n} else {\n  errorType = 'general';\n  fallbackMessage = `❌ Maaf, terjadi kesalahan teknis. Tim support kami akan segera menghubungi Anda.\\n\\n🆔 Error ID: ${Date.now()}\\n\\nTerima kasih atas kesabaran Anda.`;\n}\n\n// Prepare fallback payload\nconst fallbackPayload = {\n  session: sessionId,\n  to: userPhone,\n  text: fallbackMessage,\n  timestamp: new Date().toISOString(),\n  metadata: {\n    organization_id: organizationId,\n    error_type: errorType,\n    error_message: error,\n    fallback_response: true,\n    original_message: originalMessage,\n    execution_id: $execution.id,\n    workflow_id: 'ai-agent-workflow'\n  }\n};\n\nreturn {\n  json: fallbackPayload\n};"
+      }
+    },
+    {
+      "id": "fallback_sender",
+      "name": "Send Fallback Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 500],
+      "parameters": {
+        "url": "{{$env.WAHA_BASE_URL}}/api/sendText",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "session",
+              "value": "={{$json.session}}"
+            },
+            {
+              "name": "to",
+              "value": "={{$json.to}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.text}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "enabled": true,
+            "maxRetries": 2,
+            "retryDelay": 2000
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook_trigger": {
+      "main": [
+        [
+          {
+            "node": "data_processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_processor": {
+      "main": [
+        [
+          {
+            "node": "kb_search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "conversation_history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kb_search": {
+      "main": [
+        [
+          {
+            "node": "prompt_builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "conversation_history": {
+      "main": [
+        [
+          {
+            "node": "prompt_builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prompt_builder": {
+      "main": [
+        [
+          {
+            "node": "ai_processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai_processor": {
+      "main": [
+        [
+          {
+            "node": "response_formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "response_formatter": {
+      "main": [
+        [
+          {
+            "node": "waha_send",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "conversation_logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "waha_send": {
+      "main": [
+        [
+          {
+            "node": "analytics_logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "conversation_logger": {
+      "main": [
+        [
+          {
+            "node": "analytics_logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "Asia/Jakarta",
+    "executionTimeout": 300,
+    "maxExecutionTime": 300,
+    "errorWorkflow": {
+      "useErrorWorkflow": true,
+      "errorWorkflowId": "error_handler"
+    }
+  },
+  "staticData": {},
+  "tags": [
+    {
+      "id": "ai-agent",
+      "name": "AI Agent"
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp"
+    },
+    {
+      "id": "customer-service",
+      "name": "Customer Service"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": 1,
+  "versionId": "1.0.0"
+}

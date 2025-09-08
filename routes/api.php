@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\SubscriptionPlanController;
 use App\Http\Controllers\Api\V1\PaymentTransactionController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\BotPersonalityController;
+use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,6 +120,10 @@ Route::prefix('v1')->group(function () {
             Route::get('/', [ConversationController::class, 'index']);
             Route::get('/statistics', [ConversationController::class, 'statistics']);
 
+            // AI Agent workflow endpoints
+            Route::get('/history', [ConversationController::class, 'history']);
+            Route::post('/log', [ConversationController::class, 'logConversation']);
+
             // Individual conversation operations
             Route::prefix('{id}')->group(function () {
                 Route::get('/', [ConversationController::class, 'show']);
@@ -150,6 +155,11 @@ Route::prefix('v1')->group(function () {
             Route::get('/conversations', [AnalyticsController::class, 'conversations']);
             Route::get('/users', [AnalyticsController::class, 'users']);
             Route::get('/revenue', [AnalyticsController::class, 'revenue']);
+
+            // AI Agent workflow analytics
+            Route::post('/workflow-execution', [AnalyticsController::class, 'workflowExecution']);
+            Route::get('/ai-agent-workflow', [AnalyticsController::class, 'aiAgentWorkflow']);
+            Route::get('/workflow-performance', [AnalyticsController::class, 'workflowPerformance']);
 
             // Chatbot-specific analytics
             Route::get('/chatbot/{chatbotId}', [AnalyticsController::class, 'chatbot']);
@@ -473,6 +483,25 @@ Route::prefix('v1')->group(function () {
                 Route::patch('/{id}', [BotPersonalityController::class, 'update']);
                 Route::delete('/{id}', [BotPersonalityController::class, 'destroy']);
             });
+
+        // ====================================================================
+        // AI AGENT WORKFLOW MANAGEMENT (With Permission Middleware)
+        // ====================================================================
+
+        Route::prefix('ai-agent-workflow')
+            ->middleware(['permission:chatbots.manage', 'organization'])
+            ->group(function () {
+
+            // AI Agent workflow CRUD operations
+            Route::post('/create', [AiAgentWorkflowController::class, 'create']);
+            Route::delete('/delete', [AiAgentWorkflowController::class, 'delete']);
+            Route::get('/status', [AiAgentWorkflowController::class, 'status']);
+            Route::get('/analytics', [AiAgentWorkflowController::class, 'analytics']);
+
+            // AI Agent workflow operations
+            Route::post('/process-message', [AiAgentWorkflowController::class, 'processMessage']);
+            Route::post('/test', [AiAgentWorkflowController::class, 'test']);
+        });
 
         // ====================================================================
         // TEST ROUTES FOR MIDDLEWARE PERMISSION SYSTEM

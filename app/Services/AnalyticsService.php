@@ -2,17 +2,18 @@
 
 namespace App\Services;
 
-use App\Models\ChatSession;
-use App\Models\Message;
-use App\Models\User;
-use App\Models\BotPersonality;
-use App\Models\Organization;
-use App\Models\PaymentTransaction;
-use App\Models\Subscription;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Models\User;
+use App\Models\Message;
+use App\Models\ChatSession;
+use App\Models\Organization;
+use App\Models\Subscription;
+use App\Models\BotPersonality;
+use App\Models\PaymentTransaction;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class AnalyticsService extends BaseService
 {
@@ -689,6 +690,336 @@ class AnalyticsService extends BaseService
         }
 
         return [$result]; // Return as array of single row for CSV
+    }
+
+    /**
+     * Log workflow execution analytics
+     */
+    public function logWorkflowExecution(array $data): array
+    {
+        try {
+            // Store workflow execution data
+            $workflowData = [
+                'workflow_id' => $data['workflow_id'],
+                'execution_id' => $data['execution_id'],
+                'organization_id' => $data['organization_id'],
+                'session_id' => $data['session_id'],
+                'user_phone' => $data['user_phone'] ?? null,
+                'event_type' => $data['event_type'],
+                'metrics' => $data['metrics'],
+                'timestamp' => $data['timestamp'],
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+
+            // Store in database (you might want to create a workflow_executions table)
+            DB::table('workflow_executions')->insert($workflowData);
+
+            // Update cache for real-time analytics
+            $this->updateWorkflowCache($data['workflow_id'], $data['metrics']);
+
+            return [
+                'success' => true,
+                'message' => 'Workflow execution logged successfully',
+                'data' => [
+                    'workflow_id' => $data['workflow_id'],
+                    'execution_id' => $data['execution_id'],
+                    'logged_at' => now()->toISOString()
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Failed to log workflow execution', [
+                'data' => $data,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to log workflow execution',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get AI Agent workflow analytics
+     */
+    public function getAiAgentWorkflowAnalytics(array $filters = []): array
+    {
+        try {
+            $organizationId = $filters['organization_id'] ?? $this->getCurrentOrganizationId();
+            $cacheKey = "ai_workflow_analytics_{$organizationId}_" . md5(serialize($filters));
+
+            return Cache::remember($cacheKey, 300, function () use ($organizationId, $filters) {
+                $dateFrom = $filters['date_from'] ?? Carbon::now()->subDays(7);
+                $dateTo = $filters['date_to'] ?? Carbon::now();
+                $period = $filters['period'] ?? 'day';
+
+                // Base query
+                $query = DB::table('workflow_executions')
+                    ->where('organization_id', $organizationId)
+                    ->whereBetween('timestamp', [$dateFrom, $dateTo]);
+
+                // Apply additional filters
+                if (!empty($filters['knowledge_base_id'])) {
+                    $query->where('metrics->knowledge_base_id', $filters['knowledge_base_id']);
+                }
+
+                if (!empty($filters['workflow_id'])) {
+                    $query->where('workflow_id', $filters['workflow_id']);
+                }
+
+                // Get executions
+                $executions = $query->get();
+
+                // Calculate metrics
+                $totalExecutions = $executions->count();
+                $successfulExecutions = $executions->where('metrics.success', true)->count();
+                $failedExecutions = $totalExecutions - $successfulExecutions;
+
+                // Calculate averages
+                $avgResponseTime = $executions->avg('metrics.processing_time') ?? 0;
+                $avgCost = $executions->avg('metrics.cost') ?? 0;
+                $avgSatisfaction = $executions->avg('metrics.satisfaction_score') ?? 0;
+
+                // Group by period for trends
+                $trendData = $this->groupExecutionsByPeriod($executions, $period);
+
+                return [
+                    'success' => true,
+                    'data' => [
+                        'summary' => [
+                            'total_executions' => $totalExecutions,
+                            'successful_executions' => $successfulExecutions,
+                            'failed_executions' => $failedExecutions,
+                            'success_rate' => $totalExecutions > 0 ? round(($successfulExecutions / $totalExecutions) * 100, 2) : 0,
+                            'avg_response_time' => round($avgResponseTime, 2),
+                            'avg_cost' => round($avgCost, 4),
+                            'avg_satisfaction' => round($avgSatisfaction, 2)
+                        ],
+                        'trends' => $trendData,
+                        'filters_applied' => $filters,
+                        'period' => $period,
+                        'date_range' => [
+                            'from' => $dateFrom,
+                            'to' => $dateTo
+                        ]
+                    ]
+                ];
+            });
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get AI Agent workflow analytics', [
+                'filters' => $filters,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to retrieve AI Agent workflow analytics',
+                'error' => $e->getMessage(),
+                'data' => []
+            ];
+        }
+    }
+
+    /**
+     * Get workflow performance metrics
+     */
+    public function getWorkflowPerformanceMetrics(string $workflowId, array $filters = []): array
+    {
+        try {
+            $cacheKey = "workflow_performance_{$workflowId}_" . md5(serialize($filters));
+
+            return Cache::remember($cacheKey, 300, function () use ($workflowId, $filters) {
+                $dateFrom = $filters['date_from'] ?? Carbon::now()->subDays(1);
+                $dateTo = $filters['date_to'] ?? Carbon::now();
+                $granularity = $filters['granularity'] ?? 'hour';
+
+                // Get workflow executions
+                $executions = DB::table('workflow_executions')
+                    ->where('workflow_id', $workflowId)
+                    ->whereBetween('timestamp', [$dateFrom, $dateTo])
+                    ->get();
+
+                if ($executions->isEmpty()) {
+                    return [
+                        'success' => true,
+                        'data' => [
+                            'workflow_id' => $workflowId,
+                            'metrics' => [],
+                            'performance_trends' => [],
+                            'summary' => [
+                                'total_executions' => 0,
+                                'success_rate' => 0,
+                                'avg_duration' => 0,
+                                'error_rate' => 0,
+                                'total_cost' => 0
+                            ]
+                        ]
+                    ];
+                }
+
+                // Calculate performance metrics
+                $totalExecutions = $executions->count();
+                $successfulExecutions = $executions->where('metrics.success', true)->count();
+                $failedExecutions = $totalExecutions - $successfulExecutions;
+
+                $durations = $executions->pluck('metrics.processing_time')->filter();
+                $costs = $executions->pluck('metrics.cost')->filter();
+
+                $summary = [
+                    'total_executions' => $totalExecutions,
+                    'success_rate' => round(($successfulExecutions / $totalExecutions) * 100, 2),
+                    'error_rate' => round(($failedExecutions / $totalExecutions) * 100, 2),
+                    'avg_duration' => $durations->avg() ?? 0,
+                    'min_duration' => $durations->min() ?? 0,
+                    'max_duration' => $durations->max() ?? 0,
+                    'total_cost' => $costs->sum() ?? 0,
+                    'avg_cost' => $costs->avg() ?? 0
+                ];
+
+                // Group by granularity for trends
+                $trends = $this->groupExecutionsByGranularity($executions, $granularity);
+
+                return [
+                    'success' => true,
+                    'data' => [
+                        'workflow_id' => $workflowId,
+                        'summary' => $summary,
+                        'performance_trends' => $trends,
+                        'granularity' => $granularity,
+                        'date_range' => [
+                            'from' => $dateFrom,
+                            'to' => $dateTo
+                        ]
+                    ]
+                ];
+            });
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get workflow performance metrics', [
+                'workflow_id' => $workflowId,
+                'filters' => $filters,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to retrieve workflow performance metrics',
+                'error' => $e->getMessage(),
+                'data' => []
+            ];
+        }
+    }
+
+    /**
+     * Update workflow cache for real-time analytics
+     */
+    protected function updateWorkflowCache(string $workflowId, array $metrics): void
+    {
+        $cacheKey = "workflow_realtime_{$workflowId}";
+
+        $currentData = Cache::get($cacheKey, [
+            'total_executions' => 0,
+            'successful_executions' => 0,
+            'failed_executions' => 0,
+            'total_processing_time' => 0,
+            'total_cost' => 0,
+            'last_execution' => null
+        ]);
+
+        // Update counters
+        $currentData['total_executions']++;
+
+        if ($metrics['success'] ?? false) {
+            $currentData['successful_executions']++;
+        } else {
+            $currentData['failed_executions']++;
+        }
+
+        $currentData['total_processing_time'] += $metrics['processing_time'] ?? 0;
+        $currentData['total_cost'] += $metrics['cost'] ?? 0;
+        $currentData['last_execution'] = now()->toISOString();
+
+        // Calculate derived metrics
+        $currentData['success_rate'] = $currentData['total_executions'] > 0
+            ? round(($currentData['successful_executions'] / $currentData['total_executions']) * 100, 2)
+            : 0;
+
+        $currentData['avg_processing_time'] = $currentData['total_executions'] > 0
+            ? round($currentData['total_processing_time'] / $currentData['total_executions'], 2)
+            : 0;
+
+        // Store in cache for 1 hour
+        Cache::put($cacheKey, $currentData, 3600);
+    }
+
+    /**
+     * Group executions by period for trend analysis
+     */
+    protected function groupExecutionsByPeriod($executions, string $period): array
+    {
+        $grouped = [];
+
+        foreach ($executions as $execution) {
+            $timestamp = Carbon::parse($execution->timestamp);
+
+            $key = match($period) {
+                'hour' => $timestamp->format('Y-m-d H:00'),
+                'day' => $timestamp->format('Y-m-d'),
+                'week' => $timestamp->startOfWeek()->format('Y-m-d'),
+                'month' => $timestamp->format('Y-m'),
+                default => $timestamp->format('Y-m-d')
+            };
+
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'period' => $key,
+                    'total_executions' => 0,
+                    'successful_executions' => 0,
+                    'failed_executions' => 0,
+                    'total_processing_time' => 0,
+                    'total_cost' => 0
+                ];
+            }
+
+            $grouped[$key]['total_executions']++;
+
+            if ($execution->metrics['success'] ?? false) {
+                $grouped[$key]['successful_executions']++;
+            } else {
+                $grouped[$key]['failed_executions']++;
+            }
+
+            $grouped[$key]['total_processing_time'] += $execution->metrics['processing_time'] ?? 0;
+            $grouped[$key]['total_cost'] += $execution->metrics['cost'] ?? 0;
+        }
+
+        // Calculate derived metrics for each period
+        foreach ($grouped as &$period) {
+            $period['success_rate'] = $period['total_executions'] > 0
+                ? round(($period['successful_executions'] / $period['total_executions']) * 100, 2)
+                : 0;
+
+            $period['avg_processing_time'] = $period['total_executions'] > 0
+                ? round($period['total_processing_time'] / $period['total_executions'], 2)
+                : 0;
+        }
+
+        return array_values($grouped);
+    }
+
+    /**
+     * Group executions by granularity for performance trends
+     */
+    protected function groupExecutionsByGranularity($executions, string $granularity): array
+    {
+        return $this->groupExecutionsByPeriod($executions, $granularity);
     }
 
     /**
