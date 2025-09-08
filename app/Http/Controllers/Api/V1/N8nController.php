@@ -292,7 +292,98 @@ class N8nController extends BaseApiController
         }
     }
 
+    /**
+     * Create a new workflow
+     */
+    public function createWorkflow(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
+                'nodes' => 'required|array',
+                'connections' => 'array',
+                'active' => 'boolean',
+            ]);
 
+            if ($validator->fails()) {
+                return $this->errorResponse('Validation failed', $validator->errors()->toArray(), 422);
+            }
 
+            $workflowData = $request->only(['name', 'nodes', 'connections', 'active']);
+            $result = $this->n8nService->createWorkflow($workflowData);
 
+            if ($result['success']) {
+                return $this->successResponse($result['message'], $result['data']);
+            }
+
+            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+        } catch (Exception $e) {
+            Log::error('Failed to create workflow in controller', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->errorResponse('Failed to create workflow: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Update an existing workflow
+     */
+    public function updateWorkflow(Request $request, string $workflowId): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => 'sometimes|string|max:255',
+                'nodes' => 'sometimes|array',
+                'connections' => 'sometimes|array',
+                'active' => 'sometimes|boolean',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->errorResponse('Validation failed', $validator->errors()->toArray(), 422);
+            }
+
+            $workflowData = $request->only(['name', 'nodes', 'connections', 'active']);
+            $result = $this->n8nService->updateWorkflow($workflowId, $workflowData);
+
+            if ($result['success']) {
+                return $this->successResponse($result['message'], $result['data']);
+            }
+
+            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+        } catch (Exception $e) {
+            Log::error('Failed to update workflow in controller', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->errorResponse('Failed to update workflow: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Delete a workflow
+     */
+    public function deleteWorkflow(string $workflowId): JsonResponse
+    {
+        try {
+            $result = $this->n8nService->deleteWorkflow($workflowId);
+
+            if ($result['success']) {
+                return $this->successResponse($result['message'], $result['data'] ?? []);
+            }
+
+            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+        } catch (Exception $e) {
+            Log::error('Failed to delete workflow in controller', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->errorResponse('Failed to delete workflow: ' . $e->getMessage(), 500);
+        }
+    }
 }

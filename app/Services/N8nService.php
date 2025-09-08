@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\N8nWorkflow;
 use App\Models\N8nExecution;
+use KayedSpace\N8n\Facades\N8nClient;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -11,16 +12,10 @@ use Exception;
 
 class N8nService
 {
-    protected string $baseUrl;
-    protected string $apiKey;
-    protected int $timeout;
     protected bool $mockResponses;
 
     public function __construct()
     {
-        $this->baseUrl = config('n8n.server.url');
-        $this->apiKey = config('n8n.server.api_key');
-        $this->timeout = config('n8n.server.timeout');
         $this->mockResponses = config('n8n.testing.mock_responses', false);
     }
 
@@ -42,22 +37,17 @@ class N8nService
                 ];
             }
 
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->get($this->baseUrl . '/api/v1/health');
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'message' => 'Connection successful',
-                    'server_info' => $response->json(),
-                ];
-            }
+            // Use the package's workflows API to test connection
+            $workflows = N8nClient::workflows()->list(['limit' => 1]);
 
             return [
-                'success' => false,
-                'message' => 'Connection failed: ' . $response->status(),
-                'error' => $response->body(),
+                'success' => true,
+                'message' => 'Connection successful',
+                'server_info' => [
+                    'status' => 'running',
+                    'timestamp' => now()->toISOString(),
+                    'workflows_count' => $workflows['data']['count'] ?? 0
+                ]
             ];
         } catch (Exception $e) {
             Log::error('n8n connection test failed', [
@@ -83,21 +73,11 @@ class N8nService
                 return $this->getMockWorkflows();
             }
 
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->get($this->baseUrl . '/api/v1/workflows');
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'data' => $response->json(),
-                ];
-            }
+            $workflows = N8nClient::workflows()->list();
 
             return [
-                'success' => false,
-                'message' => 'Failed to fetch workflows',
-                'error' => $response->body(),
+                'success' => true,
+                'data' => $workflows,
             ];
         } catch (Exception $e) {
             Log::error('Failed to fetch n8n workflows', [
@@ -123,21 +103,11 @@ class N8nService
                 return $this->getMockWorkflow($workflowId);
             }
 
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->get($this->baseUrl . '/api/v1/workflows/' . $workflowId);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'data' => $response->json(),
-                ];
-            }
+            $workflow = N8nClient::workflows()->get($workflowId);
 
             return [
-                'success' => false,
-                'message' => 'Failed to fetch workflow',
-                'error' => $response->body(),
+                'success' => true,
+                'data' => $workflow,
             ];
         } catch (Exception $e) {
             Log::error('Failed to fetch n8n workflow', [
@@ -164,9 +134,10 @@ class N8nService
                 return $this->getMockExecution($workflowId, $inputData);
             }
 
-            $response = Http::timeout($this->timeout)
+            // For now, we'll use direct HTTP for execution since the package doesn't have execution API
+            $response = Http::timeout(config('n8n.server.timeout', 30))
                 ->withHeaders($this->getHeaders())
-                ->post($this->baseUrl . '/api/v1/workflows/' . $workflowId . '/execute', [
+                ->post(config('n8n.server.url') . '/api/v1/workflows/' . $workflowId . '/execute', [
                     'inputData' => $inputData,
                 ]);
 
@@ -253,9 +224,10 @@ class N8nService
                 return $this->getMockExecutions($workflowId, $limit);
             }
 
-            $response = Http::timeout($this->timeout)
+            // For now, we'll use direct HTTP for executions since the package doesn't have execution API
+            $response = Http::timeout(config('n8n.server.timeout', 30))
                 ->withHeaders($this->getHeaders())
-                ->get($this->baseUrl . '/api/v1/workflows/' . $workflowId . '/executions', [
+                ->get(config('n8n.server.url') . '/api/v1/workflows/' . $workflowId . '/executions', [
                     'limit' => $limit,
                 ]);
 
@@ -300,22 +272,12 @@ class N8nService
                 ];
             }
 
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->post($this->baseUrl . '/api/v1/workflows/' . $workflowId . '/activate');
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'message' => 'Workflow activated successfully',
-                    'data' => $response->json(),
-                ];
-            }
+            $result = N8nClient::workflows()->activate($workflowId);
 
             return [
-                'success' => false,
-                'message' => 'Failed to activate workflow',
-                'error' => $response->body(),
+                'success' => true,
+                'message' => 'Workflow activated successfully',
+                'data' => $result,
             ];
         } catch (Exception $e) {
             Log::error('Failed to activate n8n workflow', [
@@ -346,22 +308,12 @@ class N8nService
                 ];
             }
 
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->post($this->baseUrl . '/api/v1/workflows/' . $workflowId . '/deactivate');
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'message' => 'Workflow deactivated successfully',
-                    'data' => $response->json(),
-                ];
-            }
+            $result = N8nClient::workflows()->deactivate($workflowId);
 
             return [
-                'success' => false,
-                'message' => 'Failed to deactivate workflow',
-                'error' => $response->body(),
+                'success' => true,
+                'message' => 'Workflow deactivated successfully',
+                'data' => $result,
             ];
         } catch (Exception $e) {
             Log::error('Failed to deactivate n8n workflow', [
@@ -388,9 +340,9 @@ class N8nService
                 return $this->getMockStats($workflowId);
             }
 
-            $response = Http::timeout($this->timeout)
+            $response = Http::timeout(config('n8n.server.timeout', 30))
                 ->withHeaders($this->getHeaders())
-                ->get($this->baseUrl . '/api/v1/workflows/' . $workflowId . '/stats');
+                ->get(config('n8n.server.url') . '/api/v1/workflows/' . $workflowId . '/stats');
 
             if ($response->successful()) {
                 return [
@@ -467,8 +419,9 @@ class N8nService
             'Accept' => 'application/json',
         ];
 
-        if (!empty($this->apiKey)) {
-            $headers['X-N8N-API-KEY'] = $this->apiKey;
+        $apiKey = config('n8n.server.api_key');
+        if (!empty($apiKey)) {
+            $headers['X-N8N-API-KEY'] = $apiKey;
         }
 
         return $headers;
@@ -585,5 +538,126 @@ class N8nService
                 'lastExecution' => now()->subMinutes(5)->toISOString(),
             ],
         ];
+    }
+
+    /**
+     * Create a new workflow
+     */
+    public function createWorkflow(array $workflowData): array
+    {
+        try {
+            if ($this->mockResponses) {
+                return [
+                    'success' => true,
+                    'message' => 'Workflow created successfully (mock)',
+                    'data' => [
+                        'id' => 'mock-workflow-' . uniqid(),
+                        'name' => $workflowData['name'] ?? 'New Workflow',
+                        'active' => false,
+                        'nodes' => $workflowData['nodes'] ?? [],
+                        'connections' => $workflowData['connections'] ?? [],
+                    ],
+                ];
+            }
+
+            $workflow = N8nClient::workflows()->create($workflowData);
+
+            return [
+                'success' => true,
+                'message' => 'Workflow created successfully',
+                'data' => $workflow,
+            ];
+        } catch (Exception $e) {
+            Log::error('Failed to create n8n workflow', [
+                'workflow_data' => $workflowData,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to create workflow: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Update an existing workflow
+     */
+    public function updateWorkflow(string $workflowId, array $workflowData): array
+    {
+        try {
+            if ($this->mockResponses) {
+                return [
+                    'success' => true,
+                    'message' => 'Workflow updated successfully (mock)',
+                    'data' => [
+                        'id' => $workflowId,
+                        'name' => $workflowData['name'] ?? 'Updated Workflow',
+                        'active' => $workflowData['active'] ?? false,
+                        'nodes' => $workflowData['nodes'] ?? [],
+                        'connections' => $workflowData['connections'] ?? [],
+                    ],
+                ];
+            }
+
+            $workflow = N8nClient::workflows()->update($workflowId, $workflowData);
+
+            return [
+                'success' => true,
+                'message' => 'Workflow updated successfully',
+                'data' => $workflow,
+            ];
+        } catch (Exception $e) {
+            Log::error('Failed to update n8n workflow', [
+                'workflow_id' => $workflowId,
+                'workflow_data' => $workflowData,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to update workflow: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Delete a workflow
+     */
+    public function deleteWorkflow(string $workflowId): array
+    {
+        try {
+            if ($this->mockResponses) {
+                return [
+                    'success' => true,
+                    'message' => 'Workflow deleted successfully (mock)',
+                    'workflow_id' => $workflowId,
+                ];
+            }
+
+            $result = N8nClient::workflows()->delete($workflowId);
+
+            return [
+                'success' => true,
+                'message' => 'Workflow deleted successfully',
+                'data' => $result,
+            ];
+        } catch (Exception $e) {
+            Log::error('Failed to delete n8n workflow', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to delete workflow: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 }

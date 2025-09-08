@@ -23,7 +23,10 @@ Route::prefix('v1/n8n')->middleware(['unified.auth'])->group(function () {
     // Workflow Management
     Route::prefix('workflows')->group(function () {
         Route::get('/', [N8nController::class, 'getWorkflows']);
+        Route::post('/', [N8nController::class, 'createWorkflow']);
         Route::get('/{workflowId}', [N8nController::class, 'getWorkflow']);
+        Route::put('/{workflowId}', [N8nController::class, 'updateWorkflow']);
+        Route::delete('/{workflowId}', [N8nController::class, 'deleteWorkflow']);
         Route::post('/{workflowId}/execute', [N8nController::class, 'executeWorkflow']);
         Route::post('/{workflowId}/activate', [N8nController::class, 'activateWorkflow']);
         Route::post('/{workflowId}/deactivate', [N8nController::class, 'deactivateWorkflow']);

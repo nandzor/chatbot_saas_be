@@ -7,7 +7,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | This file contains configuration options for n8n workflow integration
-    | and API testing.
+    | and API testing. Now using kayedspace/laravel-n8n package for workflow
+    | management operations.
     |
     */
 
