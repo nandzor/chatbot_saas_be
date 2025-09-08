@@ -553,14 +553,24 @@ class N8nService
                     'data' => [
                         'id' => 'mock-workflow-' . uniqid(),
                         'name' => $workflowData['name'] ?? 'New Workflow',
-                        'active' => false,
+                        'active' => $workflowData['active'] ?? false,
                         'nodes' => $workflowData['nodes'] ?? [],
                         'connections' => $workflowData['connections'] ?? [],
+                        'settings' => $workflowData['settings'] ?? [],
                     ],
                 ];
             }
 
-            $workflow = N8nClient::workflows()->create($workflowData);
+            // Ensure required fields are present
+            $workflowPayload = [
+                'name' => $workflowData['name'],
+                'nodes' => $workflowData['nodes'] ?? [],
+                'connections' => $workflowData['connections'] ?? [],
+                'active' => $workflowData['active'] ?? false,
+                'settings' => $workflowData['settings'] ?? [],
+            ];
+
+            $workflow = N8nClient::workflows()->create($workflowPayload);
 
             return [
                 'success' => true,
