@@ -237,12 +237,15 @@ Route::prefix('v1')->group(function () {
 
             // Basic CRUD operations
             Route::get('/', [PermissionManagementController::class, 'index']);
-            Route::get('/{permissionId}', [PermissionManagementController::class, 'show']);
+            Route::get('/{permissionId}', [PermissionManagementController::class, 'show'])
+                ->whereUuid('permissionId');
 
             // Routes requiring additional permissions
             Route::middleware(['permission:permissions.create'])->post('/', [PermissionManagementController::class, 'store']);
-            Route::middleware(['permission:permissions.update'])->put('/{permissionId}', [PermissionManagementController::class, 'update']);
-            Route::middleware(['permission:permissions.delete'])->delete('/{permissionId}', [PermissionManagementController::class, 'destroy']);
+            Route::middleware(['permission:permissions.update'])->put('/{permissionId}', [PermissionManagementController::class, 'update'])
+                ->whereUuid('permissionId');
+            Route::middleware(['permission:permissions.delete'])->delete('/{permissionId}', [PermissionManagementController::class, 'destroy'])
+                ->whereUuid('permissionId');
 
             // Permission groups management
             Route::prefix('groups')->group(function () {

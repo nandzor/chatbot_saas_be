@@ -424,26 +424,37 @@ class PermissionService extends BaseService
     /**
      * Get permission groups for an organization
      */
-    public function getPermissionGroups(string $organizationId): Collection
+    public function getPermissionGroups(?string $organizationId): Collection
     {
-        return PermissionGroup::where('organization_id', $organizationId)
-                             ->with('permissions')
-                             ->orderBy('sort_order')
-                             ->orderBy('name')
-                             ->get();
+        $query = PermissionGroup::query();
+
+        if ($organizationId !== null) {
+            $query->where('organization_id', $organizationId);
+        } else {
+            $query->whereNull('organization_id');
+        }
+
+        return $query->with('permissions')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
     }
 
     /**
      * Create permission group
      */
-    public function createPermissionGroup(array $data, string $organizationId): PermissionGroup
+    public function createPermissionGroup(array $data, ?string $organizationId): PermissionGroup
     {
         $this->validatePermissionGroupData($data);
 
         // Check if group code already exists
-        $existingGroup = PermissionGroup::where('organization_id', $organizationId)
-                                      ->where('code', $data['code'])
-                                      ->first();
+        $existingGroupQuery = PermissionGroup::where('code', $data['code']);
+        if ($organizationId !== null) {
+            $existingGroupQuery->where('organization_id', $organizationId);
+        } else {
+            $existingGroupQuery->whereNull('organization_id');
+        }
+        $existingGroup = $existingGroupQuery->first();
 
         if ($existingGroup) {
             throw new InvalidPermissionException("Permission group code '{$data['code']}' already exists in this organization.");
@@ -484,20 +495,28 @@ class PermissionService extends BaseService
     /**
      * Assign permissions to a group
      */
-    public function assignPermissionsToGroup(string $groupId, array $permissionIds, string $organizationId): bool
+    public function assignPermissionsToGroup(string $groupId, array $permissionIds, ?string $organizationId): bool
     {
-        $group = PermissionGroup::where('id', $groupId)
-                               ->where('organization_id', $organizationId)
-                               ->first();
+        $groupQuery = PermissionGroup::where('id', $groupId);
+        if ($organizationId !== null) {
+            $groupQuery->where('organization_id', $organizationId);
+        } else {
+            $groupQuery->whereNull('organization_id');
+        }
+        $group = $groupQuery->first();
 
         if (!$group) {
             throw new InvalidPermissionException("Permission group not found.");
         }
 
         // Verify all permissions exist and belong to the organization
-        $permissions = Permission::whereIn('id', $permissionIds)
-                                ->where('organization_id', $organizationId)
-                                ->get();
+        $permissionsQuery = Permission::whereIn('id', $permissionIds);
+        if ($organizationId !== null) {
+            $permissionsQuery->where('organization_id', $organizationId);
+        } else {
+            $permissionsQuery->whereNull('organization_id');
+        }
+        $permissions = $permissionsQuery->get();
 
         if ($permissions->count() !== count($permissionIds)) {
             throw new InvalidPermissionException("One or more permissions not found or do not belong to this organization.");
