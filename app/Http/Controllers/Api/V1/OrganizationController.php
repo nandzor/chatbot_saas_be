@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Organization\CreateOrganizationRequest;
 use App\Http\Requests\Organization\UpdateOrganizationRequest;
+use App\Http\Requests\ClientManagement\BulkActionRequest;
 use App\Services\OrganizationService;
+use App\Services\ClientManagementService;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\OrganizationCollection;
 use Illuminate\Http\JsonResponse;
@@ -15,10 +17,15 @@ use Illuminate\Support\Facades\Log;
 class OrganizationController extends BaseApiController
 {
     protected OrganizationService $organizationService;
+    protected ClientManagementService $clientManagementService;
 
-    public function __construct(OrganizationService $organizationService)
-    {
+    public function __construct(
+        OrganizationService $organizationService,
+        ClientManagementService $clientManagementService
+    ) {
+        parent::__construct();
         $this->organizationService = $organizationService;
+        $this->clientManagementService = $clientManagementService;
     }
 
     /**
@@ -364,30 +371,6 @@ class OrganizationController extends BaseApiController
         }
     }
 
-    /**
-     * Get organization statistics
-     */
-    public function statistics(): JsonResponse
-    {
-        try {
-            $stats = $this->organizationService->getOrganizationStatistics();
-
-            return $this->successResponse(
-                'Statistik organisasi berhasil diambil',
-                $stats
-            );
-        } catch (\Exception $e) {
-            Log::error('Error fetching organization statistics', [
-                'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id ?? 'unknown'
-            ]);
-
-            return $this->errorResponse(
-                'Gagal mengambil statistik organisasi',
-                500
-            );
-        }
-    }
 
     /**
      * Get organization users
@@ -536,6 +519,190 @@ class OrganizationController extends BaseApiController
             return $this->errorResponse(
                 'Gagal memperbarui berlangganan organisasi: ' . $e->getMessage(),
                 422
+            );
+        }
+    }
+
+    /**
+     * Get organization statistics (Advanced)
+     */
+    public function statistics(): JsonResponse
+    {
+        try {
+            $statistics = $this->clientManagementService->getStatistics();
+
+            return $this->successResponse(
+                message: 'Statistics retrieved successfully',
+                data: $statistics,
+                meta: [
+                    'generated_at' => now()->toISOString(),
+                    'cache_ttl' => 300 // 5 minutes
+                ]
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to retrieve statistics',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Bulk actions on organizations (Advanced)
+     */
+    public function bulkAction(BulkActionRequest $request): JsonResponse
+    {
+        try {
+            $result = $this->clientManagementService->bulkAction(
+                $request->input('action'),
+                $request->input('organization_ids', [])
+            );
+
+            return $this->batchResponse(
+                results: $result,
+                message: 'Bulk action completed successfully'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to perform bulk action',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Export organizations (Advanced)
+     */
+    public function export(Request $request): JsonResponse
+    {
+        try {
+            $params = $request->only([
+                'format',
+                'filters',
+                'columns'
+            ]);
+
+            $exportData = $this->clientManagementService->exportOrganizations($params);
+
+            return $this->successResponse(
+                message: 'Export data prepared successfully',
+                data: $exportData,
+                meta: [
+                    'export_format' => $params['format'] ?? 'json',
+                    'exported_at' => now()->toISOString(),
+                    'total_records' => $exportData['total'] ?? 0
+                ]
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to export organizations',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Import organizations (Advanced)
+     */
+    public function import(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'file' => 'required|file|mimes:csv,xlsx,xls|max:10240',
+                'mapping' => 'required|array'
+            ]);
+
+            $result = $this->clientManagementService->importOrganizations(
+                $request->file('file'),
+                $request->input('mapping')
+            );
+
+            return $this->batchResponse(
+                results: $result,
+                message: 'Organizations imported successfully'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to import organizations',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Get organization activity logs (Advanced)
+     */
+    public function activityLogs(string $id, Request $request): JsonResponse
+    {
+        try {
+            $params = $request->only(['page', 'per_page', 'date_from', 'date_to']);
+            $logs = $this->clientManagementService->getOrganizationActivityLogs($id, $params);
+
+            return $this->successResponse(
+                message: 'Activity logs retrieved successfully',
+                data: $logs['data'],
+                meta: [
+                    'organization_id' => $id,
+                    'pagination' => $logs['pagination'],
+                    'filters_applied' => array_filter($params, fn($value) => !empty($value))
+                ]
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to retrieve activity logs',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Update organization status (Advanced)
+     */
+    public function updateStatus(Request $request, string $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'status' => 'required|in:active,trial,suspended,inactive'
+            ]);
+
+            $organization = $this->clientManagementService->updateOrganizationStatus(
+                $id,
+                $request->input('status')
+            );
+
+            if (!$organization) {
+                return $this->notFoundResponse('Organization', $id);
+            }
+
+            return $this->updatedResponse(
+                data: $organization,
+                message: 'Organization status updated successfully',
+                meta: [
+                    'organization_id' => $id,
+                    'new_status' => $request->input('status'),
+                    'updated_at' => now()->toISOString()
+                ]
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to update organization status',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
             );
         }
     }

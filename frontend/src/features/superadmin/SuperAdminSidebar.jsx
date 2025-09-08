@@ -75,6 +75,7 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
       case 'clients':
         return [
           { id: 'clients-organizations', label: 'Organizations', icon: Building2 },
+          { id: 'organizations', label: 'Organization Management', icon: Building2 },
           { id: 'clients-users', label: 'All Users', icon: Users },
           { id: 'clients-analytics', label: 'Client Analytics', icon: BarChart3 }
         ];

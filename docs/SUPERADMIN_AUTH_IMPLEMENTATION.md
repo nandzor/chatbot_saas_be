@@ -245,7 +245,7 @@ Admin Management:
 #### **1. Environment Configuration**
 ```bash
 # .env
-VITE_API_BASE_URL=http://localhost:8000/api
+VITE_API_BASE_URL=http://localhost:9000/api
 ```
 
 #### **2. App Integration**
@@ -306,12 +306,12 @@ const routes = [
 #### **API Testing**
 ```bash
 # Test login
-curl -X POST http://localhost:8000/api/auth/login \
+curl -X POST http://localhost:9000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"password"}'
 
 # Test protected endpoint
-curl -X GET http://localhost:8000/api/admin/users \
+curl -X GET http://localhost:9000/api/admin/users \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 

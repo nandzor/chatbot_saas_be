@@ -78,7 +78,7 @@ export const testApiAuth = async () => {
   console.log('🧪 Testing API Authentication...');
 
   try {
-    const response = await fetch('http://localhost:9000/api/v1/auth/me', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/auth/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,

@@ -3,7 +3,7 @@ import axios from 'axios';
 class AuthService {
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api',
+      baseURL: import.meta.env.VITE_API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },

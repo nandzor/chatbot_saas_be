@@ -328,6 +328,11 @@ Route::prefix('v1')->group(function () {
         // ORGANIZATION MANAGEMENT (With Permission Middleware)
         // ====================================================================
 
+        // ====================================================================
+        // COMPREHENSIVE ORGANIZATION ROUTES
+        // Complete organization management with all features
+        // ====================================================================
+
         Route::prefix('organizations')
             ->middleware(['permission:organizations.view'])
             ->group(function () {
@@ -340,7 +345,13 @@ Route::prefix('v1')->group(function () {
             Route::get('/business-type/{businessType}', [OrganizationController::class, 'byBusinessType']);
             Route::get('/industry/{industry}', [OrganizationController::class, 'byIndustry']);
             Route::get('/company-size/{companySize}', [OrganizationController::class, 'byCompanySize']);
+            Route::get('/code/{orgCode}', [OrganizationController::class, 'showByCode']);
+
+            // Advanced features
             Route::get('/statistics', [OrganizationController::class, 'statistics']);
+            Route::get('/export', [OrganizationController::class, 'export']);
+            Route::middleware(['permission:organizations.bulk_actions'])->post('/bulk-action', [OrganizationController::class, 'bulkAction']);
+            Route::middleware(['permission:organizations.import'])->post('/import', [OrganizationController::class, 'import']);
 
             // Individual organization operations
             Route::prefix('{organization}')->group(function () {
@@ -351,10 +362,11 @@ Route::prefix('v1')->group(function () {
                 Route::middleware(['permission:organizations.manage_users'])->post('/users', [OrganizationController::class, 'addUser']);
                 Route::middleware(['permission:organizations.manage_users'])->delete('/users/{userId}', [OrganizationController::class, 'removeUser']);
                 Route::middleware(['permission:organizations.update'])->patch('/subscription', [OrganizationController::class, 'updateSubscription']);
-            });
 
-            // Organization by code
-            Route::get('/code/{orgCode}', [OrganizationController::class, 'showByCode']);
+                // Advanced individual operations
+                Route::get('/activity-logs', [OrganizationController::class, 'activityLogs']);
+                Route::middleware(['permission:organizations.update'])->patch('/status', [OrganizationController::class, 'updateStatus']);
+            });
 
             // Routes requiring additional permissions
             Route::middleware(['permission:organizations.create'])->post('/', [OrganizationController::class, 'store']);

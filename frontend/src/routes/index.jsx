@@ -34,6 +34,7 @@ import Financials from '@/pages/superadmin/Financials';
 import ClientManagement from '@/pages/superadmin/ClientManagement';
 import SystemSettings from '@/pages/superadmin/SystemSettings';
 import UserManagement from '@/pages/superadmin/UserManagement';
+import OrganizationManagement from '@/pages/superadmin/OrganizationManagement';
 
 // Agent Pages
 import AgentDashboard from '@/features/agent/AgentDashboard';
@@ -167,6 +168,14 @@ export const router = createBrowserRouter([
             element: (
               <RoleBasedRoute requiredRole="super_admin">
                 <UserManagement />
+              </RoleBasedRoute>
+            )
+          },
+          {
+            path: 'organizations',
+            element: (
+              <RoleBasedRoute requiredRole="super_admin">
+                <OrganizationManagement />
               </RoleBasedRoute>
             )
           },

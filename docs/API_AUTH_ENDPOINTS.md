@@ -5,7 +5,7 @@ Sistem authentication yang lengkap dengan JWT + Sanctum + Refresh Token untuk ke
 
 ## Base URL
 ```
-http://localhost:8000/api/auth
+http://localhost:9000/api/auth
 ```
 
 ## Public Endpoints (No Authentication Required)

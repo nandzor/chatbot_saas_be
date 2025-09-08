@@ -25,19 +25,19 @@ php artisan route:list --middleware=unified.auth
 #### **3. Route Testing**
 ```bash
 # Test public routes
-curl -X POST http://localhost:8000/api/auth/login \
+curl -X POST http://localhost:9000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"password"}'
 
 # Test protected routes (should fail without token)
-curl -X GET http://localhost:8000/api/auth/me
+curl -X GET http://localhost:9000/api/auth/me
 # Should return 401 Unauthorized
 ```
 
 #### **4. Token Generation Test**
 ```bash
 # Login and get tokens
-curl -X POST http://localhost:8000/api/auth/login \
+curl -X POST http://localhost:9000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"password"}' \
   | jq '.data'
@@ -61,7 +61,7 @@ curl -X POST http://localhost:8000/api/auth/login \
 #### **5. JWT Authentication Test**
 ```bash
 # Use JWT token for API call
-curl -X GET http://localhost:8000/api/auth/me \
+curl -X GET http://localhost:9000/api/auth/me \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # Should return user data
@@ -70,7 +70,7 @@ curl -X GET http://localhost:8000/api/auth/me \
 #### **6. Sanctum Fallback Test**
 ```bash
 # Use Sanctum token for API call
-curl -X GET http://localhost:8000/api/auth/me \
+curl -X GET http://localhost:9000/api/auth/me \
   -H "X-Sanctum-Token: YOUR_SANCTUM_TOKEN"
 
 # Should return user data
@@ -79,7 +79,7 @@ curl -X GET http://localhost:8000/api/auth/me \
 #### **7. Token Refresh Test**
 ```bash
 # Refresh JWT token
-curl -X POST http://localhost:8000/api/auth/refresh \
+curl -X POST http://localhost:9000/api/auth/refresh \
   -H "Content-Type: application/json" \
   -d '{"refresh_token":"YOUR_REFRESH_TOKEN"}'
 
@@ -98,7 +98,7 @@ npm install
 #### **2. Environment Setup**
 ```bash
 # Create .env file
-echo "REACT_APP_API_URL=http://localhost:8000/api" > .env
+echo "REACT_APP_API_URL=http://localhost:9000/api" > .env
 ```
 
 #### **3. Development Server**
@@ -167,14 +167,14 @@ cd frontend && npm start
 #### **3. Error Handling Test**
 ```bash
 # Test invalid credentials
-curl -X POST http://localhost:8000/api/auth/login \
+curl -X POST http://localhost:9000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"wrong@example.com","password":"wrong"}'
 
 # Should return 401 with proper error message
 
 # Test expired refresh token
-curl -X POST http://localhost:8000/api/auth/refresh \
+curl -X POST http://localhost:9000/api/auth/refresh \
   -H "Content-Type: application/json" \
   -d '{"refresh_token":"expired_token"}'
 
@@ -187,7 +187,7 @@ curl -X POST http://localhost:8000/api/auth/refresh \
 ```bash
 # Test login rate limiting
 for i in {1..10}; do
-  curl -X POST http://localhost:8000/api/auth/login \
+  curl -X POST http://localhost:9000/api/auth/login \
     -H "Content-Type: application/json" \
     -d '{"email":"test@example.com","password":"wrong"}'
 done
@@ -198,13 +198,13 @@ done
 #### **2. Token Validation**
 ```bash
 # Test invalid JWT
-curl -X GET http://localhost:8000/api/auth/me \
+curl -X GET http://localhost:9000/api/auth/me \
   -H "Authorization: Bearer invalid_token"
 
 # Should return 401
 
 # Test invalid Sanctum token
-curl -X GET http://localhost:8000/api/auth/me \
+curl -X GET http://localhost:9000/api/auth/me \
   -H "X-Sanctum-Token: invalid_token"
 
 # Should return 401
@@ -213,7 +213,7 @@ curl -X GET http://localhost:8000/api/auth/me \
 #### **3. CORS Testing**
 ```bash
 # Test from different origin
-curl -X GET http://localhost:8000/api/auth/me \
+curl -X GET http://localhost:9000/api/auth/me \
   -H "Origin: http://malicious-site.com" \
   -H "Authorization: Bearer YOUR_TOKEN"
 
@@ -225,11 +225,11 @@ curl -X GET http://localhost:8000/api/auth/me \
 #### **1. Response Time**
 ```bash
 # Test JWT authentication speed
-time curl -X GET http://localhost:8000/api/auth/me \
+time curl -X GET http://localhost:9000/api/auth/me \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # Test Sanctum authentication speed
-time curl -X GET http://localhost:8000/api/auth/me \
+time curl -X GET http://localhost:9000/api/auth/me \
   -H "X-Sanctum-Token: YOUR_SANCTUM_TOKEN"
 ```
 
@@ -237,7 +237,7 @@ time curl -X GET http://localhost:8000/api/auth/me \
 ```bash
 # Test multiple concurrent requests
 for i in {1..10}; do
-  curl -X GET http://localhost:8000/api/auth/me \
+  curl -X GET http://localhost:9000/api/auth/me \
     -H "Authorization: Bearer YOUR_JWT_TOKEN" &
 done
 wait
@@ -312,7 +312,7 @@ curl -X GET https://your-domain.com/api/auth/me \
 #### **3. Load Testing**
 ```bash
 # Use Apache Bench for load testing
-ab -n 1000 -c 10 http://localhost:8000/api/auth/me
+ab -n 1000 -c 10 http://localhost:9000/api/auth/me
 ```
 
 ## 🎯 **Success Criteria**

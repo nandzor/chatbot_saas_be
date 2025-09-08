@@ -11,7 +11,7 @@ export const devConfig = {
   enableWhyDidYouRender: false,
 
   // API settings
-  apiBaseUrl: 'http://localhost:9000',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
   apiTimeout: 10000,
 
   // Feature flags

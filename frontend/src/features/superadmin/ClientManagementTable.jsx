@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Table,
   TableBody,
@@ -22,92 +22,84 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
+  Skeleton
 } from '@/components/ui';
-import { 
-  Search, 
-  Filter, 
-  MoreHorizontal, 
-  Eye, 
+import {
+  Search,
+  Filter,
+  MoreHorizontal,
+  Eye,
   Play,
   Pause,
   LogIn,
-  Key
+  Key,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  RefreshCw
 } from 'lucide-react';
 import { formatDate } from '@/utils/formatters';
+import { useClientManagement } from '@/hooks/useClientManagement';
+import { Pagination } from '@/pagination';
 
 const ClientManagementTable = () => {
-  const [organizations, setOrganizations] = useState([]);
-  const [filteredOrganizations, setFilteredOrganizations] = useState([]);
+  // Use the client management hook
+  const {
+    organizations,
+    loading,
+    error,
+    pagination,
+    filters,
+    sorting,
+    loadOrganizations,
+    updateOrganizationStatus,
+    updateFilters,
+    updatePagination,
+    updateSorting,
+    resetFilters
+  } = useClientManagement();
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🔍 ClientManagementTable: organizations state:', organizations);
+    console.log('🔍 ClientManagementTable: organizations length:', organizations?.length);
+    console.log('🔍 ClientManagementTable: loading state:', loading);
+    console.log('🔍 ClientManagementTable: error state:', error);
+    console.log('🔍 ClientManagementTable: pagination state:', pagination);
+  }, [organizations, loading, error, pagination]);
+
+  // Local state for search
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
-  // Sample data untuk organizations
-  const sampleOrganizations = [
-    {
-      id: 1,
-      name: 'PT Teknologi Nusantara',
-      org_code: 'TN001',
-      email: 'admin@teknusantara.com',
-      status: 'active',
-      plan_id: 'enterprise',
-      plan_name: 'Enterprise',
-      created_at: '2024-01-15T10:30:00Z',
-      agents_count: 25,
-      messages_sent: 15420
-    },
-    {
-      id: 2,
-      name: 'Digital Agency Pro',
-      org_code: 'DAP002',
-      email: 'contact@digitalagencypro.com',
-      status: 'trial',
-      plan_id: 'pro',
-      plan_name: 'Professional',
-      created_at: '2024-02-20T14:15:00Z',
-      agents_count: 8,
-      messages_sent: 3240
-    },
-    {
-      id: 3,
-      name: 'StartupXYZ',
-      org_code: 'SXYZ003',
-      email: 'hello@startupxyz.com',
-      status: 'suspended',
-      plan_id: 'basic',
-      plan_name: 'Basic',
-      created_at: '2024-01-05T09:00:00Z',
-      agents_count: 3,
-      messages_sent: 890
-    }
-  ];
+  // Debounced search
+  const handleSearchChange = useCallback((value) => {
+    setSearchTerm(value);
 
-  useEffect(() => {
-    setTimeout(() => {
-      setOrganizations(sampleOrganizations);
-      setFilteredOrganizations(sampleOrganizations);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
-
-  useEffect(() => {
-    let filtered = organizations;
-
-    if (searchTerm) {
-      filtered = filtered.filter(org => 
-        org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        org.org_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        org.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(org => org.status === statusFilter);
-    }
+    // Set new timeout for debounced search
+    const timeout = setTimeout(() => {
+      updateFilters({ search: value });
+    }, 500);
 
-    setFilteredOrganizations(filtered);
-  }, [organizations, searchTerm, statusFilter]);
+    setSearchTimeout(timeout);
+  }, [searchTerm, updateFilters]);
+
+  // Handle status filter change
+  const handleStatusFilterChange = useCallback((status) => {
+    updateFilters({ status: status === 'all' ? 'active' : status });
+  }, [updateFilters]);
+
+  // Handle sorting
+  const handleSort = useCallback((field) => {
+    const newOrder = sorting.sortBy === field && sorting.sortOrder === 'asc' ? 'desc' : 'asc';
+    updateSorting({ sortBy: field, sortOrder: newOrder });
+  }, [sorting, updateSorting]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -117,7 +109,7 @@ const ClientManagementTable = () => {
     };
 
     const config = statusConfig[status] || { variant: 'default', label: status };
-    
+
     return (
       <Badge variant={config.variant}>
         {config.label}
@@ -133,7 +125,7 @@ const ClientManagementTable = () => {
     };
 
     const config = planConfig[planName] || { variant: 'default', className: '' };
-    
+
     return (
       <Badge variant={config.variant} className={config.className}>
         {planName}
@@ -141,42 +133,84 @@ const ClientManagementTable = () => {
     );
   };
 
-  const handleStatusChange = (orgId, newStatus) => {
-    setOrganizations(prev => 
-      prev.map(org => 
-        org.id === orgId ? { ...org, status: newStatus } : org
-      )
-    );
-  };
+  // Handle status change
+  const handleStatusChange = useCallback(async (orgId, newStatus) => {
+    await updateOrganizationStatus(orgId, newStatus);
+  }, [updateOrganizationStatus]);
 
-  const handleLoginAsAdmin = (org) => {
+  // Handle login as admin
+  const handleLoginAsAdmin = useCallback((org) => {
+    // TODO: Implement login as admin functionality
     alert(`Login as admin untuk ${org.name} - Fitur ini akan mengarahkan ke dashboard admin organisasi`);
-  };
+  }, []);
 
-  const handleForcePasswordReset = (org) => {
+  // Handle force password reset
+  const handleForcePasswordReset = useCallback((org) => {
+    // TODO: Implement force password reset functionality
     alert(`Reset password telah dikirim ke ${org.email}`);
+  }, []);
+
+  // Handle refresh
+  const handleRefresh = useCallback(() => {
+    loadOrganizations(true);
+  }, [loadOrganizations]);
+
+  // Get sort icon
+  const getSortIcon = (field) => {
+    if (sorting.sortBy !== field) {
+      return <ArrowUpDown className="h-4 w-4" />;
+    }
+    return sorting.sortOrder === 'asc' ?
+      <ArrowUp className="h-4 w-4" /> :
+      <ArrowDown className="h-4 w-4" />;
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="ml-2">Loading organizations...</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Loading skeleton
+  const LoadingSkeleton = () => (
+    <div className="space-y-4">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="flex items-center space-x-4">
+          <Skeleton className="h-4 w-[200px]" />
+          <Skeleton className="h-4 w-[100px]" />
+          <Skeleton className="h-4 w-[150px]" />
+          <Skeleton className="h-4 w-[80px]" />
+          <Skeleton className="h-4 w-[100px]" />
+          <Skeleton className="h-4 w-[120px]" />
+          <Skeleton className="h-4 w-[40px]" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Organizations</CardTitle>
-        <CardDescription>
-          Manajemen semua klien/tenant yang terdaftar di platform
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Organizations</CardTitle>
+            <CardDescription>
+              Manajemen semua klien/tenant yang terdaftar di platform
+            </CardDescription>
+          </div>
+          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              console.log('🔍 Manual Debug - Current state:');
+              console.log('organizations:', organizations);
+              console.log('loading:', loading);
+              console.log('error:', error);
+              console.log('pagination:', pagination);
+              console.log('filters:', filters);
+              console.log('sorting:', sorting);
+            }}
+          >
+            Debug
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {/* Search and Filter */}
@@ -187,12 +221,12 @@ const ClientManagementTable = () => {
               <Input
                 placeholder="Search organizations..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={filters.status} onValueChange={handleStatusFilterChange}>
             <SelectTrigger className="w-48">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filter by status" />
@@ -202,6 +236,7 @@ const ClientManagementTable = () => {
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="trial">Trial</SelectItem>
               <SelectItem value="suspended">Suspended</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -211,90 +246,180 @@ const ClientManagementTable = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Organization</TableHead>
-                <TableHead>Code</TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('name')}
+                    className="h-auto p-0 font-semibold"
+                  >
+                    Organization
+                    {getSortIcon('name')}
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('org_code')}
+                    className="h-auto p-0 font-semibold"
+                  >
+                    Code
+                    {getSortIcon('org_code')}
+                  </Button>
+                </TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('status')}
+                    className="h-auto p-0 font-semibold"
+                  >
+                    Status
+                    {getSortIcon('status')}
+                  </Button>
+                </TableHead>
                 <TableHead>Plan</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('created_at')}
+                    className="h-auto p-0 font-semibold"
+                  >
+                    Created
+                    {getSortIcon('created_at')}
+                  </Button>
+                </TableHead>
                 <TableHead className="w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrganizations.map((org) => (
-                <TableRow key={org.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{org.name}</div>
-                      <div className="text-sm text-gray-500">
-                        {org.agents_count} agents • {org.messages_sent.toLocaleString()} messages
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                      {org.org_code}
-                    </code>
-                  </TableCell>
-                  <TableCell>{org.email}</TableCell>
-                  <TableCell>{getStatusBadge(org.status)}</TableCell>
-                  <TableCell>{getPlanBadge(org.plan_name)}</TableCell>
-                  <TableCell>{formatDate(org.created_at, { format: 'short' })}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => window.location.href = `/superadmin/clients/${org.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Client 360° View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleLoginAsAdmin(org)}>
-                          <LogIn className="h-4 w-4 mr-2" />
-                          Login as Admin
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleForcePasswordReset(org)}>
-                          <Key className="h-4 w-4 mr-2" />
-                          Force Password Reset
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleStatusChange(org.id, org.status === 'active' ? 'suspended' : 'active')}
-                          className={org.status === 'suspended' ? 'text-green-600' : 'text-red-600'}
-                        >
-                          {org.status === 'suspended' ? (
-                            <>
-                              <Play className="h-4 w-4 mr-2" />
-                              Activate
-                            </>
-                          ) : (
-                            <>
-                              <Pause className="h-4 w-4 mr-2" />
-                              Suspend
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <LoadingSkeleton />
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : organizations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="text-gray-500">
+                      {error ? (
+                        <div>
+                          <p className="text-red-600">Error loading organizations</p>
+                          <p className="text-sm">{error}</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p>No organizations found</p>
+                          <p className="text-xs mt-2 text-gray-400">
+                            Debug: organizations.length = {organizations?.length || 0},
+                            loading = {loading ? 'true' : 'false'},
+                            error = {error || 'none'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                organizations.map((org) => (
+                  <TableRow key={org.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{org.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {org.agentsCount || 0} agents • {org.messagesSent?.toLocaleString() || 0} messages
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                        {org.orgCode}
+                      </code>
+                    </TableCell>
+                    <TableCell>{org.email}</TableCell>
+                    <TableCell>{getStatusBadge(org.status)}</TableCell>
+                    <TableCell>{getPlanBadge(org.subscriptionPlan?.name || 'N/A')}</TableCell>
+                    <TableCell>{formatDate(org.createdAt, { format: 'short' })}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => window.location.href = `/superadmin/clients/${org.id}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Client 360° View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleLoginAsAdmin(org)}>
+                            <LogIn className="h-4 w-4 mr-2" />
+                            Login as Admin
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleForcePasswordReset(org)}>
+                            <Key className="h-4 w-4 mr-2" />
+                            Force Password Reset
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleStatusChange(org.id, org.status === 'active' ? 'suspended' : 'active')}
+                            className={org.status === 'suspended' ? 'text-green-600' : 'text-red-600'}
+                          >
+                            {org.status === 'suspended' ? (
+                              <>
+                                <Play className="h-4 w-4 mr-2" />
+                                Activate
+                              </>
+                            ) : (
+                              <>
+                                <Pause className="h-4 w-4 mr-2" />
+                                Suspend
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
 
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.totalItems}
+              itemsPerPage={pagination.itemsPerPage}
+              onPageChange={(page) => updatePagination({ currentPage: page })}
+              onItemsPerPageChange={(itemsPerPage) => updatePagination({ itemsPerPage, currentPage: 1 })}
+            />
+          </div>
+        )}
+
         {/* Summary */}
         <div className="mt-6 flex justify-between items-center text-sm text-gray-500">
           <span>
-            Showing {filteredOrganizations.length} of {organizations.length} organizations
+            Showing {organizations.length} of {pagination.totalItems} organizations
+            {pagination.totalPages > 1 && (
+              <span> (Page {pagination.currentPage} of {pagination.totalPages})</span>
+            )}
           </span>
-          <span>
-            Total Active: {organizations.filter(org => org.status === 'active').length} • 
-            Total Trial: {organizations.filter(org => org.status === 'trial').length} • 
-            Total Suspended: {organizations.filter(org => org.status === 'suspended').length}
-          </span>
+          <div className="flex items-center space-x-4">
+            <span>
+              Sorted by: <span className="font-medium">{sorting.sortBy}</span> ({sorting.sortOrder})
+            </span>
+            <span>
+              Status: <span className="font-medium">{filters.status}</span>
+            </span>
+          </div>
         </div>
       </CardContent>
     </Card>

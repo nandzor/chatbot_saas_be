@@ -248,7 +248,7 @@ try {
 // config/api.js
 export const API_CONFIG = {
     // ✅ NEW - Use robust endpoints
-    BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+    BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:9000',
     V1_BASE: '/api/v1',
     ADMIN_BASE: '/api/admin',
     
