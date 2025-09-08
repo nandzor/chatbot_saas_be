@@ -4,7 +4,6 @@ namespace App\Services;
 
 use CCK\LaravelWahaSaloonSdk\Waha\Waha;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 use Exception;
 
 class WahaService
@@ -83,9 +82,20 @@ class WahaService
                 return $this->getMockSessions();
             }
 
-            // Note: WAHA doesn't have a direct getSessions method
-            // We'll return mock data for now or implement session tracking
-            return $this->getMockSessions();
+            $response = $this->wahaClient->misc()->listAllSessions('true');
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'data' => $response->json(),
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch sessions',
+                'error' => $response->body(),
+            ];
         } catch (Exception $e) {
             Log::error('Failed to fetch WAHA sessions', [
                 'error' => $e->getMessage(),
@@ -153,7 +163,12 @@ class WahaService
                 ];
             }
 
-            $response = $this->wahaClient->sessions()->startTheSession($sessionId);
+            // If settings exist, use upsertAndStartSession; otherwise simple start
+            if (!empty($config)) {
+                $response = $this->wahaClient->misc()->upsertAndStartSession($sessionId, $config);
+            } else {
+                $response = $this->wahaClient->sessions()->startTheSession($sessionId);
+            }
 
             if ($response->successful()) {
                 return [
@@ -323,9 +338,20 @@ class WahaService
                 return $this->getMockChats();
             }
 
-            // Note: WAHA doesn't have a direct getChats method
-            // We'll return mock data for now
-            return $this->getMockChats();
+            $response = $this->wahaClient->misc()->getChats($sessionId, null, null, null, null);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'data' => $response->json(),
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch chats',
+                'error' => $response->body(),
+            ];
         } catch (Exception $e) {
             Log::error('Failed to fetch WAHA chats', [
                 'session_id' => $sessionId,
