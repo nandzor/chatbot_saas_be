@@ -65,8 +65,8 @@ class KnowledgeBaseItemCollection extends ResourceCollection
                     'metadata' => $item->metadata,
                     'configuration' => $item->configuration,
                     'status' => $item->status,
-                    'created_at' => $item->created_at->toISOString(),
-                    'updated_at' => $item->updated_at->toISOString(),
+                    'created_at' => $item->created_at?->toISOString(),
+                    'updated_at' => $item->updated_at?->toISOString(),
 
                     // Computed attributes
                     'is_published' => $item->isPublished(),

@@ -35,7 +35,7 @@ class KnowledgeBaseService extends BaseService
     public function getAllItems(
         ?Request $request = null,
         array $filters = [],
-        array $relations = null
+        ?array $relations = null
     ): Collection|LengthAwarePaginator {
         // Use optimized relations by default
         if ($relations === null) {
@@ -74,7 +74,17 @@ class KnowledgeBaseService extends BaseService
 
         // Apply search
         if ($request && $request->has('search')) {
-            $query->search($request->get('search'));
+            $searchTerm = $request->get('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('content', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('summary', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('excerpt', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('keywords', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('meta_title', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('meta_description', 'LIKE', "%{$searchTerm}%");
+            });
         }
 
         // Apply sorting
@@ -414,9 +424,14 @@ class KnowledgeBaseService extends BaseService
 
         return Cache::remember($cacheKey, 300, function () use ($query, $filters, $limit) {
             $queryBuilder = $this->getModel()->newQuery()
-                ->where('organization_id', $this->getCurrentOrganizationId())
                 ->where('is_searchable', true)
                 ->search($query);
+
+            // Apply organization filter only if user is not super admin
+            $organizationId = $this->getCurrentOrganizationId();
+            if (!empty($organizationId)) {
+                $queryBuilder->where('organization_id', $organizationId);
+            }
 
             // Apply filters
             $this->applyKnowledgeFilters($queryBuilder, $filters);
@@ -778,7 +793,7 @@ class KnowledgeBaseService extends BaseService
         // Base relations that are always needed
         $baseRelations = [
             'category:id,name,slug,description,icon,color',
-            'author:id,name,email,avatar_url'
+            'author:id,full_name,email,avatar_url'
         ];
 
         // Add relations based on request parameters or context
@@ -849,7 +864,17 @@ class KnowledgeBaseService extends BaseService
 
         // Apply search
         if ($request && $request->has('search')) {
-            $query->search($request->get('search'));
+            $searchTerm = $request->get('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('content', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('summary', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('excerpt', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('keywords', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('meta_title', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('meta_description', 'LIKE', "%{$searchTerm}%");
+            });
         }
 
         // Apply sorting
@@ -869,7 +894,7 @@ class KnowledgeBaseService extends BaseService
         // Eager load only essential relations
         $query->with([
             'category:id,name,slug,icon,color',
-            'author:id,name,email'
+            'author:id,full_name,email'
         ]);
 
         // Return paginated or all results
@@ -909,7 +934,17 @@ class KnowledgeBaseService extends BaseService
 
         // Apply search
         if ($request && $request->has('search')) {
-            $query->search($request->get('search'));
+            $searchTerm = $request->get('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('content', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('summary', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('excerpt', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('keywords', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('meta_title', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('meta_description', 'LIKE', "%{$searchTerm}%");
+            });
         }
 
         // Apply sorting
@@ -929,7 +964,7 @@ class KnowledgeBaseService extends BaseService
         // Eager load only essential relations
         $query->with([
             'category:id,name,slug,icon,color',
-            'author:id,name,email'
+            'author:id,full_name,email'
         ]);
 
         // Return paginated or all results

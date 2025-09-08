@@ -35,7 +35,7 @@ class ChatbotService extends BaseService
     public function getAllItems(
         ?Request $request = null,
         array $filters = [],
-        array $relations = null
+        ?array $relations = null
     ): Collection|LengthAwarePaginator {
         // Use optimized relations by default
         if ($relations === null) {

@@ -463,13 +463,21 @@ class KnowledgeBaseItem extends Model
     }
 
     /**
-     * Search scope using full-text search.
+     * Search scope using PostgreSQL-compatible full-text search.
      */
     public function scopeSearch($query, string $term)
     {
-        return $query->whereRaw("MATCH(title, description, content) AGAINST(? IN NATURAL LANGUAGE MODE)", [$term])
-                    ->orWhere('title', 'LIKE', "%{$term}%")
-                    ->orWhere('description', 'LIKE', "%{$term}%");
+        return $query->where(function ($q) use ($term) {
+            $q->whereRaw("to_tsvector('english', title || ' ' || description || ' ' || content) @@ plainto_tsquery('english', ?)", [$term])
+              ->orWhere('title', 'ILIKE', "%{$term}%")
+              ->orWhere('description', 'ILIKE', "%{$term}%")
+              ->orWhere('content', 'ILIKE', "%{$term}%")
+              ->orWhere('summary', 'ILIKE', "%{$term}%")
+              ->orWhere('excerpt', 'ILIKE', "%{$term}%")
+              ->orWhere('keywords', 'ILIKE', "%{$term}%")
+              ->orWhere('meta_title', 'ILIKE', "%{$term}%")
+              ->orWhere('meta_description', 'ILIKE', "%{$term}%");
+        });
     }
 
     /**
@@ -548,14 +556,6 @@ class KnowledgeBaseItem extends Model
                 $q->orWhereJsonContains('keywords', $keyword);
             }
         });
-    }
-
-    /**
-     * Scope for latest versions only.
-     */
-    public function scopeLatestVersions($query)
-    {
-        return $query->where('is_latest_version', true);
     }
 
     /**

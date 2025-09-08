@@ -534,8 +534,8 @@ class ConversationService extends BaseService
     protected function getOptimizedRelations(?Request $request = null): array
     {
         $baseRelations = [
-            'customer:id,name,email,phone',
-            'agent:id,name,email'
+            'customer:id,full_name,email,phone',
+            'agent:id,full_name,email'
         ];
 
         if ($request) {
