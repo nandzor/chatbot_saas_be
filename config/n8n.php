@@ -14,7 +14,7 @@ return [
 
     // n8n Server Configuration
     'server' => [
-        'url' => env('N8N_SERVER_URL', 'http://localhost:5678'),
+        'url' => env('N8N_API_BASE_URL', 'http://localhost:5678'),
         'api_key' => env('N8N_API_KEY', ''),
         'webhook_secret' => env('N8N_WEBHOOK_SECRET', ''),
         'timeout' => env('N8N_TIMEOUT', 30),

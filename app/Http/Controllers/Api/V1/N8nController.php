@@ -33,7 +33,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse($result['message'], $result['server_info'] ?? []);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('n8n connection test failed in controller', [
                 'error' => $e->getMessage(),
@@ -56,7 +56,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse('Workflows retrieved successfully', $result['data']);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to get n8n workflows in controller', [
                 'error' => $e->getMessage(),
@@ -115,7 +115,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse('Workflow executed successfully', $result['data']);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to execute n8n workflow in controller', [
                 'workflow_id' => $workflowId,
@@ -158,7 +158,7 @@ class N8nController extends BaseApiController
                 ]);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to test n8n workflow in controller', [
                 'workflow_id' => $workflowId,
@@ -208,7 +208,7 @@ class N8nController extends BaseApiController
                 ]);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to get n8n workflow executions in controller', [
                 'workflow_id' => $workflowId,
@@ -232,7 +232,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse($result['message'], $result['data'] ?? []);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to activate n8n workflow in controller', [
                 'workflow_id' => $workflowId,
@@ -256,7 +256,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse($result['message'], $result['data'] ?? []);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to deactivate n8n workflow in controller', [
                 'workflow_id' => $workflowId,
@@ -280,7 +280,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse('Workflow statistics retrieved successfully', $result['data']);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to get n8n workflow statistics in controller', [
                 'workflow_id' => $workflowId,
@@ -316,7 +316,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse($result['message'], $result['data']);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to create workflow in controller', [
                 'error' => $e->getMessage(),
@@ -351,7 +351,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse($result['message'], $result['data']);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to update workflow in controller', [
                 'workflow_id' => $workflowId,
@@ -375,7 +375,7 @@ class N8nController extends BaseApiController
                 return $this->successResponse($result['message'], $result['data'] ?? []);
             }
 
-            return $this->errorResponse($result['message'], 500, $result['error'] ?? null);
+            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
         } catch (Exception $e) {
             Log::error('Failed to delete workflow in controller', [
                 'workflow_id' => $workflowId,
