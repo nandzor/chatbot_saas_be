@@ -471,4 +471,146 @@ class KnowledgeBaseItem extends Model
                     ->orWhere('title', 'LIKE', "%{$term}%")
                     ->orWhere('description', 'LIKE', "%{$term}%");
     }
+
+    /**
+     * Scope for items by category.
+     */
+    public function scopeByCategory($query, string $categoryId)
+    {
+        return $query->where('category_id', $categoryId);
+    }
+
+    /**
+     * Scope for items by author.
+     */
+    public function scopeByAuthor($query, string $authorId)
+    {
+        return $query->where('author_id', $authorId);
+    }
+
+    /**
+     * Scope for items by workflow status.
+     */
+    public function scopeByWorkflowStatus($query, string $status)
+    {
+        return $query->where('workflow_status', $status);
+    }
+
+    /**
+     * Scope for items by approval status.
+     */
+    public function scopeByApprovalStatus($query, string $status)
+    {
+        return $query->where('approval_status', $status);
+    }
+
+    /**
+     * Scope for items by content type.
+     */
+    public function scopeByContentType($query, string $type)
+    {
+        return $query->where('content_type', $type);
+    }
+
+    /**
+     * Scope for items by language.
+     */
+    public function scopeByLanguage($query, string $language)
+    {
+        return $query->where('language', $language);
+    }
+
+    /**
+     * Scope for items by difficulty level.
+     */
+    public function scopeByDifficultyLevel($query, string $level)
+    {
+        return $query->where('difficulty_level', $level);
+    }
+
+    /**
+     * Scope for items by tags.
+     */
+    public function scopeByTags($query, array $tagIds)
+    {
+        return $query->whereHas('knowledgeTags', function ($q) use ($tagIds) {
+            $q->whereIn('tag_id', $tagIds);
+        });
+    }
+
+    /**
+     * Scope for items by keywords.
+     */
+    public function scopeByKeywords($query, array $keywords)
+    {
+        return $query->where(function ($q) use ($keywords) {
+            foreach ($keywords as $keyword) {
+                $q->orWhereJsonContains('keywords', $keyword);
+            }
+        });
+    }
+
+    /**
+     * Scope for latest versions only.
+     */
+    public function scopeLatestVersions($query)
+    {
+        return $query->where('is_latest_version', true);
+    }
+
+    /**
+     * Scope for active items only.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    /**
+     * Scope for items with specific priority.
+     */
+    public function scopeByPriority($query, string $priority)
+    {
+        return $query->where('priority', $priority);
+    }
+
+    /**
+     * Scope for items created within date range.
+     */
+    public function scopeCreatedBetween($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('created_at', [$startDate, $endDate]);
+    }
+
+    /**
+     * Scope for items updated within date range.
+     */
+    public function scopeUpdatedBetween($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('updated_at', [$startDate, $endDate]);
+    }
+
+    /**
+     * Scope for items with minimum view count.
+     */
+    public function scopeMinViews($query, int $minViews)
+    {
+        return $query->where('view_count', '>=', $minViews);
+    }
+
+    /**
+     * Scope for items with minimum quality score.
+     */
+    public function scopeMinQualityScore($query, float $minScore)
+    {
+        return $query->where('quality_score', '>=', $minScore);
+    }
+
+    /**
+     * Scope for items with minimum effectiveness score.
+     */
+    public function scopeMinEffectivenessScore($query, float $minScore)
+    {
+        return $query->where('effectiveness_score', '>=', $minScore);
+    }
 }

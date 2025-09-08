@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Traits\CacheHelper;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\KnowledgeQaItem;
@@ -19,6 +20,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class KnowledgeBaseService extends BaseService
 {
+    use CacheHelper;
     /**
      * Get the model for the service.
      */
@@ -33,13 +35,33 @@ class KnowledgeBaseService extends BaseService
     public function getAllItems(
         ?Request $request = null,
         array $filters = [],
-        array $relations = ['category', 'author', 'knowledgeTags']
+        array $relations = null
     ): Collection|LengthAwarePaginator {
+        // Use optimized relations by default
+        if ($relations === null) {
+            $relations = $this->getOptimizedRelations($request);
+        }
+
         $query = $this->getModel()->newQuery();
 
-        // Apply relations
-        if (!empty($relations)) {
-            $query->with($relations);
+        // Apply optimized eager loading
+        $query->with($relations);
+
+        // Select only necessary columns for list view
+        if ($request && $request->get('list_view', true)) {
+            $query->select([
+                'id', 'organization_id', 'category_id', 'title', 'slug', 'description',
+                'content_type', 'excerpt', 'language', 'difficulty_level', 'priority',
+                'estimated_read_time', 'word_count', 'featured_image_url', 'is_featured',
+                'is_public', 'is_searchable', 'is_ai_trainable', 'workflow_status',
+                'approval_status', 'author_id', 'reviewer_id', 'approved_by',
+                'published_at', 'last_reviewed_at', 'approved_at', 'view_count',
+                'helpful_count', 'not_helpful_count', 'share_count', 'comment_count',
+                'search_hit_count', 'ai_usage_count', 'ai_generated', 'ai_confidence_score',
+                'ai_last_processed_at', 'version', 'is_latest_version', 'change_summary',
+                'quality_score', 'effectiveness_score', 'last_effectiveness_update',
+                'status', 'created_at', 'updated_at'
+            ]);
         }
 
         if (Auth::user()->role !== 'super_admin') {
@@ -142,7 +164,7 @@ class KnowledgeBaseService extends BaseService
             }
 
             // Clear cache
-            $this->clearKnowledgeCache();
+            $this->clearKnowledgeBaseCache();
 
             // Log the creation
             Log::info('Knowledge base item created', [
@@ -201,7 +223,7 @@ class KnowledgeBaseService extends BaseService
             }
 
             // Clear cache
-            $this->clearKnowledgeCache();
+            $this->clearKnowledgeBaseCache();
 
             // Log the update
             Log::info('Knowledge base item updated', [
@@ -283,7 +305,7 @@ class KnowledgeBaseService extends BaseService
             ]);
 
             // Clear cache
-            $this->clearKnowledgeCache();
+            $this->clearKnowledgeBaseCache();
 
             // Log the publication
             Log::info('Knowledge base item published', [
@@ -326,7 +348,7 @@ class KnowledgeBaseService extends BaseService
             ]);
 
             // Clear cache
-            $this->clearKnowledgeCache();
+            $this->clearKnowledgeBaseCache();
 
             // Log the approval
             Log::info('Knowledge base item approved', [
@@ -369,7 +391,7 @@ class KnowledgeBaseService extends BaseService
             ]);
 
             // Clear cache
-            $this->clearKnowledgeCache();
+            $this->clearKnowledgeBaseCache();
 
             // Log the rejection
             Log::info('Knowledge base item rejected', [
@@ -716,14 +738,11 @@ class KnowledgeBaseService extends BaseService
     }
 
     /**
-     * Clear knowledge base cache.
+     * Clear knowledge base cache (legacy method for backward compatibility).
      */
     protected function clearKnowledgeCache(): void
     {
-        $organizationId = $this->getCurrentOrganizationId();
-        Cache::forget("knowledge_organization_{$organizationId}");
-        Cache::forget("knowledge_categories_{$organizationId}");
-        Cache::forget("knowledge_tags_{$organizationId}");
+        $this->clearKnowledgeBaseCache();
     }
 
     /**
@@ -750,4 +769,216 @@ class KnowledgeBaseService extends BaseService
     {
         return Auth::user();
     }
+
+    /**
+     * Get optimized relations based on request parameters.
+     */
+    protected function getOptimizedRelations(?Request $request = null): array
+    {
+        // Base relations that are always needed
+        $baseRelations = [
+            'category:id,name,slug,description,icon,color',
+            'author:id,name,email,avatar_url'
+        ];
+
+        // Add relations based on request parameters or context
+        if ($request) {
+            // If include parameter is specified, use it
+            if ($request->has('include')) {
+                $includeRelations = explode(',', $request->get('include'));
+                $baseRelations = array_merge($baseRelations, $includeRelations);
+            }
+
+            // Add reviewer and approvedBy if user has admin permissions
+            if ($request->user()?->hasPermission('knowledge.approve')) {
+                $baseRelations[] = 'reviewer:id,name,email';
+                $baseRelations[] = 'approvedBy:id,name,email';
+            }
+
+            // Add tags if needed for display
+            if ($request->get('include_tags', true)) {
+                $baseRelations[] = 'knowledgeTags:id,name,slug,color,icon';
+            }
+
+            // Add QA items only if specifically requested
+            if ($request->get('include_qa_items', false)) {
+                $baseRelations[] = 'qaItems:id,knowledge_item_id,question,answer,is_primary,is_active,order_index';
+            }
+        }
+
+        return array_unique($baseRelations);
+    }
+
+    /**
+     * Get cached knowledge base items with optimized query.
+     */
+    public function getCachedItems(
+        ?Request $request = null,
+        array $filters = [],
+        int $cacheTtl = 300
+    ): Collection|LengthAwarePaginator {
+        $cacheKey = $this->generateCacheKey($request, $filters);
+
+        return Cache::remember($cacheKey, $cacheTtl, function () use ($request, $filters) {
+            return $this->getAllItems($request, $filters);
+        });
+    }
+
+    /**
+     * Get optimized knowledge base items with minimal queries.
+     */
+    public function getOptimizedItems(
+        ?Request $request = null,
+        array $filters = [],
+        bool $useCache = true
+    ): Collection|LengthAwarePaginator {
+        if ($useCache) {
+            return $this->getCachedItems($request, $filters, 300);
+        }
+
+        // Build optimized query with minimal relations
+        $query = $this->getModel()->newQuery();
+
+        // Apply organization filter
+        if (Auth::user()->role !== 'super_admin') {
+            $query->where('organization_id', $this->getCurrentOrganizationId());
+        }
+
+        // Apply filters using optimized scopes
+        $this->applyKnowledgeFilters($query, $filters);
+
+        // Apply search
+        if ($request && $request->has('search')) {
+            $query->search($request->get('search'));
+        }
+
+        // Apply sorting
+        if ($request) {
+            $this->applyKnowledgeSorting($query, $request);
+        }
+
+        // Select only essential columns for list view
+        $query->select([
+            'id', 'organization_id', 'category_id', 'title', 'slug', 'description',
+            'content_type', 'excerpt', 'language', 'difficulty_level', 'priority',
+            'is_featured', 'is_public', 'workflow_status', 'approval_status',
+            'author_id', 'published_at', 'view_count', 'helpful_count',
+            'quality_score', 'effectiveness_score', 'status', 'created_at', 'updated_at'
+        ]);
+
+        // Eager load only essential relations
+        $query->with([
+            'category:id,name,slug,icon,color',
+            'author:id,name,email'
+        ]);
+
+        // Return paginated or all results
+        if ($request && $request->has('per_page')) {
+            $perPage = min(100, max(1, (int) $request->get('per_page', 15)));
+            return $query->paginate($perPage);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Get knowledge base items with minimal queries for list view.
+     */
+    public function getListItems(
+        ?Request $request = null,
+        array $filters = [],
+        bool $useCache = true
+    ): Collection|LengthAwarePaginator {
+        if ($useCache) {
+            $cacheKey = $this->generateCacheKey($request, $filters) . '_list';
+            return Cache::remember($cacheKey, 300, function () use ($request, $filters) {
+                return $this->getListItems($request, $filters, false);
+            });
+        }
+
+        // Build minimal query for list view
+        $query = $this->getModel()->newQuery();
+
+        // Apply organization filter
+        if (Auth::user()->role !== 'super_admin') {
+            $query->where('organization_id', $this->getCurrentOrganizationId());
+        }
+
+        // Apply filters using optimized scopes
+        $this->applyKnowledgeFilters($query, $filters);
+
+        // Apply search
+        if ($request && $request->has('search')) {
+            $query->search($request->get('search'));
+        }
+
+        // Apply sorting
+        if ($request) {
+            $this->applyKnowledgeSorting($query, $request);
+        }
+
+        // Select only essential columns for list view
+        $query->select([
+            'id', 'organization_id', 'category_id', 'title', 'slug', 'description',
+            'content_type', 'excerpt', 'language', 'difficulty_level', 'priority',
+            'is_featured', 'is_public', 'workflow_status', 'approval_status',
+            'author_id', 'published_at', 'view_count', 'helpful_count',
+            'quality_score', 'effectiveness_score', 'status', 'created_at', 'updated_at'
+        ]);
+
+        // Eager load only essential relations
+        $query->with([
+            'category:id,name,slug,icon,color',
+            'author:id,name,email'
+        ]);
+
+        // Return paginated or all results
+        if ($request && $request->has('per_page')) {
+            $perPage = min(100, max(1, (int) $request->get('per_page', 15)));
+            return $query->paginate($perPage);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Generate cache key for knowledge base queries.
+     */
+    protected function generateCacheKey(?Request $request = null, array $filters = []): string
+    {
+        $organizationId = $this->getCurrentOrganizationId();
+        $userId = $this->getCurrentUserId();
+
+        $keyParts = [
+            'knowledge_base_items',
+            "org_{$organizationId}",
+            "user_{$userId}",
+            md5(serialize($filters))
+        ];
+
+        if ($request) {
+            $keyParts[] = md5($request->getQueryString() ?? '');
+        }
+
+        return implode('_', $keyParts);
+    }
+
+    /**
+     * Clear knowledge base cache with pattern matching.
+     */
+    public function clearKnowledgeBaseCache(): void
+    {
+        $organizationId = $this->getCurrentOrganizationId();
+
+        $patterns = [
+            "knowledge_base_items_org_{$organizationId}_*",
+            "knowledge_search_*",
+            "knowledge_organization_{$organizationId}",
+            "knowledge_categories_{$organizationId}",
+            "knowledge_tags_{$organizationId}"
+        ];
+
+        $this->clearCacheByPatterns($patterns);
+    }
+
 }

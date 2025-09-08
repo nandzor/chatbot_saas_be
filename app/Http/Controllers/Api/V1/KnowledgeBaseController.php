@@ -31,8 +31,8 @@ class KnowledgeBaseController extends BaseApiController
             // Build filters from request
             $filters = $this->buildFilters($request);
 
-            // Get items with pagination
-            $items = $this->knowledgeBaseService->getAllItems($request, $filters);
+            // Use optimized items for better performance with minimal queries
+            $items = $this->knowledgeBaseService->getListItems($request, $filters, true);
 
             // Return paginated response
             if ($items instanceof \Illuminate\Pagination\LengthAwarePaginator) {
@@ -72,6 +72,9 @@ class KnowledgeBaseController extends BaseApiController
             // Increment view count
             $this->knowledgeBaseService->incrementViewCount($id);
 
+            // Clear cache after view count increment
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
+
             return $this->successResponse(
                 'Knowledge base item retrieved successfully',
                 new KnowledgeBaseItemResource($item)
@@ -102,6 +105,9 @@ class KnowledgeBaseController extends BaseApiController
             // Increment view count
             $this->knowledgeBaseService->incrementViewCount($item->id);
 
+            // Clear cache after view count increment
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
+
             return $this->successResponse(
                 'Knowledge base item retrieved successfully',
                 new KnowledgeBaseItemResource($item)
@@ -125,6 +131,9 @@ class KnowledgeBaseController extends BaseApiController
         try {
             $item = $this->knowledgeBaseService->createItem($request->validated());
 
+            // Clear cache after creation
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
+
             return $this->createdResponse(
                 new KnowledgeBaseItemResource($item),
                 'Knowledge base item created successfully'
@@ -147,6 +156,9 @@ class KnowledgeBaseController extends BaseApiController
     {
         try {
             $item = $this->knowledgeBaseService->updateItem($id, $request->validated());
+
+            // Clear cache after update
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
 
             return $this->successResponse(
                 'Knowledge base item updated successfully',
@@ -175,6 +187,9 @@ class KnowledgeBaseController extends BaseApiController
                 return $this->errorResponse('Failed to delete knowledge base item', 500);
             }
 
+            // Clear cache after deletion
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
+
             return $this->successResponse(
                 'Knowledge base item deleted successfully',
                 null
@@ -202,6 +217,9 @@ class KnowledgeBaseController extends BaseApiController
 
             $items = $this->knowledgeBaseService->searchItems($query, $filters, $limit);
 
+            // Clear cache after search (for search hit count updates)
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
+
             return $this->successResponse(
                 'Search completed successfully',
                 new KnowledgeBaseItemCollection($items)
@@ -225,6 +243,9 @@ class KnowledgeBaseController extends BaseApiController
         try {
             $filters = $this->buildFilters($request);
             $items = $this->knowledgeBaseService->getItemsByCategory($categoryId, $filters);
+
+            // Clear cache after category items retrieval
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
 
             return $this->successResponse(
                 'Category items retrieved successfully',
@@ -250,6 +271,9 @@ class KnowledgeBaseController extends BaseApiController
             $filters = $this->buildFilters($request);
             $items = $this->knowledgeBaseService->getItemsByTag($tagId, $filters);
 
+            // Clear cache after tag items retrieval
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
+
             return $this->successResponse(
                 'Tag items retrieved successfully',
                 new KnowledgeBaseItemCollection($items)
@@ -274,6 +298,9 @@ class KnowledgeBaseController extends BaseApiController
             $limit = request()->get('limit', 5);
             $items = $this->knowledgeBaseService->getRelatedItems($id, $limit);
 
+            // Clear cache after related items retrieval
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
+
             return $this->successResponse(
                 'Related items retrieved successfully',
                 new KnowledgeBaseItemCollection($items)
@@ -296,6 +323,9 @@ class KnowledgeBaseController extends BaseApiController
     {
         try {
             $item = $this->knowledgeBaseService->publishItem($id);
+
+            // Clear cache after publishing
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
 
             return $this->successResponse(
                 'Knowledge base item published successfully',
@@ -320,6 +350,9 @@ class KnowledgeBaseController extends BaseApiController
         try {
             $comment = $request->get('comment');
             $item = $this->knowledgeBaseService->approveItem($id, $comment);
+
+            // Clear cache after approval
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
 
             return $this->successResponse(
                 'Knowledge base item approved successfully',
@@ -350,6 +383,9 @@ class KnowledgeBaseController extends BaseApiController
 
             $item = $this->knowledgeBaseService->rejectItem($id, $reason);
 
+            // Clear cache after rejection
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
+
             return $this->successResponse(
                 'Knowledge base item rejected successfully',
                 new KnowledgeBaseItemResource($item)
@@ -372,6 +408,9 @@ class KnowledgeBaseController extends BaseApiController
     {
         try {
             $this->knowledgeBaseService->markAsHelpful($id);
+
+            // Clear cache after marking as helpful
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
 
             return $this->successResponse(
                 'Item marked as helpful successfully',
@@ -396,6 +435,9 @@ class KnowledgeBaseController extends BaseApiController
     {
         try {
             $this->knowledgeBaseService->markAsNotHelpful($id);
+
+            // Clear cache after marking as not helpful
+            $this->knowledgeBaseService->clearKnowledgeBaseCache();
 
             return $this->successResponse(
                 'Item marked as not helpful successfully',

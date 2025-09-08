@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\RoleManagementController;
 use App\Http\Controllers\Api\V1\PermissionManagementController;
+use App\Http\Controllers\Api\V1\ChatbotController;
+use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\AnalyticsController;
 
 use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
@@ -67,88 +70,92 @@ Route::prefix('v1')->group(function () {
                 ]);
             });
 
-            Route::put('/profile', function () {
-                // TODO: Implement profile update
-                return response()->json(['message' => 'Profile update endpoint - to be implemented']);
-            });
+            Route::put('/profile', [UserController::class, 'updateProfile']);
         });
 
         // ====================================================================
-        // CHATBOT MANAGEMENT
+        // CHATBOT MANAGEMENT (With Permission Middleware)
         // ====================================================================
 
-        Route::prefix('chatbots')->group(function () {
-            Route::get('/', function () {
-                return response()->json(['message' => 'Chatbots list endpoint - to be implemented']);
-            });
+        Route::prefix('chatbots')
+            ->middleware(['permission:bots.view', 'organization'])
+            ->group(function () {
 
-            Route::post('/', function () {
-                return response()->json(['message' => 'Create chatbot endpoint - to be implemented']);
-            });
+            // Basic CRUD operations
+            Route::get('/', [ChatbotController::class, 'index']);
+            Route::get('/statistics', [ChatbotController::class, 'statistics']);
 
+            // Individual chatbot operations
             Route::prefix('{id}')->group(function () {
-                Route::get('/', function () {
-                    return response()->json(['message' => 'Get chatbot endpoint - to be implemented']);
-                });
-
-                Route::put('/', function () {
-                    return response()->json(['message' => 'Update chatbot endpoint - to be implemented']);
-                });
-
-                Route::delete('/', function () {
-                    return response()->json(['message' => 'Delete chatbot endpoint - to be implemented']);
-                });
-
-                Route::post('/train', function () {
-                    return response()->json(['message' => 'Train chatbot endpoint - to be implemented']);
-                });
-
-                Route::post('/chat', function () {
-                    return response()->json(['message' => 'Chat with bot endpoint - to be implemented']);
-                });
+                Route::get('/', [ChatbotController::class, 'show']);
+                Route::get('/statistics', [ChatbotController::class, 'statistics']);
+                Route::post('/test', [ChatbotController::class, 'test']);
             });
+
+            // Routes requiring additional permissions
+            Route::middleware(['permission:bots.create'])->post('/', [ChatbotController::class, 'store']);
+
+            Route::middleware(['permission:bots.update'])->group(function () {
+                Route::put('/{id}', [ChatbotController::class, 'update']);
+                Route::patch('/{id}', [ChatbotController::class, 'update']);
+            });
+
+            Route::middleware(['permission:bots.delete'])->delete('/{id}', [ChatbotController::class, 'destroy']);
+
+            // Training and chat operations
+            Route::middleware(['permission:bots.train'])->post('/{id}/train', [ChatbotController::class, 'train']);
+            Route::middleware(['permission:bots.chat'])->post('/{id}/chat', [ChatbotController::class, 'chat']);
         });
 
         // ====================================================================
-        // CONVERSATION MANAGEMENT
+        // CONVERSATION MANAGEMENT (With Permission Middleware)
         // ====================================================================
 
-        Route::prefix('conversations')->group(function () {
-            Route::get('/', function () {
-                return response()->json(['message' => 'Conversations list endpoint - to be implemented']);
-            });
+        Route::prefix('conversations')
+            ->middleware(['permission:conversations.view', 'organization'])
+            ->group(function () {
 
-            Route::post('/', function () {
-                return response()->json(['message' => 'Create conversation endpoint - to be implemented']);
-            });
+            // Basic CRUD operations
+            Route::get('/', [ConversationController::class, 'index']);
+            Route::get('/statistics', [ConversationController::class, 'statistics']);
 
+            // Individual conversation operations
             Route::prefix('{id}')->group(function () {
-                Route::get('/', function () {
-                    return response()->json(['message' => 'Get conversation endpoint - to be implemented']);
-                });
-
-                Route::post('/messages', function () {
-                    return response()->json(['message' => 'Send message endpoint - to be implemented']);
-                });
+                Route::get('/', [ConversationController::class, 'show']);
+                Route::get('/messages', [ConversationController::class, 'messages']);
+                Route::post('/end', [ConversationController::class, 'end']);
+                Route::post('/transfer', [ConversationController::class, 'transfer']);
             });
+
+            // Routes requiring additional permissions
+            Route::middleware(['permission:conversations.create'])->post('/', [ConversationController::class, 'store']);
+            Route::middleware(['permission:conversations.send_message'])->post('/{id}/messages', [ConversationController::class, 'sendMessage']);
         });
 
         // ====================================================================
-        // ANALYTICS & REPORTING
+        // ANALYTICS & REPORTING (With Permission Middleware)
         // ====================================================================
 
-        Route::prefix('analytics')->group(function () {
-            Route::get('/dashboard', function () {
-                return response()->json(['message' => 'Dashboard analytics endpoint - to be implemented']);
-            });
+        Route::prefix('analytics')
+            ->middleware(['permission:analytics.view', 'organization'])
+            ->group(function () {
 
-            Route::get('/usage', function () {
-                return response()->json(['message' => 'Usage analytics endpoint - to be implemented']);
-            });
+            // Dashboard and overview analytics
+            Route::get('/dashboard', [AnalyticsController::class, 'dashboard']);
+            Route::get('/realtime', [AnalyticsController::class, 'realtime']);
 
-            Route::get('/performance', function () {
-                return response()->json(['message' => 'Performance analytics endpoint - to be implemented']);
-            });
+            // Specific analytics endpoints
+            Route::get('/usage', [AnalyticsController::class, 'usage']);
+            Route::get('/performance', [AnalyticsController::class, 'performance']);
+            Route::get('/conversations', [AnalyticsController::class, 'conversations']);
+            Route::get('/users', [AnalyticsController::class, 'users']);
+            Route::get('/revenue', [AnalyticsController::class, 'revenue']);
+
+            // Chatbot-specific analytics
+            Route::get('/chatbot/{chatbotId}', [AnalyticsController::class, 'chatbot']);
+
+            // Export functionality
+            Route::middleware(['permission:analytics.export'])->post('/export', [AnalyticsController::class, 'export']);
         });
 
         // ====================================================================

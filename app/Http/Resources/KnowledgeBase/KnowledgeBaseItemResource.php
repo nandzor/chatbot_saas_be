@@ -79,7 +79,7 @@ class KnowledgeBaseItemResource extends JsonResource
             'feedback_percentage' => $this->feedback_percentage,
             'url' => $this->url,
 
-            // Relationships
+            // Relationships - Optimized with selective loading
             'category' => $this->whenLoaded('category', function () {
                 return [
                     'id' => $this->category->id,
@@ -125,10 +125,10 @@ class KnowledgeBaseItemResource extends JsonResource
                         'color' => $tag->color,
                         'icon' => $tag->icon,
                         'pivot' => [
-                            'assigned_by' => $tag->pivot->assigned_by,
+                            'assigned_by' => $tag->pivot->assigned_by ?? null,
                             'assigned_at' => $tag->pivot->assigned_at?->toISOString(),
-                            'is_auto_assigned' => $tag->pivot->is_auto_assigned,
-                            'confidence_score' => $tag->pivot->confidence_score
+                            'is_auto_assigned' => $tag->pivot->is_auto_assigned ?? false,
+                            'confidence_score' => $tag->pivot->confidence_score ?? null
                         ]
                     ];
                 });

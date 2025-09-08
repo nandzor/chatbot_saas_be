@@ -19,6 +19,57 @@ class UserController extends BaseApiController
     }
 
     /**
+     * Update user profile
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'full_name' => 'sometimes|string|max:255',
+                'email' => 'sometimes|email|max:255|unique:users,email,' . $request->user()->id,
+                'phone' => 'nullable|string|max:20',
+                'avatar_url' => 'nullable|url|max:500',
+                'bio' => 'nullable|string|max:1000',
+                'timezone' => 'nullable|string|max:50',
+                'language' => 'nullable|string|max:10',
+                'notifications' => 'nullable|array',
+                'notifications.email' => 'nullable|boolean',
+                'notifications.push' => 'nullable|boolean',
+                'notifications.sms' => 'nullable|boolean'
+            ]);
+
+            $user = $this->userService->updateProfile($request->user()->id, $request->validated());
+
+            $this->logApiAction('profile_updated', [
+                'user_id' => $user->id,
+                'updated_fields' => array_keys($request->validated())
+            ]);
+
+            return $this->successResponseWithLog(
+                'profile_updated',
+                'Profile updated successfully',
+                new UserResource($user)
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponseWithLog(
+                'profile_validation_error',
+                'Validation failed',
+                $e->getMessage(),
+                422,
+                'VALIDATION_ERROR'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'profile_update_error',
+                'Failed to update profile',
+                $e->getMessage(),
+                500,
+                'PROFILE_UPDATE_ERROR'
+            );
+        }
+    }
+
+    /**
      * Display a listing of users.
      */
     public function index(Request $request): JsonResponse

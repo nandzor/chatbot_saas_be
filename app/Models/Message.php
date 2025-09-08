@@ -13,13 +13,14 @@ class Message extends Model
     use HasFactory, HasUuid, BelongsToOrganization;
 
     protected $fillable = [
-        'session_id',
+        'chat_session_id',
         'organization_id',
         'sender_type',
         'sender_id',
         'sender_name',
-        'message_text',
+        'content',
         'message_type',
+        'status',
         'media_url',
         'media_type',
         'media_size',
@@ -38,6 +39,8 @@ class Message extends Model
         'emotion_scores',
         'is_read',
         'read_at',
+        'is_edited',
+        'edited_at',
         'delivered_at',
         'failed_at',
         'failed_reason',
@@ -60,11 +63,14 @@ class Message extends Model
         'emotion_scores' => 'array',
         'is_read' => 'boolean',
         'read_at' => 'datetime',
+        'is_edited' => 'boolean',
+        'edited_at' => 'datetime',
         'delivered_at' => 'datetime',
         'failed_at' => 'datetime',
         'context' => 'array',
         'metadata' => 'array',
         'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -72,7 +78,7 @@ class Message extends Model
      */
     public function chatSession(): BelongsTo
     {
-        return $this->belongsTo(ChatSession::class, 'session_id');
+        return $this->belongsTo(ChatSession::class, 'chat_session_id');
     }
 
     /**
@@ -81,6 +87,30 @@ class Message extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    /**
+     * Get the customer (if sender is customer).
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'sender_id');
+    }
+
+    /**
+     * Get the agent (if sender is agent).
+     */
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'sender_id');
+    }
+
+    /**
+     * Get the bot personality (if sender is bot).
+     */
+    public function botPersonality(): BelongsTo
+    {
+        return $this->belongsTo(BotPersonality::class, 'sender_id');
     }
 
     /**
