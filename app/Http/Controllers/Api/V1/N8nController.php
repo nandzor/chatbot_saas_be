@@ -302,7 +302,6 @@ class N8nController extends BaseApiController
                 'name' => 'required|string|max:255',
                 'nodes' => 'required|array',
                 'connections' => 'array',
-                'active' => 'boolean',
                 'settings' => 'array',
             ]);
 
@@ -310,7 +309,7 @@ class N8nController extends BaseApiController
                 return $this->errorResponse('Validation failed', $validator->errors()->toArray(), 422);
             }
 
-            $workflowData = $request->only(['name', 'nodes', 'connections', 'active', 'settings']);
+            $workflowData = $request->only(['name', 'nodes', 'connections', 'settings']);
 
             // Ensure settings is present (required by N8N API)
             if (!isset($workflowData['settings'])) {

@@ -561,12 +561,11 @@ class N8nService
                 ];
             }
 
-            // Ensure required fields are present
+            // Ensure required fields are present (active is read-only in N8N API)
             $workflowPayload = [
                 'name' => $workflowData['name'],
                 'nodes' => $workflowData['nodes'] ?? [],
                 'connections' => $workflowData['connections'] ?? [],
-                'active' => $workflowData['active'] ?? false,
                 'settings' => $workflowData['settings'] ?? [],
             ];
 
