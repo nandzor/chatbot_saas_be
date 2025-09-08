@@ -1,0 +1,671 @@
+{
+  "info": {
+    "name": "AI Agent Workflow API",
+    "description": "Complete API collection for AI Agent Workflow management with N8N and WAHA integration",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "AI Agent Workflow Management",
+      "item": [
+        {
+          "name": "Create AI Agent Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"knowledge_base_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"workflow_config\": {\n    \"workflow_name\": \"AI Agent - Customer Service\",\n    \"ai_model\": \"gpt-4\",\n    \"ai_temperature\": 0.7,\n    \"ai_max_tokens\": 500,\n    \"timezone\": \"Asia/Jakarta\",\n    \"timeout\": 300,\n    \"max_execution_time\": 300\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/ai-agent-workflow/create",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "ai-agent-workflow",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete AI Agent Workflow",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"knowledge_base_id\": \"660e8400-e29b-41d4-a716-446655440001\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/ai-agent-workflow/delete",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "ai-agent-workflow",
+                "delete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Workflow Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/ai-agent-workflow/status?organization_id=550e8400-e29b-41d4-a716-446655440000&knowledge_base_id=660e8400-e29b-41d4-a716-446655440001",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "ai-agent-workflow",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "organization_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                {
+                  "key": "knowledge_base_id",
+                  "value": "660e8400-e29b-41d4-a716-446655440001"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Workflow Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/ai-agent-workflow/analytics?organization_id=550e8400-e29b-41d4-a716-446655440000&knowledge_base_id=660e8400-e29b-41d4-a716-446655440001",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "ai-agent-workflow",
+                "analytics"
+              ],
+              "query": [
+                {
+                  "key": "organization_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                {
+                  "key": "knowledge_base_id",
+                  "value": "660e8400-e29b-41d4-a716-446655440001"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Process Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session\": \"session_550e8400-e29b-41d4-a716-446655440000_660e8400-e29b-41d4-a716-446655440001\",\n  \"from\": \"+6281234567890\",\n  \"text\": \"Bagaimana cara menggunakan fitur chatbot?\",\n  \"timestamp\": \"2024-01-15T10:30:00Z\",\n  \"messageId\": \"msg_12345\",\n  \"type\": \"text\",\n  \"organization_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"knowledge_base_id\": \"660e8400-e29b-41d4-a716-446655440001\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/ai-agent-workflow/process-message",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "ai-agent-workflow",
+                "process-message"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Test Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"knowledge_base_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"test_message\": \"Halo, saya ingin bertanya tentang produk Anda\",\n  \"test_phone\": \"+6281234567890\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/ai-agent-workflow/test",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "ai-agent-workflow",
+                "test"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversation Management",
+      "item": [
+        {
+          "name": "Get Conversation History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/conversations/history?session_id=session_550e8400-e29b-41d4-a716-446655440000_660e8400-e29b-41d4-a716-446655440001&limit=10&offset=0&include_metadata=true",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "conversations",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "session_id",
+                  "value": "session_550e8400-e29b-41d4-a716-446655440000_660e8400-e29b-41d4-a716-446655440001"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "include_metadata",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Log AI Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"session_550e8400-e29b-41d4-a716-446655440000_660e8400-e29b-41d4-a716-446655440001\",\n  \"customer_message\": \"Bagaimana cara menggunakan fitur chatbot?\",\n  \"agent_response\": \"Untuk menggunakan fitur chatbot, Anda dapat mengikuti langkah-langkah berikut:\\n\\n1. **Akses Dashboard** - Login ke dashboard admin\\n2. **Pilih Chatbot** - Pilih chatbot yang ingin dikonfigurasi\\n3. **Atur Personality** - Sesuaikan personality dan responses\\n4. **Test & Deploy** - Test chatbot dan deploy ke production\\n\\n💬 Apakah ada yang bisa saya bantu lagi?\",\n  \"organization_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"knowledge_base_used\": [\n    {\n      \"id\": \"kb_001\",\n      \"title\": \"Panduan Penggunaan Chatbot\",\n      \"relevance_score\": 0.95\n    },\n    {\n      \"id\": \"kb_002\",\n      \"title\": \"Konfigurasi Bot Personality\",\n      \"relevance_score\": 0.87\n    }\n  ],\n  \"ai_metadata\": {\n    \"model_used\": \"gpt-4\",\n    \"tokens_consumed\": 245,\n    \"processing_time\": 2.3,\n    \"confidence_score\": 0.92,\n    \"temperature\": 0.7,\n    \"max_tokens\": 500\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/conversations/log",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "conversations",
+                "log"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics & Monitoring",
+      "item": [
+        {
+          "name": "Log Workflow Execution",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflow_id\": \"ai-agent-workflow\",\n  \"execution_id\": \"exec_12345_67890\",\n  \"organization_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"session_id\": \"session_550e8400-e29b-41d4-a716-446655440000_660e8400-e29b-41d4-a716-446655440001\",\n  \"user_phone\": \"+6281234567890\",\n  \"metrics\": {\n    \"processing_time\": 2.3,\n    \"response_length\": 245,\n    \"kb_results_count\": 3,\n    \"conversation_history_count\": 5,\n    \"ai_tokens_used\": 245,\n    \"ai_cost\": 0.0049,\n    \"success\": true,\n    \"error_count\": 0,\n    \"retry_count\": 0,\n    \"cache_hit\": false,\n    \"kb_relevance_avg\": 0.87,\n    \"user_satisfaction\": null\n  },\n  \"event_type\": \"workflow_execution\",\n  \"timestamp\": \"2024-01-15T10:30:25Z\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/analytics/workflow-execution",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "analytics",
+                "workflow-execution"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get AI Agent Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/analytics/ai-agent-workflow?organization_id=550e8400-e29b-41d4-a716-446655440000&knowledge_base_id=660e8400-e29b-41d4-a716-446655440001&workflow_id=ai-agent-workflow&date_from=2024-01-01&date_to=2024-01-31&period=day&metrics[]=executions&metrics[]=success_rate&metrics[]=response_time&metrics[]=cost&metrics[]=satisfaction",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "analytics",
+                "ai-agent-workflow"
+              ],
+              "query": [
+                {
+                  "key": "organization_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                {
+                  "key": "knowledge_base_id",
+                  "value": "660e8400-e29b-41d4-a716-446655440001"
+                },
+                {
+                  "key": "workflow_id",
+                  "value": "ai-agent-workflow"
+                },
+                {
+                  "key": "date_from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2024-01-31"
+                },
+                {
+                  "key": "period",
+                  "value": "day"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "executions"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "success_rate"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "response_time"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "cost"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "satisfaction"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Workflow Performance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:9000/api/v1/analytics/workflow-performance?workflow_id=ai-agent-workflow&date_from=2024-01-01&date_to=2024-01-31&granularity=hour&metrics[]=execution_count&metrics[]=success_rate&metrics[]=avg_duration&metrics[]=error_rate&metrics[]=cost",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "v1",
+                "analytics",
+                "workflow-performance"
+              ],
+              "query": [
+                {
+                  "key": "workflow_id",
+                  "value": "ai-agent-workflow"
+                },
+                {
+                  "key": "date_from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2024-01-31"
+                },
+                {
+                  "key": "granularity",
+                  "value": "hour"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "execution_count"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "success_rate"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "avg_duration"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "error_rate"
+                },
+                {
+                  "key": "metrics[]",
+                  "value": "cost"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check & Testing",
+      "item": [
+        {
+          "name": "API Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:9000/api/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9000",
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Webhook Test (N8N Trigger)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session\": \"session_550e8400-e29b-41d4-a716-446655440000_660e8400-e29b-41d4-a716-446655440001\",\n  \"from\": \"+6281234567890\",\n  \"text\": \"Test message dari webhook\",\n  \"timestamp\": \"2024-01-15T10:30:00Z\",\n  \"messageId\": \"webhook_test_12345\",\n  \"type\": \"text\",\n  \"knowledge_base_id\": \"660e8400-e29b-41d4-a716-446655440001\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5678/webhook/kb-webhook/660e8400-e29b-41d4-a716-446655440001",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5678",
+              "path": [
+                "webhook",
+                "kb-webhook",
+                "660e8400-e29b-41d4-a716-446655440001"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "jwt_token",
+      "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjkwMDAvYXBpL3YxL2F1dGgvbG9naW4iLCJpYXQiOjE3MDUzMzQ0MDAsImV4cCI6MTcwNTMzODAwMCwibmJmIjoxNzA1MzM0NDAwLCJqdGkiOiJhYmNkZWZnaCIsInN1YiI6IjEiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.example_token_signature",
+      "type": "string",
+      "description": "JWT Authentication Token - Replace with your actual token"
+    }
+  ]
+}

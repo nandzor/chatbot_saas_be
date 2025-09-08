@@ -212,6 +212,7 @@ class ConversationController extends BaseApiController
             return $this->successResponse(
                 'Messages retrieved successfully',
                 $messages->through(fn($message) => new MessageResource($message)),
+                200,
                 ['pagination' => $pagination]
             );
         } catch (\Exception $e) {
@@ -314,6 +315,111 @@ class ConversationController extends BaseApiController
                 $e->getMessage(),
                 500,
                 'CONVERSATION_TRANSFER_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Get conversation history for AI Agent workflow
+     */
+    public function history(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'session_id' => 'required|string|max:255',
+                'limit' => 'nullable|integer|min:1|max:100',
+                'offset' => 'nullable|integer|min:0',
+                'include_metadata' => 'nullable|boolean'
+            ]);
+
+            $sessionId = $request->input('session_id');
+            $limit = $request->input('limit', 10);
+            $offset = $request->input('offset', 0);
+            $includeMetadata = $request->input('include_metadata', false);
+
+            $history = $this->conversationService->getConversationHistory(
+                $sessionId,
+                $limit,
+                $offset,
+                $includeMetadata
+            );
+
+            $this->logApiAction('conversation_history_retrieved', [
+                'session_id' => $sessionId,
+                'limit' => $limit,
+                'offset' => $offset,
+                'result_count' => count($history['data'] ?? [])
+            ]);
+
+            return $this->successResponseWithLog(
+                'conversation_history_retrieved',
+                'Conversation history retrieved successfully',
+                $history
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponseWithLog(
+                'conversation_history_validation_error',
+                'History validation failed',
+                $e->getMessage(),
+                422,
+                'VALIDATION_ERROR'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'conversation_history_error',
+                'Failed to retrieve conversation history',
+                $e->getMessage(),
+                500,
+                'CONVERSATION_HISTORY_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Log conversation for AI Agent workflow
+     */
+    public function logConversation(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'session_id' => 'required|string|max:255',
+                'customer_message' => 'required|string',
+                'agent_response' => 'required|string',
+                'organization_id' => 'required|uuid|exists:organizations,id',
+                'knowledge_base_used' => 'nullable|array',
+                'ai_metadata' => 'nullable|array'
+            ]);
+
+            $result = $this->conversationService->logAiAgentConversation($request->validated());
+
+            $this->logApiAction('ai_conversation_logged', [
+                'session_id' => $request->input('session_id'),
+                'organization_id' => $request->input('organization_id'),
+                'conversation_id' => $result['conversation_id'] ?? null,
+                'message_ids' => $result['message_ids'] ?? []
+            ]);
+
+            return $this->successResponseWithLog(
+                'ai_conversation_logged',
+                'AI conversation logged successfully',
+                $result,
+                201
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponseWithLog(
+                'conversation_log_validation_error',
+                'Conversation log validation failed',
+                $e->getMessage(),
+                422,
+                'VALIDATION_ERROR'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'conversation_log_error',
+                'Failed to log conversation',
+                $e->getMessage(),
+                500,
+                'CONVERSATION_LOG_ERROR'
             );
         }
     }

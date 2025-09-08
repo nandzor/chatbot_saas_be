@@ -269,9 +269,9 @@ class AnalyticsController extends BaseApiController
             $exportData = $this->analyticsService->exportAnalytics($request->validated());
 
             $this->logApiAction('analytics_exported', [
-                'type' => $request->type,
-                'format' => $request->format,
-                'filters' => $request->filters
+                'type' => $request->input('type'),
+                'format' => $request->input('format'),
+                'filters' => $request->input('filters')
             ]);
 
             return $this->successResponseWithLog(
@@ -317,6 +317,159 @@ class AnalyticsController extends BaseApiController
                 $e->getMessage(),
                 500,
                 'REALTIME_METRICS_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Log workflow execution analytics
+     */
+    public function workflowExecution(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'workflow_id' => 'required|string|max:255',
+                'execution_id' => 'required|string|max:255',
+                'organization_id' => 'required|uuid|exists:organizations,id',
+                'session_id' => 'required|string|max:255',
+                'user_phone' => 'nullable|string|max:20',
+                'metrics' => 'required|array',
+                'event_type' => 'required|string|max:100',
+                'timestamp' => 'required|date_iso8601'
+            ]);
+
+            $result = $this->analyticsService->logWorkflowExecution($request->validated());
+
+            $this->logApiAction('workflow_execution_logged', [
+                'workflow_id' => $request->input('workflow_id'),
+                'execution_id' => $request->input('execution_id'),
+                'organization_id' => $request->input('organization_id'),
+                'event_type' => $request->input('event_type')
+            ]);
+
+            return $this->successResponseWithLog(
+                'workflow_execution_logged',
+                'Workflow execution logged successfully',
+                $result,
+                201
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponseWithLog(
+                'workflow_execution_validation_error',
+                'Workflow execution validation failed',
+                $e->getMessage(),
+                422,
+                'VALIDATION_ERROR'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'workflow_execution_error',
+                'Failed to log workflow execution',
+                $e->getMessage(),
+                500,
+                'WORKFLOW_EXECUTION_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Get AI Agent workflow analytics
+     */
+    public function aiAgentWorkflow(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'organization_id' => 'nullable|uuid|exists:organizations,id',
+                'knowledge_base_id' => 'nullable|uuid|exists:knowledge_bases,id',
+                'workflow_id' => 'nullable|string|max:255',
+                'date_from' => 'nullable|date',
+                'date_to' => 'nullable|date|after_or_equal:date_from',
+                'period' => 'nullable|string|in:hour,day,week,month',
+                'metrics' => 'nullable|array',
+                'metrics.*' => 'string|in:executions,success_rate,response_time,cost,satisfaction'
+            ]);
+
+            $filters = $request->only([
+                'organization_id', 'knowledge_base_id', 'workflow_id',
+                'date_from', 'date_to', 'period', 'metrics'
+            ]);
+
+            $analytics = $this->analyticsService->getAiAgentWorkflowAnalytics($filters);
+
+            $this->logApiAction('ai_agent_analytics_viewed', [
+                'filters' => $filters,
+                'result_count' => count($analytics['data'] ?? [])
+            ]);
+
+            return $this->successResponseWithLog(
+                'ai_agent_analytics_viewed',
+                'AI Agent workflow analytics retrieved successfully',
+                $analytics
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponseWithLog(
+                'ai_agent_analytics_validation_error',
+                'AI Agent analytics validation failed',
+                $e->getMessage(),
+                422,
+                'VALIDATION_ERROR'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'ai_agent_analytics_error',
+                'Failed to retrieve AI Agent analytics',
+                $e->getMessage(),
+                500,
+                'AI_AGENT_ANALYTICS_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Get workflow performance metrics
+     */
+    public function workflowPerformance(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'workflow_id' => 'required|string|max:255',
+                'date_from' => 'nullable|date',
+                'date_to' => 'nullable|date|after_or_equal:date_from',
+                'granularity' => 'nullable|string|in:minute,hour,day',
+                'metrics' => 'nullable|array',
+                'metrics.*' => 'string|in:execution_count,success_rate,avg_duration,error_rate,cost'
+            ]);
+
+            $workflowId = $request->input('workflow_id');
+            $filters = $request->only(['date_from', 'date_to', 'granularity', 'metrics']);
+
+            $performance = $this->analyticsService->getWorkflowPerformanceMetrics($workflowId, $filters);
+
+            $this->logApiAction('workflow_performance_viewed', [
+                'workflow_id' => $workflowId,
+                'filters' => $filters
+            ]);
+
+            return $this->successResponseWithLog(
+                'workflow_performance_viewed',
+                'Workflow performance metrics retrieved successfully',
+                $performance
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponseWithLog(
+                'workflow_performance_validation_error',
+                'Workflow performance validation failed',
+                $e->getMessage(),
+                422,
+                'VALIDATION_ERROR'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'workflow_performance_error',
+                'Failed to retrieve workflow performance',
+                $e->getMessage(),
+                500,
+                'WORKFLOW_PERFORMANCE_ERROR'
             );
         }
     }

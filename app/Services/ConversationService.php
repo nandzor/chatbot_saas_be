@@ -581,4 +581,247 @@ class ConversationService extends BaseService
     {
         return Auth::user();
     }
+
+    /**
+     * Get conversation history for AI Agent workflow
+     */
+    public function getConversationHistory(
+        string $sessionId,
+        int $limit = 10,
+        int $offset = 0,
+        bool $includeMetadata = false
+    ): array {
+        try {
+            // Find conversation by session ID
+            $conversation = $this->getModel()->newQuery()
+                ->where('session_id', $sessionId)
+                ->orWhere('external_session_id', $sessionId)
+                ->first();
+
+            if (!$conversation) {
+                return [
+                    'success' => true,
+                    'data' => [],
+                    'meta' => [
+                        'total' => 0,
+                        'limit' => $limit,
+                        'offset' => $offset,
+                        'has_more' => false
+                    ]
+                ];
+            }
+
+            // Get messages with pagination
+            $messagesQuery = Message::where('chat_session_id', $conversation->id)
+                ->orderBy('created_at', 'desc')
+                ->offset($offset)
+                ->limit($limit + 1); // Get one extra to check if there are more
+
+            if ($includeMetadata) {
+                $messagesQuery->with(['sender']);
+            }
+
+            $messages = $messagesQuery->get();
+            $hasMore = $messages->count() > $limit;
+
+            if ($hasMore) {
+                $messages = $messages->take($limit);
+            }
+
+            // Format messages for AI Agent workflow
+            $formattedMessages = $messages->reverse()->map(function ($message) use ($includeMetadata) {
+                $data = [
+                    'id' => $message->id,
+                    'message' => $message->content,
+                    'sender' => $message->sender_type === 'customer' ? 'customer' : 'agent',
+                    'timestamp' => $message->created_at->toISOString(),
+                    'message_type' => $message->message_type ?? 'text'
+                ];
+
+                if ($includeMetadata) {
+                    $data['metadata'] = [
+                        'sender_id' => $message->sender_id,
+                        'sender_name' => $message->sender?->full_name ?? $message->sender?->name ?? 'Unknown',
+                        'message_id' => $message->id,
+                        'chat_session_id' => $message->chat_session_id,
+                        'created_at' => $message->created_at->toISOString(),
+                        'updated_at' => $message->updated_at->toISOString()
+                    ];
+                }
+
+                return $data;
+            })->values();
+
+            return [
+                'success' => true,
+                'data' => $formattedMessages,
+                'meta' => [
+                    'total' => $conversation->messages()->count(),
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => $hasMore,
+                    'conversation_id' => $conversation->id,
+                    'session_id' => $sessionId
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get conversation history', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => $e->getMessage(),
+                'meta' => [
+                    'total' => 0,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => false
+                ]
+            ];
+        }
+    }
+
+    /**
+     * Log AI Agent conversation
+     */
+    public function logAiAgentConversation(array $data): array
+    {
+        try {
+            DB::beginTransaction();
+
+            $sessionId = $data['session_id'];
+            $organizationId = $data['organization_id'];
+            $customerMessage = $data['customer_message'];
+            $agentResponse = $data['agent_response'];
+            $knowledgeBaseUsed = $data['knowledge_base_used'] ?? [];
+            $aiMetadata = $data['ai_metadata'] ?? [];
+
+            // Find or create conversation
+            $conversation = $this->getModel()->newQuery()
+                ->where('session_id', $sessionId)
+                ->orWhere('external_session_id', $sessionId)
+                ->first();
+
+            if (!$conversation) {
+                // Create new conversation for AI Agent
+                $conversation = $this->getModel()->create([
+                    'id' => Str::uuid(),
+                    'session_id' => $sessionId,
+                    'external_session_id' => $sessionId,
+                    'organization_id' => $organizationId,
+                    'session_type' => 'ai_agent',
+                    'status' => 'active',
+                    'is_bot_session' => true,
+                    'platform' => 'whatsapp',
+                    'channel' => 'waha',
+                    'started_at' => now(),
+                    'metadata' => [
+                        'ai_agent' => true,
+                        'knowledge_base_used' => $knowledgeBaseUsed,
+                        'ai_metadata' => $aiMetadata
+                    ]
+                ]);
+            } else {
+                // Update existing conversation metadata
+                $existingMetadata = $conversation->metadata ?? [];
+                $conversation->update([
+                    'metadata' => array_merge($existingMetadata, [
+                        'last_ai_interaction' => now()->toISOString(),
+                        'knowledge_base_used' => $knowledgeBaseUsed,
+                        'ai_metadata' => $aiMetadata
+                    ]),
+                    'updated_at' => now()
+                ]);
+            }
+
+            $messageIds = [];
+
+            // Log customer message
+            $customerMessageRecord = Message::create([
+                'id' => Str::uuid(),
+                'chat_session_id' => $conversation->id,
+                'sender_type' => 'customer',
+                'sender_id' => null, // AI Agent doesn't have specific customer ID
+                'content' => $customerMessage,
+                'message_type' => 'text',
+                'platform' => 'whatsapp',
+                'external_message_id' => $aiMetadata['customer_message_id'] ?? null,
+                'metadata' => [
+                    'ai_processed' => true,
+                    'session_id' => $sessionId,
+                    'organization_id' => $organizationId
+                ],
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            $messageIds[] = $customerMessageRecord->id;
+
+            // Log agent (AI) response
+            $agentMessageRecord = Message::create([
+                'id' => Str::uuid(),
+                'chat_session_id' => $conversation->id,
+                'sender_type' => 'agent',
+                'sender_id' => null, // AI Agent
+                'content' => $agentResponse,
+                'message_type' => 'text',
+                'platform' => 'whatsapp',
+                'external_message_id' => $aiMetadata['agent_message_id'] ?? null,
+                'metadata' => [
+                    'ai_generated' => true,
+                    'knowledge_base_used' => $knowledgeBaseUsed,
+                    'ai_metadata' => $aiMetadata,
+                    'session_id' => $sessionId,
+                    'organization_id' => $organizationId
+                ],
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            $messageIds[] = $agentMessageRecord->id;
+
+            // Update conversation stats
+            $conversation->increment('message_count', 2);
+            $conversation->touch(); // Update updated_at
+
+            DB::commit();
+
+            Log::info('AI Agent conversation logged successfully', [
+                'session_id' => $sessionId,
+                'conversation_id' => $conversation->id,
+                'organization_id' => $organizationId,
+                'message_count' => 2
+            ]);
+
+            return [
+                'success' => true,
+                'conversation_id' => $conversation->id,
+                'message_ids' => $messageIds,
+                'session_id' => $sessionId,
+                'organization_id' => $organizationId
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Failed to log AI Agent conversation', [
+                'session_id' => $data['session_id'] ?? null,
+                'organization_id' => $data['organization_id'] ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'session_id' => $data['session_id'] ?? null,
+                'organization_id' => $data['organization_id'] ?? null
+            ];
+        }
+    }
 }
