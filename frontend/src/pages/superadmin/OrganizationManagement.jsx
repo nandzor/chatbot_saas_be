@@ -29,10 +29,14 @@ import {
   SelectValue
 } from '@/components/ui';
 import { useOrganizationManagement } from '@/hooks/useOrganizationManagement';
+import toast from 'react-hot-toast';
 import OrganizationList from '@/components/organization/OrganizationList';
 import CreateOrganizationDialog from '@/components/organization/CreateOrganizationDialog';
 import EditOrganizationDialog from '@/components/organization/EditOrganizationDialog';
 import OrganizationDetailsModal from '@/components/organization/OrganizationDetailsModal';
+import OrganizationUsersDialog from '@/components/organization/OrganizationUsersDialog';
+import OrganizationPermissionsDialog from '@/components/organization/OrganizationPermissionsDialog';
+import OrganizationSettingsDialog from '@/components/organization/OrganizationSettingsDialog';
 import OrganizationQuickActions from '@/components/organization/OrganizationQuickActions';
 import OrganizationAnalytics from '@/components/organization/OrganizationAnalytics';
 
@@ -52,6 +56,9 @@ const OrganizationManagement = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showUsersDialog, setShowUsersDialog] = useState(false);
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState(null);
 
   // State for view modes
@@ -189,23 +196,85 @@ const OrganizationManagement = () => {
     setShowEditDialog(true);
   }, []);
 
-  // Handle add user (placeholder)
+  // Handle add user
   const handleAddUser = useCallback((organization) => {
-    console.log('Add user to organization:', organization);
-    // TODO: Implement add user functionality
+    setSelectedOrganization(organization);
+    setShowUsersDialog(true);
   }, []);
 
-  // Handle remove user (placeholder)
-  const handleRemoveUser = useCallback((organization, user) => {
-    console.log('Remove user from organization:', organization, user);
-    // TODO: Implement remove user functionality
-  }, []);
+  // Handle remove user
+  const handleRemoveUser = useCallback(async (organization, user) => {
+    try {
+      const response = await removeUserFromOrganization(organization.id, user.id);
+      if (response.success) {
+        toast.success('User removed successfully');
+        loadOrganizations(true);
+      } else {
+        toast.error(response.error || 'Failed to remove user');
+      }
+    } catch (error) {
+      console.error('Error removing user:', error);
+      toast.error('Failed to remove user');
+    }
+  }, [removeUserFromOrganization, loadOrganizations]);
 
-  // Handle update subscription (placeholder)
+  // Handle update subscription
   const handleUpdateSubscription = useCallback((organization) => {
-    console.log('Update subscription for organization:', organization);
-    // TODO: Implement update subscription functionality
+    setSelectedOrganization(organization);
+    setShowSettingsDialog(true);
   }, []);
+
+  // Handle manage users
+  const handleManageUsers = useCallback((organization) => {
+    setSelectedOrganization(organization);
+    setShowUsersDialog(true);
+  }, []);
+
+  // Handle manage permissions
+  const handleManagePermissions = useCallback((organization) => {
+    setSelectedOrganization(organization);
+    setShowPermissionsDialog(true);
+  }, []);
+
+  // Handle manage settings
+  const handleManageSettings = useCallback((organization) => {
+    setSelectedOrganization(organization);
+    setShowSettingsDialog(true);
+  }, []);
+
+  // Handle save permissions
+  const handleSavePermissions = useCallback(async (organizationId, permissions) => {
+    try {
+      const response = await saveAllPermissions(organizationId, permissions);
+      if (response.success) {
+        toast.success('Permissions saved successfully');
+        loadOrganizations(true);
+      } else {
+        toast.error(response.error || 'Failed to save permissions');
+      }
+    } catch (error) {
+      console.error('Error saving permissions:', error);
+      toast.error('Failed to save permissions');
+    }
+  }, [saveAllPermissions, loadOrganizations]);
+
+  // Handle save settings
+  const handleSaveSettings = useCallback(async (organizationId, settings) => {
+    try {
+      const result = await updateOrganization(organizationId, settings);
+      if (result.success) {
+        setShowSettingsDialog(false);
+        setSelectedOrganization(null);
+        // Reload statistics
+        statisticsLoaded.current = false;
+        loadStatistics();
+      }
+      return result;
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      return { success: false, error: error.message };
+    }
+  }, [updateOrganization, loadStatistics]);
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
@@ -213,6 +282,50 @@ const OrganizationManagement = () => {
     statisticsLoaded.current = false;
     loadStatistics();
   }, [loadOrganizations, loadStatistics]);
+
+  // Handle export organizations
+  const handleExportOrganizations = useCallback(async () => {
+    try {
+      const response = await exportOrganizations();
+      if (response.success) {
+        toast.success('Organizations exported successfully');
+      } else {
+        toast.error(response.error || 'Failed to export organizations');
+      }
+    } catch (error) {
+      console.error('Error exporting organizations:', error);
+      toast.error('Failed to export organizations');
+    }
+  }, [exportOrganizations]);
+
+  // Handle import organizations
+  const handleImportOrganizations = useCallback(() => {
+    // Create file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,.xlsx,.json';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await importOrganizations(formData);
+          if (response.success) {
+            toast.success('Organizations imported successfully');
+            loadOrganizations(true);
+          } else {
+            toast.error(response.error || 'Failed to import organizations');
+          }
+        } catch (error) {
+          console.error('Error importing organizations:', error);
+          toast.error('Failed to import organizations');
+        }
+      }
+    };
+    input.click();
+  }, [importOrganizations, loadOrganizations]);
 
   // Handle quick actions
   const handleQuickAction = useCallback((action) => {
@@ -224,12 +337,10 @@ const OrganizationManagement = () => {
         handleRefresh();
         break;
       case 'export':
-        // TODO: Implement export functionality
-        console.log('Export functionality not implemented yet');
+        handleExportOrganizations();
         break;
       case 'import':
-        // TODO: Implement import functionality
-        console.log('Import functionality not implemented yet');
+        handleImportOrganizations();
         break;
       default:
         break;
@@ -467,6 +578,45 @@ const OrganizationManagement = () => {
         onAddUser={handleAddUser}
         onRemoveUser={handleRemoveUser}
         onUpdateSubscription={handleUpdateSubscription}
+        loading={loading}
+      />
+
+      {/* Organization Users Dialog */}
+      <OrganizationUsersDialog
+        isOpen={showUsersDialog}
+        onClose={() => {
+          setShowUsersDialog(false);
+          setSelectedOrganization(null);
+        }}
+        organization={selectedOrganization}
+        onAddUser={handleAddUser}
+        onEditUser={(user) => console.log('Edit user:', user)}
+        onRemoveUser={handleRemoveUser}
+        onToggleUserStatus={(user) => console.log('Toggle user status:', user)}
+        loading={loading}
+      />
+
+      {/* Organization Permissions Dialog */}
+      <OrganizationPermissionsDialog
+        isOpen={showPermissionsDialog}
+        onClose={() => {
+          setShowPermissionsDialog(false);
+          setSelectedOrganization(null);
+        }}
+        organization={selectedOrganization}
+        onSavePermissions={handleSavePermissions}
+        loading={loading}
+      />
+
+      {/* Organization Settings Dialog */}
+      <OrganizationSettingsDialog
+        isOpen={showSettingsDialog}
+        onClose={() => {
+          setShowSettingsDialog(false);
+          setSelectedOrganization(null);
+        }}
+        organization={selectedOrganization}
+        onSaveSettings={handleSaveSettings}
         loading={loading}
       />
     </div>

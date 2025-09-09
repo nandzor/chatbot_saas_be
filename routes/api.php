@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
 use App\Http\Controllers\Api\V1\PaymentTransactionController;
 use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\OrganizationAuditController;
+use App\Http\Controllers\Api\V1\OrganizationNotificationController;
 use App\Http\Controllers\Api\V1\BotPersonalityController;
 use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
 
@@ -344,7 +346,7 @@ Route::prefix('v1')->group(function () {
         // ====================================================================
 
         Route::prefix('organizations')
-            ->middleware(['permission:organizations.view'])
+            ->middleware(['permission:organizations.view', 'organization.management'])
             ->group(function () {
 
             // Basic CRUD operations
@@ -376,11 +378,51 @@ Route::prefix('v1')->group(function () {
                 // Advanced individual operations
                 Route::get('/activity-logs', [OrganizationController::class, 'activityLogs']);
                 Route::middleware(['permission:organizations.update'])->patch('/status', [OrganizationController::class, 'updateStatus']);
+
+                // Organization settings
+                Route::get('/settings', [OrganizationController::class, 'getSettings']);
+                Route::middleware(['permission:organizations.update'])->put('/settings', [OrganizationController::class, 'saveSettings']);
+                Route::middleware(['permission:organizations.update'])->post('/webhook/test', [OrganizationController::class, 'testWebhook']);
+
+                // Organization analytics
+                Route::get('/analytics', [OrganizationController::class, 'getAnalytics']);
+
+                // Organization roles and permissions
+                Route::get('/roles', [OrganizationController::class, 'getRoles']);
+                Route::middleware(['permission:organizations.manage_permissions'])->put('/roles/{roleId}/permissions', [OrganizationController::class, 'saveRolePermissions']);
+                Route::middleware(['permission:organizations.manage_permissions'])->put('/permissions', [OrganizationController::class, 'saveAllPermissions']);
+
+                // Organization audit logs
+                Route::get('/audit-logs', [OrganizationAuditController::class, 'index']);
+                Route::get('/audit-logs/statistics', [OrganizationAuditController::class, 'statistics']);
+                Route::get('/audit-logs/{auditLogId}', [OrganizationAuditController::class, 'show']);
+
+                // Organization notifications
+                Route::get('/notifications', [OrganizationNotificationController::class, 'index']);
+                Route::post('/notifications', [OrganizationNotificationController::class, 'send']);
+                Route::patch('/notifications/{notificationId}/read', [OrganizationNotificationController::class, 'markAsRead']);
+                Route::patch('/notifications/read-all', [OrganizationNotificationController::class, 'markAllAsRead']);
+                Route::delete('/notifications/{notificationId}', [OrganizationNotificationController::class, 'destroy']);
             });
 
             // Routes requiring additional permissions
             Route::middleware(['permission:organizations.create'])->post('/', [OrganizationController::class, 'store']);
         });
+
+        // ====================================================================
+        // SUPERADMIN ROUTES
+        // Routes for superadmin functionality
+        // ====================================================================
+
+        Route::prefix('superadmin')
+            ->middleware(['permission:superadmin.*'])
+            ->group(function () {
+                // Login as admin
+                Route::post('/login-as-admin', [OrganizationController::class, 'loginAsAdmin']);
+
+                // Force password reset
+                Route::post('/force-password-reset', [OrganizationController::class, 'forcePasswordReset']);
+            });
 
         // ====================================================================
         // ADVANCED PERMISSION EXAMPLES

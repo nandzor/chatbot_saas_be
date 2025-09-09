@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Organization\CreateOrganizationRequest;
 use App\Http\Requests\Organization\UpdateOrganizationRequest;
 use App\Http\Requests\ClientManagement\BulkActionRequest;
+use App\Http\Requests\OrganizationSettingsRequest;
 use App\Services\OrganizationService;
 use App\Services\ClientManagementService;
 use App\Http\Resources\OrganizationResource;
@@ -700,6 +701,222 @@ class OrganizationController extends BaseApiController
         } catch (\Exception $e) {
             return $this->errorResponseWithDebug(
                 message: 'Failed to update organization status',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Get organization settings
+     */
+    public function getSettings($organizationId): JsonResponse
+    {
+        try {
+            $settings = $this->organizationService->getOrganizationSettings($organizationId);
+
+            return $this->successResponse(
+                'Organization settings retrieved successfully',
+                $settings
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to get organization settings',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Save organization settings
+     */
+    public function saveSettings(OrganizationSettingsRequest $request, $organizationId): JsonResponse
+    {
+        try {
+            $settings = $request->validated();
+            $result = $this->organizationService->saveOrganizationSettings($organizationId, $settings);
+
+            return $this->successResponse(
+                'Organization settings saved successfully',
+                $result
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to save organization settings',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Test webhook
+     */
+    public function testWebhook(Request $request, $organizationId): JsonResponse
+    {
+        try {
+            $webhookUrl = $request->input('url');
+            $result = $this->organizationService->testWebhook($organizationId, $webhookUrl);
+
+            return $this->successResponse(
+                'Webhook test successful',
+                $result
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Webhook test failed',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Get organization analytics
+     */
+    public function getAnalytics(Request $request, $organizationId): JsonResponse
+    {
+        try {
+            $params = $request->only(['time_range', 'start_date', 'end_date']);
+            $analytics = $this->organizationService->getOrganizationAnalytics($organizationId, $params);
+
+            return $this->successResponse(
+                'Organization analytics retrieved successfully',
+                $analytics
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to get organization analytics',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Get organization roles
+     */
+    public function getRoles($organizationId): JsonResponse
+    {
+        try {
+            $roles = $this->organizationService->getOrganizationRoles($organizationId);
+
+            return $this->successResponse(
+                'Organization roles retrieved successfully',
+                $roles
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to get organization roles',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Save role permissions
+     */
+    public function saveRolePermissions(Request $request, $organizationId, $roleId): JsonResponse
+    {
+        try {
+            $permissions = $request->input('permissions', []);
+            $result = $this->organizationService->saveRolePermissions($organizationId, $roleId, $permissions);
+
+            return $this->successResponse(
+                'Role permissions saved successfully',
+                $result
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to save role permissions',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Save all permissions
+     */
+    public function saveAllPermissions(Request $request, $organizationId): JsonResponse
+    {
+        try {
+            $rolePermissions = $request->input('rolePermissions', []);
+            $result = $this->organizationService->saveAllPermissions($organizationId, $rolePermissions);
+
+            return $this->successResponse(
+                'All permissions saved successfully',
+                $result
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to save all permissions',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Login as admin
+     */
+    public function loginAsAdmin(Request $request): JsonResponse
+    {
+        try {
+            $organizationId = $request->input('organization_id');
+            $organizationName = $request->input('organization_name');
+
+            // Generate temporary admin token
+            $token = $this->organizationService->generateAdminToken($organizationId);
+
+            return $this->successResponse(
+                'Admin token generated successfully',
+                [
+                    'token' => $token,
+                    'organization_id' => $organizationId,
+                    'organization_name' => $organizationName,
+                    'redirect_url' => "/admin/organizations/{$organizationId}/dashboard"
+                ]
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to generate admin token',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
+     * Force password reset
+     */
+    public function forcePasswordReset(Request $request): JsonResponse
+    {
+        try {
+            $organizationId = $request->input('organization_id');
+            $email = $request->input('email');
+            $organizationName = $request->input('organization_name');
+
+            $result = $this->organizationService->forcePasswordReset($organizationId, $email, $organizationName);
+
+            return $this->successResponse(
+                'Password reset email sent successfully',
+                $result
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to send password reset email',
                 statusCode: 500,
                 errors: $e->getMessage(),
                 exception: $e

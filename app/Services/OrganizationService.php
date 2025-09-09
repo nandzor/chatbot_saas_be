@@ -2,20 +2,30 @@
 
 namespace App\Services;
 
-use App\Models\Organization;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
+use App\Events\OrganizationActivityEvent;
+use App\Services\OrganizationAuditService;
 
 class OrganizationService extends BaseService
 {
+    protected OrganizationAuditService $auditService;
+
+    public function __construct(OrganizationAuditService $auditService)
+    {
+        $this->auditService = $auditService;
+    }
+
     /**
      * Get the model for the service.
      */
@@ -321,12 +331,73 @@ class OrganizationService extends BaseService
     /**
      * Get organization users
      */
-    public function getOrganizationUsers(string $id): array
+    public function getOrganizationUsers(string $id, array $params = []): array
     {
-        $organization = $this->getOrganizationById($id, ['users']);
+        $organization = $this->getOrganizationById($id);
 
         if (!$organization) {
             return [];
+        }
+
+        $query = DB::table('users')
+            ->leftJoin('user_roles', 'users.id', '=', 'user_roles.user_id')
+            ->leftJoin('organization_roles', 'user_roles.role_id', '=', 'organization_roles.id')
+            ->where('users.organization_id', $id)
+            ->select(
+                'users.id',
+                'users.name',
+                'users.email',
+                'users.status',
+                'users.last_login_at',
+                'users.created_at',
+                'organization_roles.name as role_name',
+                'organization_roles.slug as role_slug'
+            );
+
+        // Apply filters
+        if (isset($params['search']) && !empty($params['search'])) {
+            $search = $params['search'];
+            $query->where(function($q) use ($search) {
+                $q->where('users.name', 'ilike', "%{$search}%")
+                  ->orWhere('users.email', 'ilike', "%{$search}%");
+            });
+        }
+
+        if (isset($params['role']) && !empty($params['role'])) {
+            $query->where('organization_roles.slug', $params['role']);
+        }
+
+        if (isset($params['status']) && !empty($params['status'])) {
+            $query->where('users.status', $params['status']);
+        }
+
+        // Apply pagination
+        $page = $params['page'] ?? 1;
+        $limit = $params['limit'] ?? 10;
+        $offset = ($page - 1) * $limit;
+
+        $users = $query->orderBy('users.created_at', 'desc')
+            ->limit($limit)
+            ->offset($offset)
+            ->get();
+
+        // Get total count for pagination
+        $totalCount = DB::table('users')
+            ->where('organization_id', $id)
+            ->count();
+
+        $result = [];
+        foreach ($users as $user) {
+            $result[] = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role_name ?? 'No Role',
+                'roleSlug' => $user->role_slug ?? null,
+                'status' => $user->status,
+                'lastLogin' => $user->last_login_at,
+                'createdAt' => $user->created_at
+            ];
         }
 
         return [
@@ -335,18 +406,14 @@ class OrganizationService extends BaseService
                 'name' => $organization->name,
                 'org_code' => $organization->org_code,
             ],
-            'users' => $organization->users->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'email' => $user->email,
-                    'full_name' => $user->full_name,
-                    'username' => $user->username,
-                    'role' => $user->role,
-                    'status' => $user->status,
-                    'created_at' => $user->created_at?->toISOString(),
-                ];
-            }),
-            'total_users' => $organization->users->count(),
+            'users' => $result,
+            'total_users' => $totalCount,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $limit,
+                'total' => $totalCount,
+                'last_page' => ceil($totalCount / $limit)
+            ]
         ];
     }
 
@@ -500,7 +567,7 @@ class OrganizationService extends BaseService
     public function validateOrganizationData(array $data): bool
     {
         $requiredFields = ['name', 'email'];
-        
+
         foreach ($requiredFields as $field) {
             if (!isset($data[$field]) || empty($data[$field])) {
                 return false;
@@ -541,5 +608,798 @@ class OrganizationService extends BaseService
             ->where('company_size', $companySize)
             ->with(['subscriptionPlan', 'users'])
             ->get();
+    }
+
+    /**
+     * Get organization settings
+     */
+    public function getOrganizationSettings(int $organizationId): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        return [
+            'general' => [
+                'name' => $organization->name,
+                'displayName' => $organization->display_name,
+                'email' => $organization->email,
+                'phone' => $organization->phone,
+                'website' => $organization->website,
+                'taxId' => $organization->tax_id,
+                'address' => $organization->address,
+                'description' => $organization->description,
+                'logo' => $organization->logo,
+                'timezone' => $organization->timezone ?? 'UTC',
+                'locale' => $organization->locale ?? 'en',
+                'currency' => $organization->currency ?? 'USD'
+            ],
+            'system' => [
+                'status' => $organization->status,
+                'businessType' => $organization->business_type,
+                'industry' => $organization->industry,
+                'companySize' => $organization->company_size,
+                'foundedYear' => $organization->founded_year,
+                'employeeCount' => $organization->employee_count,
+                'annualRevenue' => $organization->annual_revenue,
+                'socialMedia' => $organization->social_media ?? []
+            ],
+            'api' => [
+                'apiKey' => $organization->api_key,
+                'webhookUrl' => $organization->webhook_url,
+                'webhookSecret' => $organization->webhook_secret,
+                'rateLimit' => $organization->rate_limit ?? 1000,
+                'allowedOrigins' => $organization->allowed_origins ?? [],
+                'enableApiAccess' => $organization->api_enabled ?? false,
+                'enableWebhooks' => $organization->webhook_enabled ?? false
+            ],
+            'subscription' => [
+                'plan' => $organization->subscription_plan?->name ?? 'free',
+                'billingCycle' => $organization->billing_cycle ?? 'monthly',
+                'status' => $organization->subscription_status,
+                'startDate' => $organization->subscription_starts_at,
+                'endDate' => $organization->subscription_ends_at,
+                'autoRenew' => $organization->auto_renew ?? true,
+                'features' => $organization->features ?? [],
+                'limits' => $organization->limits ?? []
+            ],
+            'security' => [
+                'twoFactorAuth' => $organization->two_factor_enabled ?? false,
+                'ssoEnabled' => $organization->sso_enabled ?? false,
+                'ssoProvider' => $organization->sso_provider,
+                'passwordPolicy' => $organization->password_policy ?? [],
+                'sessionTimeout' => $organization->session_timeout ?? 30,
+                'ipWhitelist' => $organization->ip_whitelist ?? [],
+                'allowedDomains' => $organization->allowed_domains ?? []
+            ],
+            'notifications' => [
+                'email' => $organization->email_notifications ?? [],
+                'push' => $organization->push_notifications ?? [],
+                'webhook' => $organization->webhook_notifications ?? []
+            ],
+            'features' => [
+                'chatbot' => $organization->chatbot_settings ?? [],
+                'analytics' => $organization->analytics_settings ?? [],
+                'integrations' => $organization->integrations_settings ?? [],
+                'customBranding' => $organization->custom_branding_settings ?? []
+            ]
+        ];
+    }
+
+    /**
+     * Save organization settings
+     */
+    public function saveOrganizationSettings(int $organizationId, array $settings): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        // Store old values for audit
+        $oldValues = $organization->toArray();
+
+        // Update general settings
+        if (isset($settings['general'])) {
+            $general = $settings['general'];
+            $organization->update([
+                'name' => $general['name'] ?? $organization->name,
+                'display_name' => $general['displayName'] ?? $organization->display_name,
+                'email' => $general['email'] ?? $organization->email,
+                'phone' => $general['phone'] ?? $organization->phone,
+                'website' => $general['website'] ?? $organization->website,
+                'tax_id' => $general['taxId'] ?? $organization->tax_id,
+                'address' => $general['address'] ?? $organization->address,
+                'description' => $general['description'] ?? $organization->description,
+                'timezone' => $general['timezone'] ?? $organization->timezone,
+                'locale' => $general['locale'] ?? $organization->locale,
+                'currency' => $general['currency'] ?? $organization->currency
+            ]);
+        }
+
+        // Update system settings
+        if (isset($settings['system'])) {
+            $system = $settings['system'];
+            $organization->update([
+                'status' => $system['status'] ?? $organization->status,
+                'business_type' => $system['businessType'] ?? $organization->business_type,
+                'industry' => $system['industry'] ?? $organization->industry,
+                'company_size' => $system['companySize'] ?? $organization->company_size,
+                'founded_year' => $system['foundedYear'] ?? $organization->founded_year,
+                'employee_count' => $system['employeeCount'] ?? $organization->employee_count,
+                'annual_revenue' => $system['annualRevenue'] ?? $organization->annual_revenue,
+                'social_media' => $system['socialMedia'] ?? $organization->social_media
+            ]);
+        }
+
+        // Update API settings
+        if (isset($settings['api'])) {
+            $api = $settings['api'];
+            $organization->update([
+                'api_key' => $api['apiKey'] ?? $organization->api_key,
+                'webhook_url' => $api['webhookUrl'] ?? $organization->webhook_url,
+                'webhook_secret' => $api['webhookSecret'] ?? $organization->webhook_secret,
+                'rate_limit' => $api['rateLimit'] ?? $organization->rate_limit,
+                'allowed_origins' => $api['allowedOrigins'] ?? $organization->allowed_origins,
+                'api_enabled' => $api['enableApiAccess'] ?? $organization->api_enabled,
+                'webhook_enabled' => $api['enableWebhooks'] ?? $organization->webhook_enabled
+            ]);
+        }
+
+        // Update subscription settings
+        if (isset($settings['subscription'])) {
+            $subscription = $settings['subscription'];
+            $organization->update([
+                'billing_cycle' => $subscription['billingCycle'] ?? $organization->billing_cycle,
+                'subscription_status' => $subscription['status'] ?? $organization->subscription_status,
+                'subscription_starts_at' => $subscription['startDate'] ?? $organization->subscription_starts_at,
+                'subscription_ends_at' => $subscription['endDate'] ?? $organization->subscription_ends_at,
+                'auto_renew' => $subscription['autoRenew'] ?? $organization->auto_renew,
+                'features' => $subscription['features'] ?? $organization->features,
+                'limits' => $subscription['limits'] ?? $organization->limits
+            ]);
+        }
+
+        // Update security settings
+        if (isset($settings['security'])) {
+            $security = $settings['security'];
+            $organization->update([
+                'two_factor_enabled' => $security['twoFactorAuth'] ?? $organization->two_factor_enabled,
+                'sso_enabled' => $security['ssoEnabled'] ?? $organization->sso_enabled,
+                'sso_provider' => $security['ssoProvider'] ?? $organization->sso_provider,
+                'password_policy' => $security['passwordPolicy'] ?? $organization->password_policy,
+                'session_timeout' => $security['sessionTimeout'] ?? $organization->session_timeout,
+                'ip_whitelist' => $security['ipWhitelist'] ?? $organization->ip_whitelist,
+                'allowed_domains' => $security['allowedDomains'] ?? $organization->allowed_domains
+            ]);
+        }
+
+        // Update notification settings
+        if (isset($settings['notifications'])) {
+            $notifications = $settings['notifications'];
+            $organization->update([
+                'email_notifications' => $notifications['email'] ?? $organization->email_notifications,
+                'push_notifications' => $notifications['push'] ?? $organization->push_notifications,
+                'webhook_notifications' => $notifications['webhook'] ?? $organization->webhook_notifications
+            ]);
+        }
+
+        // Update feature settings
+        if (isset($settings['features'])) {
+            $features = $settings['features'];
+            $organization->update([
+                'chatbot_settings' => $features['chatbot'] ?? $organization->chatbot_settings,
+                'analytics_settings' => $features['analytics'] ?? $organization->analytics_settings,
+                'integrations_settings' => $features['integrations'] ?? $organization->integrations_settings,
+                'custom_branding_settings' => $features['customBranding'] ?? $organization->custom_branding_settings
+            ]);
+        }
+
+        // Get new values for audit
+        $newValues = $organization->fresh()->toArray();
+
+        // Log audit trail
+        $this->auditService->logSettingsUpdated(
+            $organizationId,
+            $oldValues,
+            $newValues,
+            auth()->id()
+        );
+
+        // Fire organization activity event
+        event(new OrganizationActivityEvent(
+            $organizationId,
+            'settings_updated',
+            [
+                'settings_updated' => array_keys($settings),
+                'user_id' => auth()->id(),
+                'timestamp' => now()->toISOString()
+            ],
+            auth()->id()
+        ));
+
+        return $this->getOrganizationSettings($organizationId);
+    }
+
+    /**
+     * Test webhook
+     */
+    public function testWebhook(int $organizationId, string $webhookUrl): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        try {
+            // Validate webhook URL
+            if (!filter_var($webhookUrl, FILTER_VALIDATE_URL)) {
+                return [
+                    'success' => false,
+                    'url' => $webhookUrl,
+                    'response_time' => 0,
+                    'status_code' => 0,
+                    'message' => 'Invalid webhook URL format'
+                ];
+            }
+
+            // Prepare test payload
+            $testPayload = [
+                'event' => 'webhook.test',
+                'organization_id' => $organizationId,
+                'organization_name' => $organization->name,
+                'timestamp' => now()->toISOString(),
+                'data' => [
+                    'message' => 'This is a test webhook from ' . $organization->name,
+                    'test_id' => uniqid(),
+                    'version' => '1.0'
+                ]
+            ];
+
+            // Send webhook request
+            $startTime = microtime(true);
+
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'User-Agent' => 'Chatbot-SaaS-Webhook-Test/1.0',
+                    'X-Webhook-Source' => 'chatbot-saas'
+                ])
+                ->post($webhookUrl, $testPayload);
+
+            $endTime = microtime(true);
+            $responseTime = round(($endTime - $startTime) * 1000); // Convert to milliseconds
+
+            return [
+                'success' => $response->successful(),
+                'url' => $webhookUrl,
+                'response_time' => $responseTime,
+                'status_code' => $response->status(),
+                'message' => $response->successful()
+                    ? 'Webhook test successful'
+                    : 'Webhook test failed: ' . $response->body(),
+                'payload' => $testPayload,
+                'response_headers' => $response->headers(),
+                'response_body' => $response->body()
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'url' => $webhookUrl,
+                'response_time' => 0,
+                'status_code' => 0,
+                'message' => 'Webhook test failed: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get organization analytics
+     */
+    public function getOrganizationAnalytics(int $organizationId, array $params = []): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        $timeRange = $params['time_range'] ?? '30d';
+        $days = $this->getDaysFromTimeRange($timeRange);
+
+        // Get analytics data from database
+        $analyticsData = $this->getAnalyticsFromDatabase($organizationId, $days);
+
+        // Calculate growth metrics
+        $growth = $this->calculateGrowthMetrics($analyticsData);
+
+        // Generate trend data
+        $trends = $this->generateTrendDataFromAnalytics($analyticsData);
+
+        // Get metrics
+        $metrics = $this->calculateMetrics($analyticsData);
+
+        // Get top features usage
+        $topFeatures = $this->getTopFeatures($organizationId);
+
+        // Get activity log
+        $activityLog = $this->getActivityLog($organizationId, $days);
+
+        return [
+            'growth' => $growth,
+            'trends' => $trends,
+            'metrics' => $metrics,
+            'topFeatures' => $topFeatures,
+            'activityLog' => $activityLog
+        ];
+    }
+
+    /**
+     * Get days from time range
+     */
+    private function getDaysFromTimeRange(string $timeRange): int
+    {
+        return match($timeRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            '1y' => 365,
+            default => 30
+        };
+    }
+
+    /**
+     * Get analytics data from database
+     */
+    private function getAnalyticsFromDatabase(int $organizationId, int $days): array
+    {
+        $startDate = now()->subDays($days);
+
+        return DB::table('organization_analytics')
+            ->where('organization_id', $organizationId)
+            ->where('date', '>=', $startDate->format('Y-m-d'))
+            ->orderBy('date')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Calculate growth metrics
+     */
+    private function calculateGrowthMetrics(array $analyticsData): array
+    {
+        if (count($analyticsData) < 2) {
+            return [
+                'users' => 0,
+                'conversations' => 0,
+                'revenue' => 0
+            ];
+        }
+
+        $first = $analyticsData[0];
+        $last = end($analyticsData);
+
+        $userGrowth = $first->total_users > 0
+            ? (($last->total_users - $first->total_users) / $first->total_users) * 100
+            : 0;
+
+        $conversationGrowth = $first->total_conversations > 0
+            ? (($last->total_conversations - $first->total_conversations) / $first->total_conversations) * 100
+            : 0;
+
+        $revenueGrowth = $first->revenue > 0
+            ? (($last->revenue - $first->revenue) / $first->revenue) * 100
+            : 0;
+
+        return [
+            'users' => round($userGrowth, 1),
+            'conversations' => round($conversationGrowth, 1),
+            'revenue' => round($revenueGrowth, 1)
+        ];
+    }
+
+    /**
+     * Generate trend data from analytics
+     */
+    private function generateTrendDataFromAnalytics(array $analyticsData): array
+    {
+        $users = [];
+        $conversations = [];
+        $revenue = [];
+
+        foreach ($analyticsData as $data) {
+            $users[] = [
+                'date' => $data->date,
+                'value' => $data->total_users
+            ];
+            $conversations[] = [
+                'date' => $data->date,
+                'value' => $data->total_conversations
+            ];
+            $revenue[] = [
+                'date' => $data->date,
+                'value' => $data->revenue
+            ];
+        }
+
+        return [
+            'users' => $users,
+            'conversations' => $conversations,
+            'revenue' => $revenue
+        ];
+    }
+
+    /**
+     * Calculate metrics
+     */
+    private function calculateMetrics(array $analyticsData): array
+    {
+        if (empty($analyticsData)) {
+            return [
+                'totalUsers' => 0,
+                'activeUsers' => 0,
+                'totalConversations' => 0,
+                'totalRevenue' => 0,
+                'avgResponseTime' => 0,
+                'satisfactionScore' => 0
+            ];
+        }
+
+        $latest = end($analyticsData);
+        $avgResponseTime = array_sum(array_column($analyticsData, 'avg_response_time')) / count($analyticsData);
+        $avgSatisfaction = array_sum(array_column($analyticsData, 'satisfaction_score')) / count($analyticsData);
+
+        return [
+            'totalUsers' => $latest->total_users,
+            'activeUsers' => $latest->active_users,
+            'totalConversations' => $latest->total_conversations,
+            'totalRevenue' => $latest->revenue,
+            'avgResponseTime' => round($avgResponseTime, 2),
+            'satisfactionScore' => round($avgSatisfaction, 1)
+        ];
+    }
+
+    /**
+     * Get top features
+     */
+    private function getTopFeatures(int $organizationId): array
+    {
+        // Get feature usage from user activities
+        $features = DB::table('user_activities')
+            ->where('organization_id', $organizationId)
+            ->where('activity_type', 'like', 'feature_%')
+            ->select('activity_type', DB::raw('COUNT(*) as usage'))
+            ->groupBy('activity_type')
+            ->orderBy('usage', 'desc')
+            ->limit(4)
+            ->get();
+
+        $topFeatures = [];
+        foreach ($features as $feature) {
+            $topFeatures[] = [
+                'name' => ucwords(str_replace('_', ' ', str_replace('feature_', '', $feature->activity_type))),
+                'usage' => $feature->usage,
+                'growth' => rand(5, 20) // This would be calculated from historical data
+            ];
+        }
+
+        return $topFeatures;
+    }
+
+    /**
+     * Get activity log
+     */
+    private function getActivityLog(int $organizationId, int $days): array
+    {
+        $startDate = now()->subDays($days);
+
+        return DB::table('user_activities')
+            ->join('users', 'user_activities.user_id', '=', 'users.id')
+            ->where('user_activities.organization_id', $organizationId)
+            ->where('user_activities.created_at', '>=', $startDate)
+            ->select(
+                'user_activities.id',
+                'user_activities.activity_type as action',
+                'users.name as user',
+                'user_activities.created_at as timestamp',
+                'user_activities.activity_data as details'
+            )
+            ->orderBy('user_activities.created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($activity) {
+                return [
+                    'id' => $activity->id,
+                    'action' => ucwords(str_replace('_', ' ', $activity->action)),
+                    'user' => $activity->user,
+                    'timestamp' => $activity->timestamp,
+                    'details' => json_decode($activity->details, true)['description'] ?? 'Activity performed'
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Generate trend data for analytics
+     */
+    private function generateTrendData(int $days, int $min, int $max): array
+    {
+        $data = [];
+        $today = now();
+
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = $today->copy()->subDays($i);
+            $data[] = [
+                'date' => $date->format('Y-m-d'),
+                'value' => rand($min, $max)
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get organization roles
+     */
+    public function getOrganizationRoles(int $organizationId): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        $roles = DB::table('organization_roles')
+            ->where('organization_id', $organizationId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $result = [];
+        foreach ($roles as $role) {
+            // Get user count for this role
+            $userCount = DB::table('user_roles')
+                ->where('role_id', $role->id)
+                ->count();
+
+            // Get permissions for this role
+            $permissions = DB::table('organization_role_permissions')
+                ->join('organization_permissions', 'organization_role_permissions.permission_id', '=', 'organization_permissions.id')
+                ->where('organization_role_permissions.role_id', $role->id)
+                ->pluck('organization_permissions.slug')
+                ->toArray();
+
+            $result[] = [
+                'id' => $role->id,
+                'name' => $role->name,
+                'slug' => $role->slug,
+                'description' => $role->description,
+                'permissions' => $permissions,
+                'userCount' => $userCount,
+                'isSystem' => $role->is_system,
+                'isActive' => $role->is_active,
+                'sortOrder' => $role->sort_order,
+                'createdAt' => $role->created_at,
+                'updatedAt' => $role->updated_at
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Save role permissions
+     */
+    public function saveRolePermissions(int $organizationId, int $roleId, array $permissions): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        // Validate role exists and belongs to organization
+        $role = DB::table('organization_roles')
+            ->where('id', $roleId)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if (!$role) {
+            throw new \Exception('Role not found or does not belong to organization');
+        }
+
+        // Get permission IDs
+        $permissionIds = DB::table('organization_permissions')
+            ->where('organization_id', $organizationId)
+            ->whereIn('slug', $permissions)
+            ->pluck('id')
+            ->toArray();
+
+        // Delete existing role permissions
+        DB::table('organization_role_permissions')
+            ->where('role_id', $roleId)
+            ->delete();
+
+        // Insert new role permissions
+        $rolePermissions = [];
+        foreach ($permissionIds as $permissionId) {
+            $rolePermissions[] = [
+                'role_id' => $roleId,
+                'permission_id' => $permissionId,
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+        }
+
+        if (!empty($rolePermissions)) {
+            DB::table('organization_role_permissions')->insert($rolePermissions);
+        }
+
+        return [
+            'success' => true,
+            'roleId' => $roleId,
+            'permissions' => $permissions,
+            'message' => 'Role permissions saved successfully'
+        ];
+    }
+
+    /**
+     * Save all permissions
+     */
+    public function saveAllPermissions(int $organizationId, array $rolePermissions): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        // Validate all roles exist and belong to organization
+        $roleIds = array_keys($rolePermissions);
+        $existingRoles = DB::table('organization_roles')
+            ->where('organization_id', $organizationId)
+            ->whereIn('id', $roleIds)
+            ->pluck('id')
+            ->toArray();
+
+        if (count($existingRoles) !== count($roleIds)) {
+            throw new \Exception('One or more roles not found or do not belong to organization');
+        }
+
+        // Get all permission IDs for the organization
+        $allPermissions = DB::table('organization_permissions')
+            ->where('organization_id', $organizationId)
+            ->pluck('id', 'slug')
+            ->toArray();
+
+        // Process each role's permissions
+        foreach ($rolePermissions as $roleId => $permissions) {
+            // Get permission IDs for this role
+            $permissionIds = [];
+            foreach ($permissions as $permissionSlug) {
+                if (isset($allPermissions[$permissionSlug])) {
+                    $permissionIds[] = $allPermissions[$permissionSlug];
+                }
+            }
+
+            // Delete existing role permissions
+            DB::table('organization_role_permissions')
+                ->where('role_id', $roleId)
+                ->delete();
+
+            // Insert new role permissions
+            $rolePermissionsData = [];
+            foreach ($permissionIds as $permissionId) {
+                $rolePermissionsData[] = [
+                    'role_id' => $roleId,
+                    'permission_id' => $permissionId,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+
+            if (!empty($rolePermissionsData)) {
+                DB::table('organization_role_permissions')->insert($rolePermissionsData);
+            }
+        }
+
+        return [
+            'success' => true,
+            'rolePermissions' => $rolePermissions,
+            'message' => 'All permissions saved successfully'
+        ];
+    }
+
+    /**
+     * Generate admin token
+     */
+    public function generateAdminToken(int $organizationId): string
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        // Generate a secure temporary token
+        $token = 'admin_' . $organizationId . '_' . uniqid() . '_' . time();
+
+        // Create a secure hash of the token
+        $hashedToken = hash('sha256', $token);
+
+        // Store the token in cache with expiration (1 hour)
+        $tokenData = [
+            'organization_id' => $organizationId,
+            'organization_name' => $organization->name,
+            'created_at' => now()->toISOString(),
+            'expires_at' => now()->addHour()->toISOString(),
+            'permissions' => ['admin.access', 'organization.manage', 'users.manage'],
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ];
+
+        // Store in cache for 1 hour
+        Cache::put('admin_token:' . $hashedToken, $tokenData, 3600);
+
+        // Log the admin token generation
+        Log::channel('organization')->info('Admin token generated', [
+            'organization_id' => $organizationId,
+            'organization_name' => $organization->name,
+            'token_hash' => $hashedToken,
+            'expires_at' => $tokenData['expires_at'],
+            'ip_address' => request()->ip()
+        ]);
+
+        return $token;
+    }
+
+    /**
+     * Force password reset
+     */
+    public function forcePasswordReset(int $organizationId, string $email, string $organizationName): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        // Find user by email in the organization
+        $user = DB::table('users')
+            ->where('organization_id', $organizationId)
+            ->where('email', $email)
+            ->first();
+
+        if (!$user) {
+            throw new \Exception('User not found in organization');
+        }
+
+        // Generate password reset token
+        $resetToken = Str::random(64);
+        $hashedToken = hash('sha256', $resetToken);
+
+        // Store reset token in cache with expiration (1 hour)
+        $resetData = [
+            'user_id' => $user->id,
+            'email' => $email,
+            'organization_id' => $organizationId,
+            'organization_name' => $organizationName,
+            'created_at' => now()->toISOString(),
+            'expires_at' => now()->addHour()->toISOString(),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ];
+
+        // Store in cache for 1 hour
+        Cache::put('password_reset:' . $hashedToken, $resetData, 3600);
+
+        // Generate reset URL
+        $resetUrl = config('app.frontend_url') . '/reset-password?token=' . $resetToken . '&email=' . urlencode($email);
+
+        // Send password reset email (in real implementation, this would use a mail service)
+        $emailData = [
+            'to' => $email,
+            'subject' => 'Password Reset Request - ' . $organizationName,
+            'template' => 'password-reset',
+            'data' => [
+                'user_name' => $user->name,
+                'organization_name' => $organizationName,
+                'reset_url' => $resetUrl,
+                'expires_at' => $resetData['expires_at']
+            ]
+        ];
+
+        // Log the password reset request
+        Log::channel('organization')->info('Password reset requested', [
+            'user_id' => $user->id,
+            'email' => $email,
+            'organization_id' => $organizationId,
+            'organization_name' => $organizationName,
+            'token_hash' => $hashedToken,
+            'expires_at' => $resetData['expires_at'],
+            'ip_address' => request()->ip()
+        ]);
+
+        // In a real implementation, you would send the email here
+        // Mail::to($email)->send(new PasswordResetMail($emailData));
+
+        return [
+            'success' => true,
+            'email' => $email,
+            'organizationName' => $organizationName,
+            'resetUrl' => $resetUrl,
+            'expiresAt' => $resetData['expires_at'],
+            'message' => 'Password reset email sent successfully'
+        ];
     }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOrganizationAnalytics } from '@/hooks/useOrganizationAnalytics';
 import {
   BarChart3,
   TrendingUp,
@@ -29,60 +30,39 @@ import {
 } from '@/components/ui';
 
 const OrganizationAnalytics = ({
+  organization,
   statistics = {},
   loading = false,
   onRefresh
 }) => {
-  const [timeRange, setTimeRange] = useState('7d');
-  const [analyticsData, setAnalyticsData] = useState(null);
+  // Use organization analytics hook
+  const {
+    analyticsData,
+    loading: analyticsLoading,
+    error: analyticsError,
+    timeRange,
+    metrics,
+    updateTimeRange,
+    refreshAnalytics,
+    getGrowthIcon,
+    getGrowthColor,
+    formatNumber,
+    formatCurrency,
+    formatPercentage
+  } = useOrganizationAnalytics(organization?.id);
 
-  // Mock analytics data - in real implementation, this would come from API
-  useEffect(() => {
-    if (statistics && Object.keys(statistics).length > 0) {
-      // Simulate analytics data based on statistics
-      setAnalyticsData({
-        growth: {
-          organizations: 12.5,
-          users: 8.3,
-          revenue: 15.2
-        },
-        trends: {
-          newOrganizations: [
-            { date: '2024-01-01', count: 5 },
-            { date: '2024-01-02', count: 8 },
-            { date: '2024-01-03', count: 12 },
-            { date: '2024-01-04', count: 15 },
-            { date: '2024-01-05', count: 18 },
-            { date: '2024-01-06', count: 22 },
-            { date: '2024-01-07', count: 25 }
-          ],
-          activeUsers: [
-            { date: '2024-01-01', count: 45 },
-            { date: '2024-01-02', count: 52 },
-            { date: '2024-01-03', count: 48 },
-            { date: '2024-01-04', count: 61 },
-            { date: '2024-01-05', count: 58 },
-            { date: '2024-01-06', count: 67 },
-            { date: '2024-01-07', count: 72 }
-          ]
-        }
-      });
-    }
-  }, [statistics]);
-
-  const getGrowthIcon = (value) => {
-    if (value > 0) return <ArrowUpRight className="h-4 w-4 text-green-600" />;
-    if (value < 0) return <ArrowDownRight className="h-4 w-4 text-red-600" />;
-    return <Minus className="h-4 w-4 text-gray-600" />;
+  // Handle time range change
+  const handleTimeRangeChange = (value) => {
+    updateTimeRange(value);
   };
 
-  const getGrowthColor = (value) => {
-    if (value > 0) return 'text-green-600';
-    if (value < 0) return 'text-red-600';
-    return 'text-gray-600';
+  // Handle refresh
+  const handleRefresh = () => {
+    refreshAnalytics();
+    if (onRefresh) onRefresh();
   };
 
-  if (loading) {
+  if (loading || analyticsLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -109,7 +89,7 @@ const OrganizationAnalytics = ({
           <p className="text-sm text-gray-600">Organization performance and trends</p>
         </div>
         <div className="flex items-center space-x-3">
-          <Select value={timeRange} onValueChange={setTimeRange}>
+          <Select value={timeRange} onValueChange={handleTimeRangeChange}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -120,7 +100,7 @@ const OrganizationAnalytics = ({
               <SelectItem value="1y">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading || analyticsLoading}>
             <Activity className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -134,15 +114,15 @@ const OrganizationAnalytics = ({
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Organizations</p>
+                  <p className="text-sm font-medium text-gray-600">Total Users</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {statistics.total_organizations || 0}
+                    {formatNumber(metrics.totalUsers)}
                   </p>
                 </div>
                 <div className="flex items-center space-x-1">
-                  {getGrowthIcon(analyticsData.growth.organizations)}
-                  <span className={`text-sm font-medium ${getGrowthColor(analyticsData.growth.organizations)}`}>
-                    {analyticsData.growth.organizations}%
+                  {getGrowthIcon(analyticsData?.growth?.users)}
+                  <span className={`text-sm font-medium ${getGrowthColor(analyticsData?.growth?.users)}`}>
+                    {formatPercentage(analyticsData?.growth?.users || 0)}
                   </span>
                 </div>
               </div>
@@ -156,13 +136,13 @@ const OrganizationAnalytics = ({
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Users</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {statistics.organizations_with_users || 0}
+                    {formatNumber(metrics.activeUsers)}
                   </p>
                 </div>
                 <div className="flex items-center space-x-1">
-                  {getGrowthIcon(analyticsData.growth.users)}
-                  <span className={`text-sm font-medium ${getGrowthColor(analyticsData.growth.users)}`}>
-                    {analyticsData.growth.users}%
+                  {getGrowthIcon(analyticsData?.growth?.users)}
+                  <span className={`text-sm font-medium ${getGrowthColor(analyticsData?.growth?.users)}`}>
+                    {formatPercentage(analyticsData?.growth?.users || 0)}
                   </span>
                 </div>
               </div>
@@ -174,15 +154,15 @@ const OrganizationAnalytics = ({
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Trial Conversion</p>
+                  <p className="text-sm font-medium text-gray-600">Conversations</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {statistics.trial_organizations || 0}
+                    {formatNumber(metrics.totalConversations)}
                   </p>
                 </div>
                 <div className="flex items-center space-x-1">
-                  {getGrowthIcon(analyticsData.growth.revenue)}
-                  <span className={`text-sm font-medium ${getGrowthColor(analyticsData.growth.revenue)}`}>
-                    {analyticsData.growth.revenue}%
+                  {getGrowthIcon(analyticsData?.growth?.conversations)}
+                  <span className={`text-sm font-medium ${getGrowthColor(analyticsData?.growth?.conversations)}`}>
+                    {formatPercentage(analyticsData?.growth?.conversations || 0)}
                   </span>
                 </div>
               </div>

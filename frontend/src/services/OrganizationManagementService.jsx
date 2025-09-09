@@ -2,167 +2,156 @@ import api from './api';
 
 class OrganizationManagementService {
   /**
-   * Get all organizations with pagination and filters
+   * Get all organizations with pagination, sorting, and filtering
+   * @param {Object} params - Query parameters
+   * @param {number} params.page - Page number (default: 1)
+   * @param {number} params.per_page - Items per page (default: 15)
+   * @param {string} params.status - Filter by status (active, trial, suspended, etc.)
+   * @param {string} params.subscription_status - Filter by subscription status
+   * @param {string} params.business_type - Filter by business type
+   * @param {string} params.industry - Filter by industry
+   * @param {string} params.company_size - Filter by company size
+   * @param {string} params.sort_by - Sort field (created_at, name, etc.)
+   * @param {string} params.sort_order - Sort order (asc, desc)
+   * @param {string} params.search - Search term
    */
   async getOrganizations(params = {}) {
     try {
       console.log('🔍 OrganizationManagementService: Getting organizations with params:', params);
-      console.log('🔍 OrganizationManagementService: API base URL:', api.defaults.baseURL);
 
-      const response = await api.get('/v1/organizations', { params });
-      console.log('✅ OrganizationManagementService: Organizations retrieved successfully:', response.data);
+      // Set default parameters
+      const defaultParams = {
+        page: 1,
+        per_page: 15,
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        ...params
+      };
 
-      // Handle different response structures from backend
-      const responseData = response.data;
-      let organizationsData, paginationData;
+      const response = await api.get('/v1/organizations', {
+        params: defaultParams
+      });
 
-      if (responseData.data && responseData.pagination) {
-        // Custom pagination response with nested pagination object
-        organizationsData = responseData.data;
-        paginationData = responseData.pagination;
-      } else if (responseData.data && responseData.total) {
-        // Standard Laravel pagination response
-        organizationsData = responseData.data;
-        paginationData = {
-          total: responseData.total,
-          per_page: responseData.per_page,
-          current_page: responseData.current_page,
-          last_page: responseData.last_page,
-          from: responseData.from,
-          to: responseData.to
-        };
-      } else if (Array.isArray(responseData)) {
-        // Direct array response
-        organizationsData = responseData;
-        paginationData = { total: responseData.length, last_page: 1, current_page: 1 };
-      } else {
-        // Fallback
-        organizationsData = responseData.organizations || [];
-        paginationData = responseData.pagination || { total: 0, last_page: 1, current_page: 1 };
-      }
-
-      // Transform organizations data to frontend format
-      const transformedOrganizations = Array.isArray(organizationsData)
-        ? organizationsData.map(org => this.transformOrganizationDataForFrontend(org))
-        : [];
-
-      console.log('🔍 OrganizationManagementService: Processed organizations data:', organizationsData);
-      console.log('🔍 OrganizationManagementService: Transformed organizations data:', transformedOrganizations);
-      console.log('🔍 OrganizationManagementService: Processed pagination data:', paginationData);
+      console.log('✅ OrganizationManagementService: Organizations fetched successfully:', response.data);
 
       return {
         success: true,
-        data: {
-          data: transformedOrganizations,
-          pagination: paginationData
-        },
-        message: responseData.message || 'Organizations retrieved successfully'
+        data: response.data.data,
+        pagination: {
+          current_page: response.data.current_page,
+          last_page: response.data.last_page,
+          per_page: response.data.per_page,
+          total: response.data.total,
+          from: response.data.from,
+          to: response.data.to
+        }
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get organizations:', error);
-      console.error('❌ OrganizationManagementService: Error response:', error.response);
-      console.error('❌ OrganizationManagementService: Error status:', error.response?.status);
-      console.error('❌ OrganizationManagementService: Error data:', error.response?.data);
-
-      return this.handleError(error, 'Failed to fetch organizations');
+      console.error('❌ OrganizationManagementService: Error fetching organizations:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch organizations',
+        data: []
+      };
     }
   }
 
   /**
    * Get organization by ID
+   * @param {string} id - Organization ID
+   * @param {Array} includes - Relations to include
    */
-  async getOrganizationById(id) {
+  async getOrganizationById(id, includes = []) {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching organization by ID:', id);
-      const response = await api.get(`/v1/organizations/${id}`);
-      console.log('✅ OrganizationManagementService: Organization retrieved successfully:', response.data);
+      console.log('🔍 OrganizationManagementService: Getting organization by ID:', id);
+
+      const params = includes.length > 0 ? { include: includes.join(',') } : {};
+
+      const response = await api.get(`/v1/organizations/${id}`, {
+        params
+      });
+
+      console.log('✅ OrganizationManagementService: Organization fetched successfully:', response.data);
 
       return {
         success: true,
-        data: this.transformOrganizationDataForFrontend(response.data.data),
-        message: response.data.message
+        data: response.data.data
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get organization:', error);
-      return this.handleError(error, 'Failed to fetch organization');
-    }
-  }
-
-  /**
-   * Get organization by code
-   */
-  async getOrganizationByCode(orgCode) {
-    try {
-      console.log('🔍 OrganizationManagementService: Fetching organization by code:', orgCode);
-      const response = await api.get(`/v1/organizations/code/${orgCode}`);
-      console.log('✅ OrganizationManagementService: Organization retrieved successfully:', response.data);
-
+      console.error('❌ OrganizationManagementService: Error fetching organization:', error);
       return {
-        success: true,
-        data: this.transformOrganizationDataForFrontend(response.data.data),
-        message: response.data.message
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch organization',
+        data: null
       };
-    } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get organization by code:', error);
-      return this.handleError(error, 'Failed to fetch organization by code');
     }
   }
 
   /**
    * Create new organization
+   * @param {Object} organizationData - Organization data
    */
   async createOrganization(organizationData) {
     try {
-      console.log('🔍 OrganizationManagementService: Creating organization with data:', organizationData);
+      console.log('🔍 OrganizationManagementService: Creating organization:', organizationData);
 
-      const transformedData = this.transformOrganizationDataForBackend(organizationData);
-      console.log('🔍 OrganizationManagementService: Transformed data for backend:', transformedData);
+      const response = await api.post('/v1/organizations', organizationData);
 
-      const response = await api.post('/v1/organizations', transformedData);
       console.log('✅ OrganizationManagementService: Organization created successfully:', response.data);
 
       return {
         success: true,
-        data: this.transformOrganizationDataForFrontend(response.data.data),
+        data: response.data.data,
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to create organization:', error);
-      return this.handleError(error, 'Failed to create organization');
+      console.error('❌ OrganizationManagementService: Error creating organization:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to create organization',
+        data: null
+      };
     }
   }
 
   /**
    * Update organization
+   * @param {string} id - Organization ID
+   * @param {Object} organizationData - Updated organization data
    */
   async updateOrganization(id, organizationData) {
     try {
-      console.log('🔍 OrganizationManagementService: Updating organization:', id, 'with data:', organizationData);
+      console.log('🔍 OrganizationManagementService: Updating organization:', id, organizationData);
 
-      const transformedData = this.transformOrganizationDataForBackend(organizationData);
-      console.log('🔍 OrganizationManagementService: Transformed data for backend:', transformedData);
+      const response = await api.put(`/v1/organizations/${id}`, organizationData);
 
-      const response = await api.put(`/v1/organizations/${id}`, transformedData);
       console.log('✅ OrganizationManagementService: Organization updated successfully:', response.data);
 
       return {
         success: true,
-        data: this.transformOrganizationDataForFrontend(response.data.data),
+        data: response.data.data,
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to update organization:', error);
-      return this.handleError(error, 'Failed to update organization');
+      console.error('❌ OrganizationManagementService: Error updating organization:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update organization',
+        data: null
+      };
     }
   }
 
   /**
    * Delete organization
+   * @param {string} id - Organization ID
    */
   async deleteOrganization(id) {
     try {
       console.log('🔍 OrganizationManagementService: Deleting organization:', id);
+
       const response = await api.delete(`/v1/organizations/${id}`);
+
       console.log('✅ OrganizationManagementService: Organization deleted successfully:', response.data);
 
       return {
@@ -170,8 +159,11 @@ class OrganizationManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to delete organization:', error);
-      return this.handleError(error, 'Failed to delete organization');
+      console.error('❌ OrganizationManagementService: Error deleting organization:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete organization',
+      };
     }
   }
 
@@ -180,57 +172,67 @@ class OrganizationManagementService {
    */
   async getOrganizationStatistics() {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching statistics from /v1/organizations/statistics');
+      console.log('🔍 OrganizationManagementService: Getting organization statistics');
+
       const response = await api.get('/v1/organizations/statistics');
 
-      console.log('🔍 OrganizationManagementService: Raw API response:', response);
-      console.log('🔍 OrganizationManagementService: Response data:', response.data);
-
-      const statisticsData = response.data.data || response.data;
-      console.log('🔍 OrganizationManagementService: Final statistics data:', statisticsData);
+      console.log('✅ OrganizationManagementService: Statistics fetched successfully:', response.data);
 
       return {
         success: true,
-        data: statisticsData,
-        message: response.data.message || 'Statistics retrieved successfully'
+        data: response.data.data
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get statistics:', error);
-      console.error('❌ OrganizationManagementService: Error response:', error.response);
-      return this.handleError(error, 'Failed to fetch organization statistics');
+      console.error('❌ OrganizationManagementService: Error fetching statistics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch statistics',
+        data: {}
+      };
     }
   }
 
   /**
    * Get organization users
+   * @param {string} id - Organization ID
+   * @param {Object} params - Query parameters
    */
-  async getOrganizationUsers(id) {
+  async getOrganizationUsers(id, params = {}) {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching users for organization:', id);
-      const response = await api.get(`/v1/organizations/${id}/users`);
-      console.log('🔍 OrganizationManagementService: Users response:', response.data);
+      console.log('🔍 OrganizationManagementService: Getting organization users:', id);
+
+      const response = await api.get(`/v1/organizations/${id}/users`, {
+        params
+      });
+
+      console.log('✅ OrganizationManagementService: Organization users fetched successfully:', response.data);
 
       return {
         success: true,
         data: response.data.data,
-        message: response.data.message
+        pagination: response.data.pagination || null
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get organization users:', error);
-      return this.handleError(error, 'Failed to fetch organization users');
+      console.error('❌ OrganizationManagementService: Error fetching organization users:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch organization users',
+        data: []
+      };
     }
   }
 
   /**
    * Add user to organization
+   * @param {string} organizationId - Organization ID
+   * @param {Object} userData - User data
    */
-  async addUserToOrganization(organizationId, userId, role = 'member') {
+  async addUserToOrganization(organizationId, userData) {
     try {
-      console.log('🔍 OrganizationManagementService: Adding user to organization:', { organizationId, userId, role });
-      const response = await api.post(`/v1/organizations/${organizationId}/users`, {
-        user_id: userId,
-        role: role
-      });
+      console.log('🔍 OrganizationManagementService: Adding user to organization:', organizationId, userData);
+
+      const response = await api.post(`/v1/organizations/${organizationId}/users`, userData);
+
       console.log('✅ OrganizationManagementService: User added successfully:', response.data);
 
       return {
@@ -239,18 +241,26 @@ class OrganizationManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to add user to organization:', error);
-      return this.handleError(error, 'Failed to add user to organization');
+      console.error('❌ OrganizationManagementService: Error adding user:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to add user to organization',
+        data: null
+      };
     }
   }
 
   /**
    * Remove user from organization
+   * @param {string} organizationId - Organization ID
+   * @param {string} userId - User ID
    */
   async removeUserFromOrganization(organizationId, userId) {
     try {
-      console.log('🔍 OrganizationManagementService: Removing user from organization:', { organizationId, userId });
+      console.log('🔍 OrganizationManagementService: Removing user from organization:', organizationId, userId);
+
       const response = await api.delete(`/v1/organizations/${organizationId}/users/${userId}`);
+
       console.log('✅ OrganizationManagementService: User removed successfully:', response.data);
 
       return {
@@ -258,103 +268,266 @@ class OrganizationManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to remove user from organization:', error);
-      return this.handleError(error, 'Failed to remove user from organization');
+      console.error('❌ OrganizationManagementService: Error removing user:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to remove user from organization',
+      };
     }
   }
 
   /**
    * Update organization subscription
+   * @param {string} id - Organization ID
+   * @param {Object} subscriptionData - Subscription data
    */
   async updateOrganizationSubscription(id, subscriptionData) {
     try {
-      console.log('🔍 OrganizationManagementService: Updating subscription for organization:', id, 'with data:', subscriptionData);
+      console.log('🔍 OrganizationManagementService: Updating organization subscription:', id, subscriptionData);
+
       const response = await api.patch(`/v1/organizations/${id}/subscription`, subscriptionData);
+
       console.log('✅ OrganizationManagementService: Subscription updated successfully:', response.data);
 
       return {
         success: true,
-        data: this.transformOrganizationDataForFrontend(response.data.data),
+        data: response.data.data,
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to update subscription:', error);
-      return this.handleError(error, 'Failed to update organization subscription');
+      console.error('❌ OrganizationManagementService: Error updating subscription:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update subscription',
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Update organization status
+   * @param {string} id - Organization ID
+   * @param {string} status - New status
+   */
+  async updateOrganizationStatus(id, status) {
+    try {
+      console.log('🔍 OrganizationManagementService: Updating organization status:', id, status);
+
+      const response = await api.patch(`/v1/organizations/${id}/status`, { status });
+
+      console.log('✅ OrganizationManagementService: Status updated successfully:', response.data);
+
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error updating status:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update organization status',
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Get organization activity logs
+   * @param {string} id - Organization ID
+   * @param {Object} params - Query parameters
+   */
+  async getOrganizationActivityLogs(id, params = {}) {
+    try {
+      console.log('🔍 OrganizationManagementService: Getting organization activity logs:', id);
+
+      const response = await api.get(`/v1/organizations/${id}/activity-logs`, {
+        params
+      });
+
+      console.log('✅ OrganizationManagementService: Activity logs fetched successfully:', response.data);
+
+      return {
+        success: true,
+        data: response.data.data,
+        pagination: response.data.pagination || null
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error fetching activity logs:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch activity logs',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Export organizations
+   * @param {Object} params - Export parameters
+   */
+  async exportOrganizations(params = {}) {
+    try {
+      console.log('🔍 OrganizationManagementService: Exporting organizations:', params);
+
+      const response = await api.get('/v1/organizations/export', {
+        params,
+        responseType: 'blob'
+      });
+
+      console.log('✅ OrganizationManagementService: Organizations exported successfully');
+
+      return {
+        success: true,
+        data: response.data,
+        filename: `organizations_${new Date().toISOString().split('T')[0]}.xlsx`
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error exporting organizations:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to export organizations',
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Import organizations
+   * @param {File} file - Import file
+   */
+  async importOrganizations(file) {
+    try {
+      console.log('🔍 OrganizationManagementService: Importing organizations');
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/v1/organizations/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      console.log('✅ OrganizationManagementService: Organizations imported successfully:', response.data);
+
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error importing organizations:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to import organizations',
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Bulk action on organizations
+   * @param {Object} actionData - Action data
+   */
+  async bulkAction(actionData) {
+    try {
+      console.log('🔍 OrganizationManagementService: Performing bulk action:', actionData);
+
+      const response = await api.post('/v1/organizations/bulk-action', actionData);
+
+      console.log('✅ OrganizationManagementService: Bulk action completed successfully:', response.data);
+
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error performing bulk action:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to perform bulk action',
+        data: null
+      };
     }
   }
 
   /**
    * Get organizations by business type
+   * @param {string} businessType - Business type
    */
   async getOrganizationsByBusinessType(businessType) {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching organizations by business type:', businessType);
-      const response = await api.get(`/v1/organizations/business-type/${businessType}`);
-      console.log('✅ OrganizationManagementService: Organizations retrieved successfully:', response.data);
+      console.log('🔍 OrganizationManagementService: Getting organizations by business type:', businessType);
 
-      const organizationsData = response.data.data || response.data;
-      const transformedOrganizations = Array.isArray(organizationsData)
-        ? organizationsData.map(org => this.transformOrganizationDataForFrontend(org))
-        : [];
+      const response = await api.get(`/v1/organizations/business-type/${businessType}`);
+
+      console.log('✅ OrganizationManagementService: Organizations by business type fetched successfully:', response.data);
 
       return {
         success: true,
-        data: transformedOrganizations,
-        message: response.data.message
+        data: response.data.data
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get organizations by business type:', error);
-      return this.handleError(error, 'Failed to fetch organizations by business type');
+      console.error('❌ OrganizationManagementService: Error fetching organizations by business type:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch organizations by business type',
+        data: []
+      };
     }
   }
 
   /**
    * Get organizations by industry
+   * @param {string} industry - Industry
    */
   async getOrganizationsByIndustry(industry) {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching organizations by industry:', industry);
-      const response = await api.get(`/v1/organizations/industry/${industry}`);
-      console.log('✅ OrganizationManagementService: Organizations retrieved successfully:', response.data);
+      console.log('🔍 OrganizationManagementService: Getting organizations by industry:', industry);
 
-      const organizationsData = response.data.data || response.data;
-      const transformedOrganizations = Array.isArray(organizationsData)
-        ? organizationsData.map(org => this.transformOrganizationDataForFrontend(org))
-        : [];
+      const response = await api.get(`/v1/organizations/industry/${industry}`);
+
+      console.log('✅ OrganizationManagementService: Organizations by industry fetched successfully:', response.data);
 
       return {
         success: true,
-        data: transformedOrganizations,
-        message: response.data.message
+        data: response.data.data
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get organizations by industry:', error);
-      return this.handleError(error, 'Failed to fetch organizations by industry');
+      console.error('❌ OrganizationManagementService: Error fetching organizations by industry:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch organizations by industry',
+        data: []
+      };
     }
   }
 
   /**
    * Get organizations by company size
+   * @param {string} companySize - Company size
    */
   async getOrganizationsByCompanySize(companySize) {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching organizations by company size:', companySize);
-      const response = await api.get(`/v1/organizations/company-size/${companySize}`);
-      console.log('✅ OrganizationManagementService: Organizations retrieved successfully:', response.data);
+      console.log('🔍 OrganizationManagementService: Getting organizations by company size:', companySize);
 
-      const organizationsData = response.data.data || response.data;
-      const transformedOrganizations = Array.isArray(organizationsData)
-        ? organizationsData.map(org => this.transformOrganizationDataForFrontend(org))
-        : [];
+      const response = await api.get(`/v1/organizations/company-size/${companySize}`);
+
+      console.log('✅ OrganizationManagementService: Organizations by company size fetched successfully:', response.data);
 
       return {
         success: true,
-        data: transformedOrganizations,
-        message: response.data.message
+        data: response.data.data
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get organizations by company size:', error);
-      return this.handleError(error, 'Failed to fetch organizations by company size');
+      console.error('❌ OrganizationManagementService: Error fetching organizations by company size:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch organizations by company size',
+        data: []
+      };
     }
   }
 
@@ -363,23 +536,23 @@ class OrganizationManagementService {
    */
   async getActiveOrganizations() {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching active organizations');
-      const response = await api.get('/v1/organizations/active');
-      console.log('✅ OrganizationManagementService: Active organizations retrieved successfully:', response.data);
+      console.log('🔍 OrganizationManagementService: Getting active organizations');
 
-      const organizationsData = response.data.data || response.data;
-      const transformedOrganizations = Array.isArray(organizationsData)
-        ? organizationsData.map(org => this.transformOrganizationDataForFrontend(org))
-        : [];
+      const response = await api.get('/v1/organizations/active');
+
+      console.log('✅ OrganizationManagementService: Active organizations fetched successfully:', response.data);
 
       return {
         success: true,
-        data: transformedOrganizations,
-        message: response.data.message
+        data: response.data.data
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get active organizations:', error);
-      return this.handleError(error, 'Failed to fetch active organizations');
+      console.error('❌ OrganizationManagementService: Error fetching active organizations:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch active organizations',
+        data: []
+      };
     }
   }
 
@@ -388,23 +561,23 @@ class OrganizationManagementService {
    */
   async getTrialOrganizations() {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching trial organizations');
-      const response = await api.get('/v1/organizations/trial');
-      console.log('✅ OrganizationManagementService: Trial organizations retrieved successfully:', response.data);
+      console.log('🔍 OrganizationManagementService: Getting trial organizations');
 
-      const organizationsData = response.data.data || response.data;
-      const transformedOrganizations = Array.isArray(organizationsData)
-        ? organizationsData.map(org => this.transformOrganizationDataForFrontend(org))
-        : [];
+      const response = await api.get('/v1/organizations/trial');
+
+      console.log('✅ OrganizationManagementService: Trial organizations fetched successfully:', response.data);
 
       return {
         success: true,
-        data: transformedOrganizations,
-        message: response.data.message
+        data: response.data.data
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get trial organizations:', error);
-      return this.handleError(error, 'Failed to fetch trial organizations');
+      console.error('❌ OrganizationManagementService: Error fetching trial organizations:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch trial organizations',
+        data: []
+      };
     }
   }
 
@@ -413,153 +586,262 @@ class OrganizationManagementService {
    */
   async getExpiredTrialOrganizations() {
     try {
-      console.log('🔍 OrganizationManagementService: Fetching expired trial organizations');
-      const response = await api.get('/v1/organizations/expired-trial');
-      console.log('✅ OrganizationManagementService: Expired trial organizations retrieved successfully:', response.data);
+      console.log('🔍 OrganizationManagementService: Getting expired trial organizations');
 
-      const organizationsData = response.data.data || response.data;
-      const transformedOrganizations = Array.isArray(organizationsData)
-        ? organizationsData.map(org => this.transformOrganizationDataForFrontend(org))
-        : [];
+      const response = await api.get('/v1/organizations/expired-trial');
+
+      console.log('✅ OrganizationManagementService: Expired trial organizations fetched successfully:', response.data);
 
       return {
         success: true,
-        data: transformedOrganizations,
-        message: response.data.message
+        data: response.data.data
       };
     } catch (error) {
-      console.error('❌ OrganizationManagementService: Failed to get expired trial organizations:', error);
-      return this.handleError(error, 'Failed to fetch expired trial organizations');
-    }
-  }
-
-  /**
-   * Handle API errors
-   */
-  handleError(error, defaultMessage) {
-    console.error('OrganizationManagementService Error:', error);
-
-    if (error.response) {
-      // Server responded with error status
-      const { status, data } = error.response;
-
+      console.error('❌ OrganizationManagementService: Error fetching expired trial organizations:', error);
       return {
         success: false,
-        message: data?.message || defaultMessage,
-        errors: data?.errors || {},
-        status,
-        code: data?.code || 'API_ERROR'
-      };
-    } else if (error.request) {
-      // Network error
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.',
-        errors: {},
-        status: 0,
-        code: 'NETWORK_ERROR'
-      };
-    } else {
-      // Other error
-      return {
-        success: false,
-        message: error.message || defaultMessage,
-        errors: {},
-        status: 0,
-        code: 'UNKNOWN_ERROR'
+        error: error.response?.data?.message || 'Failed to fetch expired trial organizations',
+        data: []
       };
     }
   }
 
   /**
-   * Transform frontend organization data to backend format
+   * Get organization settings
    */
-  transformOrganizationDataForBackend(organizationData) {
-    return {
-      name: organizationData.name,
-      display_name: organizationData.displayName || organizationData.display_name,
-      email: organizationData.email,
-      phone: organizationData.phone,
-      address: organizationData.address,
-      website: organizationData.website,
-      tax_id: organizationData.taxId || organizationData.tax_id,
-      business_type: organizationData.businessType || organizationData.business_type,
-      industry: organizationData.industry,
-      company_size: organizationData.companySize || organizationData.company_size,
-      timezone: organizationData.timezone || 'Asia/Jakarta',
-      locale: organizationData.locale || 'id',
-      currency: organizationData.currency || 'IDR',
-      subscription_plan_id: organizationData.subscriptionPlanId || organizationData.subscription_plan_id,
-      subscription_status: organizationData.subscriptionStatus || organizationData.subscription_status || 'trial',
-      trial_ends_at: organizationData.trialEndsAt || organizationData.trial_ends_at,
-      subscription_starts_at: organizationData.subscriptionStartsAt || organizationData.subscription_starts_at,
-      subscription_ends_at: organizationData.subscriptionEndsAt || organizationData.subscription_ends_at,
-      billing_cycle: organizationData.billingCycle || organizationData.billing_cycle,
-      theme_config: organizationData.themeConfig || organizationData.theme_config,
-      branding_config: organizationData.brandingConfig || organizationData.branding_config,
-      feature_flags: organizationData.featureFlags || organizationData.feature_flags,
-      ui_preferences: organizationData.uiPreferences || organizationData.ui_preferences,
-      business_hours: organizationData.businessHours || organizationData.business_hours,
-      contact_info: organizationData.contactInfo || organizationData.contact_info,
-      social_media: organizationData.socialMedia || organizationData.social_media,
-      security_settings: organizationData.securitySettings || organizationData.security_settings,
-      api_enabled: organizationData.apiEnabled || organizationData.api_enabled,
-      webhook_url: organizationData.webhookUrl || organizationData.webhook_url,
-      webhook_secret: organizationData.webhookSecret || organizationData.webhook_secret,
-      settings: organizationData.settings,
-      metadata: organizationData.metadata,
-      status: organizationData.status || 'active'
-    };
+  async getOrganizationSettings(organizationId) {
+    try {
+      console.log('🔍 OrganizationManagementService: Getting organization settings:', organizationId);
+
+      const response = await api.get(`/v1/organizations/${organizationId}/settings`);
+
+      console.log('✅ OrganizationManagementService: Settings retrieved successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error getting settings:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to get organization settings'
+      };
+    }
   }
 
   /**
-   * Transform backend organization data to frontend format
+   * Save organization settings
    */
-  transformOrganizationDataForFrontend(organizationData) {
+  async saveOrganizationSettings(organizationId, settings) {
+    try {
+      console.log('🔍 OrganizationManagementService: Saving organization settings:', organizationId, settings);
+
+      const response = await api.put(`/v1/organizations/${organizationId}/settings`, settings);
+
+      console.log('✅ OrganizationManagementService: Settings saved successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error saving settings:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to save organization settings'
+      };
+    }
+  }
+
+  /**
+   * Test webhook
+   */
+  async testWebhook(organizationId, webhookUrl) {
+    try {
+      console.log('🔍 OrganizationManagementService: Testing webhook:', organizationId, webhookUrl);
+
+      const response = await api.post(`/v1/organizations/${organizationId}/webhook/test`, {
+        url: webhookUrl
+      });
+
+      console.log('✅ OrganizationManagementService: Webhook test successful:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error testing webhook:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Webhook test failed'
+      };
+    }
+  }
+
+  /**
+   * Get organization analytics
+   */
+  async getOrganizationAnalytics(organizationId, params = {}) {
+    try {
+      console.log('🔍 OrganizationManagementService: Getting organization analytics:', organizationId, params);
+
+      const response = await api.get(`/v1/organizations/${organizationId}/analytics`, { params });
+
+      console.log('✅ OrganizationManagementService: Analytics retrieved successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error getting analytics:', error);
     return {
-      id: organizationData.id,
-      orgCode: organizationData.org_code,
-      name: organizationData.name,
-      displayName: organizationData.display_name,
-      email: organizationData.email,
-      phone: organizationData.phone,
-      address: organizationData.address,
-      website: organizationData.website,
-      taxId: organizationData.tax_id,
-      businessType: organizationData.business_type,
-      industry: organizationData.industry,
-      companySize: organizationData.company_size,
-      timezone: organizationData.timezone,
-      locale: organizationData.locale,
-      currency: organizationData.currency,
-      subscriptionPlan: organizationData.subscription_plan,
-      subscriptionPlanId: organizationData.subscription_plan_id,
-      subscriptionStatus: organizationData.subscription_status,
-      trialEndsAt: organizationData.trial_ends_at,
-      subscriptionStartsAt: organizationData.subscription_starts_at,
-      subscriptionEndsAt: organizationData.subscription_ends_at,
-      billingCycle: organizationData.billing_cycle,
-      currentUsage: organizationData.current_usage,
-      themeConfig: organizationData.theme_config,
-      brandingConfig: organizationData.branding_config,
-      featureFlags: organizationData.feature_flags,
-      uiPreferences: organizationData.ui_preferences,
-      businessHours: organizationData.business_hours,
-      contactInfo: organizationData.contact_info,
-      socialMedia: organizationData.social_media,
-      securitySettings: organizationData.security_settings,
-      apiEnabled: organizationData.api_enabled,
-      webhookUrl: organizationData.webhook_url,
-      webhookSecret: organizationData.webhook_secret,
-      settings: organizationData.settings,
-      metadata: organizationData.metadata,
-      status: organizationData.status,
-      users: organizationData.users || [],
-      usersCount: organizationData.users?.length || 0,
-      createdAt: organizationData.created_at,
-      updatedAt: organizationData.updated_at,
-      deletedAt: organizationData.deleted_at
-    };
+        success: false,
+        error: error.response?.data?.message || 'Failed to get organization analytics'
+      };
+    }
+  }
+
+  /**
+   * Get organization roles
+   */
+  async getOrganizationRoles(organizationId) {
+    try {
+      console.log('🔍 OrganizationManagementService: Getting organization roles:', organizationId);
+
+      const response = await api.get(`/v1/organizations/${organizationId}/roles`);
+
+      console.log('✅ OrganizationManagementService: Roles retrieved successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error getting roles:', error);
+    return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to get organization roles'
+      };
+    }
+  }
+
+  /**
+   * Get permissions
+   */
+  async getPermissions() {
+    try {
+      console.log('🔍 OrganizationManagementService: Getting permissions');
+
+      const response = await api.get('/v1/permissions');
+
+      console.log('✅ OrganizationManagementService: Permissions retrieved successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error getting permissions:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to get permissions'
+      };
+    }
+  }
+
+  /**
+   * Save role permissions
+   */
+  async saveRolePermissions(organizationId, roleId, permissions) {
+    try {
+      console.log('🔍 OrganizationManagementService: Saving role permissions:', organizationId, roleId, permissions);
+
+      const response = await api.put(`/v1/organizations/${organizationId}/roles/${roleId}/permissions`, {
+        permissions
+      });
+
+      console.log('✅ OrganizationManagementService: Role permissions saved successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error saving role permissions:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to save role permissions'
+      };
+    }
+  }
+
+  /**
+   * Save all permissions
+   */
+  async saveAllPermissions(organizationId, rolePermissions) {
+    try {
+      console.log('🔍 OrganizationManagementService: Saving all permissions:', organizationId, rolePermissions);
+
+      const response = await api.put(`/v1/organizations/${organizationId}/permissions`, {
+        rolePermissions
+      });
+
+      console.log('✅ OrganizationManagementService: All permissions saved successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error saving all permissions:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to save all permissions'
+      };
+    }
+  }
+
+  /**
+   * Update user
+   */
+  async updateUser(organizationId, userId, userData) {
+    try {
+      console.log('🔍 OrganizationManagementService: Updating user:', organizationId, userId, userData);
+
+      const response = await api.put(`/v1/organizations/${organizationId}/users/${userId}`, userData);
+
+      console.log('✅ OrganizationManagementService: User updated successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error updating user:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update user'
+      };
+    }
+  }
+
+  /**
+   * Toggle user status
+   */
+  async toggleUserStatus(organizationId, userId, status) {
+    try {
+      console.log('🔍 OrganizationManagementService: Toggling user status:', organizationId, userId, status);
+
+      const response = await api.patch(`/v1/organizations/${organizationId}/users/${userId}/status`, {
+        status
+      });
+
+      console.log('✅ OrganizationManagementService: User status toggled successfully:', response.data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      console.error('❌ OrganizationManagementService: Error toggling user status:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to toggle user status'
+      };
+    }
   }
 }
 

@@ -439,6 +439,38 @@ class ClientManagementService {
       deletedAt: organizationData.deleted_at
     };
   }
+
+  /**
+   * Get client analytics
+   * @param {Object} params - Query parameters
+   * @param {string} params.time_range - Time range for analytics (7d, 30d, 90d, 1y)
+   */
+  async getAnalytics(params = {}) {
+    try {
+      console.log('🔍 ClientManagementService: Getting analytics with params:', params);
+
+      const response = await api.get('/v1/organizations/analytics', { params });
+      console.log('✅ ClientManagementService: Analytics retrieved successfully:', response.data);
+
+      if (response.data.success) {
+        return {
+          success: true,
+          data: response.data.data
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to get analytics'
+        };
+      }
+    } catch (error) {
+      console.error('❌ ClientManagementService: Error getting analytics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to get analytics'
+      };
+    }
+  }
 }
 
 export default new ClientManagementService();

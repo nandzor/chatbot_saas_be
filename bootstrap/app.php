@@ -29,6 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->group(base_path('routes/waha.php'));
         },
     )
+    ->withProviders([
+        \App\Providers\EventServiceProvider::class,
+        \App\Providers\NotificationServiceProvider::class,
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         // Register middleware aliases
         $middleware->alias([
@@ -39,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.only' => \App\Http\Middleware\AdminOnly::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
             'organization' => \App\Http\Middleware\OrganizationAccessMiddleware::class,
+            'organization.management' => \App\Http\Middleware\OrganizationManagementMiddleware::class,
             'super.admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
             'throttle.auth' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':5,1',
             'throttle.refresh' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':10,1',

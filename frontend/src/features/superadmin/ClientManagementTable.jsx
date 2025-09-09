@@ -139,15 +139,67 @@ const ClientManagementTable = () => {
   }, [updateOrganizationStatus]);
 
   // Handle login as admin
-  const handleLoginAsAdmin = useCallback((org) => {
-    // TODO: Implement login as admin functionality
-    alert(`Login as admin untuk ${org.name} - Fitur ini akan mengarahkan ke dashboard admin organisasi`);
+  const handleLoginAsAdmin = useCallback(async (org) => {
+    try {
+      const response = await fetch('/api/v1/superadmin/login-as-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          organization_id: org.id,
+          organization_name: org.name
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Redirecting to ${org.name} admin dashboard...`);
+
+        // Store the temporary admin token
+        localStorage.setItem('admin_token', data.token);
+        localStorage.setItem('admin_organization_id', org.id);
+
+        // Redirect to admin dashboard
+        window.open(`/admin/organizations/${org.id}/dashboard?token=${data.token}`, '_blank');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to login as admin');
+      }
+    } catch (error) {
+      console.error('Error logging in as admin:', error);
+      toast.error('Failed to login as admin');
+    }
   }, []);
 
   // Handle force password reset
-  const handleForcePasswordReset = useCallback((org) => {
-    // TODO: Implement force password reset functionality
-    alert(`Reset password telah dikirim ke ${org.email}`);
+  const handleForcePasswordReset = useCallback(async (org) => {
+    try {
+      const response = await fetch('/api/v1/superadmin/force-password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          organization_id: org.id,
+          email: org.email,
+          organization_name: org.name
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Password reset email sent to ${org.email}`);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to send password reset email');
+      }
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      toast.error('Failed to send password reset email');
+    }
   }, []);
 
   // Handle refresh

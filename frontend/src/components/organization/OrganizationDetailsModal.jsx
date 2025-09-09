@@ -175,6 +175,14 @@ const OrganizationDetailsModal = ({
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
+            <Button variant="outline" size="sm" onClick={() => onAddUser(organization)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Manage Users
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onUpdateSubscription(organization)}>
+              <DollarSign className="h-4 w-4 mr-2" />
+              Subscription
+            </Button>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
