@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('organization_role_permissions', function (Blueprint $table) {
+        if (!Schema::hasTable('organization_role_permissions')) {
+            Schema::create('organization_role_permissions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('role_id')->constrained('organization_roles')->onDelete('cascade');
             $table->foreignId('permission_id')->constrained('organization_permissions')->onDelete('cascade');
@@ -20,7 +21,8 @@ return new class extends Migration
             $table->unique(['role_id', 'permission_id']);
             $table->index(['role_id']);
             $table->index(['permission_id']);
-        });
+            });
+        }
     }
 
     /**

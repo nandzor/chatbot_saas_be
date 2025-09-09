@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('organization_audit_logs', function (Blueprint $table) {
+        if (!Schema::hasTable('organization_audit_logs')) {
+            Schema::create('organization_audit_logs', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('organization_id');
-            $table->unsignedBigInteger('user_id')->nullable();
+            $table->uuid('organization_id');
+            $table->uuid('user_id')->nullable();
             $table->string('action', 50);
             $table->string('resource_type', 50)->nullable();
             $table->unsignedBigInteger('resource_id')->nullable();
@@ -35,7 +36,8 @@ return new class extends Migration
             // Foreign keys
             $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
-        });
+            });
+        }
     }
 
     /**

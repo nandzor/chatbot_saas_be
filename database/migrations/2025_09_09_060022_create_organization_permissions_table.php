@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('organization_permissions', function (Blueprint $table) {
+        if (!Schema::hasTable('organization_permissions')) {
+            Schema::create('organization_permissions', function (Blueprint $table) {
             $table->id();
             $table->uuid('organization_id');
             $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
@@ -27,7 +28,8 @@ return new class extends Migration
             $table->index(['organization_id', 'category']);
             $table->index(['organization_id', 'is_active']);
             $table->unique(['organization_id', 'slug']);
-        });
+            });
+        }
     }
 
     /**

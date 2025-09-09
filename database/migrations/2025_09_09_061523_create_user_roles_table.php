@@ -11,17 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_roles', function (Blueprint $table) {
-            $table->id();
-            $table->uuid('user_id');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreignId('role_id')->constrained('organization_roles')->onDelete('cascade');
-            $table->timestamps();
+        if (!Schema::hasTable('user_roles')) {
+            Schema::create('user_roles', function (Blueprint $table) {
+                $table->id();
+                $table->uuid('user_id');
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+                $table->foreignId('role_id')->constrained('organization_roles')->onDelete('cascade');
+                $table->timestamps();
 
-            $table->unique(['user_id', 'role_id']);
-            $table->index(['user_id']);
-            $table->index(['role_id']);
-        });
+                $table->unique(['user_id', 'role_id']);
+                $table->index(['user_id']);
+                $table->index(['role_id']);
+            });
+        }
     }
 
     /**

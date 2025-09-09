@@ -78,7 +78,7 @@ class OrganizationFactory extends Factory
             'trial_ends_at' => $this->faker->optional()->dateTimeBetween('now', '+30 days'),
             'subscription_starts_at' => $this->faker->optional()->dateTimeBetween('-6 months', 'now'),
             'subscription_ends_at' => $this->faker->optional()->dateTimeBetween('now', '+12 months'),
-            'billing_cycle' => $this->faker->optional()->randomElement(['monthly', 'quarterly', 'yearly']),
+            'billing_cycle' => $this->faker->randomElement(['monthly', 'quarterly', 'yearly']),
             'current_usage' => [
                 'agents' => $this->faker->numberBetween(0, 20),
                 'channels' => $this->faker->numberBetween(0, 10),

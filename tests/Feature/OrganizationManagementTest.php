@@ -30,6 +30,7 @@ class OrganizationManagementTest extends TestCase
 
         // Assign user to organization
         $this->user->update(['organization_id' => $this->organization->id]);
+        $this->user->refresh(); // Ensure fresh Authenticatable instance
 
         // Initialize services
         $this->organizationService = app(OrganizationService::class);

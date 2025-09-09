@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('organization_analytics', function (Blueprint $table) {
+        if (!Schema::hasTable('organization_analytics')) {
+            Schema::create('organization_analytics', function (Blueprint $table) {
             $table->id();
             $table->uuid('organization_id');
             $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
@@ -28,7 +29,8 @@ return new class extends Migration
 
             $table->unique(['organization_id', 'date']);
             $table->index(['organization_id', 'date']);
-        });
+            });
+        }
     }
 
     /**

@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('revenue_transactions', function (Blueprint $table) {
+        if (!Schema::hasTable('revenue_transactions')) {
+            Schema::create('revenue_transactions', function (Blueprint $table) {
             $table->id();
             $table->uuid('organization_id');
             $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
@@ -26,7 +27,8 @@ return new class extends Migration
 
             $table->index(['organization_id', 'transaction_date']);
             $table->index(['transaction_type', 'status']);
-        });
+            });
+        }
     }
 
     /**
