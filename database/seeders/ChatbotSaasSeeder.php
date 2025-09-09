@@ -610,10 +610,10 @@ class ChatbotSaasSeeder extends Seeder
                 'organization_id' => $organization->id,
             ]);
 
-            // Create VIP customers
+            // Create VIP customers (using segments to mark as VIP)
             $vipCustomers = Customer::factory(2)->create([
                 'organization_id' => $organization->id,
-                'tier' => 'vip',
+                'segments' => ['vip', 'high_value', 'premium'],
             ]);
 
             $allCustomers = $customers->concat($vipCustomers);
@@ -661,7 +661,6 @@ class ChatbotSaasSeeder extends Seeder
                 'organization_id' => $organization->id,
                 'customer_id' => $allCustomers->random()->id,
                 'channel_config_id' => $channelConfigs->random()->id,
-                'satisfaction_score' => 0.9,
                 'is_resolved' => true,
             ]);
 
@@ -883,15 +882,15 @@ class ChatbotSaasSeeder extends Seeder
             for ($i = 0; $i < $workflowCount; $i++) {
                 $workflowId = \Illuminate\Support\Str::uuid()->toString();
                 $workflowUuid = \Illuminate\Support\Str::uuid()->toString();
-                $workflowName = 'Workflow ' . ($i + 1);
+                $workflowName = 'Workflow ' . ($i + 1) . ' - ' . \Illuminate\Support\Str::random(6);
                 $workflows[] = N8nWorkflow::updateOrCreate(
                     [
-                        'id' => $workflowId,
                         'organization_id' => $organization->id,
-                        'workflow_id' => $workflowUuid,
                         'name' => $workflowName,
                     ],
                     [
+                        'id' => $workflowId,
+                        'workflow_id' => $workflowUuid,
                         'created_by' => User::where('organization_id', $organization->id)->first()?->id,
                         'workflow_data' => ['nodes' => [], 'connections' => []],
                         // ...other fields as needed...
@@ -904,12 +903,12 @@ class ChatbotSaasSeeder extends Seeder
             $scheduledWorkflowUuid = \Illuminate\Support\Str::uuid()->toString();
             N8nWorkflow::updateOrCreate(
                 [
-                    'id' => $scheduledWorkflowId,
                     'organization_id' => $organization->id,
-                    'workflow_id' => $scheduledWorkflowUuid,
-                    'name' => 'Daily Report Generation',
+                    'name' => 'Daily Report Generation - ' . \Illuminate\Support\Str::random(6),
                 ],
                 [
+                    'id' => $scheduledWorkflowId,
+                    'workflow_id' => $scheduledWorkflowUuid,
                     'created_by' => User::where('organization_id', $organization->id)->first()?->id,
                     'workflow_data' => ['nodes' => [], 'connections' => []],
                     // ...other fields as needed...
@@ -921,12 +920,12 @@ class ChatbotSaasSeeder extends Seeder
             $webhookWorkflowUuid = \Illuminate\Support\Str::uuid()->toString();
             N8nWorkflow::updateOrCreate(
                 [
-                    'id' => $webhookWorkflowId,
                     'organization_id' => $organization->id,
-                    'workflow_id' => $webhookWorkflowUuid,
-                    'name' => 'Incoming Message Processor',
+                    'name' => 'Incoming Message Processor - ' . \Illuminate\Support\Str::random(6),
                 ],
                 [
+                    'id' => $webhookWorkflowId,
+                    'workflow_id' => $webhookWorkflowUuid,
                     'created_by' => User::where('organization_id', $organization->id)->first()?->id,
                     'workflow_data' => ['nodes' => [], 'connections' => []],
                     // ...other fields as needed...

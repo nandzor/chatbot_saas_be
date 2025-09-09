@@ -50,8 +50,8 @@ class OrganizationFactory extends Factory
         $companySize = $this->faker->randomElement($companySizes);
         $currency = $this->faker->randomElement($currencies);
 
-        // Generate org_code based on business type and random number
-        $orgCode = strtoupper(substr($businessType, 0, 3)) . str_pad($this->faker->numberBetween(1, 999), 3, '0', STR_PAD_LEFT);
+        // Generate unique org_code based on business type and unique identifier
+        $orgCode = strtoupper(substr($businessType, 0, 3)) . str_pad($this->faker->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT);
 
         // Generate company name based on business type
         $companyName = $this->generateCompanyName($businessType, $industry);

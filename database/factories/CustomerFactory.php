@@ -28,7 +28,7 @@ class CustomerFactory extends Factory
         $customerTypes = ['individual', 'business', 'enterprise', 'startup', 'agency'];
         $customerType = $this->faker->randomElement($customerTypes);
 
-        $statuses = ['active', 'inactive', 'pending', 'suspended', 'churned'];
+        $statuses = ['active', 'inactive', 'pending', 'suspended', 'deleted', 'draft', 'published', 'archived'];
         $status = $this->faker->randomElement($statuses);
 
         $sources = ['website', 'referral', 'social_media', 'advertising', 'partnership', 'cold_outreach'];
@@ -48,90 +48,118 @@ class CustomerFactory extends Factory
 
         return [
             'organization_id' => Organization::factory(),
-            'customer_code' => 'CUST-' . strtoupper(Str::random(8)),
+            'external_id' => 'CUST-' . strtoupper(Str::random(8)),
+            'name' => $fullName,
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'full_name' => $fullName,
             'email' => $email,
             'phone' => $phone,
-            'customer_type' => $customerType,
-            'status' => $status,
+            'channel' => $this->faker->randomElement(['whatsapp', 'webchat', 'telegram', 'api', 'facebook', 'instagram', 'line', 'slack', 'discord', 'teams', 'viber', 'wechat']),
+            'channel_user_id' => $this->faker->uuid(),
+            'avatar_url' => $this->faker->optional(0.7)->imageUrl(200, 200, 'people'),
+            'language' => $this->faker->randomElement(['indonesia', 'english', 'javanese', 'sundanese', 'balinese', 'minang', 'chinese', 'japanese', 'korean', 'spanish', 'french', 'german', 'arabic', 'thai', 'vietnamese']),
+            'timezone' => $this->faker->randomElement(['Asia/Jakarta', 'Asia/Singapore', 'America/New_York', 'Europe/London', 'Asia/Tokyo']),
+            'profile_data' => $profileData,
+            'preferences' => $preferences,
+            'tags' => $this->generateCustomerTags($customerType, $profileData['industry'] ?? null),
+            'segments' => $this->generateCustomerSegments($customerType),
             'source' => $source,
-            // Profile Information
-            'company_name' => $profileData['company_name'],
-            'job_title' => $profileData['job_title'],
-            'department' => $profileData['department'],
-            'industry' => $profileData['industry'],
-            'company_size' => $profileData['company_size'],
-            'website' => $profileData['website'],
-            'linkedin_url' => $profileData['linkedin_url'],
-            'twitter_handle' => $profileData['twitter_handle'],
-            // Contact Information
-            'address' => $contactInfo['address'],
-                'city' => $contactInfo['city'],
-                'state' => $contactInfo['state'],
-                'country' => $contactInfo['country'],
-                'postal_code' => $contactInfo['postal_code'],
-                'timezone' => $contactInfo['timezone'],
-                'language' => $contactInfo['language'],
-                'currency' => $contactInfo['currency'],
-                // Customer Details
-                'avatar_url' => $this->faker->optional(0.7)->imageUrl(200, 200, 'people'),
-                'bio' => $this->faker->optional(0.6)->paragraph(),
-                'notes' => $this->faker->optional(0.4)->sentences(2, true),
-                'tags' => json_encode($this->generateCustomerTags($customerType, $industry ?? null)),
-                // Preferences & Settings
-                'communication_preferences' => json_encode($preferences['communication']),
-                'notification_settings' => json_encode($preferences['notifications']),
-                'privacy_settings' => json_encode($preferences['privacy']),
-                'ui_preferences' => json_encode($preferences['ui']),
-                // Engagement & Activity
-                'last_contact_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
-                'last_purchase_at' => $this->faker->optional(0.6)->dateTimeBetween('-1 year', 'now'),
-                'total_purchases' => $this->faker->numberBetween(0, 50),
-                'total_spent' => $this->faker->randomFloat(2, 0, 100000),
-                'average_order_value' => $this->faker->randomFloat(2, 0, 5000),
-                'engagement_score' => $this->faker->randomFloat(2, 0, 100),
-                'loyalty_points' => $this->faker->numberBetween(0, 10000),
-                'referral_count' => $this->faker->numberBetween(0, 20),
-                // Subscription & Billing
-                'subscription_status' => $this->determineSubscriptionStatus($status),
-                'subscription_plan' => $this->faker->optional(0.7)->randomElement(['trial', 'starter', 'professional', 'enterprise']),
-                'billing_cycle' => $this->faker->optional(0.6)->randomElement(['monthly', 'quarterly', 'yearly']),
-                'payment_method' => $this->faker->optional(0.5)->randomElement(['credit_card', 'bank_transfer', 'paypal']),
-                'tax_exempt' => $this->faker->boolean(10),
-                'credit_limit' => $this->faker->optional(0.3)->randomFloat(2, 1000, 50000),
-                // Support & Communication
-                'support_tier' => $this->determineSupportTier($customerType, $status),
-                'assigned_agent_id' => $this->faker->optional(0.4)->uuid(),
-                'preferred_contact_method' => $this->faker->randomElement(['email', 'phone', 'chat', 'video_call']),
-                'communication_frequency' => $this->faker->randomElement(['daily', 'weekly', 'monthly', 'quarterly', 'as_needed']),
-                'marketing_consent' => $this->faker->boolean(70),
-                'newsletter_subscription' => $this->faker->boolean(60),
-                // Integration & API
-                'api_access_enabled' => $this->faker->boolean(30),
-                'api_key' => $this->faker->optional(0.3)->uuid(),
-                'webhook_url' => $this->faker->optional(0.2)->url(),
-                'integration_preferences' => json_encode($this->generateIntegrationPreferences($customerType)),
-                // Analytics & Tracking
-                'first_visit_at' => $this->faker->dateTimeBetween('-2 years', '-6 months'),
-                'last_visit_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
-                'total_visits' => $this->faker->numberBetween(1, 100),
-                'average_session_duration' => $this->faker->numberBetween(60, 3600),
-                'conversion_rate' => $this->faker->randomFloat(2, 0, 15),
-                'customer_lifetime_value' => $this->faker->randomFloat(2, 0, 500000),
-                // Risk & Compliance
-                'risk_level' => $this->determineRiskLevel($status, $totalSpent ?? 0),
-                'compliance_status' => json_encode($this->generateComplianceStatus($customerType)),
-                'verification_status' => $this->faker->randomElement(['unverified', 'pending', 'verified', 'rejected']),
-                'kyc_completed' => $this->faker->boolean(60),
-                'aml_check_passed' => $this->faker->boolean(90),
-                // Metadata
-                'metadata' => json_encode($metadata),
-                // System fields
-                'created_at' => $this->faker->dateTimeBetween('-2 years', 'now'),
-                'updated_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'utm_data' => [
+                'utm_source' => $this->faker->optional(0.6)->randomElement(['google', 'facebook', 'linkedin', 'twitter', 'email']),
+                'utm_medium' => $this->faker->optional(0.6)->randomElement(['cpc', 'social', 'email', 'organic', 'referral']),
+                'utm_campaign' => $this->faker->optional(0.4)->word(),
+                'utm_term' => $this->faker->optional(0.3)->word(),
+                'utm_content' => $this->faker->optional(0.2)->word(),
+            ],
+            'last_interaction_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
+            'total_interactions' => $this->faker->numberBetween(0, 100),
+            'total_messages' => $this->faker->numberBetween(0, 500),
+            'avg_response_time' => $this->faker->optional(0.7)->numberBetween(30, 3600),
+            'satisfaction_score' => $this->faker->optional(0.8)->randomFloat(2, 1, 5),
+            'interaction_patterns' => [
+                'peak_hours' => $this->faker->randomElements(['morning', 'afternoon', 'evening', 'night'], $this->faker->numberBetween(1, 3)),
+                'preferred_days' => $this->faker->randomElements(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'], $this->faker->numberBetween(1, 5)),
+                'response_style' => $this->faker->randomElement(['formal', 'casual', 'technical', 'friendly']),
+                'communication_frequency' => $this->faker->randomElement(['low', 'medium', 'high']),
+            ],
+            'interests' => $this->faker->randomElements(['technology', 'business', 'health', 'education', 'entertainment', 'sports', 'travel', 'food'], $this->faker->numberBetween(2, 5)),
+            'purchase_history' => $this->generatePurchaseHistory(),
+            'sentiment_history' => $this->generateSentimentHistory(),
+            'intent_patterns' => [
+                'primary_intents' => $this->faker->randomElements(['support', 'sales', 'information', 'complaint', 'compliment'], $this->faker->numberBetween(1, 3)),
+                'intent_confidence' => $this->faker->randomFloat(2, 0.5, 1.0),
+                'intent_consistency' => $this->faker->randomFloat(2, 0.3, 1.0),
+            ],
+            'engagement_score' => $this->faker->randomFloat(2, 0, 5),
+            'notes' => $this->faker->optional(0.4)->sentences(2, true),
+            'status' => $status,
+        ];
+    }
+
+    /**
+     * Generate customer segments
+     */
+    private function generateCustomerSegments(string $customerType): array
+    {
+        $segments = [$customerType];
+
+        $additionalSegments = [
+            'new_customer',
+            'returning_customer',
+            'high_value',
+            'enterprise',
+            'startup',
+            'agency',
+            'individual',
+            'verified',
+            'active',
+            'premium'
+        ];
+
+        $selectedSegments = $this->faker->randomElements($additionalSegments, $this->faker->numberBetween(1, 3));
+        return array_unique(array_merge($segments, $selectedSegments));
+    }
+
+    /**
+     * Generate purchase history
+     */
+    private function generatePurchaseHistory(): array
+    {
+        $purchases = [];
+        $purchaseCount = $this->faker->numberBetween(0, 10);
+
+        for ($i = 0; $i < $purchaseCount; $i++) {
+            $purchases[] = [
+                'id' => $this->faker->uuid(),
+                'product' => $this->faker->randomElement(['Basic Plan', 'Pro Plan', 'Enterprise Plan', 'Add-on Service']),
+                'amount' => $this->faker->randomFloat(2, 10, 1000),
+                'currency' => $this->faker->randomElement(['USD', 'IDR', 'EUR']),
+                'date' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d'),
+                'status' => $this->faker->randomElement(['completed', 'pending', 'cancelled', 'refunded']),
             ];
+        }
+
+        return $purchases;
+    }
+
+    /**
+     * Generate sentiment history
+     */
+    private function generateSentimentHistory(): array
+    {
+        $sentiments = [];
+        $sentimentCount = $this->faker->numberBetween(0, 20);
+
+        for ($i = 0; $i < $sentimentCount; $i++) {
+            $sentiments[] = [
+                'sentiment' => $this->faker->randomElement(['positive', 'neutral', 'negative']),
+                'score' => $this->faker->randomFloat(2, -1, 1),
+                'timestamp' => $this->faker->dateTimeBetween('-6 months', 'now')->format('c'),
+                'context' => $this->faker->optional(0.7)->sentence(),
+            ];
+        }
+
+        return $sentiments;
     }
 
     /**
@@ -381,10 +409,9 @@ class CustomerFactory extends Factory
     {
         return match($status) {
             'active' => 'subscribed',
-            'trial' => 'trial',
             'pending' => 'pending',
-            'inactive', 'suspended' => 'unsubscribed',
-            'churned' => 'churned',
+            'inactive', 'suspended', 'deleted', 'archived' => 'unsubscribed',
+            'draft', 'published' => 'trial',
             default => 'none'
         };
     }
@@ -413,7 +440,7 @@ class CustomerFactory extends Factory
      */
     private function determineRiskLevel(string $status, float $totalSpent): string
     {
-        if ($status === 'churned' || $status === 'suspended') {
+        if ($status === 'deleted' || $status === 'suspended' || $status === 'archived') {
             return 'high';
         }
 
@@ -466,11 +493,10 @@ class CustomerFactory extends Factory
     {
         return match($status) {
             'active' => 'closed_won',
-            'trial' => 'trial',
             'pending' => 'proposal',
             'inactive' => 'lead',
-            'suspended' => 'churned',
-            'churned' => 'churned',
+            'suspended', 'deleted', 'archived' => 'churned',
+            'draft', 'published' => 'trial',
             default => 'lead'
         };
     }
@@ -514,8 +540,7 @@ class CustomerFactory extends Factory
     public function churned(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'churned',
-            'subscription_status' => 'churned',
+            'status' => 'archived',
             'last_contact_at' => $this->faker->dateTimeBetween('-1 year', '-6 months'),
         ]);
     }
