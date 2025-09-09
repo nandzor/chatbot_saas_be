@@ -67,111 +67,131 @@ class AuthTestDataSeeder extends Seeder
     private function createTestUsers(Organization $organization): void
     {
         // Super Admin
-        User::create([
-            'organization_id' => $organization->id,
-            'email' => 'superadmin@test.com',
-            'username' => 'superadmin',
-            'password_hash' => Hash::make('Password123!'),
-            'full_name' => 'Super Administrator',
-            'first_name' => 'Super',
-            'last_name' => 'Administrator',
-            'role' => 'super_admin',
-            'status' => 'active',
-            'is_email_verified' => true,
-            'phone' => '+6281234567890',
-            'ui_preferences' => [
-                'theme' => 'light',
-                'language' => 'id',
-                'timezone' => 'Asia/Jakarta',
-                'notifications' => ['email' => true, 'push' => true]
+        User::updateOrCreate(
+            [
+                'organization_id' => $organization->id,
+                'email' => 'superadmin@test.com',
             ],
-        ]);
+            [
+                'username' => 'superadmin',
+                'password_hash' => Hash::make('Password123!'),
+                'full_name' => 'Super Administrator',
+                'first_name' => 'Super',
+                'last_name' => 'Administrator',
+                'role' => 'super_admin',
+                'status' => 'active',
+                'is_email_verified' => true,
+                'phone' => '+6281234567890',
+                'ui_preferences' => [
+                    'theme' => 'light',
+                    'language' => 'id',
+                    'timezone' => 'Asia/Jakarta',
+                    'notifications' => ['email' => true, 'push' => true]
+                ],
+            ]
+        );
 
         // Organization Admin
-        User::create([
-            'organization_id' => $organization->id,
-            'email' => 'admin@test.com',
-            'username' => 'admin',
-            'password_hash' => Hash::make('Password123!'),
-            'full_name' => 'Organization Administrator',
-            'first_name' => 'Organization',
-            'last_name' => 'Administrator',
-            'role' => 'org_admin',
-            'status' => 'active',
-            'is_email_verified' => true,
-            'phone' => '+6281234567891',
-            'ui_preferences' => [
-                'theme' => 'light',
-                'language' => 'id',
-                'timezone' => 'Asia/Jakarta',
-                'notifications' => ['email' => true, 'push' => true]
+        User::updateOrCreate(
+            [
+                'organization_id' => $organization->id,
+                'email' => 'admin@test.com',
             ],
-        ]);
+            [
+                'username' => 'admin',
+                'password_hash' => Hash::make('Password123!'),
+                'full_name' => 'Organization Administrator',
+                'first_name' => 'Organization',
+                'last_name' => 'Administrator',
+                'role' => 'org_admin',
+                'status' => 'active',
+                'is_email_verified' => true,
+                'phone' => '+6281234567891',
+                'ui_preferences' => [
+                    'theme' => 'light',
+                    'language' => 'id',
+                    'timezone' => 'Asia/Jakarta',
+                    'notifications' => ['email' => true, 'push' => true]
+                ],
+            ]
+        );
 
         // Regular Customer
-        User::create([
-            'organization_id' => $organization->id,
-            'email' => 'customer@test.com',
-            'username' => 'customer',
-            'password_hash' => Hash::make('Password123!'),
-            'full_name' => 'Test Customer',
-            'first_name' => 'Test',
-            'last_name' => 'Customer',
-            'role' => 'customer',
-            'status' => 'active',
-            'is_email_verified' => true,
-            'phone' => '+6281234567892',
-            'ui_preferences' => [
-                'theme' => 'light',
-                'language' => 'id',
-                'timezone' => 'Asia/Jakarta',
-                'notifications' => ['email' => true, 'push' => true]
+        User::updateOrCreate(
+            [
+                'organization_id' => $organization->id,
+                'email' => 'customer@test.com',
             ],
-        ]);
+            [
+                'username' => 'customer',
+                'password_hash' => Hash::make('Password123!'),
+                'full_name' => 'Test Customer',
+                'first_name' => 'Test',
+                'last_name' => 'Customer',
+                'role' => 'customer',
+                'status' => 'active',
+                'is_email_verified' => true,
+                'phone' => '+6281234567892',
+                'ui_preferences' => [
+                    'theme' => 'light',
+                    'language' => 'id',
+                    'timezone' => 'Asia/Jakarta',
+                    'notifications' => ['email' => true, 'push' => true]
+                ],
+            ]
+        );
 
         // Agent
-        User::create([
-            'organization_id' => $organization->id,
-            'email' => 'agent@test.com',
-            'username' => 'agent',
-            'password_hash' => Hash::make('Password123!'),
-            'full_name' => 'Test Agent',
-            'first_name' => 'Test',
-            'last_name' => 'Agent',
-            'role' => 'agent',
-            'status' => 'active',
-            'is_email_verified' => true,
-            'phone' => '+6281234567893',
-            'ui_preferences' => [
-                'theme' => 'light',
-                'language' => 'id',
-                'timezone' => 'Asia/Jakarta',
-                'notifications' => ['email' => true, 'push' => true]
+        User::updateOrCreate(
+            [
+                'organization_id' => $organization->id,
+                'email' => 'agent@test.com',
             ],
-        ]);
+            [
+                'username' => 'agent',
+                'password_hash' => Hash::make('Password123!'),
+                'full_name' => 'Test Agent',
+                'first_name' => 'Test',
+                'last_name' => 'Agent',
+                'role' => 'agent',
+                'status' => 'active',
+                'is_email_verified' => true,
+                'phone' => '+6281234567893',
+                'ui_preferences' => [
+                    'theme' => 'light',
+                    'language' => 'id',
+                    'timezone' => 'Asia/Jakarta',
+                    'notifications' => ['email' => true, 'push' => true]
+                ],
+            ]
+        );
 
         // Locked User (for testing)
-        User::create([
-            'organization_id' => $organization->id,
-            'email' => 'locked@test.com',
-            'username' => 'locked',
-            'password_hash' => Hash::make('Password123!'),
-            'full_name' => 'Locked User',
-            'first_name' => 'Locked',
-            'last_name' => 'User',
-            'role' => 'customer',
-            'status' => 'suspended',
-            'is_email_verified' => true,
-            'locked_until' => now()->addHours(1),
-            'failed_login_attempts' => 5,
-            'phone' => '+6281234567894',
-            'ui_preferences' => [
-                'theme' => 'light',
-                'language' => 'id',
-                'timezone' => 'Asia/Jakarta',
-                'notifications' => ['email' => true, 'push' => true]
+        User::updateOrCreate(
+            [
+                'organization_id' => $organization->id,
+                'email' => 'locked@test.com',
             ],
-        ]);
+            [
+                'username' => 'locked',
+                'password_hash' => Hash::make('Password123!'),
+                'full_name' => 'Locked User',
+                'first_name' => 'Locked',
+                'last_name' => 'User',
+                'role' => 'customer',
+                'status' => 'suspended',
+                'is_email_verified' => true,
+                'locked_until' => now()->addHours(1),
+                'failed_login_attempts' => 5,
+                'phone' => '+6281234567894',
+                'ui_preferences' => [
+                    'theme' => 'light',
+                    'language' => 'id',
+                    'timezone' => 'Asia/Jakarta',
+                    'notifications' => ['email' => true, 'push' => true]
+                ],
+            ]
+        );
 
         $this->command->info('Test users created:');
         $this->command->info('- superadmin@test.com (Password123!)');

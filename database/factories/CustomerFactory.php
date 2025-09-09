@@ -48,7 +48,6 @@ class CustomerFactory extends Factory
 
         return [
             'organization_id' => Organization::factory(),
-            'user_id' => User::factory(),
             'customer_code' => 'CUST-' . strtoupper(Str::random(8)),
             'first_name' => $firstName,
             'last_name' => $lastName,
@@ -58,7 +57,6 @@ class CustomerFactory extends Factory
             'customer_type' => $customerType,
             'status' => $status,
             'source' => $source,
-
             // Profile Information
             'company_name' => $profileData['company_name'],
             'job_title' => $profileData['job_title'],
@@ -68,83 +66,72 @@ class CustomerFactory extends Factory
             'website' => $profileData['website'],
             'linkedin_url' => $profileData['linkedin_url'],
             'twitter_handle' => $profileData['twitter_handle'],
-
             // Contact Information
             'address' => $contactInfo['address'],
-            'city' => $contactInfo['city'],
-            'state' => $contactInfo['state'],
-            'country' => $contactInfo['country'],
-            'postal_code' => $contactInfo['postal_code'],
-            'timezone' => $contactInfo['timezone'],
-            'language' => $contactInfo['language'],
-            'currency' => $contactInfo['currency'],
-
-            // Customer Details
-            'avatar_url' => $this->faker->optional(0.7)->imageUrl(200, 200, 'people'),
-            'bio' => $this->faker->optional(0.6)->paragraph(),
-            'notes' => $this->faker->optional(0.4)->sentences(2, true),
-            'tags' => $this->generateCustomerTags($customerType, $industry ?? null),
-
-            // Preferences & Settings
-            'communication_preferences' => $preferences['communication'],
-            'notification_settings' => $preferences['notifications'],
-            'privacy_settings' => $preferences['privacy'],
-            'ui_preferences' => $preferences['ui'],
-
-            // Engagement & Activity
-            'last_contact_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
-            'last_purchase_at' => $this->faker->optional(0.6)->dateTimeBetween('-1 year', 'now'),
-            'total_purchases' => $this->faker->numberBetween(0, 50),
-            'total_spent' => $this->faker->randomFloat(2, 0, 100000),
-            'average_order_value' => $this->faker->randomFloat(2, 0, 5000),
-            'engagement_score' => $this->faker->randomFloat(2, 0, 100),
-            'loyalty_points' => $this->faker->numberBetween(0, 10000),
-            'referral_count' => $this->faker->numberBetween(0, 20),
-
-            // Subscription & Billing
-            'subscription_status' => $this->determineSubscriptionStatus($status),
-            'subscription_plan' => $this->faker->optional(0.7)->randomElement(['trial', 'starter', 'professional', 'enterprise']),
-            'billing_cycle' => $this->faker->optional(0.6)->randomElement(['monthly', 'quarterly', 'yearly']),
-            'payment_method' => $this->faker->optional(0.5)->randomElement(['credit_card', 'bank_transfer', 'paypal']),
-            'tax_exempt' => $this->faker->boolean(10),
-            'credit_limit' => $this->faker->optional(0.3)->randomFloat(2, 1000, 50000),
-
-            // Support & Communication
-            'support_tier' => $this->determineSupportTier($customerType, $status),
-            'assigned_agent_id' => $this->faker->optional(0.4)->uuid(),
-            'preferred_contact_method' => $this->faker->randomElement(['email', 'phone', 'chat', 'video_call']),
-            'communication_frequency' => $this->faker->randomElement(['daily', 'weekly', 'monthly', 'quarterly', 'as_needed']),
-            'marketing_consent' => $this->faker->boolean(70),
-            'newsletter_subscription' => $this->faker->boolean(60),
-
-            // Integration & API
-            'api_access_enabled' => $this->faker->boolean(30),
-            'api_key' => $this->faker->optional(0.3)->uuid(),
-            'webhook_url' => $this->faker->optional(0.2)->url(),
-            'integration_preferences' => $this->generateIntegrationPreferences($customerType),
-
-            // Analytics & Tracking
-            'first_visit_at' => $this->faker->dateTimeBetween('-2 years', '-6 months'),
-            'last_visit_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
-            'total_visits' => $this->faker->numberBetween(1, 100),
-            'average_session_duration' => $this->faker->numberBetween(60, 3600),
-            'conversion_rate' => $this->faker->randomFloat(2, 0, 15),
-            'customer_lifetime_value' => $this->faker->randomFloat(2, 0, 500000),
-
-            // Risk & Compliance
-            'risk_level' => $this->determineRiskLevel($status, $totalSpent ?? 0),
-            'compliance_status' => $this->generateComplianceStatus($customerType),
-            'verification_status' => $this->faker->randomElement(['unverified', 'pending', 'verified', 'rejected']),
-            'kyc_completed' => $this->faker->boolean(60),
-            'aml_check_passed' => $this->faker->boolean(90),
-
-            // Metadata
-            'metadata' => $metadata,
-
-            // System fields
-            'created_at' => $this->faker->dateTimeBetween('-2 years', 'now'),
-            'updated_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
-        ];
+                'city' => $contactInfo['city'],
+                'state' => $contactInfo['state'],
+                'country' => $contactInfo['country'],
+                'postal_code' => $contactInfo['postal_code'],
+                'timezone' => $contactInfo['timezone'],
+                'language' => $contactInfo['language'],
+                'currency' => $contactInfo['currency'],
+                // Customer Details
+                'avatar_url' => $this->faker->optional(0.7)->imageUrl(200, 200, 'people'),
+                'bio' => $this->faker->optional(0.6)->paragraph(),
+                'notes' => $this->faker->optional(0.4)->sentences(2, true),
+                'tags' => json_encode($this->generateCustomerTags($customerType, $industry ?? null)),
+                // Preferences & Settings
+                'communication_preferences' => json_encode($preferences['communication']),
+                'notification_settings' => json_encode($preferences['notifications']),
+                'privacy_settings' => json_encode($preferences['privacy']),
+                'ui_preferences' => json_encode($preferences['ui']),
+                // Engagement & Activity
+                'last_contact_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
+                'last_purchase_at' => $this->faker->optional(0.6)->dateTimeBetween('-1 year', 'now'),
+                'total_purchases' => $this->faker->numberBetween(0, 50),
+                'total_spent' => $this->faker->randomFloat(2, 0, 100000),
+                'average_order_value' => $this->faker->randomFloat(2, 0, 5000),
+                'engagement_score' => $this->faker->randomFloat(2, 0, 100),
+                'loyalty_points' => $this->faker->numberBetween(0, 10000),
+                'referral_count' => $this->faker->numberBetween(0, 20),
+                // Subscription & Billing
+                'subscription_status' => $this->determineSubscriptionStatus($status),
+                'subscription_plan' => $this->faker->optional(0.7)->randomElement(['trial', 'starter', 'professional', 'enterprise']),
+                'billing_cycle' => $this->faker->optional(0.6)->randomElement(['monthly', 'quarterly', 'yearly']),
+                'payment_method' => $this->faker->optional(0.5)->randomElement(['credit_card', 'bank_transfer', 'paypal']),
+                'tax_exempt' => $this->faker->boolean(10),
+                'credit_limit' => $this->faker->optional(0.3)->randomFloat(2, 1000, 50000),
+                // Support & Communication
+                'support_tier' => $this->determineSupportTier($customerType, $status),
+                'assigned_agent_id' => $this->faker->optional(0.4)->uuid(),
+                'preferred_contact_method' => $this->faker->randomElement(['email', 'phone', 'chat', 'video_call']),
+                'communication_frequency' => $this->faker->randomElement(['daily', 'weekly', 'monthly', 'quarterly', 'as_needed']),
+                'marketing_consent' => $this->faker->boolean(70),
+                'newsletter_subscription' => $this->faker->boolean(60),
+                // Integration & API
+                'api_access_enabled' => $this->faker->boolean(30),
+                'api_key' => $this->faker->optional(0.3)->uuid(),
+                'webhook_url' => $this->faker->optional(0.2)->url(),
+                'integration_preferences' => json_encode($this->generateIntegrationPreferences($customerType)),
+                // Analytics & Tracking
+                'first_visit_at' => $this->faker->dateTimeBetween('-2 years', '-6 months'),
+                'last_visit_at' => $this->faker->optional(0.8)->dateTimeBetween('-6 months', 'now'),
+                'total_visits' => $this->faker->numberBetween(1, 100),
+                'average_session_duration' => $this->faker->numberBetween(60, 3600),
+                'conversion_rate' => $this->faker->randomFloat(2, 0, 15),
+                'customer_lifetime_value' => $this->faker->randomFloat(2, 0, 500000),
+                // Risk & Compliance
+                'risk_level' => $this->determineRiskLevel($status, $totalSpent ?? 0),
+                'compliance_status' => json_encode($this->generateComplianceStatus($customerType)),
+                'verification_status' => $this->faker->randomElement(['unverified', 'pending', 'verified', 'rejected']),
+                'kyc_completed' => $this->faker->boolean(60),
+                'aml_check_passed' => $this->faker->boolean(90),
+                // Metadata
+                'metadata' => json_encode($metadata),
+                // System fields
+                'created_at' => $this->faker->dateTimeBetween('-2 years', 'now'),
+                'updated_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            ];
     }
 
     /**
@@ -447,10 +434,11 @@ class CustomerFactory extends Factory
         $complianceStandards = ['gdpr', 'ccpa', 'sox', 'hipaa', 'iso27001'];
         $relevantStandards = $this->faker->randomElements($complianceStandards, $this->faker->numberBetween(0, 3));
 
+        $lastAudit = $this->faker->optional(0.6)->dateTimeBetween('-1 year', 'now');
         return [
             'standards' => $relevantStandards,
             'compliance_score' => $this->faker->randomFloat(2, 0.7, 1.0),
-            'last_audit' => $this->faker->optional(0.6)->dateTimeBetween('-1 year', 'now')->format('c'),
+            'last_audit' => $lastAudit ? $lastAudit->format('c') : null,
             'next_audit_due' => $this->faker->dateTimeBetween('now', '+1 year')->format('c'),
             'risk_level' => $this->faker->randomElement(['low', 'medium', 'high'])
         ];

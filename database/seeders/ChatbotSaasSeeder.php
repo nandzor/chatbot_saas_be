@@ -22,14 +22,15 @@ use App\Models\UserRole;
 use App\Models\Webhook;
 use Illuminate\Database\Seeder;
 use Faker\Generator as Faker;
+use Illuminate\Support\Facades\Hash;
 
 class ChatbotSaasSeeder extends Seeder
 {
     protected $faker;
 
-    public function __construct(Faker $faker)
+    public function __construct()
     {
-        $this->faker = $faker;
+        $this->faker = \Faker\Factory::create('id_ID');
     }
 
     /**
@@ -86,36 +87,156 @@ class ChatbotSaasSeeder extends Seeder
     {
         $plans = [];
 
-        // Trial Plan
-        $plans['trial'] = SubscriptionPlan::factory()->trial()->create([
-            'name' => 'Trial',
-            'display_name' => 'Free Trial',
-            'description' => '14-day free trial with basic features',
-        ]);
+        // Ensure baseline plans exist without relying on factory state methods
+        $plans['trial'] = SubscriptionPlan::firstOrCreate(
+            ['name' => 'trial'],
+            [
+                'display_name' => 'Free Trial',
+                'description' => '14-day free trial with basic features',
+                'tier' => 'trial',
+                'price_monthly' => 0,
+                'price_quarterly' => 0,
+                'price_yearly' => 0,
+                'currency' => 'IDR',
+                'max_agents' => 1,
+                'max_channels' => 1,
+                'max_knowledge_articles' => 10,
+                'max_monthly_messages' => 100,
+                'max_monthly_ai_requests' => 50,
+                'max_storage_gb' => 1,
+                'max_api_calls_per_day' => 100,
+                'features' => [
+                    'ai_chat' => true,
+                    'knowledge_base' => true,
+                    'multi_channel' => false,
+                    'api_access' => false,
+                    'analytics' => false,
+                    'custom_branding' => false,
+                    'priority_support' => false,
+                    'white_label' => false,
+                    'advanced_analytics' => false,
+                    'custom_integrations' => false,
+                ],
+                'trial_days' => 14,
+                'is_popular' => true,
+                'is_custom' => false,
+                'sort_order' => 0,
+                'status' => 'active',
+            ]
+        );
 
-        // Starter Plan
-        $plans['starter'] = SubscriptionPlan::factory()->starter()->create([
-            'name' => 'Starter',
-            'display_name' => 'Starter Plan',
-            'description' => 'Perfect for small businesses getting started',
-        ]);
+        $plans['starter'] = SubscriptionPlan::firstOrCreate(
+            ['name' => 'starter'],
+            [
+                'display_name' => 'Starter Plan',
+                'description' => 'Perfect for small businesses getting started',
+                'tier' => 'starter',
+                'price_monthly' => 1000000,
+                'price_quarterly' => 4000000,
+                'price_yearly' => 12000000,
+                'currency' => 'IDR',
+                'max_agents' => 2,
+                'max_channels' => 3,
+                'max_knowledge_articles' => 100,
+                'max_monthly_messages' => 1000,
+                'max_monthly_ai_requests' => 500,
+                'max_storage_gb' => 5,
+                'max_api_calls_per_day' => 1000,
+                'features' => [
+                    'ai_chat' => true,
+                    'knowledge_base' => true,
+                    'multi_channel' => true,
+                    'api_access' => false,
+                    'analytics' => false,
+                    'custom_branding' => false,
+                    'priority_support' => false,
+                    'white_label' => false,
+                    'advanced_analytics' => false,
+                    'custom_integrations' => false,
+                ],
+                'trial_days' => 14,
+                'is_popular' => true,
+                'is_custom' => false,
+                'sort_order' => 1,
+                'status' => 'active',
+            ]
+        );
 
-        // Professional Plan (Popular)
-        $plans['professional'] = SubscriptionPlan::factory()->professional()->create([
-            'name' => 'Professional',
-            'display_name' => 'Professional Plan',
-            'description' => 'Advanced features for growing businesses',
-            'is_popular' => true,
-        ]);
+        $plans['professional'] = SubscriptionPlan::firstOrCreate(
+            ['name' => 'professional'],
+            [
+                'display_name' => 'Professional Plan',
+                'description' => 'Advanced features for growing businesses',
+                'tier' => 'professional',
+                'price_monthly' => 2000000,
+                'price_quarterly' => 8000000,
+                'price_yearly' => 24000000,
+                'currency' => 'IDR',
+                'max_agents' => 10,
+                'max_channels' => 10,
+                'max_knowledge_articles' => 1000,
+                'max_monthly_messages' => 10000,
+                'max_monthly_ai_requests' => 5000,
+                'max_storage_gb' => 50,
+                'max_api_calls_per_day' => 10000,
+                'features' => [
+                    'ai_chat' => true,
+                    'knowledge_base' => true,
+                    'multi_channel' => true,
+                    'api_access' => true,
+                    'analytics' => true,
+                    'custom_branding' => true,
+                    'priority_support' => false,
+                    'white_label' => false,
+                    'advanced_analytics' => false,
+                    'custom_integrations' => false,
+                ],
+                'trial_days' => 30,
+                'is_popular' => true,
+                'is_custom' => false,
+                'sort_order' => 2,
+                'status' => 'active',
+            ]
+        );
 
-        // Enterprise Plan
-        $plans['enterprise'] = SubscriptionPlan::factory()->enterprise()->create([
-            'name' => 'Enterprise',
-            'display_name' => 'Enterprise Plan',
-            'description' => 'Full-featured plan for large organizations',
-        ]);
+        $plans['enterprise'] = SubscriptionPlan::firstOrCreate(
+            ['name' => 'enterprise'],
+            [
+                'display_name' => 'Enterprise Plan',
+                'description' => 'Full-featured plan for large organizations',
+                'tier' => 'enterprise',
+                'price_monthly' => 2700000,
+                'price_quarterly' => 10800000,
+                'price_yearly' => 43200000,
+                'currency' => 'IDR',
+                'max_agents' => 100,
+                'max_channels' => 50,
+                'max_knowledge_articles' => 10000,
+                'max_monthly_messages' => 100000,
+                'max_monthly_ai_requests' => 50000,
+                'max_storage_gb' => 500,
+                'max_api_calls_per_day' => 100000,
+                'features' => [
+                    'ai_chat' => true,
+                    'knowledge_base' => true,
+                    'multi_channel' => true,
+                    'api_access' => true,
+                    'analytics' => true,
+                    'custom_branding' => true,
+                    'priority_support' => true,
+                    'white_label' => true,
+                    'advanced_analytics' => true,
+                    'custom_integrations' => true,
+                ],
+                'trial_days' => 30,
+                'is_popular' => false,
+                'is_custom' => false,
+                'sort_order' => 3,
+                'status' => 'active',
+            ]
+        );
 
-        $this->command->info('   ✓ Created ' . count($plans) . ' subscription plans');
+        $this->command->info('   ✓ Ensured subscription plans are present');
         return $plans;
     }
 
@@ -123,37 +244,51 @@ class ChatbotSaasSeeder extends Seeder
     {
         $organizations = [];
 
-        // Demo Organization (Professional Plan)
-        $organizations['demo'] = Organization::factory()->active()->create([
-            'org_code' => 'DEMO001',
-            'name' => 'Demo Corporation',
-            'display_name' => 'Demo Corp',
-            'email' => 'admin@demo.com',
-            'subscription_plan_id' => $plans['professional']->id,
-            'subscription_status' => 'active',
-        ]);
+        // Demo Organization (Professional Plan) - idempotent
+        $organizations['demo'] = Organization::updateOrCreate(
+            ['org_code' => 'DEMO001'],
+            [
+                'name' => 'Demo Corporation',
+                'display_name' => 'Demo Corp',
+                'email' => 'admin@demo.com',
+                'subscription_plan_id' => $plans['professional']->id,
+                'subscription_status' => 'active',
+                'billing_cycle' => 'monthly',
+                'status' => 'active',
+            ]
+        );
 
-        // Test Organization (Trial)
-        $organizations['test'] = Organization::factory()->withTrial()->create([
-            'org_code' => 'TEST001',
-            'name' => 'Test Company Ltd',
-            'display_name' => 'Test Co.',
-            'email' => 'admin@test.com',
-            'subscription_plan_id' => $plans['trial']->id,
-        ]);
+        // Test Organization (Trial) - idempotent
+        $organizations['test'] = Organization::updateOrCreate(
+            ['org_code' => 'TEST001'],
+            [
+                'name' => 'Test Company Ltd',
+                'display_name' => 'Test Co.',
+                'email' => 'admin@test.com',
+                'subscription_plan_id' => $plans['trial']->id,
+                'subscription_status' => 'trial',
+                'trial_ends_at' => now()->addDays(14),
+                'billing_cycle' => 'monthly',
+                'status' => 'active',
+            ]
+        );
 
-        // Enterprise Organization
-        $organizations['enterprise'] = Organization::factory()->enterprise()->create([
-            'org_code' => 'ENT001',
-            'name' => 'Enterprise Solutions Inc',
-            'display_name' => 'Enterprise Solutions',
-            'email' => 'admin@enterprise.com',
-            'subscription_plan_id' => $plans['enterprise']->id,
-            'subscription_status' => 'active',
-        ]);
+        // Enterprise Organization (active) - idempotent
+        $organizations['enterprise'] = Organization::updateOrCreate(
+            ['org_code' => 'ENT001'],
+            [
+                'name' => 'Enterprise Solutions Inc',
+                'display_name' => 'Enterprise Solutions',
+                'email' => 'admin@enterprise.com',
+                'subscription_plan_id' => $plans['enterprise']->id,
+                'subscription_status' => 'active',
+                'billing_cycle' => 'yearly',
+                'status' => 'active',
+            ]
+        );
 
         // Additional random organizations
-        $additionalOrgs = Organization::factory(3)->active()->create();
+        $additionalOrgs = Organization::factory(3)->create();
         foreach ($additionalOrgs as $index => $org) {
             $organizations["org_$index"] = $org;
         }
@@ -165,35 +300,83 @@ class ChatbotSaasSeeder extends Seeder
     private function createUsers(array $organizations): void
     {
         foreach ($organizations as $key => $organization) {
-            // Create admin user
-            User::factory()->admin()->create([
-                'organization_id' => $organization->id,
-                'email' => "admin@{$organization->org_code}.com",
-                'username' => "admin_{$organization->org_code}",
-                'full_name' => 'Admin User',
-                'role' => 'org_admin',
-            ]);
-
-            // Create agent users (2-5 per organization)
-            $agentCount = rand(2, 5);
-            $agents = User::factory($agentCount)->agent()->create([
-                'organization_id' => $organization->id,
-            ]);
-
-            // Create Agent profiles for agent users
-            foreach ($agents as $agentUser) {
-                Agent::factory()->create([
-                    'user_id' => $agentUser->id,
+            // Create or update admin user (idempotent)
+            User::updateOrCreate(
+                [
                     'organization_id' => $organization->id,
-                    'agent_code' => 'AGT' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT),
-                ]);
+                    'email' => "admin@{$organization->org_code}.com",
+                ],
+                [
+                    'username' => "admin_{$organization->org_code}",
+                    'full_name' => 'Admin User',
+                    'password_hash' => Hash::make('Admin123!'),
+                    'role' => 'org_admin',
+                    'is_email_verified' => true,
+                    'status' => 'active',
+                ]
+            );
+
+            // Create agent users (2-5 per organization) - idempotent by username
+            $agentCount = rand(2, 5);
+            $agents = collect();
+            for ($i = 0; $i < $agentCount; $i++) {
+                $email = "agent{$i}@{$organization->org_code}.com";
+                $username = "agent_{$organization->org_code}_{$i}";
+                $user = User::updateOrCreate(
+                    [
+                        'organization_id' => $organization->id,
+                        'email' => $email,
+                    ],
+                    [
+                        'username' => $username,
+                        'full_name' => 'Agent User',
+                        'password_hash' => Hash::make('Agent123!'),
+                        'role' => 'agent',
+                        'is_email_verified' => true,
+                        'status' => 'active',
+                    ]
+                );
+                $agents->push($user);
             }
 
-            // Create customer users (5-10 per organization)
+            // Create Agent profiles for agent users (no factory dependency)
+            foreach ($agents as $agentUser) {
+                Agent::updateOrCreate(
+                    [
+                        'user_id' => $agentUser->id,
+                        'organization_id' => $organization->id,
+                    ],
+                    [
+                        'agent_code' => 'AGT' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT),
+                        'display_name' => $agentUser->full_name ?? $agentUser->username,
+                        'availability_status' => 'online',
+                        'max_concurrent_chats' => 3,
+                        'current_active_chats' => 0,
+                        'status' => 'active',
+                    ]
+                );
+            }
+
+            // Create customer users (5-10 per organization) - idempotent by username
             $customerCount = rand(5, 10);
-            User::factory($customerCount)->customer()->create([
-                'organization_id' => $organization->id,
-            ]);
+            for ($i = 0; $i < $customerCount; $i++) {
+                $email = "customer{$i}@{$organization->org_code}.com";
+                $username = "customer_{$organization->org_code}_{$i}";
+                User::updateOrCreate(
+                    [
+                        'organization_id' => $organization->id,
+                        'email' => $email,
+                    ],
+                    [
+                        'username' => $username,
+                        'full_name' => 'Customer User',
+                        'password_hash' => Hash::make('Customer123!'),
+                        'role' => 'customer',
+                        'is_email_verified' => true,
+                        'status' => 'active',
+                    ]
+                );
+            }
 
             $this->command->info("   ✓ Created users for {$organization->name}");
         }
@@ -205,63 +388,171 @@ class ChatbotSaasSeeder extends Seeder
             // Create knowledge base categories
             $categories = [];
 
-            // Main categories
-            $categories['general'] = KnowledgeBaseCategory::factory()->featured()->create([
-                'organization_id' => $organization->id,
-                'name' => 'General FAQ',
-                'slug' => 'general-faq',
-                'description' => 'Frequently asked questions and general information',
-                'icon' => 'help-circle',
-            ]);
+            // Main categories (idempotent by organization_id + slug)
+            $categories['general'] = KnowledgeBaseCategory::updateOrCreate(
+                [
+                    'organization_id' => $organization->id,
+                    'slug' => 'general-faq',
+                ],
+                [
+                    'name' => 'General FAQ',
+                    'description' => 'Frequently asked questions and general information',
+                    'icon' => 'help-circle',
+                    'is_featured' => true,
+                    'is_public' => true,
+                    'supports_articles' => true,
+                    'supports_qa' => true,
+                    'supports_faq' => true,
+                    'status' => 'active',
+                ]
+            );
 
-            $categories['technical'] = KnowledgeBaseCategory::factory()->system()->create([
-                'organization_id' => $organization->id,
-                'name' => 'Technical Support',
-                'slug' => 'technical-support',
-                'description' => 'Technical help and troubleshooting guides',
-                'icon' => 'settings',
-            ]);
+            $categories['technical'] = KnowledgeBaseCategory::updateOrCreate(
+                [
+                    'organization_id' => $organization->id,
+                    'slug' => 'technical-support',
+                ],
+                [
+                    'name' => 'Technical Support',
+                    'description' => 'Technical help and troubleshooting guides',
+                    'icon' => 'settings',
+                    'is_system_category' => true,
+                    'is_public' => true,
+                    'supports_articles' => true,
+                    'supports_qa' => true,
+                    'supports_faq' => true,
+                    'status' => 'active',
+                ]
+            );
 
-            $categories['product'] = KnowledgeBaseCategory::factory()->create([
-                'organization_id' => $organization->id,
-                'name' => 'Product Information',
-                'slug' => 'product-info',
-                'description' => 'Product features and specifications',
-                'icon' => 'package',
-            ]);
+            $categories['product'] = KnowledgeBaseCategory::updateOrCreate(
+                [
+                    'organization_id' => $organization->id,
+                    'slug' => 'product-info',
+                ],
+                [
+                    'name' => 'Product Information',
+                    'description' => 'Product features and specifications',
+                    'icon' => 'package',
+                    'is_public' => true,
+                    'supports_articles' => true,
+                    'supports_qa' => true,
+                    'supports_faq' => true,
+                    'status' => 'active',
+                ]
+            );
 
-            // Create subcategories
-            $subCategory = KnowledgeBaseCategory::factory()->withParent($categories['technical'])->create([
-                'organization_id' => $organization->id,
-                'name' => 'Troubleshooting',
-                'slug' => 'troubleshooting',
-            ]);
+            // Create subcategories without factory state helper
+            $subCategory = KnowledgeBaseCategory::updateOrCreate(
+                [
+                    'organization_id' => $organization->id,
+                    'slug' => 'troubleshooting',
+                ],
+                [
+                    'parent_id' => $categories['technical']->id,
+                    'name' => 'Troubleshooting',
+                    'description' => 'Troubleshooting guides and resolutions',
+                    'supports_articles' => true,
+                    'supports_qa' => true,
+                    'supports_faq' => true,
+                    'is_public' => true,
+                    'status' => 'active',
+                ]
+            );
 
             // Create knowledge base items for each category
             foreach ($categories as $category) {
-                // Articles
-                KnowledgeBaseItem::factory(3)->article()->published()->create([
-                    'organization_id' => $organization->id,
-                    'category_id' => $category->id,
-                ]);
+                $authorId = User::where('organization_id', $organization->id)->value('id');
 
-                // Q&A Collections
-                KnowledgeBaseItem::factory(2)->qaCollection()->published()->create([
-                    'organization_id' => $organization->id,
-                    'category_id' => $category->id,
-                ]);
+                // Articles (3)
+                for ($i = 0; $i < 3; $i++) {
+                    $title = $this->faker->sentence(6, true);
+                    $content = '<h2>Introduction</h2><p>' . $this->faker->paragraphs(3, true) . '</p>';
+                    KnowledgeBaseItem::updateOrCreate(
+                        [
+                            'organization_id' => $organization->id,
+                            'category_id' => $category->id,
+                            'title' => $title,
+                        ],
+                        [
+                            'author_id' => $authorId,
+                            'slug' => \Illuminate\Support\Str::slug($title) . '-' . \Illuminate\Support\Str::random(6),
+                            'excerpt' => \Illuminate\Support\Str::limit(strip_tags($content), 160),
+                            'content' => $content,
+                            'content_type' => 'article',
+                            'status' => 'published',
+                            'is_public' => true,
+                            'language' => 'indonesia',
+                        ]
+                    );
+                }
 
-                // FAQs
-                KnowledgeBaseItem::factory(2)->faq()->published()->create([
-                    'organization_id' => $organization->id,
-                    'category_id' => $category->id,
-                ]);
+                // Q&A Collections (2)
+                for ($i = 0; $i < 2; $i++) {
+                    $title = 'Q&A: ' . $this->faker->sentence(5, true);
+                    $content = '<p>' . $this->faker->paragraphs(2, true) . '</p>';
+                    KnowledgeBaseItem::updateOrCreate(
+                        [
+                            'organization_id' => $organization->id,
+                            'category_id' => $category->id,
+                            'title' => $title,
+                        ],
+                        [
+                            'author_id' => $authorId,
+                            'slug' => \Illuminate\Support\Str::slug($title) . '-' . \Illuminate\Support\Str::random(6),
+                            'excerpt' => \Illuminate\Support\Str::limit(strip_tags($content), 160),
+                            'content' => $content,
+                            'content_type' => 'qa_collection',
+                            'status' => 'published',
+                            'is_public' => true,
+                            'language' => 'indonesia',
+                        ]
+                    );
+                }
 
-                // Some draft items
-                KnowledgeBaseItem::factory(1)->draft()->create([
-                    'organization_id' => $organization->id,
-                    'category_id' => $category->id,
-                ]);
+                // FAQs (2)
+                for ($i = 0; $i < 2; $i++) {
+                    $title = 'FAQ: ' . $this->faker->sentence(5, true);
+                    $content = '<p>' . $this->faker->paragraphs(1, true) . '</p>';
+                    KnowledgeBaseItem::updateOrCreate(
+                        [
+                            'organization_id' => $organization->id,
+                            'category_id' => $category->id,
+                            'title' => $title,
+                        ],
+                        [
+                            'author_id' => $authorId,
+                            'slug' => \Illuminate\Support\Str::slug($title) . '-' . \Illuminate\Support\Str::random(6),
+                            'excerpt' => \Illuminate\Support\Str::limit(strip_tags($content), 160),
+                            'content' => $content,
+                            'content_type' => 'faq',
+                            'status' => 'published',
+                            'is_public' => true,
+                            'language' => 'indonesia',
+                        ]
+                    );
+                }
+
+                // Draft item (1)
+                $title = 'Draft: ' . $this->faker->sentence(6, true);
+                $content = '<p>' . $this->faker->paragraphs(2, true) . '</p>';
+                KnowledgeBaseItem::updateOrCreate(
+                    [
+                        'organization_id' => $organization->id,
+                        'category_id' => $category->id,
+                        'title' => $title,
+                    ],
+                    [
+                        'author_id' => $authorId,
+                        'slug' => \Illuminate\Support\Str::slug($title) . '-' . \Illuminate\Support\Str::random(6),
+                        'excerpt' => \Illuminate\Support\Str::limit(strip_tags($content), 160),
+                        'content' => $content,
+                        'content_type' => 'article',
+                        'status' => 'draft',
+                        'is_public' => false,
+                        'language' => 'indonesia',
+                    ]
+                );
             }
 
             $this->command->info("   ✓ Created knowledge base for {$organization->name}");
@@ -271,27 +562,36 @@ class ChatbotSaasSeeder extends Seeder
     private function createBotConfigurations(array $organizations): void
     {
         foreach ($organizations as $organization) {
-            // Create bot personality
-            $personality = BotPersonality::factory()->create([
-                'organization_id' => $organization->id,
-                'name' => 'Default Assistant',
-                'code' => 'default',
-                'display_name' => 'Customer Assistant',
-                'language' => 'indonesia',
-                'is_default' => true,
-            ]);
+            // Create bot personality (idempotent by organization_id + code)
+            $personality = BotPersonality::updateOrCreate(
+                [
+                    'organization_id' => $organization->id,
+                    'code' => 'default',
+                ],
+                [
+                    'name' => 'Default Assistant',
+                    'display_name' => 'Customer Assistant',
+                    'language' => 'indonesia',
+                    'is_default' => true,
+                ]
+            );
 
             // Create channel configurations
             $channels = ['webchat', 'whatsapp', 'telegram'];
 
             foreach ($channels as $channel) {
-                ChannelConfig::factory()->active()->create([
-                    'organization_id' => $organization->id,
-                    'channel' => $channel,
-                    'channel_identifier' => $channel . '_' . $organization->org_code,
-                    'name' => ucfirst($channel) . ' Channel',
-                    'personality_id' => $personality->id,
-                ]);
+                ChannelConfig::updateOrCreate(
+                    [
+                        'organization_id' => $organization->id,
+                        'channel' => $channel,
+                        'channel_identifier' => $channel . '_' . $organization->org_code,
+                    ],
+                    [
+                        'name' => ucfirst($channel) . ' Channel',
+                        'personality_id' => $personality->id,
+                        'status' => 'active',
+                    ]
+                );
             }
 
             $this->command->info("   ✓ Created bot configurations for {$organization->name}");
@@ -311,8 +611,9 @@ class ChatbotSaasSeeder extends Seeder
             ]);
 
             // Create VIP customers
-            $vipCustomers = Customer::factory(2)->vip()->create([
+            $vipCustomers = Customer::factory(2)->create([
                 'organization_id' => $organization->id,
+                'tier' => 'vip',
             ]);
 
             $allCustomers = $customers->concat($vipCustomers);
@@ -327,36 +628,41 @@ class ChatbotSaasSeeder extends Seeder
                     // 70% bot sessions, 30% agent sessions
                     if (rand(1, 10) <= 7) {
                         // Bot session
-                        ChatSession::factory()->botSession()->create([
+                        ChatSession::factory()->create([
                             'organization_id' => $organization->id,
                             'customer_id' => $customer->id,
                             'channel_config_id' => $channelConfig->id,
+                            'session_type' => 'bot',
                         ]);
                     } else {
                         // Agent session
                         $agent = $agents->isNotEmpty() ? $agents->random() : null;
-                        ChatSession::factory()->agentSession()->create([
+                        ChatSession::factory()->create([
                             'organization_id' => $organization->id,
                             'customer_id' => $customer->id,
                             'channel_config_id' => $channelConfig->id,
                             'agent_id' => $agent?->id,
+                            'session_type' => 'agent',
                         ]);
                     }
                 }
             }
 
             // Create some active sessions
-            ChatSession::factory(3)->active()->create([
+            ChatSession::factory(3)->create([
                 'organization_id' => $organization->id,
                 'customer_id' => $allCustomers->random()->id,
                 'channel_config_id' => $channelConfigs->random()->id,
+                'is_active' => true,
             ]);
 
             // Create high satisfaction sessions
-            ChatSession::factory(5)->withHighSatisfaction()->resolved()->create([
+            ChatSession::factory(5)->create([
                 'organization_id' => $organization->id,
                 'customer_id' => $allCustomers->random()->id,
                 'channel_config_id' => $channelConfigs->random()->id,
+                'satisfaction_score' => 0.9,
+                'is_resolved' => true,
             ]);
 
             $totalSessions = ChatSession::where('organization_id', $organization->id)->count();
@@ -378,12 +684,16 @@ class ChatbotSaasSeeder extends Seeder
             ];
 
             foreach ($groupsData as $groupData) {
-                $permissionGroups[$groupData['code']] = PermissionGroup::factory()->create([
-                    'organization_id' => $organization->id,
-                    'name' => $groupData['name'],
-                    'code' => $groupData['code'],
-                    'category' => $groupData['category'],
-                ]);
+                $permissionGroups[$groupData['code']] = PermissionGroup::updateOrCreate(
+                    [
+                        'organization_id' => $organization->id,
+                        'code' => $groupData['code'],
+                    ],
+                    [
+                        'name' => $groupData['name'],
+                        'category' => $groupData['category'],
+                    ]
+                );
             }
 
             // Create Permissions
@@ -401,14 +711,19 @@ class ChatbotSaasSeeder extends Seeder
                 ['name' => 'View System Logs', 'code' => 'logs.view', 'resource' => 'system_logs', 'action' => 'read'],
             ];
 
+            // Permission creation
             foreach ($permissionData as $permData) {
-                $permissions[$permData['code']] = Permission::factory()->create([
-                    'organization_id' => $organization->id,
-                    'name' => $permData['name'],
-                    'code' => $permData['code'],
-                    'resource' => $permData['resource'],
-                    'action' => $permData['action'],
-                ]);
+                $permissions[$permData['code']] = Permission::updateOrCreate(
+                    [
+                        'organization_id' => $organization->id,
+                        'code' => $permData['code'],
+                    ],
+                    [
+                        'name' => $permData['name'],
+                        'resource' => $permData['resource'],
+                        'action' => $permData['action'],
+                    ]
+                );
             }
 
             // Create Roles
@@ -423,13 +738,18 @@ class ChatbotSaasSeeder extends Seeder
                 ['name' => 'Viewer', 'code' => 'viewer', 'level' => 6],
             ];
 
+            // Role creation
             foreach ($rolesData as $roleData) {
-                $roles[$roleData['code']] = Role::factory()->create([
-                    'organization_id' => $organization->id,
-                    'name' => $roleData['name'],
-                    'code' => $roleData['code'],
-                    'level' => $roleData['level'],
-                ]);
+                $roles[$roleData['code']] = Role::updateOrCreate(
+                    [
+                        'organization_id' => $organization->id,
+                        'code' => $roleData['code'],
+                    ],
+                    [
+                        'name' => $roleData['name'],
+                        'level' => $roleData['level'],
+                    ]
+                );
             }
 
             // Assign permissions to roles (simplified)
@@ -443,13 +763,20 @@ class ChatbotSaasSeeder extends Seeder
                 'viewer' => ['analytics.view'],
             ];
 
+            // Assign permissions to roles
             foreach ($rolePermissions as $roleCode => $permissionCodes) {
                 foreach ($permissionCodes as $permissionCode) {
                     if (isset($roles[$roleCode]) && isset($permissions[$permissionCode])) {
-                        $roles[$roleCode]->permissions()->attach($permissions[$permissionCode]->id, [
-                            'is_granted' => true,
-                            'granted_at' => now(),
-                        ]);
+                        \App\Models\RolePermission::updateOrCreate(
+                            [
+                                'role_id' => $roles[$roleCode]->id,
+                                'permission_id' => $permissions[$permissionCode]->id,
+                            ],
+                            [
+                                'is_granted' => true,
+                                'granted_at' => now(),
+                            ]
+                        );
                     }
                 }
             }
@@ -466,11 +793,15 @@ class ChatbotSaasSeeder extends Seeder
                 };
 
                 if (isset($roles[$roleCode])) {
-                    UserRole::factory()->create([
-                        'user_id' => $user->id,
-                        'role_id' => $roles[$roleCode]->id,
-                        'is_primary' => true,
-                    ]);
+                    UserRole::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'role_id' => $roles[$roleCode]->id,
+                        ],
+                        [
+                            'is_primary' => true,
+                        ]
+                    );
                 }
             }
 
@@ -485,14 +816,17 @@ class ChatbotSaasSeeder extends Seeder
             $webhookCount = rand(2, 5);
 
             $webhooks = [
-                Webhook::factory()->forChatEvents()->create([
+                Webhook::factory()->create([
                     'organization_id' => $organization->id,
+                    'events' => ['chat.created','chat.updated'],
                 ]),
-                Webhook::factory()->forPaymentEvents()->create([
+                Webhook::factory()->create([
                     'organization_id' => $organization->id,
+                    'events' => ['payment.succeeded','payment.failed'],
                 ]),
-                Webhook::factory()->forUserEvents()->create([
+                Webhook::factory()->create([
                     'organization_id' => $organization->id,
+                    'events' => ['user.created','user.updated'],
                 ]),
             ];
 
@@ -510,20 +844,27 @@ class ChatbotSaasSeeder extends Seeder
                     $deliveryCount = rand(5, 15);
                     for ($j = 0; $j < $deliveryCount; $j++) {
                         $isSuccess = rand(1, 10) <= 8; // 80% success rate
-
-                        $webhook->deliveries()->create([
-                            'event_type' => $this->faker->randomElement($webhook->events),
-                            'payload' => [
-                                'event_id' => $this->faker->uuid(),
-                                'timestamp' => now()->toISOString(),
-                                'data' => ['test' => 'data'],
+                        $eventType = $this->faker->randomElement($webhook->events);
+                        $createdAt = $this->faker->dateTimeBetween('-30 days', 'now');
+                        \App\Models\WebhookDelivery::updateOrCreate(
+                            [
+                                'webhook_id' => $webhook->id,
+                                'event_type' => $eventType,
+                                'created_at' => $createdAt,
                             ],
-                            'http_status' => $isSuccess ? 200 : rand(400, 500),
-                            'is_success' => $isSuccess,
-                            'delivered_at' => $this->faker->dateTimeBetween('-30 days', 'now'),
-                            'response_time_ms' => rand(100, 2000),
-                            'attempt_number' => $isSuccess ? 1 : rand(1, 3),
-                        ]);
+                            [
+                                'payload' => [
+                                    'event_id' => $this->faker->uuid(),
+                                    'timestamp' => now()->toISOString(),
+                                    'data' => ['test' => 'data'],
+                                ],
+                                'http_status' => $isSuccess ? 200 : rand(400, 500),
+                                'is_success' => $isSuccess,
+                                'delivered_at' => $createdAt,
+                                'response_time_ms' => rand(100, 2000),
+                                'attempt_number' => $isSuccess ? 1 : rand(1, 3),
+                            ]
+                        );
                     }
                 }
             }
@@ -540,25 +881,57 @@ class ChatbotSaasSeeder extends Seeder
             $workflows = [];
 
             for ($i = 0; $i < $workflowCount; $i++) {
-                $workflows[] = N8nWorkflow::factory()->create([
-                    'organization_id' => $organization->id,
-                    'created_by' => User::where('organization_id', $organization->id)->first()?->id,
-                ]);
+                $workflowId = \Illuminate\Support\Str::uuid()->toString();
+                $workflowUuid = \Illuminate\Support\Str::uuid()->toString();
+                $workflowName = 'Workflow ' . ($i + 1);
+                $workflows[] = N8nWorkflow::updateOrCreate(
+                    [
+                        'id' => $workflowId,
+                        'organization_id' => $organization->id,
+                        'workflow_id' => $workflowUuid,
+                        'name' => $workflowName,
+                    ],
+                    [
+                        'created_by' => User::where('organization_id', $organization->id)->first()?->id,
+                        'workflow_data' => ['nodes' => [], 'connections' => []],
+                        // ...other fields as needed...
+                    ]
+                );
             }
 
             // Create some scheduled workflows
-            N8nWorkflow::factory()->scheduled()->create([
-                'organization_id' => $organization->id,
-                'name' => 'Daily Report Generation',
-                'created_by' => User::where('organization_id', $organization->id)->first()?->id,
-            ]);
+            $scheduledWorkflowId = \Illuminate\Support\Str::uuid()->toString();
+            $scheduledWorkflowUuid = \Illuminate\Support\Str::uuid()->toString();
+            N8nWorkflow::updateOrCreate(
+                [
+                    'id' => $scheduledWorkflowId,
+                    'organization_id' => $organization->id,
+                    'workflow_id' => $scheduledWorkflowUuid,
+                    'name' => 'Daily Report Generation',
+                ],
+                [
+                    'created_by' => User::where('organization_id', $organization->id)->first()?->id,
+                    'workflow_data' => ['nodes' => [], 'connections' => []],
+                    // ...other fields as needed...
+                ]
+            );
 
             // Create some webhook workflows
-            N8nWorkflow::factory()->webhook()->create([
-                'organization_id' => $organization->id,
-                'name' => 'Incoming Message Processor',
-                'created_by' => User::where('organization_id', $organization->id)->first()?->id,
-            ]);
+            $webhookWorkflowId = \Illuminate\Support\Str::uuid()->toString();
+            $webhookWorkflowUuid = \Illuminate\Support\Str::uuid()->toString();
+            N8nWorkflow::updateOrCreate(
+                [
+                    'id' => $webhookWorkflowId,
+                    'organization_id' => $organization->id,
+                    'workflow_id' => $webhookWorkflowUuid,
+                    'name' => 'Incoming Message Processor',
+                ],
+                [
+                    'created_by' => User::where('organization_id', $organization->id)->first()?->id,
+                    'workflow_data' => ['nodes' => [], 'connections' => []],
+                    // ...other fields as needed...
+                ]
+            );
 
             // Create executions for some workflows
             foreach ($workflows as $workflow) {
@@ -566,19 +939,25 @@ class ChatbotSaasSeeder extends Seeder
                     $executionCount = rand(5, 50);
                     for ($j = 0; $j < $executionCount; $j++) {
                         $isSuccessful = rand(1, 10) <= 8; // 80% success rate
-
-                        $workflow->executions()->create([
-                            'organization_id' => $organization->id,
-                            'execution_id' => 'exec_' . $this->faker->uuid(),
-                            'status' => $isSuccessful ? 'success' : 'failed',
-                            'mode' => $this->faker->randomElement(['trigger', 'manual', 'retry']),
-                            'started_at' => $startedAt = $this->faker->dateTimeBetween('-30 days', 'now'),
-                            'finished_at' => $finishedAt = $this->faker->dateTimeBetween($startedAt, 'now'),
-                            'duration_ms' => abs($finishedAt->getTimestamp() - $startedAt->getTimestamp()) * 1000,
-                            'input_data' => ['test' => 'input'],
-                            'output_data' => $isSuccessful ? ['test' => 'output'] : null,
-                            'error_message' => $isSuccessful ? null : $this->faker->sentence(),
-                        ]);
+                        $executionId = \Illuminate\Support\Str::uuid()->toString();
+                        $workflow->executions()->updateOrCreate(
+                            [
+                                'id' => $executionId,
+                                'organization_id' => $organization->id,
+                                'execution_id' => 'exec_' . $this->faker->uuid(),
+                            ],
+                            [
+                                'status' => $isSuccessful ? 'success' : 'failed',
+                                'mode' => $this->faker->randomElement(['trigger', 'manual', 'retry']),
+                                'started_at' => $startedAt = $this->faker->dateTimeBetween('-30 days', 'now'),
+                                'finished_at' => $finishedAt = $this->faker->dateTimeBetween($startedAt, 'now'),
+                                    // Cap duration_ms to 24 hours max (86400000 ms) to avoid integer overflow
+                                    'duration_ms' => min(abs($finishedAt->getTimestamp() - $startedAt->getTimestamp()) * 1000, 86400000),
+                                'input_data' => ['test' => 'input'],
+                                'output_data' => $isSuccessful ? ['test' => 'output'] : ['test' => 'error'],
+                                'error_message' => $isSuccessful ? null : $this->faker->sentence(),
+                            ]
+                        );
                     }
                 }
             }
@@ -590,7 +969,7 @@ class ChatbotSaasSeeder extends Seeder
     private function createSystemMonitoring(array $organizations): void
     {
         foreach ($organizations as $organization) {
-            // Create Real-time Metrics
+            // Create Realtime Metrics
             $metricNames = [
                 'active_sessions', 'message_count', 'response_time', 'memory_usage',
                 'cpu_usage', 'disk_usage', 'api_requests', 'webhook_deliveries',
@@ -605,18 +984,21 @@ class ChatbotSaasSeeder extends Seeder
                     // Create hourly metrics
                     for ($hour = 0; $hour < 24; $hour++) {
                         $metricTimestamp = $timestamp->copy()->addHours($hour);
-
-                        RealtimeMetric::factory()->create([
-                            'organization_id' => $organization->id,
-                            'metric_name' => $metricName,
-                            'metric_type' => $this->faker->randomElement(['counter', 'gauge', 'histogram']),
-                            'value' => $this->generateMetricValue($metricName),
-                            'timestamp' => $metricTimestamp,
-                            'labels' => [
-                                'environment' => 'production',
-                                'instance' => 'web-01',
+                        RealtimeMetric::updateOrCreate(
+                            [
+                                'organization_id' => $organization->id,
+                                'metric_name' => $metricName,
+                                'timestamp' => $metricTimestamp,
                             ],
-                        ]);
+                            [
+                                'metric_type' => $this->faker->randomElement(['counter', 'gauge', 'histogram']),
+                                'value' => $this->generateMetricValue($metricName),
+                                'labels' => [
+                                    'environment' => 'production',
+                                    'instance' => 'web-01',
+                                ],
+                            ]
+                        );
                     }
                 }
             }
@@ -624,19 +1006,37 @@ class ChatbotSaasSeeder extends Seeder
             // Create System Logs
             $logCount = rand(100, 500);
             for ($i = 0; $i < $logCount; $i++) {
-                SystemLog::factory()->create([
-                    'organization_id' => $organization->id,
-                    'user_id' => $this->faker->optional(0.3)->randomElement(
-                        User::where('organization_id', $organization->id)->pluck('id')->toArray()
-                    ),
-                ]);
+                SystemLog::updateOrCreate(
+                    [
+                        'id' => \Illuminate\Support\Str::uuid()->toString(),
+                        'organization_id' => $organization->id,
+                        'user_id' => $this->faker->optional(0.3)->randomElement(
+                            User::where('organization_id', $organization->id)->pluck('id')->toArray()
+                        ),
+                        'timestamp' => now(),
+                    ],
+                    [
+                        'level' => $this->faker->randomElement(['info', 'debug', 'warn', 'error', 'fatal']),
+                        'message' => $this->faker->sentence(),
+                        'created_at' => now(),
+                    ]
+                );
             }
 
             // Create some error logs
             for ($i = 0; $i < 20; $i++) {
-                SystemLog::factory()->error()->create([
-                    'organization_id' => $organization->id,
-                ]);
+                SystemLog::updateOrCreate(
+                    [
+                        'id' => \Illuminate\Support\Str::uuid()->toString(),
+                        'organization_id' => $organization->id,
+                        'timestamp' => now(),
+                    ],
+                    [
+                        'level' => 'error',
+                        'message' => $this->faker->sentence(),
+                        'created_at' => now(),
+                    ]
+                );
             }
 
             $this->command->info("   ✓ Created system monitoring data for {$organization->name}");

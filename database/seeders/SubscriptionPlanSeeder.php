@@ -154,9 +154,9 @@ class SubscriptionPlanSeeder extends Seeder
                 'display_name' => 'Custom Plan',
                 'description' => 'Paket kustom sesuai kebutuhan khusus',
                 'tier' => 'custom',
-                'price_monthly' => null,
-                'price_quarterly' => null,
-                'price_yearly' => null,
+                'price_monthly' => 0, // Custom pricing - contact sales
+                'price_quarterly' => 0, // Custom pricing - contact sales
+                'price_yearly' => 0, // Custom pricing - contact sales
                 'currency' => 'USD',
                 'max_agents' => -1, // Unlimited
                 'max_channels' => -1, // Unlimited

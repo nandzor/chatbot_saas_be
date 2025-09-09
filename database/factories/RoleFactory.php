@@ -18,15 +18,26 @@ class RoleFactory extends Factory
      */
     public function definition(): array
     {
+        $name = $this->faker->jobTitle();
+        $code = strtolower(str_replace(' ', '_', $name));
+
         return [
             'id' => Str::uuid(),
-            'name' => $this->faker->unique()->word(),
+            'name' => $name,
+            'code' => $code,
             'display_name' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(),
             'organization_id' => Organization::factory(),
-            'permissions' => [],
+            'level' => $this->faker->numberBetween(1, 10),
             'is_system_role' => false,
-            'sort_order' => $this->faker->numberBetween(1, 100),
+            'is_default' => false,
+            'inherits_permissions' => true,
+            'max_users' => null,
+            'current_users' => 0,
+            'color' => $this->faker->hexColor(),
+            'icon' => $this->faker->randomElement(['user', 'admin', 'manager', 'supervisor', 'viewer']),
+            'badge_text' => null,
+            'metadata' => [],
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
@@ -50,6 +61,26 @@ class RoleFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'inactive',
+        ]);
+    }
+
+    /**
+     * Indicate that the role is a default role.
+     */
+    public function default(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_default' => true,
+        ]);
+    }
+
+    /**
+     * Set a specific level for the role.
+     */
+    public function level(int $level): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'level' => $level,
         ]);
     }
 }

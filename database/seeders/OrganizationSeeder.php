@@ -14,7 +14,7 @@ class OrganizationSeeder extends Seeder
     public function run(): void
     {
         // Get subscription plans
-        $basicPlan = SubscriptionPlan::where('name', 'basic')->first();
+        $starterPlan = SubscriptionPlan::where('name', 'starter')->first();
         $professionalPlan = SubscriptionPlan::where('name', 'professional')->first();
         $enterprisePlan = SubscriptionPlan::where('name', 'enterprise')->first();
 
@@ -242,12 +242,12 @@ class OrganizationSeeder extends Seeder
                 'timezone' => 'Asia/Jakarta',
                 'locale' => 'id',
                 'currency' => 'IDR',
-                'subscription_plan_id' => $basicPlan?->id ?? null,
+                'subscription_plan_id' => $starterPlan?->id ?? null,
                 'subscription_status' => 'trial',
                 'trial_ends_at' => now()->addDays(7),
                 'subscription_starts_at' => null,
                 'subscription_ends_at' => null,
-                'billing_cycle' => null,
+                'billing_cycle' => 'monthly',
                 'current_usage' => [
                     'agents' => 1,
                     'channels' => 2,

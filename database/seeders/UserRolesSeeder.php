@@ -32,9 +32,9 @@ class UserRolesSeeder extends Seeder
     private function assignUserRole($user)
     {
         // Get organization roles
-        $roles = DB::table('organization_roles')
+        $roles = DB::table('roles')
             ->where('organization_id', $user->organization_id)
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->get();
 
         if ($roles->isEmpty()) {
@@ -42,8 +42,8 @@ class UserRolesSeeder extends Seeder
         }
 
         // Assign random role to user (with preference for admin role)
-        $role = $roles->where('slug', 'organization_admin')->first()
-            ?? $roles->where('slug', 'agent')->first()
+        $role = $roles->where('code', 'org_admin')->first()
+            ?? $roles->where('code', 'agent')->first()
             ?? $roles->random();
 
         // Check if user already has a role

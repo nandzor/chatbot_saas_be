@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class UserRoleFactory extends Factory
 {
@@ -20,6 +21,7 @@ class UserRoleFactory extends Factory
             null;
 
         return [
+            'id' => Str::uuid(),
             'user_id' => User::factory(),
             'role_id' => Role::factory(),
             'is_active' => $this->faker->boolean(90),

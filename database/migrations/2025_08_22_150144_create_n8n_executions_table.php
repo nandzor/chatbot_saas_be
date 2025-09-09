@@ -55,7 +55,7 @@ return new class extends Migration
             // System fields
             $table->json('metadata')->default('{}');
             $table->timestamp('created_at')->useCurrent();
-
+            $table->timestamp('updated_at')->useCurrent()->nullable()->onUpdate(now());
             // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
             $table->unique('execution_id', 'n8n_executions_execution_id_unique');

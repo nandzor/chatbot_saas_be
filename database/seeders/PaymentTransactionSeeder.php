@@ -96,8 +96,12 @@ class PaymentTransactionSeeder extends Seeder
         $currencies
     ): void {
         // Select random subscription and invoice for this organization
-        $subscription = $subscriptions->where('organization_id', $organization->id)->random();
-        $invoice = $invoices->where('organization_id', $organization->id)->random();
+        $subscription = $subscriptions->where('organization_id', $organization->id)->isNotEmpty()
+            ? $subscriptions->where('organization_id', $organization->id)->random()
+            : null;
+        $invoice = $invoices->where('organization_id', $organization->id)->isNotEmpty()
+            ? $invoices->where('organization_id', $organization->id)->random()
+            : null;
 
         // Select payment method and gateway
         $paymentMethod = $faker->randomElement(array_keys($paymentMethods));
