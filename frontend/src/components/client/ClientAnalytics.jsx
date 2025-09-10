@@ -29,6 +29,8 @@ import {
   Skeleton
 } from '@/components/ui';
 import { useClientAnalytics } from '../../hooks/useClientAnalytics';
+import AdvancedGrowthChart from '../charts/AdvancedGrowthChart';
+import GrowthSummary from '../charts/GrowthSummary';
 
 const ClientAnalytics = () => {
   const [timeRange, setTimeRange] = useState('30d');
@@ -257,29 +259,13 @@ const ClientAnalytics = () => {
         </Card>
       </div>
 
+      {/* Growth Summary */}
+      <GrowthSummary data={trends} />
+
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Growth Trend Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <LineChart className="h-5 w-5" />
-              <span>Growth Trend</span>
-            </CardTitle>
-            <CardDescription>
-              Organization and user growth over time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500">Growth trend chart would be here</p>
-                <p className="text-sm text-gray-400">Integration with chart library needed</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AdvancedGrowthChart data={trends} height={300} />
 
         {/* Status Distribution */}
         <Card>
