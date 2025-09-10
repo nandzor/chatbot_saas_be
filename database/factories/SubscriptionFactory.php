@@ -21,12 +21,12 @@ class SubscriptionFactory extends Factory
     {
         $statuses = ['active', 'trial', 'past_due', 'canceled', 'unpaid', 'suspended'];
         $status = $this->faker->randomElement($statuses);
-        
+
         $billingCycles = ['monthly', 'quarterly', 'yearly'];
         $billingCycle = $this->faker->randomElement($billingCycles);
-        
+
         $plan = SubscriptionPlan::factory();
-        
+
         // Calculate pricing based on billing cycle
         $basePrice = $this->faker->numberBetween(100000, 5000000); // IDR
         $price = match($billingCycle) {
@@ -35,7 +35,7 @@ class SubscriptionFactory extends Factory
             'yearly' => round($basePrice * 12 * 0.8), // 20% discount
             default => $basePrice
         };
-        
+
         // Generate subscription dates
         $startDate = $this->faker->dateTimeBetween('-2 years', 'now');
         $trialEndDate = $status === 'trial' ? $this->faker->dateTimeBetween($startDate, '+30 days') : null;
@@ -43,26 +43,26 @@ class SubscriptionFactory extends Factory
         $currentPeriodEnd = $this->calculatePeriodEnd($currentPeriodStart, $billingCycle);
         $canceledAt = $status === 'canceled' ? $this->faker->dateTimeBetween($startDate, 'now') : null;
         $endedAt = $status === 'canceled' ? $canceledAt : null;
-        
+
         // Generate usage data
         $usageData = $this->generateUsageData($status);
-        
+
         // Generate payment information
         $paymentInfo = $this->generatePaymentInfo($status, $billingCycle);
-        
+
         // Generate subscription features
         $features = $this->generateSubscriptionFeatures($status);
-        
+
         // Generate metadata
         $metadata = $this->generateMetadata($status, $billingCycle);
-        
+
         return [
             'organization_id' => Organization::factory(),
             'subscription_plan_id' => $plan,
             'user_id' => User::factory(),
             'status' => $status,
             'billing_cycle' => $billingCycle,
-            
+
             // Pricing
             'price' => $price,
             'currency' => $planData['currency'] ?? 'IDR',
@@ -70,7 +70,7 @@ class SubscriptionFactory extends Factory
             'discount_percentage' => $this->faker->optional(0.3)->randomFloat(2, 0, 30),
             'tax_amount' => $this->faker->optional(0.7)->randomFloat(2, 0, $price * 0.1),
             'total_amount' => $price,
-            
+
             // Dates
             'start_date' => $startDate,
             'trial_ends_at' => $trialEndDate,
@@ -79,12 +79,12 @@ class SubscriptionFactory extends Factory
             'canceled_at' => $canceledAt,
             'ended_at' => $endedAt,
             'next_billing_date' => $this->calculateNextBillingDate($currentPeriodEnd, $billingCycle, $status),
-            
+
             // Usage & Limits
             'usage_data' => $usageData,
             'feature_usage' => $this->generateFeatureUsage($status),
             'overage_charges' => $this->generateOverageCharges($usageData),
-            
+
             // Payment & Billing
             'payment_method_id' => $this->faker->optional(0.8)->uuid(),
             'payment_status' => $this->determinePaymentStatus($status),
@@ -92,28 +92,28 @@ class SubscriptionFactory extends Factory
             'next_payment_amount' => $this->calculateNextPaymentAmount($price, $billingCycle, $status),
             'payment_failure_count' => $this->faker->numberBetween(0, 5),
             'last_payment_failure' => $this->faker->optional(0.3)->dateTimeBetween($startDate, 'now'),
-            
+
             // Features & Configuration
             'features' => $features,
             'feature_flags' => $this->generateFeatureFlags($status),
             'custom_fields' => $this->generateCustomFields(),
-            
+
             // Metadata
             'metadata' => $metadata,
-            
+
             // System fields
             'created_at' => $startDate,
             'updated_at' => $this->faker->dateTimeBetween($startDate, 'now'),
         ];
     }
-    
+
     /**
      * Calculate period end based on billing cycle
      */
     private function calculatePeriodEnd(\DateTime $startDate, string $billingCycle): \DateTime
     {
         $endDate = clone $startDate;
-        
+
         return match($billingCycle) {
             'monthly' => $endDate->modify('+1 month'),
             'quarterly' => $endDate->modify('+3 months'),
@@ -121,7 +121,7 @@ class SubscriptionFactory extends Factory
             default => $endDate->modify('+1 month')
         };
     }
-    
+
     /**
      * Calculate next billing date
      */
@@ -130,9 +130,9 @@ class SubscriptionFactory extends Factory
         if (in_array($status, ['canceled', 'suspended', 'unpaid'])) {
             return null;
         }
-        
+
         $nextBilling = clone $currentPeriodEnd;
-        
+
         return match($billingCycle) {
             'monthly' => $nextBilling->modify('+1 month'),
             'quarterly' => $nextBilling->modify('+3 months'),
@@ -140,7 +140,7 @@ class SubscriptionFactory extends Factory
             default => $nextBilling->modify('+1 month')
         };
     }
-    
+
     /**
      * Calculate next payment amount
      */
@@ -149,10 +149,10 @@ class SubscriptionFactory extends Factory
         if (in_array($status, ['canceled', 'suspended', 'unpaid'])) {
             return null;
         }
-        
+
         return $price;
     }
-    
+
     /**
      * Generate usage data
      */
@@ -160,13 +160,13 @@ class SubscriptionFactory extends Factory
     {
         $isActive = in_array($status, ['active', 'trial']);
         $usageMultiplier = $isActive ? $this->faker->randomFloat(2, 0.1, 1.5) : 0;
-        
+
         $maxAgents = 10;
         $maxCustomers = 1000;
         $maxApiCalls = 10000;
         $maxStorage = 10;
         $maxChatSessions = 1000;
-        
+
         return [
             'agents' => [
                 'used' => round($maxAgents * $usageMultiplier),
@@ -196,7 +196,7 @@ class SubscriptionFactory extends Factory
             'last_updated' => now()->toISOString()
         ];
     }
-    
+
     /**
      * Generate feature usage
      */
@@ -204,7 +204,7 @@ class SubscriptionFactory extends Factory
     {
         $isActive = in_array($status, ['active', 'trial']);
         $usageMultiplier = $isActive ? $this->faker->randomFloat(2, 0.1, 1.2) : 0;
-        
+
         $features = [
             'ai_models' => true,
             'knowledge_bases' => true,
@@ -218,7 +218,7 @@ class SubscriptionFactory extends Factory
             'white_label' => false
         ];
         $featureUsage = [];
-        
+
         foreach ($features as $feature => $enabled) {
             if ($enabled) {
                 $featureUsage[$feature] = [
@@ -236,22 +236,22 @@ class SubscriptionFactory extends Factory
                 ];
             }
         }
-        
+
         return $featureUsage;
     }
-    
+
     /**
      * Generate overage charges
      */
     private function generateOverageCharges(array $usageData): array
     {
         $overages = [];
-        
+
         foreach ($usageData as $resource => $data) {
             if ($data['percentage'] > 100) {
                 $overageAmount = $data['used'] - $data['limit'];
                 $overageRate = $this->getOverageRate($resource);
-                
+
                 $overages[$resource] = [
                     'overage_amount' => $overageAmount,
                     'overage_rate' => $overageRate,
@@ -261,10 +261,10 @@ class SubscriptionFactory extends Factory
                 ];
             }
         }
-        
+
         return $overages;
     }
-    
+
     /**
      * Get overage rate for resource
      */
@@ -277,10 +277,10 @@ class SubscriptionFactory extends Factory
             'storage' => 0.50,
             'chat_sessions' => 0.05
         ];
-        
+
         return $overageRates[$resource] ?? 1.0;
     }
-    
+
     /**
      * Generate payment information
      */
@@ -304,9 +304,9 @@ class SubscriptionFactory extends Factory
                 'email' => $this->faker->email()
             ]
         ];
-        
+
         $selectedMethod = $this->faker->randomElement(array_keys($paymentMethods));
-        
+
         return [
             'method' => $selectedMethod,
             'details' => $paymentMethods[$selectedMethod],
@@ -316,7 +316,7 @@ class SubscriptionFactory extends Factory
             'retry_interval_hours' => $this->faker->randomElement([1, 6, 12, 24])
         ];
     }
-    
+
     /**
      * Generate subscription features
      */
@@ -335,7 +335,7 @@ class SubscriptionFactory extends Factory
             'white_label' => false
         ];
         $subscriptionFeatures = [];
-        
+
         foreach ($features as $feature => $enabled) {
             $subscriptionFeatures[$feature] = [
                 'enabled' => $enabled && in_array($status, ['active', 'trial']),
@@ -344,10 +344,10 @@ class SubscriptionFactory extends Factory
                 'last_updated' => now()->toISOString()
             ];
         }
-        
+
         return $subscriptionFeatures;
     }
-    
+
     /**
      * Get feature limit
      */
@@ -365,17 +365,17 @@ class SubscriptionFactory extends Factory
             'multi_language' => false,
             'white_label' => false
         ];
-        
+
         return $featureLimits[$feature] ?? null;
     }
-    
+
     /**
      * Generate feature flags
      */
     private function generateFeatureFlags(string $status): array
     {
         $isActive = in_array($status, ['active', 'trial']);
-        
+
         return [
             'beta_features' => $isActive && $this->faker->boolean(30),
             'early_access' => $isActive && $this->faker->boolean(20),
@@ -387,33 +387,33 @@ class SubscriptionFactory extends Factory
             'multi_tenant' => $isActive && $this->faker->boolean(25)
         ];
     }
-    
+
     /**
      * Generate custom fields
      */
     private function generateCustomFields(): array
     {
         $customFields = [];
-        
+
         if ($this->faker->boolean(40)) {
             $customFields['company_size'] = $this->faker->randomElement(['startup', 'sme', 'enterprise']);
         }
-        
+
         if ($this->faker->boolean(30)) {
             $customFields['industry'] = $this->faker->randomElement(['technology', 'healthcare', 'finance', 'education', 'retail']);
         }
-        
+
         if ($this->faker->boolean(25)) {
             $customFields['contract_terms'] = $this->faker->randomElement(['standard', 'custom', 'enterprise']);
         }
-        
+
         if ($this->faker->boolean(20)) {
             $customFields['payment_terms'] = $this->faker->randomElement(['net_30', 'net_60', 'net_90']);
         }
-        
+
         return $customFields;
     }
-    
+
     /**
      * Generate metadata
      */
@@ -454,29 +454,29 @@ class SubscriptionFactory extends Factory
             'tags' => $this->generateSubscriptionTags($status, $billingCycle)
         ];
     }
-    
+
     /**
      * Generate subscription tags
      */
     private function generateSubscriptionTags(string $status, string $billingCycle): array
     {
         $tags = ['subscription', $status, $billingCycle];
-        
+
         if ($billingCycle === 'yearly') {
             $tags[] = 'annual';
         }
-        
+
         if ($status === 'trial') {
             $tags[] = 'trial';
         }
-        
+
         if ($status === 'active') {
             $tags[] = 'active';
         }
-        
+
         return array_unique($tags);
     }
-    
+
     /**
      * Determine payment status based on subscription status
      */
@@ -491,7 +491,7 @@ class SubscriptionFactory extends Factory
             default => 'unknown'
         };
     }
-    
+
     /**
      * Indicate that the subscription is active.
      */
@@ -503,7 +503,7 @@ class SubscriptionFactory extends Factory
             'next_billing_date' => $this->faker->dateTimeBetween('now', '+1 year'),
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is in trial.
      */
@@ -515,7 +515,7 @@ class SubscriptionFactory extends Factory
             'current_period_end' => $this->faker->dateTimeBetween('now', '+30 days'),
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is past due.
      */
@@ -527,7 +527,7 @@ class SubscriptionFactory extends Factory
             'payment_failure_count' => $this->faker->numberBetween(1, 5),
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is canceled.
      */
@@ -540,7 +540,7 @@ class SubscriptionFactory extends Factory
             'next_billing_date' => null,
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is unpaid.
      */
@@ -552,7 +552,7 @@ class SubscriptionFactory extends Factory
             'last_payment_failure' => $this->faker->dateTimeBetween('-30 days', 'now'),
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is suspended.
      */
@@ -564,7 +564,7 @@ class SubscriptionFactory extends Factory
             'next_billing_date' => null,
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is monthly.
      */
@@ -574,7 +574,7 @@ class SubscriptionFactory extends Factory
             'billing_cycle' => 'monthly',
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is quarterly.
      */
@@ -584,7 +584,7 @@ class SubscriptionFactory extends Factory
             'billing_cycle' => 'quarterly',
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is yearly.
      */
@@ -594,7 +594,7 @@ class SubscriptionFactory extends Factory
             'billing_cycle' => 'yearly',
         ]);
     }
-    
+
     /**
      * Indicate that the subscription has high usage.
      */
@@ -611,7 +611,7 @@ class SubscriptionFactory extends Factory
             ],
         ]);
     }
-    
+
     /**
      * Indicate that the subscription has overage usage.
      */
@@ -637,7 +637,7 @@ class SubscriptionFactory extends Factory
             ],
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is newly created.
      */
@@ -657,7 +657,7 @@ class SubscriptionFactory extends Factory
             ],
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is expiring soon.
      */
@@ -668,7 +668,7 @@ class SubscriptionFactory extends Factory
             'next_billing_date' => $this->faker->dateTimeBetween('now', '+7 days'),
         ]);
     }
-    
+
     /**
      * Indicate that the subscription has payment issues.
      */
@@ -680,7 +680,7 @@ class SubscriptionFactory extends Factory
             'payment_status' => 'failed',
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is for enterprise.
      */
@@ -695,7 +695,7 @@ class SubscriptionFactory extends Factory
             ]),
         ]);
     }
-    
+
     /**
      * Indicate that the subscription is for startups.
      */

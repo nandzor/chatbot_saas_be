@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\AnalyticsController;
 
 use App\Http\Controllers\Api\V1\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\PaymentTransactionController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationAuditController;
@@ -311,6 +312,46 @@ Route::prefix('v1')->group(function () {
             Route::middleware(['permission:subscription_plans.create'])->post('/', [SubscriptionPlanController::class, 'store']);
             Route::middleware(['permission:subscription_plans.update'])->patch('/sort-order', [SubscriptionPlanController::class, 'updateSortOrder']);
         });
+
+        // ====================================================================
+        // SUBSCRIPTION MANAGEMENT (Super Admin Only)
+        // ====================================================================
+
+        Route::prefix('subscriptions')
+            ->middleware(['super.admin'])
+            ->group(function () {
+            // Main subscription endpoints
+            Route::get('/', [SubscriptionController::class, 'index']);
+            Route::get('/statistics', [SubscriptionController::class, 'statistics']);
+            Route::get('/analytics', [SubscriptionController::class, 'analytics']);
+            Route::get('/export', [SubscriptionController::class, 'export']);
+
+            // CRUD operations
+            Route::post('/', [SubscriptionController::class, 'store']);
+            Route::put('/{id}', [SubscriptionController::class, 'update']);
+
+            // Individual subscription
+            Route::get('/{id}', [SubscriptionController::class, 'show']);
+
+            // Subscription actions
+            Route::patch('/{id}/cancel', [SubscriptionController::class, 'cancel']);
+            Route::patch('/{id}/renew', [SubscriptionController::class, 'renew']);
+
+            // Bulk operations
+            Route::patch('/bulk-update', [SubscriptionController::class, 'bulkUpdate']);
+
+            // Filtered endpoints
+            Route::get('/organization/{organizationId}', [SubscriptionController::class, 'byOrganization']);
+            Route::get('/status/{status}', [SubscriptionController::class, 'byStatus']);
+            Route::get('/billing-cycle/{billingCycle}', [SubscriptionController::class, 'byBillingCycle']);
+
+            // Additional endpoints
+            Route::get('/{id}/history', [SubscriptionController::class, 'history']);
+            Route::get('/usage', [SubscriptionController::class, 'usage']);
+        });
+
+        // Webhook endpoints (no authentication required for external services)
+        Route::post('/subscriptions/webhook', [SubscriptionController::class, 'webhook']);
 
                 // ====================================================================
         // PAYMENT TRANSACTION HISTORY (Super Admin Only)

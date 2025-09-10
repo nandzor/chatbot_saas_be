@@ -26,6 +26,9 @@ class DatabaseSeeder extends Seeder
 
             // Payment Transaction Seeder
             PaymentTransactionSeeder::class,
+
+            // Subscription Seeder
+            SubscriptionSeeder::class,
         ]);
     }
 }
