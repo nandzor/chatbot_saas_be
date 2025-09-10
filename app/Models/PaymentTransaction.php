@@ -359,7 +359,7 @@ class PaymentTransaction extends Model
      */
     public function scopeSuccessful($query)
     {
-        return $query->where('status', 'successful');
+        return $query->where('status', 'completed');
     }
 
     /**
