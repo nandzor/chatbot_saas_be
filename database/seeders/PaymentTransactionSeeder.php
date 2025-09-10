@@ -55,7 +55,7 @@ class PaymentTransactionSeeder extends Seeder
         ];
 
         $statuses = ['pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded', 'disputed', 'expired'];
-        $currencies = ['IDR', 'USD', 'EUR', 'SGD', 'MYR'];
+        $currencies = ['IDR']; // Focus on IDR currency for Indonesian market
 
         $transactionCount = 0;
         $maxTransactions = 500; // Limit to prevent memory issues
@@ -107,9 +107,9 @@ class PaymentTransactionSeeder extends Seeder
         $paymentMethod = $faker->randomElement(array_keys($paymentMethods));
         $gateway = $this->getRandomGatewayForMethod($paymentGateways, $paymentMethod);
 
-        // Generate transaction data
-        $amount = $faker->randomFloat(2, 50000, 5000000);
-        $currency = $faker->randomElement($currencies);
+        // Generate transaction data with realistic IDR amounts
+        $amount = $this->getRealisticIDRAmount();
+        $currency = 'IDR'; // Always use IDR
         $status = $faker->randomElement($statuses);
 
         // Calculate fees
@@ -524,5 +524,37 @@ class PaymentTransactionSeeder extends Seeder
         ];
 
         return $categories[$paymentMethod] ?? 'other';
+    }
+
+    /**
+     * Get realistic IDR amount based on Indonesian market
+     */
+    private function getRealisticIDRAmount(): float
+    {
+        $amountRanges = [
+            // Small transactions (daily use)
+            ['min' => 10000, 'max' => 50000, 'weight' => 30],
+            // Medium transactions (weekly/monthly)
+            ['min' => 50000, 'max' => 500000, 'weight' => 40],
+            // Large transactions (subscriptions)
+            ['min' => 500000, 'max' => 2000000, 'weight' => 20],
+            // Enterprise transactions
+            ['min' => 2000000, 'max' => 10000000, 'weight' => 10],
+        ];
+
+        // Weighted random selection
+        $totalWeight = array_sum(array_column($amountRanges, 'weight'));
+        $randomWeight = rand(1, $totalWeight);
+
+        $currentWeight = 0;
+        foreach ($amountRanges as $range) {
+            $currentWeight += $range['weight'];
+            if ($randomWeight <= $currentWeight) {
+                return rand($range['min'], $range['max']);
+            }
+        }
+
+        // Fallback
+        return rand(10000, 500000);
     }
 }

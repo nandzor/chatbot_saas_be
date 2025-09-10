@@ -19,6 +19,10 @@ use App\Http\Controllers\Api\V1\OrganizationNotificationController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\BotPersonalityController;
 use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
+use App\Http\Controllers\Api\V1\WebhookEventController;
+use App\Http\Controllers\Api\V1\SystemConfigurationController;
+use App\Http\Controllers\Api\V1\NotificationTemplateController;
+use App\Http\Controllers\Api\V1\QueueController;
 
 /*
 |--------------------------------------------------------------------------
@@ -817,6 +821,91 @@ Route::middleware(['unified.auth', 'organization'])->group(function () {
         Route::get('/overdue/list', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'getOverdueInvoices'])->name('overdue');
         Route::get('/upcoming/list', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'getUpcomingInvoices'])->name('upcoming');
         Route::get('/statistics/summary', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'getStatistics'])->name('statistics');
+    });
+});
+
+// ============================================================================
+// WEBHOOK EVENT MANAGEMENT
+// ============================================================================
+
+Route::middleware(['unified.auth', 'organization'])->group(function () {
+    // Webhook Event Routes
+    Route::prefix('webhook-events')->name('webhook-events.')->group(function () {
+        Route::get('/', [WebhookEventController::class, 'index'])->name('index');
+        Route::post('/', [WebhookEventController::class, 'store'])->name('store');
+        Route::get('/{webhookEvent}', [WebhookEventController::class, 'show'])->name('show');
+        Route::put('/{webhookEvent}', [WebhookEventController::class, 'update'])->name('update');
+        Route::delete('/{webhookEvent}', [WebhookEventController::class, 'destroy'])->name('destroy');
+        Route::post('/{webhookEvent}/retry', [WebhookEventController::class, 'retry'])->name('retry');
+        Route::get('/statistics/summary', [WebhookEventController::class, 'statistics'])->name('statistics');
+        Route::get('/ready-for-retry/list', [WebhookEventController::class, 'readyForRetry'])->name('ready-for-retry');
+        Route::post('/bulk-retry', [WebhookEventController::class, 'bulkRetry'])->name('bulk-retry');
+        Route::get('/{webhookEvent}/logs', [WebhookEventController::class, 'logs'])->name('logs');
+    });
+});
+
+// ============================================================================
+// SYSTEM CONFIGURATION MANAGEMENT
+// ============================================================================
+
+Route::middleware(['unified.auth', 'organization'])->group(function () {
+    // System Configuration Routes
+    Route::prefix('system-configurations')->name('system-configurations.')->group(function () {
+        Route::get('/', [SystemConfigurationController::class, 'index'])->name('index');
+        Route::post('/', [SystemConfigurationController::class, 'store'])->name('store');
+        Route::get('/{systemConfiguration}', [SystemConfigurationController::class, 'show'])->name('show');
+        Route::put('/{systemConfiguration}', [SystemConfigurationController::class, 'update'])->name('update');
+        Route::delete('/{systemConfiguration}', [SystemConfigurationController::class, 'destroy'])->name('destroy');
+        Route::get('/category/{category}', [SystemConfigurationController::class, 'getByCategory'])->name('category');
+        Route::get('/public/list', [SystemConfigurationController::class, 'getPublic'])->name('public');
+        Route::get('/value/{key}', [SystemConfigurationController::class, 'getValue'])->name('value');
+        Route::post('/value/{key}', [SystemConfigurationController::class, 'setValue'])->name('set-value');
+        Route::post('/bulk-update', [SystemConfigurationController::class, 'bulkUpdate'])->name('bulk-update');
+        Route::get('/export/data', [SystemConfigurationController::class, 'export'])->name('export');
+        Route::post('/import/data', [SystemConfigurationController::class, 'import'])->name('import');
+        Route::post('/cache/clear', [SystemConfigurationController::class, 'clearCache'])->name('clear-cache');
+        Route::post('/cache/warm-up', [SystemConfigurationController::class, 'warmUpCache'])->name('warm-up-cache');
+    });
+});
+
+// ============================================================================
+// NOTIFICATION TEMPLATE MANAGEMENT
+// ============================================================================
+
+Route::middleware(['unified.auth', 'organization'])->group(function () {
+    // Notification Template Routes
+    Route::prefix('notification-templates')->name('notification-templates.')->group(function () {
+        Route::get('/', [NotificationTemplateController::class, 'index'])->name('index');
+        Route::post('/', [NotificationTemplateController::class, 'store'])->name('store');
+        Route::get('/{notificationTemplate}', [NotificationTemplateController::class, 'show'])->name('show');
+        Route::put('/{notificationTemplate}', [NotificationTemplateController::class, 'update'])->name('update');
+        Route::delete('/{notificationTemplate}', [NotificationTemplateController::class, 'destroy'])->name('destroy');
+        Route::get('/{name}/preview', [NotificationTemplateController::class, 'preview'])->name('preview');
+        Route::post('/{name}/send', [NotificationTemplateController::class, 'send'])->name('send');
+        Route::post('/{name}/validate-data', [NotificationTemplateController::class, 'validateData'])->name('validate-data');
+        Route::get('/category/{category}', [NotificationTemplateController::class, 'getByCategory'])->name('category');
+        Route::get('/available/list', [NotificationTemplateController::class, 'getAvailable'])->name('available');
+        Route::patch('/{notificationTemplate}/toggle-status', [NotificationTemplateController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/cache/clear', [NotificationTemplateController::class, 'clearCache'])->name('clear-cache');
+    });
+});
+
+// ============================================================================
+// QUEUE MANAGEMENT
+// ============================================================================
+
+Route::middleware(['unified.auth', 'organization'])->group(function () {
+    // Queue Management Routes
+    Route::prefix('queue')->name('queue.')->group(function () {
+        Route::get('/status', [QueueController::class, 'status'])->name('status');
+        Route::get('/statistics', [QueueController::class, 'statistics'])->name('statistics');
+        Route::get('/health', [QueueController::class, 'health'])->name('health');
+        Route::get('/failed-jobs', [QueueController::class, 'failedJobs'])->name('failed-jobs');
+        Route::post('/failed-jobs/{id}/retry', [QueueController::class, 'retryJob'])->name('retry-job');
+        Route::delete('/failed-jobs/{id}', [QueueController::class, 'deleteFailedJob'])->name('delete-failed-job');
+        Route::post('/failed-jobs/retry-all', [QueueController::class, 'retryAllFailed'])->name('retry-all-failed');
+        Route::post('/failed-jobs/clear-all', [QueueController::class, 'clearAllFailed'])->name('clear-all-failed');
+        Route::post('/workers/restart', [QueueController::class, 'restartWorkers'])->name('restart-workers');
     });
 });
 

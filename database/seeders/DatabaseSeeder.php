@@ -24,6 +24,9 @@ class DatabaseSeeder extends Seeder
             // Knowledge Base Seeder
             KnowledgeBaseSeeder::class,
 
+            // System Configuration Seeder
+            SystemConfigurationSeeder::class,
+
             // Payment Transaction Seeder
             PaymentTransactionSeeder::class,
 
@@ -32,6 +35,18 @@ class DatabaseSeeder extends Seeder
 
             // Billing Invoice Seeder
             BillingInvoiceSeeder::class,
+
+            // Webhook Event Seeder
+            WebhookEventSeeder::class,
+
+            // Queue Job Seeder
+            QueueJobSeeder::class,
+
+            // Audit Log Seeder
+            AuditLogSeeder::class,
+
+            // Notification Template Seeder
+            NotificationTemplateSeeder::class,
         ]);
     }
 }
