@@ -52,9 +52,10 @@ class PaymentTransactionService extends BaseService
         }
 
         // Return paginated or all results
-        if ($request && $request->has('per_page')) {
+        if ($request && ($request->has('per_page') || $request->has('page'))) {
             $perPage = min(100, max(1, (int) $request->get('per_page', 15)));
-            return $query->paginate($perPage);
+            $page = max(1, (int) $request->get('page', 1));
+            return $query->paginate($perPage, ['*'], 'page', $page);
         }
 
         return $query->get();
@@ -319,14 +320,14 @@ class PaymentTransactionService extends BaseService
     protected function applyTransactionSorting($query, Request $request): void
     {
         $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'desc');
+        $sortDirection = $request->get('sort_direction', 'desc');
 
         $allowedSortFields = [
             'created_at', 'amount', 'status', 'payment_method', 'payment_gateway'
         ];
 
         if (in_array($sortBy, $allowedSortFields)) {
-            $query->orderBy($sortBy, $sortOrder);
+            $query->orderBy($sortBy, $sortDirection);
         } else {
             $query->latest();
         }

@@ -12,7 +12,8 @@ import {
   Settings,
   Shield,
   LogOut,
-  Building2
+  Building2,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -29,6 +30,7 @@ const SuperAdminContent = () => {
   const navigation = [
     { name: 'Dashboard', href: '/superadmin', icon: BarChart3 },
     { name: 'Financials', href: '/superadmin/financials', icon: DollarSign },
+    { name: 'Transaction History', href: '/superadmin/transactions', icon: CreditCard },
     { name: 'User Management', href: '/superadmin/users', icon: Users },
     { name: 'Organization Management', href: '/superadmin/organizations', icon: Building2 },
     {

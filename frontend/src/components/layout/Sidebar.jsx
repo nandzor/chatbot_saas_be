@@ -36,7 +36,8 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
         return [
           { id: 'dashboard', label: 'Dashboard', icon: BarChart3, href: '/superadmin' },
           { id: 'financials', label: 'Financials', icon: DollarSign, href: '/superadmin/financials' },
-          { id: 'clients', label: 'Client Success & Management', icon: Users, href: '/superadmin/clients' },
+          { id: 'transactions', label: 'Transaction History', icon: CreditCard, href: '/superadmin/transactions' },
+          { id: 'clients', label: 'Client Management', icon: Users, href: '/superadmin/clients' },
           { id: 'client-health', label: 'Client Health Dashboard', icon: Heart, href: '/superadmin/client-health' },
           { id: 'onboarding', label: 'Onboarding Pipeline', icon: UserPlus, href: '/superadmin/onboarding' },
           { id: 'automation', label: 'Automation & Playbooks', icon: Zap, href: '/superadmin/automation' },

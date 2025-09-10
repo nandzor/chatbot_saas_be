@@ -355,6 +355,14 @@ class PaymentTransaction extends Model
     }
 
     /**
+     * Scope for successful transactions.
+     */
+    public function scopeSuccessful($query)
+    {
+        return $query->where('status', 'successful');
+    }
+
+    /**
      * Scope for pending transactions.
      */
     public function scopePending($query)
@@ -393,6 +401,14 @@ class PaymentTransaction extends Model
     public function scopeOneTime($query)
     {
         return $query->where('payment_type', 'one_time');
+    }
+
+    /**
+     * Scope for specific status.
+     */
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
     }
 
     /**

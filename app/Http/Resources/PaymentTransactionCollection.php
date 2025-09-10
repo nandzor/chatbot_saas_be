@@ -16,7 +16,7 @@ class PaymentTransactionCollection extends ResourceCollection
     {
         return [
             'data' => $this->collection,
-            'pagination' => [
+            'meta' => [
                 'current_page' => $this->currentPage(),
                 'last_page' => $this->lastPage(),
                 'per_page' => $this->perPage(),
@@ -25,13 +25,11 @@ class PaymentTransactionCollection extends ResourceCollection
                 'to' => $this->lastItem(),
                 'has_more_pages' => $this->hasMorePages(),
             ],
-            'meta' => [
-                'total_transactions' => $this->total(),
-                'total_amount' => $this->collection->sum('amount'),
-                'successful_transactions' => $this->collection->where('status', 'completed')->count(),
-                'failed_transactions' => $this->collection->whereIn('status', ['failed', 'cancelled'])->count(),
-                'pending_transactions' => $this->collection->whereIn('status', ['pending', 'processing'])->count(),
-                'refunded_transactions' => $this->collection->where('status', 'refunded')->count(),
+            'links' => [
+                'first' => $this->url(1),
+                'last' => $this->url($this->lastPage()),
+                'prev' => $this->previousPageUrl(),
+                'next' => $this->nextPageUrl(),
             ],
         ];
     }

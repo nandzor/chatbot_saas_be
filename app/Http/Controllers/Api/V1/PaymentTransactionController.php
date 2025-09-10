@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Services\PaymentTransactionService;
 use App\Http\Resources\PaymentTransactionResource;
-use App\Http\Resources\PaymentTransactionCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -35,7 +34,7 @@ class PaymentTransactionController extends BaseApiController
 
             return $this->successResponse(
                 'Daftar riwayat transaksi berhasil diambil',
-                new PaymentTransactionCollection($transactions)
+                $transactions->through(fn($transaction) => new PaymentTransactionResource($transaction))
             );
         } catch (\Exception $e) {
             Log::error('Error fetching payment transactions', [
@@ -229,7 +228,7 @@ class PaymentTransactionController extends BaseApiController
 
             return $this->successResponse(
                 "Daftar transaksi dengan status {$status} berhasil diambil",
-                new PaymentTransactionCollection($transactions)
+                $transactions->through(fn($transaction) => new PaymentTransactionResource($transaction))
             );
         } catch (\Exception $e) {
             Log::error('Error fetching transactions by status', [
@@ -259,7 +258,7 @@ class PaymentTransactionController extends BaseApiController
 
             return $this->successResponse(
                 "Daftar transaksi dengan metode pembayaran {$method} berhasil diambil",
-                new PaymentTransactionCollection($transactions)
+                $transactions->through(fn($transaction) => new PaymentTransactionResource($transaction))
             );
         } catch (\Exception $e) {
             Log::error('Error fetching transactions by payment method', [
@@ -289,7 +288,7 @@ class PaymentTransactionController extends BaseApiController
 
             return $this->successResponse(
                 "Daftar transaksi dengan gateway pembayaran {$gateway} berhasil diambil",
-                new PaymentTransactionCollection($transactions)
+                $transactions->through(fn($transaction) => new PaymentTransactionResource($transaction))
             );
         } catch (\Exception $e) {
             Log::error('Error fetching transactions by payment gateway', [
