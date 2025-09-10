@@ -48,6 +48,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle.auth' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':5,1',
             'throttle.refresh' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':10,1',
             'throttle.validation' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':20,1',
+            'throttle.webhook' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':100,1',
+            'throttle.subscription' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':30,1',
+            'webhook.signature' => \App\Http\Middleware\WebhookSignatureMiddleware::class,
         ]);
 
         // Register custom middleware for API guard

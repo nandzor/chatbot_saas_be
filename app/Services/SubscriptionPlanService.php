@@ -344,4 +344,465 @@ class SubscriptionPlanService extends BaseService
                 ->toArray()
         ];
     }
+
+    /**
+     * Get popular plans (alias for getPopularPlans)
+     */
+    public function popular(): Collection
+    {
+        return $this->getPopularPlans();
+    }
+
+    /**
+     * Get plans by tier (alias for getPlansByTier)
+     */
+    public function byTier(string $tier): Collection
+    {
+        return $this->getPlansByTier($tier);
+    }
+
+    /**
+     * Get custom plans (alias for getCustomPlans)
+     */
+    public function custom(): Collection
+    {
+        return $this->getCustomPlans();
+    }
+
+    /**
+     * Get plan analytics
+     */
+    public function analytics(array $filters = []): array
+    {
+        $query = $this->getModel()->newQuery();
+
+        // Apply filters
+        if (!empty($filters['tier'])) {
+            $query->where('tier', $filters['tier']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        // Plan performance metrics
+        $planPerformance = $query->clone()
+            ->withCount('subscriptions')
+            ->withSum('subscriptions', 'unit_amount')
+            ->get()
+            ->map(function ($plan) {
+                return [
+                    'plan_id' => $plan->id,
+                    'plan_name' => $plan->name,
+                    'tier' => $plan->tier,
+                    'subscription_count' => $plan->subscriptions_count,
+                    'total_revenue' => (float) $plan->subscriptions_sum_unit_amount,
+                    'average_revenue_per_subscription' => $plan->subscriptions_count > 0
+                        ? (float) $plan->subscriptions_sum_unit_amount / $plan->subscriptions_count
+                        : 0,
+                ];
+            });
+
+        // Revenue trends by plan
+        $revenueTrends = $query->clone()
+            ->join('subscriptions', 'subscription_plans.id', '=', 'subscriptions.plan_id')
+            ->selectRaw('subscription_plans.name as plan_name, DATE_TRUNC(\'month\', subscriptions.created_at) as month, SUM(subscriptions.unit_amount) as revenue')
+            ->where('subscriptions.created_at', '>=', now()->subMonths(12))
+            ->where('subscriptions.status', 'success')
+            ->groupBy('subscription_plans.name', 'month')
+            ->orderBy('month')
+            ->get()
+            ->groupBy('plan_name')
+            ->map(function ($planData) {
+                return $planData->map(function ($item) {
+                    return [
+                        'month' => $item->month->format('Y-m'),
+                        'revenue' => (float) $item->revenue,
+                    ];
+                });
+            });
+
+        // Plan conversion rates
+        $conversionRates = $query->clone()
+            ->withCount(['subscriptions as total_subscriptions'])
+            ->withCount(['subscriptions as successful_subscriptions' => function ($query) {
+                $query->where('status', 'success');
+            }])
+            ->get()
+            ->map(function ($plan) {
+                $conversionRate = $plan->total_subscriptions > 0
+                    ? ($plan->successful_subscriptions / $plan->total_subscriptions) * 100
+                    : 0;
+
+                return [
+                    'plan_id' => $plan->id,
+                    'plan_name' => $plan->name,
+                    'total_subscriptions' => $plan->total_subscriptions,
+                    'successful_subscriptions' => $plan->successful_subscriptions,
+                    'conversion_rate' => round($conversionRate, 2),
+                ];
+            });
+
+        return [
+            'plan_performance' => $planPerformance,
+            'revenue_trends' => $revenueTrends,
+            'conversion_rates' => $conversionRates,
+            'generated_at' => now()->toISOString(),
+        ];
+    }
+
+    /**
+     * Export plans data
+     */
+    public function export(array $filters = []): array
+    {
+        $plans = $this->getAllPlans(null, $filters);
+
+        $exportData = [];
+        foreach ($plans as $plan) {
+            $exportData[] = [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'display_name' => $plan->display_name,
+                'description' => $plan->description,
+                'tier' => $plan->tier,
+                'unit_amount' => $plan->unit_amount,
+                'currency' => $plan->currency,
+                'billing_cycle' => $plan->billing_cycle,
+                'features' => json_encode($plan->features ?? []),
+                'limits' => json_encode($plan->limits ?? []),
+                'is_popular' => $plan->is_popular ? 'Yes' : 'No',
+                'is_custom' => $plan->is_custom ? 'Yes' : 'No',
+                'status' => $plan->status,
+                'sort_order' => $plan->sort_order,
+                'created_at' => $plan->created_at->format('Y-m-d H:i:s'),
+                'updated_at' => $plan->updated_at->format('Y-m-d H:i:s'),
+            ];
+        }
+
+        return [
+            'data' => $exportData,
+            'total_records' => count($exportData),
+            'exported_at' => now()->toISOString(),
+        ];
+    }
+
+    /**
+     * Get plans with subscription count
+     */
+    public function withSubscriptionCount(array $filters = []): Collection
+    {
+        $query = $this->getModel()->newQuery();
+
+        // Apply filters
+        if (!empty($filters['tier'])) {
+            $query->where('tier', $filters['tier']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        return $query->withCount('subscriptions')->ordered()->get();
+    }
+
+    /**
+     * Get popular plans with statistics
+     */
+    public function popularWithStats(): Collection
+    {
+        return $this->getModel()
+            ->popular()
+            ->withCount('subscriptions')
+            ->withSum('subscriptions', 'unit_amount')
+            ->ordered()
+            ->get();
+    }
+
+    /**
+     * Get plans by tier with features
+     */
+    public function byTierWithFeatures(string $tier): Collection
+    {
+        return $this->getModel()
+            ->tier($tier)
+            ->withCount('subscriptions')
+            ->ordered()
+            ->get();
+    }
+
+    /**
+     * Compare plans
+     */
+    public function comparison(array $planIds): array
+    {
+        $plans = $this->getModel()->whereIn('id', $planIds)->ordered()->get();
+
+        $comparison = [];
+        foreach ($plans as $plan) {
+            $comparison[] = [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'display_name' => $plan->display_name,
+                'tier' => $plan->tier,
+                'unit_amount' => $plan->unit_amount,
+                'currency' => $plan->currency,
+                'billing_cycle' => $plan->billing_cycle,
+                'features' => $plan->features ?? [],
+                'limits' => $plan->limits ?? [],
+                'is_popular' => $plan->is_popular,
+                'subscription_count' => $plan->subscriptions_count ?? 0,
+            ];
+        }
+
+        return $comparison;
+    }
+
+    /**
+     * Get plan recommendations
+     */
+    public function recommendations(array $filters = []): Collection
+    {
+        $query = $this->getModel()->where('status', 'active');
+
+        // Recommend based on current plan
+        if (!empty($filters['current_plan_id'])) {
+            $currentPlan = $this->getById($filters['current_plan_id']);
+            if ($currentPlan) {
+                // Recommend higher tier plans
+                $query->where('tier', '>', $currentPlan->tier);
+            }
+        }
+
+        // Recommend based on usage pattern
+        if (!empty($filters['usage_pattern'])) {
+            switch ($filters['usage_pattern']) {
+                case 'high':
+                    $query->where('tier', 'enterprise');
+                    break;
+                case 'medium':
+                    $query->where('tier', 'professional');
+                    break;
+                case 'low':
+                    $query->where('tier', 'basic');
+                    break;
+            }
+        }
+
+        return $query->withCount('subscriptions')->ordered()->limit(3)->get();
+    }
+
+    /**
+     * Get plan features
+     */
+    public function features(string $id): ?array
+    {
+        $plan = $this->getById($id);
+        return $plan ? $plan->features : null;
+    }
+
+    /**
+     * Get plan pricing
+     */
+    public function pricing(string $id): ?array
+    {
+        $plan = $this->getById($id);
+        if (!$plan) {
+            return null;
+        }
+
+        return [
+            'id' => $plan->id,
+            'name' => $plan->name,
+            'unit_amount' => $plan->unit_amount,
+            'currency' => $plan->currency,
+            'billing_cycle' => $plan->billing_cycle,
+            'discount_amount' => $plan->discount_amount ?? 0,
+            'tax_amount' => $plan->tax_amount ?? 0,
+            'total_amount' => $plan->unit_amount - ($plan->discount_amount ?? 0) + ($plan->tax_amount ?? 0),
+        ];
+    }
+
+    /**
+     * Get plan subscriptions
+     */
+    public function subscriptions(string $id, array $filters = []): Collection
+    {
+        $plan = $this->getById($id);
+        if (!$plan) {
+            return collect();
+        }
+
+        $query = $plan->subscriptions();
+
+        // Apply filters
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['organization_id'])) {
+            $query->where('organization_id', $filters['organization_id']);
+        }
+
+        return $query->with('organization')->latest()->get();
+    }
+
+    /**
+     * Get plan usage statistics
+     */
+    public function usageStats(string $id): ?array
+    {
+        $plan = $this->getById($id);
+        if (!$plan) {
+            return null;
+        }
+
+        $subscriptions = $plan->subscriptions;
+        $activeSubscriptions = $subscriptions->where('status', 'success');
+        $trialSubscriptions = $subscriptions->where('status', 'pending');
+
+        return [
+            'plan_id' => $id,
+            'plan_name' => $plan->name,
+            'total_subscriptions' => $subscriptions->count(),
+            'active_subscriptions' => $activeSubscriptions->count(),
+            'trial_subscriptions' => $trialSubscriptions->count(),
+            'total_revenue' => $activeSubscriptions->sum('unit_amount'),
+            'average_revenue_per_subscription' => $activeSubscriptions->avg('unit_amount'),
+            'conversion_rate' => $subscriptions->count() > 0
+                ? round(($activeSubscriptions->count() / $subscriptions->count()) * 100, 2)
+                : 0,
+        ];
+    }
+
+    /**
+     * Toggle plan status
+     */
+    public function toggleStatus(string $id): ?SubscriptionPlan
+    {
+        $plan = $this->getById($id);
+        if (!$plan) {
+            return null;
+        }
+
+        $newStatus = $plan->status === 'active' ? 'inactive' : 'active';
+        $plan->update(['status' => $newStatus]);
+
+        // Clear cache
+        $this->clearPlanCache();
+
+        return $plan->fresh();
+    }
+
+    /**
+     * Duplicate a plan
+     */
+    public function duplicate(string $id, array $data = []): ?SubscriptionPlan
+    {
+        $originalPlan = $this->getById($id);
+        if (!$originalPlan) {
+            return null;
+        }
+
+        $duplicateData = $originalPlan->toArray();
+        unset($duplicateData['id'], $duplicateData['created_at'], $duplicateData['updated_at']);
+
+        // Override with provided data
+        $duplicateData = array_merge($duplicateData, $data);
+
+        // Ensure unique name
+        if (!isset($data['name'])) {
+            $duplicateData['name'] = $originalPlan->name . ' (Copy)';
+        }
+
+        // Ensure unique display name
+        if (!isset($data['display_name'])) {
+            $duplicateData['display_name'] = $originalPlan->display_name . ' (Copy)';
+        }
+
+        return $this->createPlan($duplicateData);
+    }
+
+    /**
+     * Bulk create plans
+     */
+    public function bulkCreate(array $plansData): array
+    {
+        $created = 0;
+        $failed = 0;
+        $results = [];
+
+        foreach ($plansData as $planData) {
+            try {
+                $plan = $this->createPlan($planData);
+                $created++;
+                $results[] = [
+                    'success' => true,
+                    'plan' => $plan,
+                ];
+            } catch (\Exception $e) {
+                $failed++;
+                $results[] = [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'data' => $planData,
+                ];
+            }
+        }
+
+        return [
+            'created' => $created,
+            'failed' => $failed,
+            'total' => count($plansData),
+            'results' => $results,
+        ];
+    }
+
+    /**
+     * Bulk update plans
+     */
+    public function bulkUpdatePlans(array $plansData): array
+    {
+        $updated = 0;
+        $failed = 0;
+        $results = [];
+
+        foreach ($plansData as $planData) {
+            try {
+                if (!isset($planData['id'])) {
+                    throw new \Exception('Plan ID is required for bulk update');
+                }
+
+                $plan = $this->updatePlan($planData['id'], collect($planData)->except('id')->toArray());
+                if ($plan) {
+                    $updated++;
+                    $results[] = [
+                        'success' => true,
+                        'plan' => $plan,
+                    ];
+                } else {
+                    $failed++;
+                    $results[] = [
+                        'success' => false,
+                        'error' => 'Plan not found',
+                        'id' => $planData['id'],
+                    ];
+                }
+            } catch (\Exception $e) {
+                $failed++;
+                $results[] = [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'data' => $planData,
+                ];
+            }
+        }
+
+        return [
+            'updated' => $updated,
+            'failed' => $failed,
+            'total' => count($plansData),
+            'results' => $results,
+        ];
+    }
 }

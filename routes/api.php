@@ -283,8 +283,6 @@ Route::prefix('v1')->group(function () {
 
         // ====================================================================
         // ORGANIZATION MANAGEMENT (With Permission Middleware)
-
-
         // ====================================================================
         // SUBSCRIPTION PLAN MANAGEMENT (With Permission Middleware)
         // ====================================================================
@@ -299,24 +297,44 @@ Route::prefix('v1')->group(function () {
             Route::get('/tier/{tier}', [SubscriptionPlanController::class, 'byTier']);
             Route::get('/custom', [SubscriptionPlanController::class, 'custom']);
             Route::get('/statistics', [SubscriptionPlanController::class, 'statistics']);
+            Route::get('/analytics', [SubscriptionPlanController::class, 'analytics']);
+            Route::get('/export', [SubscriptionPlanController::class, 'export']);
+
+            // Enhanced plan endpoints (from subscription management integration)
+            Route::get('/with-subscription-count', [SubscriptionPlanController::class, 'withSubscriptionCount']);
+            Route::get('/popular-with-stats', [SubscriptionPlanController::class, 'popularWithStats']);
+            Route::get('/tier/{tier}/with-features', [SubscriptionPlanController::class, 'byTierWithFeatures']);
+            Route::get('/comparison', [SubscriptionPlanController::class, 'comparison']);
+            Route::get('/recommendations', [SubscriptionPlanController::class, 'recommendations']);
 
             // Individual plan operations
             Route::prefix('{subscription_plan}')->group(function () {
                 Route::get('/', [SubscriptionPlanController::class, 'show']);
+                Route::get('/features', [SubscriptionPlanController::class, 'features']);
+                Route::get('/pricing', [SubscriptionPlanController::class, 'pricing']);
+                Route::get('/subscriptions', [SubscriptionPlanController::class, 'subscriptions']);
+                Route::get('/usage-stats', [SubscriptionPlanController::class, 'usageStats']);
+
                 Route::middleware(['permission:subscription_plans.update'])->put('/', [SubscriptionPlanController::class, 'update']);
+                Route::middleware(['permission:subscription_plans.update'])->patch('/', [SubscriptionPlanController::class, 'update']);
                 Route::middleware(['permission:subscription_plans.delete'])->delete('/', [SubscriptionPlanController::class, 'destroy']);
                 Route::middleware(['permission:subscription_plans.update'])->patch('/toggle-popular', [SubscriptionPlanController::class, 'togglePopular']);
+                Route::middleware(['permission:subscription_plans.update'])->patch('/toggle-status', [SubscriptionPlanController::class, 'toggleStatus']);
+                Route::middleware(['permission:subscription_plans.update'])->patch('/duplicate', [SubscriptionPlanController::class, 'duplicate']);
             });
 
             // Routes requiring additional permissions
             Route::middleware(['permission:subscription_plans.create'])->post('/', [SubscriptionPlanController::class, 'store']);
             Route::middleware(['permission:subscription_plans.update'])->patch('/sort-order', [SubscriptionPlanController::class, 'updateSortOrder']);
+            Route::middleware(['permission:subscription_plans.create'])->post('/bulk-create', [SubscriptionPlanController::class, 'bulkCreate']);
+            Route::middleware(['permission:subscription_plans.update'])->patch('/bulk-update', [SubscriptionPlanController::class, 'bulkUpdate']);
         });
 
         // ====================================================================
-        // SUBSCRIPTION MANAGEMENT (Super Admin Only)
+        // SUBSCRIPTION MANAGEMENT
         // ====================================================================
 
+        // Super Admin subscription management (full access)
         Route::prefix('subscriptions')
             ->middleware(['super.admin'])
             ->group(function () {
@@ -329,53 +347,144 @@ Route::prefix('v1')->group(function () {
             // CRUD operations
             Route::post('/', [SubscriptionController::class, 'store']);
             Route::put('/{id}', [SubscriptionController::class, 'update']);
+            Route::patch('/{id}', [SubscriptionController::class, 'update']);
+            Route::delete('/{id}', [SubscriptionController::class, 'destroy']);
 
             // Individual subscription
             Route::get('/{id}', [SubscriptionController::class, 'show']);
 
-            // Subscription actions
+            // Subscription lifecycle management
+            Route::patch('/{id}/activate', [SubscriptionController::class, 'activate']);
+            Route::patch('/{id}/suspend', [SubscriptionController::class, 'suspend']);
             Route::patch('/{id}/cancel', [SubscriptionController::class, 'cancel']);
             Route::patch('/{id}/renew', [SubscriptionController::class, 'renew']);
+            Route::patch('/{id}/upgrade', [SubscriptionController::class, 'upgrade']);
+            Route::patch('/{id}/downgrade', [SubscriptionController::class, 'downgrade']);
+
+            // Subscription billing management
+            Route::get('/{id}/billing', [SubscriptionController::class, 'billing']);
+            Route::post('/{id}/billing/process', [SubscriptionController::class, 'processBilling']);
+            Route::get('/{id}/invoices', [SubscriptionController::class, 'invoices']);
+            Route::get('/{id}/invoices/{invoiceId}', [SubscriptionController::class, 'invoice']);
 
             // Bulk operations
             Route::patch('/bulk-update', [SubscriptionController::class, 'bulkUpdate']);
+            Route::patch('/bulk-cancel', [SubscriptionController::class, 'bulkCancel']);
+            Route::patch('/bulk-renew', [SubscriptionController::class, 'bulkRenew']);
 
             // Filtered endpoints
             Route::get('/organization/{organizationId}', [SubscriptionController::class, 'byOrganization']);
+            Route::get('/plan/{planId}', [SubscriptionController::class, 'byPlan']);
             Route::get('/status/{status}', [SubscriptionController::class, 'byStatus']);
             Route::get('/billing-cycle/{billingCycle}', [SubscriptionController::class, 'byBillingCycle']);
+            Route::get('/trial/active', [SubscriptionController::class, 'activeTrials']);
+            Route::get('/trial/expired', [SubscriptionController::class, 'expiredTrials']);
+            Route::get('/expiring', [SubscriptionController::class, 'expiringSubscriptions']);
 
             // Additional endpoints
             Route::get('/{id}/history', [SubscriptionController::class, 'history']);
-            Route::get('/usage', [SubscriptionController::class, 'usage']);
+            Route::get('/{id}/usage', [SubscriptionController::class, 'usage']);
+            Route::get('/{id}/metrics', [SubscriptionController::class, 'metrics']);
+            Route::get('/usage/overview', [SubscriptionController::class, 'usageOverview']);
         });
 
-        // Webhook endpoints (no authentication required for external services)
-        Route::post('/subscriptions/webhook', [SubscriptionController::class, 'webhook']);
+        // Organization-scoped subscription access (for organization admins)
+        Route::prefix('subscriptions')
+            ->middleware(['permission:subscriptions.view', 'organization'])
+            ->group(function () {
+            // Organization's own subscription
+            Route::get('/my-subscription', [SubscriptionController::class, 'mySubscription']);
+            Route::get('/my-subscription/usage', [SubscriptionController::class, 'myUsage']);
+            Route::get('/my-subscription/billing', [SubscriptionController::class, 'myBilling']);
+            Route::get('/my-subscription/invoices', [SubscriptionController::class, 'myInvoices']);
+            Route::get('/my-subscription/history', [SubscriptionController::class, 'myHistory']);
+            Route::get('/my-subscription/metrics', [SubscriptionController::class, 'myMetrics']);
+
+            // Subscription management (limited to own organization)
+            Route::middleware(['permission:subscriptions.update'])->group(function () {
+                Route::patch('/my-subscription/upgrade', [SubscriptionController::class, 'requestUpgrade']);
+                Route::patch('/my-subscription/downgrade', [SubscriptionController::class, 'requestDowngrade']);
+                Route::patch('/my-subscription/cancel', [SubscriptionController::class, 'requestCancellation']);
+                Route::patch('/my-subscription/renew', [SubscriptionController::class, 'requestRenewal']);
+            });
+
+            // Subscription plan comparison and selection
+            Route::get('/plans/compare', [SubscriptionController::class, 'comparePlans']);
+            Route::get('/plans/available', [SubscriptionController::class, 'availablePlans']);
+            Route::get('/plans/recommended', [SubscriptionController::class, 'recommendedPlans']);
+            Route::get('/plans/upgrade-options', [SubscriptionController::class, 'upgradeOptions']);
+        });
+
+
+        // Webhook endpoints (with security validation)
+        Route::prefix('webhooks')->group(function () {
+            // Public webhook endpoints (no authentication required for external services)
+            Route::post('/subscriptions', [SubscriptionController::class, 'webhook'])
+                ->middleware(['throttle:webhook', 'webhook.signature']);
+            Route::post('/subscriptions/validate', [SubscriptionController::class, 'validateWebhook'])
+                ->middleware(['throttle:webhook']);
+
+            // Payment gateway webhooks
+            Route::post('/payments/stripe', [PaymentTransactionController::class, 'stripeWebhook'])
+                ->middleware(['throttle:webhook', 'webhook.signature']);
+            Route::post('/payments/midtrans', [PaymentTransactionController::class, 'midtransWebhook'])
+                ->middleware(['throttle:webhook', 'webhook.signature']);
+            Route::post('/payments/xendit', [PaymentTransactionController::class, 'xenditWebhook'])
+                ->middleware(['throttle:webhook', 'webhook.signature']);
+
+            // Admin webhook management (authenticated)
+            Route::middleware(['super.admin'])->group(function () {
+                Route::get('/subscriptions/logs', [SubscriptionController::class, 'webhookLogs']);
+                Route::get('/subscriptions/logs/{id}', [SubscriptionController::class, 'webhookLog']);
+                Route::post('/subscriptions/test', [SubscriptionController::class, 'testWebhook']);
+                Route::post('/subscriptions/retry/{id}', [SubscriptionController::class, 'retryWebhook']);
+            });
+        });
 
                 // ====================================================================
-        // PAYMENT TRANSACTION HISTORY (Super Admin Only)
+        // PAYMENT TRANSACTION MANAGEMENT
         // ====================================================================
 
+        // Super Admin payment transaction management (full access)
         Route::prefix('payment-transactions')
             ->middleware(['super.admin'])
             ->group(function () {
             // Main transaction endpoints
             Route::get('/', [PaymentTransactionController::class, 'index']);
             Route::get('/statistics', [PaymentTransactionController::class, 'statistics']);
+            Route::get('/analytics', [PaymentTransactionController::class, 'analytics']);
             Route::get('/export', [PaymentTransactionController::class, 'export']);
 
             // Individual transaction
             Route::get('/{id}', [PaymentTransactionController::class, 'show']);
+            Route::patch('/{id}/refund', [PaymentTransactionController::class, 'refund']);
+            Route::patch('/{id}/retry', [PaymentTransactionController::class, 'retry']);
 
             // Filtered endpoints
             Route::get('/status/{status}', [PaymentTransactionController::class, 'byStatus']);
             Route::get('/payment-method/{method}', [PaymentTransactionController::class, 'byPaymentMethod']);
             Route::get('/payment-gateway/{gateway}', [PaymentTransactionController::class, 'byPaymentGateway']);
+            Route::get('/date-range', [PaymentTransactionController::class, 'byDateRange']);
+            Route::get('/amount-range', [PaymentTransactionController::class, 'byAmountRange']);
 
             // History endpoints
             Route::get('/plan/{planId}/history', [PaymentTransactionController::class, 'planHistory']);
             Route::get('/organization/{organizationId}/history', [PaymentTransactionController::class, 'organizationHistory']);
+            Route::get('/subscription/{subscriptionId}/history', [PaymentTransactionController::class, 'subscriptionHistory']);
+
+            // Bulk operations
+            Route::patch('/bulk-refund', [PaymentTransactionController::class, 'bulkRefund']);
+            Route::patch('/bulk-retry', [PaymentTransactionController::class, 'bulkRetry']);
+        });
+
+        // Organization-scoped payment transaction access
+        Route::prefix('payment-transactions')
+            ->middleware(['permission:payments.view', 'organization'])
+            ->group(function () {
+            // Organization's own payment transactions
+            Route::get('/my-transactions', [PaymentTransactionController::class, 'myTransactions']);
+            Route::get('/my-transactions/{id}', [PaymentTransactionController::class, 'myTransaction']);
+            Route::get('/my-transactions/statistics', [PaymentTransactionController::class, 'myStatistics']);
         });
 
         // ====================================================================
@@ -678,6 +787,38 @@ Route::prefix('settings')
         Route::get('/client-management/export', [SettingsController::class, 'exportSettings']);
         Route::post('/client-management/import', [SettingsController::class, 'importSettings']);
     });
+
+// ============================================================================
+// HEALTH CHECK & MONITORING
+// ============================================================================
+
+Route::prefix('health')->name('health.')->group(function () {
+    Route::get('/basic', [App\Http\Controllers\Api\V1\HealthCheckController::class, 'basic'])->name('basic');
+    Route::get('/detailed', [App\Http\Controllers\Api\V1\HealthCheckController::class, 'detailed'])->name('detailed');
+    Route::get('/metrics', [App\Http\Controllers\Api\V1\HealthCheckController::class, 'metrics'])->name('metrics');
+});
+
+// ============================================================================
+// BILLING INVOICE MANAGEMENT
+// ============================================================================
+
+Route::middleware(['unified.auth', 'organization'])->group(function () {
+    // Billing Invoice Routes
+    Route::prefix('billing-invoices')->name('billing-invoices.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'index'])->name('index');
+        Route::post('/', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'store'])->name('store');
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'show'])->name('show');
+        Route::put('/{id}', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'update'])->name('update');
+        Route::patch('/{id}/mark-paid', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'markAsPaid'])->name('mark-paid');
+        Route::patch('/{id}/mark-overdue', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'markAsOverdue'])->name('mark-overdue');
+        Route::patch('/{id}/cancel', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'cancel'])->name('cancel');
+        Route::get('/organization/{organizationId}', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'getOrganizationInvoices'])->name('organization');
+        Route::get('/subscription/{subscriptionId}', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'getSubscriptionInvoices'])->name('subscription');
+        Route::get('/overdue/list', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'getOverdueInvoices'])->name('overdue');
+        Route::get('/upcoming/list', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'getUpcomingInvoices'])->name('upcoming');
+        Route::get('/statistics/summary', [App\Http\Controllers\Api\V1\BillingInvoiceController::class, 'getStatistics'])->name('statistics');
+    });
+});
 
 // ============================================================================
 // FALLBACK ROUTE

@@ -74,6 +74,51 @@ return [
             'after_commit' => false,
         ],
 
+        'payment' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_PAYMENT_QUEUE_CONNECTION', 'default'),
+            'queue' => env('REDIS_PAYMENT_QUEUE', 'payment'),
+            'retry_after' => (int) env('REDIS_PAYMENT_QUEUE_RETRY_AFTER', 120),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        'billing' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_BILLING_QUEUE_CONNECTION', 'default'),
+            'queue' => env('REDIS_BILLING_QUEUE', 'billing'),
+            'retry_after' => (int) env('REDIS_BILLING_QUEUE_RETRY_AFTER', 300),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        'notifications' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_NOTIFICATIONS_QUEUE_CONNECTION', 'default'),
+            'queue' => env('REDIS_NOTIFICATIONS_QUEUE', 'notifications'),
+            'retry_after' => (int) env('REDIS_NOTIFICATIONS_QUEUE_RETRY_AFTER', 60),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        'webhooks' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_WEBHOOKS_QUEUE_CONNECTION', 'default'),
+            'queue' => env('REDIS_WEBHOOKS_QUEUE', 'webhooks'),
+            'retry_after' => (int) env('REDIS_WEBHOOKS_QUEUE_RETRY_AFTER', 60),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        'high_priority' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_HIGH_PRIORITY_QUEUE_CONNECTION', 'default'),
+            'queue' => env('REDIS_HIGH_PRIORITY_QUEUE', 'high_priority'),
+            'retry_after' => (int) env('REDIS_HIGH_PRIORITY_QUEUE_RETRY_AFTER', 30),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
     ],
 
     /*

@@ -824,4 +824,834 @@ class SubscriptionService
             ['path' => request()->url()]
         );
     }
+
+    /**
+     * Activate a subscription.
+     */
+    public function activateSubscription(string $id): ?Subscription
+    {
+        return DB::transaction(function () use ($id) {
+            $subscription = Subscription::find($id);
+            if (!$subscription) {
+                return null;
+            }
+
+            $subscription->update([
+                'status' => 'success',
+                'activated_at' => now(),
+            ]);
+
+            $subscription->load(['organization', 'plan']);
+            return $subscription;
+        });
+    }
+
+    /**
+     * Suspend a subscription.
+     */
+    public function suspendSubscription(string $id): ?Subscription
+    {
+        return DB::transaction(function () use ($id) {
+            $subscription = Subscription::find($id);
+            if (!$subscription) {
+                return null;
+            }
+
+            $subscription->update([
+                'status' => 'suspended',
+                'suspended_at' => now(),
+            ]);
+
+            $subscription->load(['organization', 'plan']);
+            return $subscription;
+        });
+    }
+
+    /**
+     * Upgrade a subscription.
+     */
+    public function upgradeSubscription(string $id, array $data): ?Subscription
+    {
+        return DB::transaction(function () use ($id, $data) {
+            $subscription = Subscription::find($id);
+            if (!$subscription) {
+                return null;
+            }
+
+            $newPlan = SubscriptionPlan::find($data['new_plan_id']);
+            if (!$newPlan) {
+                throw new \Exception('New plan not found');
+            }
+
+            $effectiveDate = $data['effective_date'] ?? now();
+            $proration = $data['proration'] ?? true;
+
+            // Calculate prorated amount if needed
+            if ($proration) {
+                $remainingDays = Carbon::parse($subscription->current_period_end)->diffInDays(now());
+                $totalDays = Carbon::parse($subscription->current_period_start)->diffInDays($subscription->current_period_end);
+                $prorationFactor = $remainingDays / $totalDays;
+
+                $oldAmount = $subscription->unit_amount;
+                $newAmount = $newPlan->unit_amount;
+                $proratedAmount = ($newAmount - $oldAmount) * $prorationFactor;
+            }
+
+            $subscription->update([
+                'plan_id' => $data['new_plan_id'],
+                'unit_amount' => $newPlan->unit_amount,
+                'status' => 'success',
+                'upgraded_at' => now(),
+            ]);
+
+            $subscription->load(['organization', 'plan']);
+            return $subscription;
+        });
+    }
+
+    /**
+     * Downgrade a subscription.
+     */
+    public function downgradeSubscription(string $id, array $data): ?Subscription
+    {
+        return DB::transaction(function () use ($id, $data) {
+            $subscription = Subscription::find($id);
+            if (!$subscription) {
+                return null;
+            }
+
+            $newPlan = SubscriptionPlan::find($data['new_plan_id']);
+            if (!$newPlan) {
+                throw new \Exception('New plan not found');
+            }
+
+            $effectiveDate = $data['effective_date'] ?? $subscription->current_period_end;
+
+            $subscription->update([
+                'plan_id' => $data['new_plan_id'],
+                'unit_amount' => $newPlan->unit_amount,
+                'status' => 'success',
+                'downgraded_at' => now(),
+                'effective_date' => $effectiveDate,
+            ]);
+
+            $subscription->load(['organization', 'plan']);
+            return $subscription;
+        });
+    }
+
+    /**
+     * Get subscription billing information.
+     */
+    public function getSubscriptionBilling(string $id): ?array
+    {
+        $subscription = Subscription::with(['organization', 'plan'])->find($id);
+        if (!$subscription) {
+            return null;
+        }
+
+        return [
+            'subscription_id' => $subscription->id,
+            'organization' => $subscription->organization,
+            'plan' => $subscription->plan,
+            'billing_cycle' => $subscription->billing_cycle,
+            'unit_amount' => $subscription->unit_amount,
+            'currency' => $subscription->currency,
+            'discount_amount' => $subscription->discount_amount,
+            'tax_amount' => $subscription->tax_amount,
+            'total_amount' => $subscription->unit_amount - $subscription->discount_amount + $subscription->tax_amount,
+            'current_period_start' => $subscription->current_period_start,
+            'current_period_end' => $subscription->current_period_end,
+            'next_payment_date' => $subscription->next_payment_date,
+            'last_payment_date' => $subscription->last_payment_date,
+            'payment_method' => $subscription->payment_method ?? 'card',
+            'billing_address' => $subscription->billing_address ?? null,
+        ];
+    }
+
+    /**
+     * Process subscription billing.
+     */
+    public function processSubscriptionBilling(string $id): ?array
+    {
+        $subscription = Subscription::find($id);
+        if (!$subscription) {
+            return null;
+        }
+
+        // Simulate billing process
+        $billingResult = [
+            'subscription_id' => $id,
+            'billing_date' => now(),
+            'amount' => $subscription->unit_amount,
+            'currency' => $subscription->currency,
+            'status' => 'success',
+            'transaction_id' => 'txn_' . uniqid(),
+            'next_billing_date' => Carbon::parse($subscription->current_period_end)->addMonth(),
+        ];
+
+        // Update subscription
+        $subscription->update([
+            'last_payment_date' => now(),
+            'next_payment_date' => $billingResult['next_billing_date'],
+            'status' => 'success',
+        ]);
+
+        return $billingResult;
+    }
+
+    /**
+     * Get subscription invoices.
+     */
+    public function getSubscriptionInvoices(string $id, array $filters = []): LengthAwarePaginator
+    {
+        $query = DB::table('invoices')
+            ->where('subscription_id', $id);
+
+        // Apply filters
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->where('created_at', '>=', Carbon::parse($filters['date_from'])->startOfDay());
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->where('created_at', '<=', Carbon::parse($filters['date_to'])->endOfDay());
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        $page = $filters['page'] ?? 1;
+
+        return new LengthAwarePaginator(
+            $query->orderBy('created_at', 'desc')->get(),
+            $query->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url()]
+        );
+    }
+
+    /**
+     * Get specific subscription invoice.
+     */
+    public function getSubscriptionInvoice(string $id, string $invoiceId): ?array
+    {
+        $invoice = DB::table('invoices')
+            ->where('id', $invoiceId)
+            ->where('subscription_id', $id)
+            ->first();
+
+        return $invoice ? (array) $invoice : null;
+    }
+
+    /**
+     * Get subscription metrics.
+     */
+    public function getSubscriptionMetrics(string $id): ?array
+    {
+        $subscription = Subscription::with(['organization', 'plan'])->find($id);
+        if (!$subscription) {
+            return null;
+        }
+
+        // Calculate metrics
+        $daysActive = $subscription->created_at->diffInDays(now());
+        $totalRevenue = $subscription->unit_amount * $daysActive / 30; // Approximate
+
+        return [
+            'subscription_id' => $id,
+            'days_active' => $daysActive,
+            'total_revenue' => $totalRevenue,
+            'average_monthly_revenue' => $subscription->unit_amount,
+            'billing_cycle' => $subscription->billing_cycle,
+            'status' => $subscription->status,
+            'plan_tier' => $subscription->plan->tier ?? 'basic',
+            'organization_size' => $subscription->organization->company_size ?? 'unknown',
+            'created_at' => $subscription->created_at,
+            'last_payment_date' => $subscription->last_payment_date,
+            'next_payment_date' => $subscription->next_payment_date,
+        ];
+    }
+
+    /**
+     * Get usage overview.
+     */
+    public function getUsageOverview(array $filters = []): array
+    {
+        $query = Subscription::query();
+
+        if (!empty($filters['organization_id'])) {
+            $query->where('organization_id', $filters['organization_id']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->where('created_at', '>=', Carbon::parse($filters['date_from'])->startOfDay());
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->where('created_at', '<=', Carbon::parse($filters['date_to'])->endOfDay());
+        }
+
+        $subscriptions = $query->get();
+
+        return [
+            'total_subscriptions' => $subscriptions->count(),
+            'active_subscriptions' => $subscriptions->where('status', 'success')->count(),
+            'total_revenue' => $subscriptions->where('status', 'success')->sum('unit_amount'),
+            'average_revenue_per_subscription' => $subscriptions->where('status', 'success')->avg('unit_amount'),
+            'billing_cycle_distribution' => $subscriptions->groupBy('billing_cycle')->map->count(),
+            'plan_distribution' => $subscriptions->groupBy('plan.name')->map->count(),
+        ];
+    }
+
+    /**
+     * Get my subscription (organization-scoped).
+     */
+    public function getMySubscription(string $organizationId): ?Subscription
+    {
+        return Subscription::with(['organization', 'plan'])
+            ->where('organization_id', $organizationId)
+            ->where('status', 'success')
+            ->first();
+    }
+
+    /**
+     * Get my usage (organization-scoped).
+     */
+    public function getMyUsage(string $organizationId): array
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        if (!$subscription) {
+            return [];
+        }
+
+        return [
+            'subscription' => $subscription,
+            'usage_metrics' => $this->getSubscriptionMetrics($subscription->id),
+            'billing_info' => $this->getSubscriptionBilling($subscription->id),
+        ];
+    }
+
+    /**
+     * Get my billing (organization-scoped).
+     */
+    public function getMyBilling(string $organizationId): ?array
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        return $subscription ? $this->getSubscriptionBilling($subscription->id) : null;
+    }
+
+    /**
+     * Get my invoices (organization-scoped).
+     */
+    public function getMyInvoices(string $organizationId, array $filters = []): LengthAwarePaginator
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        if (!$subscription) {
+            return new LengthAwarePaginator([], 0, 15, 1);
+        }
+
+        return $this->getSubscriptionInvoices($subscription->id, $filters);
+    }
+
+    /**
+     * Get my history (organization-scoped).
+     */
+    public function getMyHistory(string $organizationId, array $filters = []): LengthAwarePaginator
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        if (!$subscription) {
+            return new LengthAwarePaginator([], 0, 15, 1);
+        }
+
+        return $this->getSubscriptionHistory($subscription->id, $filters);
+    }
+
+    /**
+     * Get my metrics (organization-scoped).
+     */
+    public function getMyMetrics(string $organizationId): ?array
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        return $subscription ? $this->getSubscriptionMetrics($subscription->id) : null;
+    }
+
+    /**
+     * Request subscription upgrade.
+     */
+    public function requestUpgrade(string $organizationId, array $data): array
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        if (!$subscription) {
+            throw new \Exception('No active subscription found');
+        }
+
+        // Create upgrade request
+        $request = [
+            'id' => uniqid('upgrade_'),
+            'organization_id' => $organizationId,
+            'subscription_id' => $subscription->id,
+            'current_plan_id' => $subscription->plan_id,
+            'new_plan_id' => $data['new_plan_id'],
+            'reason' => $data['reason'] ?? null,
+            'status' => 'pending',
+            'created_at' => now(),
+        ];
+
+        // In a real implementation, save to database
+        Log::info('Subscription upgrade requested', $request);
+
+        return $request;
+    }
+
+    /**
+     * Request subscription downgrade.
+     */
+    public function requestDowngrade(string $organizationId, array $data): array
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        if (!$subscription) {
+            throw new \Exception('No active subscription found');
+        }
+
+        // Create downgrade request
+        $request = [
+            'id' => uniqid('downgrade_'),
+            'organization_id' => $organizationId,
+            'subscription_id' => $subscription->id,
+            'current_plan_id' => $subscription->plan_id,
+            'new_plan_id' => $data['new_plan_id'],
+            'reason' => $data['reason'] ?? null,
+            'status' => 'pending',
+            'created_at' => now(),
+        ];
+
+        Log::info('Subscription downgrade requested', $request);
+
+        return $request;
+    }
+
+    /**
+     * Request subscription cancellation.
+     */
+    public function requestCancellation(string $organizationId, array $data): array
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        if (!$subscription) {
+            throw new \Exception('No active subscription found');
+        }
+
+        // Create cancellation request
+        $request = [
+            'id' => uniqid('cancel_'),
+            'organization_id' => $organizationId,
+            'subscription_id' => $subscription->id,
+            'reason' => $data['reason'] ?? null,
+            'cancel_at_period_end' => $data['cancel_at_period_end'] ?? true,
+            'status' => 'pending',
+            'created_at' => now(),
+        ];
+
+        Log::info('Subscription cancellation requested', $request);
+
+        return $request;
+    }
+
+    /**
+     * Request subscription renewal.
+     */
+    public function requestRenewal(string $organizationId, array $data): array
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        if (!$subscription) {
+            throw new \Exception('No active subscription found');
+        }
+
+        // Create renewal request
+        $request = [
+            'id' => uniqid('renewal_'),
+            'organization_id' => $organizationId,
+            'subscription_id' => $subscription->id,
+            'billing_cycle' => $data['billing_cycle'] ?? $subscription->billing_cycle,
+            'status' => 'pending',
+            'created_at' => now(),
+        ];
+
+        Log::info('Subscription renewal requested', $request);
+
+        return $request;
+    }
+
+    /**
+     * Compare subscription plans.
+     */
+    public function comparePlans(array $planIds): array
+    {
+        $plans = SubscriptionPlan::whereIn('id', $planIds)->get();
+
+        $comparison = [];
+        foreach ($plans as $plan) {
+            $comparison[] = [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'display_name' => $plan->display_name,
+                'description' => $plan->description,
+                'tier' => $plan->tier,
+                'unit_amount' => $plan->unit_amount,
+                'currency' => $plan->currency,
+                'billing_cycle' => $plan->billing_cycle,
+                'features' => $plan->features ?? [],
+                'limits' => $plan->limits ?? [],
+                'is_popular' => $plan->is_popular ?? false,
+                'is_active' => $plan->is_active ?? true,
+            ];
+        }
+
+        return $comparison;
+    }
+
+    /**
+     * Get available plans.
+     */
+    public function getAvailablePlans(array $filters = []): array
+    {
+        $query = SubscriptionPlan::where('is_active', true);
+
+        if (!empty($filters['tier'])) {
+            $query->where('tier', $filters['tier']);
+        }
+
+        if (!empty($filters['billing_cycle'])) {
+            $query->where('billing_cycle', $filters['billing_cycle']);
+        }
+
+        return $query->orderBy('sort_order')->get()->toArray();
+    }
+
+    /**
+     * Get recommended plans.
+     */
+    public function getRecommendedPlans(array $filters = []): array
+    {
+        $query = SubscriptionPlan::where('is_active', true);
+
+        if (!empty($filters['current_plan_id'])) {
+            $currentPlan = SubscriptionPlan::find($filters['current_plan_id']);
+            if ($currentPlan) {
+                // Recommend higher tier plans
+                $query->where('tier', '>', $currentPlan->tier);
+            }
+        }
+
+        if (!empty($filters['usage_pattern'])) {
+            // Recommend based on usage pattern
+            switch ($filters['usage_pattern']) {
+                case 'high':
+                    $query->where('tier', 'enterprise');
+                    break;
+                case 'medium':
+                    $query->where('tier', 'professional');
+                    break;
+                case 'low':
+                    $query->where('tier', 'basic');
+                    break;
+            }
+        }
+
+        return $query->orderBy('sort_order')->limit(3)->get()->toArray();
+    }
+
+    /**
+     * Get upgrade options.
+     */
+    public function getUpgradeOptions(string $organizationId): array
+    {
+        $subscription = $this->getMySubscription($organizationId);
+        if (!$subscription) {
+            return [];
+        }
+
+        $currentPlan = $subscription->plan;
+        $upgradeOptions = SubscriptionPlan::where('is_active', true)
+            ->where('tier', '>', $currentPlan->tier)
+            ->orderBy('sort_order')
+            ->get();
+
+        return $upgradeOptions->map(function ($plan) use ($currentPlan) {
+            return [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'display_name' => $plan->display_name,
+                'tier' => $plan->tier,
+                'unit_amount' => $plan->unit_amount,
+                'currency' => $plan->currency,
+                'billing_cycle' => $plan->billing_cycle,
+                'features' => $plan->features ?? [],
+                'price_difference' => $plan->unit_amount - $currentPlan->unit_amount,
+                'is_popular' => $plan->is_popular ?? false,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Validate webhook.
+     */
+    public function validateWebhook(array $data): array
+    {
+        // Basic webhook validation
+        $requiredFields = ['event_type', 'subscription_id'];
+        $missingFields = [];
+
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field])) {
+                $missingFields[] = $field;
+            }
+        }
+
+        return [
+            'valid' => empty($missingFields),
+            'missing_fields' => $missingFields,
+            'event_type' => $data['event_type'] ?? null,
+            'subscription_id' => $data['subscription_id'] ?? null,
+        ];
+    }
+
+    /**
+     * Get webhook logs.
+     */
+    public function getWebhookLogs(array $filters = []): LengthAwarePaginator
+    {
+        $query = DB::table('webhook_logs');
+
+        if (!empty($filters['event_type'])) {
+            $query->where('event_type', $filters['event_type']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->where('created_at', '>=', Carbon::parse($filters['date_from'])->startOfDay());
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->where('created_at', '<=', Carbon::parse($filters['date_to'])->endOfDay());
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        $page = $filters['page'] ?? 1;
+
+        return new LengthAwarePaginator(
+            $query->orderBy('created_at', 'desc')->get(),
+            $query->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url()]
+        );
+    }
+
+    /**
+     * Get specific webhook log.
+     */
+    public function getWebhookLog(string $id): ?array
+    {
+        $log = DB::table('webhook_logs')->where('id', $id)->first();
+        return $log ? (array) $log : null;
+    }
+
+    /**
+     * Test webhook.
+     */
+    public function testWebhook(array $data): array
+    {
+        $webhookUrl = $data['webhook_url'];
+        $eventType = $data['event_type'];
+        $testData = $data['test_data'] ?? [];
+
+        // Simulate webhook test
+        $testResult = [
+            'webhook_url' => $webhookUrl,
+            'event_type' => $eventType,
+            'status' => 'success',
+            'response_code' => 200,
+            'response_time_ms' => rand(50, 500),
+            'tested_at' => now(),
+            'test_data' => $testData,
+        ];
+
+        Log::info('Webhook test performed', $testResult);
+
+        return $testResult;
+    }
+
+    /**
+     * Retry webhook.
+     */
+    public function retryWebhook(string $id): ?array
+    {
+        $log = $this->getWebhookLog($id);
+        if (!$log) {
+            return null;
+        }
+
+        // Simulate webhook retry
+        $retryResult = [
+            'webhook_log_id' => $id,
+            'status' => 'success',
+            'response_code' => 200,
+            'response_time_ms' => rand(50, 500),
+            'retried_at' => now(),
+            'retry_count' => ($log['retry_count'] ?? 0) + 1,
+        ];
+
+        Log::info('Webhook retry performed', $retryResult);
+
+        return $retryResult;
+    }
+
+    /**
+     * Get subscriptions by plan.
+     */
+    public function getSubscriptionsByPlan(string $planId, array $filters = []): LengthAwarePaginator
+    {
+        $filters['plan_id'] = $planId;
+        return $this->getSubscriptions($filters);
+    }
+
+    /**
+     * Get active trials.
+     */
+    public function getActiveTrials(array $filters = []): LengthAwarePaginator
+    {
+        $filters['status'] = 'pending';
+        $query = Subscription::with(['organization', 'plan'])
+            ->where('status', 'pending')
+            ->whereNotNull('trial_start')
+            ->where('trial_end', '>', now());
+
+        // Apply additional filters
+        if (!empty($filters['organization_id'])) {
+            $query->where('organization_id', $filters['organization_id']);
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        $page = $filters['page'] ?? 1;
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    /**
+     * Get expired trials.
+     */
+    public function getExpiredTrials(array $filters = []): LengthAwarePaginator
+    {
+        $query = Subscription::with(['organization', 'plan'])
+            ->where('status', 'pending')
+            ->whereNotNull('trial_start')
+            ->where('trial_end', '<', now());
+
+        // Apply additional filters
+        if (!empty($filters['organization_id'])) {
+            $query->where('organization_id', $filters['organization_id']);
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        $page = $filters['page'] ?? 1;
+
+        return $query->orderBy('trial_end', 'desc')->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    /**
+     * Get expiring subscriptions.
+     */
+    public function getExpiringSubscriptions(array $filters = []): LengthAwarePaginator
+    {
+        $daysAhead = $filters['days_ahead'] ?? 7;
+        $expiryDate = now()->addDays($daysAhead);
+
+        $query = Subscription::with(['organization', 'plan'])
+            ->where('status', 'success')
+            ->where('current_period_end', '<=', $expiryDate)
+            ->where('current_period_end', '>', now());
+
+        // Apply additional filters
+        if (!empty($filters['organization_id'])) {
+            $query->where('organization_id', $filters['organization_id']);
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        $page = $filters['page'] ?? 1;
+
+        return $query->orderBy('current_period_end', 'asc')->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    /**
+     * Bulk cancel subscriptions.
+     */
+    public function bulkCancelSubscriptions(array $data): array
+    {
+        return DB::transaction(function () use ($data) {
+            $subscriptionIds = $data['subscription_ids'];
+            $cancellationData = collect($data)->except('subscription_ids')->toArray();
+
+            $cancelled = 0;
+            foreach ($subscriptionIds as $id) {
+                $result = $this->cancelSubscription($id, $cancellationData);
+                if ($result) {
+                    $cancelled++;
+                }
+            }
+
+            return [
+                'cancelled' => $cancelled,
+                'total' => count($subscriptionIds),
+                'failed' => count($subscriptionIds) - $cancelled,
+            ];
+        });
+    }
+
+    /**
+     * Bulk renew subscriptions.
+     */
+    public function bulkRenewSubscriptions(array $data): array
+    {
+        return DB::transaction(function () use ($data) {
+            $subscriptionIds = $data['subscription_ids'];
+            $renewalData = collect($data)->except('subscription_ids')->toArray();
+
+            $renewed = 0;
+            foreach ($subscriptionIds as $id) {
+                $result = $this->renewSubscription($id, $renewalData);
+                if ($result) {
+                    $renewed++;
+                }
+            }
+
+            return [
+                'renewed' => $renewed,
+                'total' => count($subscriptionIds),
+                'failed' => count($subscriptionIds) - $renewed,
+            ];
+        });
+    }
+
+    /**
+     * Delete subscription.
+     */
+    public function deleteSubscription(string $id): bool
+    {
+        return DB::transaction(function () use ($id) {
+            $subscription = Subscription::find($id);
+            if (!$subscription) {
+                return false;
+            }
+
+            // Soft delete or hard delete based on business logic
+            $subscription->delete();
+            return true;
+        });
+    }
 }

@@ -40,15 +40,21 @@ class UserController extends BaseApiController
 
             $user = $this->userService->updateProfile($request->user()->id, $request->validated());
 
-            $this->logApiAction('profile_updated', [
-                'user_id' => $user->id,
-                'updated_fields' => array_keys($request->validated())
-            ]);
+            if ($user && is_object($user)) {
+                $this->logApiAction('profile_updated', [
+                    'user_id' => $user->id,
+                    'updated_fields' => array_keys($request->validated())
+                ]);
 
-            return $this->successResponseWithLog(
-                'profile_updated',
-                'Profile updated successfully',
-                new UserResource($user)
+                return $this->successResponse(
+                    'Profile updated successfully',
+                    new UserResource($user)
+                );
+            }
+
+            return $this->errorResponse(
+                'Failed to update profile',
+                500
             );
         } catch (ValidationException $e) {
             return $this->errorResponseWithLog(

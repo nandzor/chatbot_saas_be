@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\PaymentTransaction;
+use App\Models\BillingInvoice;
+use App\Observers\PaymentTransactionObserver;
+use App\Observers\BillingInvoiceObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -23,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+        $this->registerObservers();
 
         // Allow publishing our custom WAHA config via: php artisan vendor:publish --tag="waha-config"
         if ($this->app->runningInConsole()) {
@@ -56,5 +61,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('refresh', function (Request $request) {
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
+    }
+
+    /**
+     * Register model observers.
+     */
+    protected function registerObservers(): void
+    {
+        PaymentTransaction::observe(PaymentTransactionObserver::class);
+        BillingInvoice::observe(BillingInvoiceObserver::class);
     }
 }

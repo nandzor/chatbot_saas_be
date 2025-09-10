@@ -90,6 +90,41 @@ return [
             'driver' => 'octane',
         ],
 
+        'payment' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_PAYMENT_CONNECTION', 'cache'),
+            'lock_connection' => env('REDIS_PAYMENT_LOCK_CONNECTION', 'default'),
+            'prefix' => 'payment:',
+        ],
+
+        'billing' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_BILLING_CONNECTION', 'cache'),
+            'lock_connection' => env('REDIS_BILLING_LOCK_CONNECTION', 'default'),
+            'prefix' => 'billing:',
+        ],
+
+        'organization' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_ORGANIZATION_CONNECTION', 'cache'),
+            'lock_connection' => env('REDIS_ORGANIZATION_LOCK_CONNECTION', 'default'),
+            'prefix' => 'org:',
+        ],
+
+        'session' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_SESSION_CONNECTION', 'cache'),
+            'lock_connection' => env('REDIS_SESSION_LOCK_CONNECTION', 'default'),
+            'prefix' => 'session:',
+        ],
+
+        'rate_limit' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_RATE_LIMIT_CONNECTION', 'cache'),
+            'lock_connection' => env('REDIS_RATE_LIMIT_LOCK_CONNECTION', 'default'),
+            'prefix' => 'rate_limit:',
+        ],
+
     ],
 
     /*

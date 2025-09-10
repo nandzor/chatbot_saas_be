@@ -66,6 +66,103 @@ class SubscriptionPlan extends Model
     }
 
     /**
+     * Get active subscriptions for this plan.
+     */
+    public function activeSubscriptions(): HasMany
+    {
+        return $this->subscriptions()->where('status', 'success');
+    }
+
+    /**
+     * Get trial subscriptions for this plan.
+     */
+    public function trialSubscriptions(): HasMany
+    {
+        return $this->subscriptions()->whereNotNull('trial_start')
+                                   ->where('trial_end', '>', now());
+    }
+
+    /**
+     * Get the subscription count for this plan.
+     */
+    public function getSubscriptionCount(): int
+    {
+        return $this->subscriptions()->count();
+    }
+
+    /**
+     * Get the active subscription count for this plan.
+     */
+    public function getActiveSubscriptionCount(): int
+    {
+        return $this->activeSubscriptions()->count();
+    }
+
+    /**
+     * Check if the plan is popular (has many subscriptions).
+     */
+    public function isPopular(int $threshold = 10): bool
+    {
+        return $this->getActiveSubscriptionCount() >= $threshold;
+    }
+
+    /**
+     * Check if the plan is available for new subscriptions.
+     */
+    public function isAvailable(): bool
+    {
+        return $this->status === 'active' && $this->is_visible;
+    }
+
+    /**
+     * Get the monthly price.
+     */
+    public function getMonthlyPrice(): float
+    {
+        if ($this->billing_cycle === 'monthly') {
+            return $this->price;
+        }
+
+        if ($this->billing_cycle === 'yearly') {
+            return $this->price / 12;
+        }
+
+        return $this->price;
+    }
+
+    /**
+     * Get the yearly price.
+     */
+    public function getYearlyPrice(): float
+    {
+        if ($this->billing_cycle === 'yearly') {
+            return $this->price;
+        }
+
+        if ($this->billing_cycle === 'monthly') {
+            return $this->price * 12;
+        }
+
+        return $this->price;
+    }
+
+    /**
+     * Get the savings percentage for yearly billing.
+     */
+    public function getYearlySavingsPercentage(): float
+    {
+        $monthlyPrice = $this->getMonthlyPrice();
+        $yearlyPrice = $this->getYearlyPrice();
+
+        if ($monthlyPrice <= 0) {
+            return 0;
+        }
+
+        $yearlyEquivalent = $monthlyPrice * 12;
+        return round((($yearlyEquivalent - $yearlyPrice) / $yearlyEquivalent) * 100, 2);
+    }
+
+    /**
      * Check if the plan has a specific feature.
      */
     public function hasFeature(string $feature): bool

@@ -138,6 +138,74 @@ class Subscription extends Model
     }
 
     /**
+     * Check if subscription is expired.
+     */
+    public function isExpired(): bool
+    {
+        return $this->current_period_end && $this->current_period_end->isPast();
+    }
+
+    /**
+     * Check if subscription is suspended.
+     */
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    /**
+     * Check if subscription can be upgraded.
+     */
+    public function canBeUpgraded(): bool
+    {
+        return $this->isActive() && !$this->isCancelled();
+    }
+
+    /**
+     * Check if subscription can be downgraded.
+     */
+    public function canBeDowngraded(): bool
+    {
+        return $this->isActive() && !$this->isCancelled();
+    }
+
+    /**
+     * Get days until next billing.
+     */
+    public function getDaysUntilNextBilling(): ?int
+    {
+        if (!$this->next_payment_date) {
+            return null;
+        }
+
+        return now()->diffInDays($this->next_payment_date, false);
+    }
+
+    /**
+     * Get trial days remaining.
+     */
+    public function getTrialDaysRemaining(): ?int
+    {
+        if (!$this->trial_end || !$this->isInTrial()) {
+            return null;
+        }
+
+        return now()->diffInDays($this->trial_end, false);
+    }
+
+    /**
+     * Get subscription duration in days.
+     */
+    public function getDurationInDays(): ?int
+    {
+        if (!$this->current_period_start || !$this->current_period_end) {
+            return null;
+        }
+
+        return $this->current_period_start->diffInDays($this->current_period_end);
+    }
+
+    /**
      * Scope for active subscriptions.
      */
     public function scopeActive($query)

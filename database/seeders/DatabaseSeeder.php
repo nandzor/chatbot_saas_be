@@ -29,6 +29,9 @@ class DatabaseSeeder extends Seeder
 
             // Subscription Seeder
             SubscriptionSeeder::class,
+
+            // Billing Invoice Seeder
+            BillingInvoiceSeeder::class,
         ]);
     }
 }

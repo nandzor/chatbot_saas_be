@@ -81,6 +81,54 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'payment' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/payment.log'),
+            'level' => env('PAYMENT_LOG_LEVEL', 'info'),
+            'days' => env('PAYMENT_LOG_DAYS', 90),
+            'replace_placeholders' => true,
+        ],
+
+        'billing' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/billing.log'),
+            'level' => env('BILLING_LOG_LEVEL', 'info'),
+            'days' => env('BILLING_LOG_DAYS', 90),
+            'replace_placeholders' => true,
+        ],
+
+        'webhook' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/webhook.log'),
+            'level' => env('WEBHOOK_LOG_LEVEL', 'info'),
+            'days' => env('WEBHOOK_LOG_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
+        'audit' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/audit.log'),
+            'level' => env('AUDIT_LOG_LEVEL', 'info'),
+            'days' => env('AUDIT_LOG_DAYS', 365),
+            'replace_placeholders' => true,
+        ],
+
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => env('SECURITY_LOG_LEVEL', 'warning'),
+            'days' => env('SECURITY_LOG_DAYS', 365),
+            'replace_placeholders' => true,
+        ],
+
+        'performance' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/performance.log'),
+            'level' => env('PERFORMANCE_LOG_LEVEL', 'info'),
+            'days' => env('PERFORMANCE_LOG_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

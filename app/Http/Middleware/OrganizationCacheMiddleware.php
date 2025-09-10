@@ -44,9 +44,9 @@ class OrganizationCacheMiddleware
 
             Cache::put($cacheKey, $responseData, $cacheDuration);
 
-            $response->header('X-Cache', 'MISS')
-                    ->header('X-Cache-Key', $cacheKey)
-                    ->header('X-Cache-Duration', $cacheDuration);
+            $response->headers->set('X-Cache', 'MISS');
+            $response->headers->set('X-Cache-Key', $cacheKey);
+            $response->headers->set('X-Cache-Duration', $cacheDuration);
         }
 
         return $response;
