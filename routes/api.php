@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\PaymentTransactionController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationAuditController;
 use App\Http\Controllers\Api\V1\OrganizationNotificationController;
+use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\BotPersonalityController;
 use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
 
@@ -622,6 +623,20 @@ Route::prefix('v1')->group(function () {
         });
     });
 });
+
+// ============================================================================
+// SETTINGS ROUTES
+// ============================================================================
+
+Route::prefix('settings')
+    ->middleware(['auth:sanctum', 'permission:settings.manage'])
+    ->group(function () {
+        Route::get('/client-management', [SettingsController::class, 'getClientManagementSettings']);
+        Route::put('/client-management', [SettingsController::class, 'updateClientManagementSettings']);
+        Route::post('/client-management/reset', [SettingsController::class, 'resetToDefaults']);
+        Route::get('/client-management/export', [SettingsController::class, 'exportSettings']);
+        Route::post('/client-management/import', [SettingsController::class, 'importSettings']);
+    });
 
 // ============================================================================
 // FALLBACK ROUTE

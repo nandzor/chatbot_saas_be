@@ -13,7 +13,7 @@ export { default as Switch } from './Switch';
 export { default as Checkbox } from './Checkbox';
 export { default as Slider } from './Slider';
 export { default as Textarea } from './Textarea';
-export { Alert, AlertDescription } from './Alert';
+export { Alert, AlertTitle, AlertDescription } from './Alert';
 export { ChartContainer, ChartTooltip, ChartTooltipContent } from './ChartComponents';
 export { default as Copy } from './Copy';
 export {

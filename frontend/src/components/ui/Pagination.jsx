@@ -162,7 +162,7 @@ const Pagination = forwardRef(({
   const PageButton = ({ pageNum, isActive = false }) => {
     if (pageNum === '...') {
       return (
-        <span key="ellipsis" className="px-2 text-gray-500">
+        <span className="px-2 text-gray-500">
           <MoreHorizontal className={currentSize.icon} />
         </span>
       );
@@ -170,7 +170,6 @@ const Pagination = forwardRef(({
 
     return (
       <Button
-        key={pageNum}
         variant={isActive ? "default" : "outline"}
         size={size}
         onClick={() => handlePageChange(pageNum)}
@@ -247,8 +246,8 @@ const Pagination = forwardRef(({
 
       {showPageNumbers && (
         <div className="flex items-center gap-1">
-          {visiblePages.map(pageNum => (
-            <PageButton key={pageNum} pageNum={pageNum} isActive={pageNum === currentPage} />
+          {visiblePages.map((pageNum, index) => (
+            <PageButton key={pageNum === '...' ? `ellipsis-${index}` : pageNum} pageNum={pageNum} isActive={pageNum === currentPage} />
           ))}
         </div>
       )}

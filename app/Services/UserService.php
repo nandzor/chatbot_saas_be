@@ -20,54 +20,6 @@ class UserService extends BaseService
         return new User();
     }
 
-    /**
-     * Update user profile
-     */
-    public function updateProfile(string $userId, array $data): User
-    {
-        return DB::transaction(function () use ($userId, $data) {
-            $user = $this->getModel()->findOrFail($userId);
-
-            // Update only the provided fields
-            $updateData = [];
-
-            if (isset($data['full_name'])) {
-                $updateData['full_name'] = $data['full_name'];
-            }
-
-            if (isset($data['email'])) {
-                $updateData['email'] = $data['email'];
-            }
-
-            if (isset($data['phone'])) {
-                $updateData['phone'] = $data['phone'];
-            }
-
-            if (isset($data['avatar_url'])) {
-                $updateData['avatar_url'] = $data['avatar_url'];
-            }
-
-            if (isset($data['bio'])) {
-                $updateData['bio'] = $data['bio'];
-            }
-
-            if (isset($data['timezone'])) {
-                $updateData['timezone'] = $data['timezone'];
-            }
-
-            if (isset($data['language'])) {
-                $updateData['language'] = $data['language'];
-            }
-
-            if (isset($data['notifications'])) {
-                $updateData['notifications'] = $data['notifications'];
-            }
-
-            $user->update($updateData);
-
-            return $user->fresh();
-        });
-    }
 
     /**
      * Create a new user.
