@@ -88,26 +88,32 @@ export const useTransactionHistory = () => {
       const response = await transactionService.getTransactions(params);
 
       if (response.success) {
-        // Handle the response structure: response.data contains { data, meta }
-        const responseData = response.data;
-        const data = responseData?.data || responseData;
-        const meta = responseData?.meta;
-
-        console.log('🔍 useTransactionHistory: Full response:', response);
-        console.log('🔍 useTransactionHistory: Response data:', responseData);
+        // Extract data and pagination based on the actual response structure
+        let data, paginationData;
+        data = response.data;
+        paginationData = response.pagination;
+        console.log('🔍 useTransactionHistory: Response data:', data);
+        console.log('🔍 useTransactionHistory: Response pagination:', paginationData);
         console.log('🔍 useTransactionHistory: Transactions loaded:', data?.length || 0);
-        console.log('🔍 useTransactionHistory: Pagination meta:', meta);
+        console.log('🔍 useTransactionHistory: Pagination - current_page:', paginationData?.current_page, 'last_page:', paginationData?.last_page, 'total:', paginationData?.total);
 
         setTransactions(Array.isArray(data) ? data : []);
 
         // Update pagination state
-        setPagination(prev => ({
-          ...prev,
-          totalItems: meta?.total || 0,
-          totalPages: meta?.last_page || 1,
-          hasNextPage: meta?.current_page < meta?.last_page,
-          hasPrevPage: meta?.current_page > 1
-        }));
+        setPagination(prev => {
+          const newPagination = {
+            ...prev,
+            currentPage: paginationData?.current_page || 1,
+            totalItems: paginationData?.total || 0,
+            totalPages: paginationData?.last_page || 1,
+            hasNextPage: paginationData?.has_more_pages || (paginationData?.current_page < paginationData?.last_page),
+            hasPrevPage: paginationData?.current_page > 1
+          };
+
+          console.log('🔍 useTransactionHistory: Setting pagination:', newPagination);
+
+          return newPagination;
+        });
 
         console.log('✅ useTransactionHistory: Transactions loaded successfully');
       } else {

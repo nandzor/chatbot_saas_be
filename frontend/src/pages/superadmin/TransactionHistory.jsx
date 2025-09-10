@@ -700,6 +700,71 @@ const TransactionHistory = () => {
                 )}
               </div>
             </div>
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span>Per page:</span>
+                  <Select
+                    value={(pagination.itemsPerPage || 15).toString()}
+                    onValueChange={(value) => handlePerPageChange(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-20 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="15">15</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {loading && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    Loading transactions...
+                  </div>
+                )}
+                {(pagination.totalPages || 1) > 1 && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePageChange((pagination.currentPage || 1) - 1)}
+                      disabled={(pagination.currentPage || 1) <= 1 || loading}
+                    >
+                      ←
+                    </Button>
+                    <span className="text-xs">
+                      {pagination.currentPage || 1} / {pagination.totalPages || 1}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePageChange((pagination.currentPage || 1) + 1)}
+                      disabled={(pagination.currentPage || 1) >= (pagination.totalPages || 1) || loading}
+                    >
+                      →
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handlePageChange(1);
+                    resetFilters();
+                  }}
+                  className="text-gray-600"
+                >
+                  Reset Filters
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -872,25 +937,23 @@ const TransactionHistory = () => {
               </Table>
             </div>
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="mt-6">
-                <Pagination
-                  currentPage={pagination.currentPage}
-                  totalPages={pagination.totalPages}
-                  totalItems={pagination.totalItems}
-                  perPage={pagination.itemsPerPage}
-                  onPageChange={handlePageChange}
-                  onPerPageChange={handlePerPageChange}
-                  variant="table"
-                  size="sm"
-                  loading={loading}
-                  perPageOptions={[10, 15, 25, 50, 100]}
-                  maxVisiblePages={7}
-                  className="border-t pt-4"
-                />
-              </div>
-            )}
+            {/* Enhanced Pagination */}
+            <div className="mt-6">
+              <Pagination
+                currentPage={pagination.currentPage || 1}
+                totalPages={pagination.totalPages || 1}
+                totalItems={pagination.totalItems || 0}
+                perPage={pagination.itemsPerPage || 15}
+                onPageChange={handlePageChange}
+                onPerPageChange={handlePerPageChange}
+                variant="table"
+                size="sm"
+                loading={loading}
+                perPageOptions={[10, 15, 25, 50, 100]}
+                maxVisiblePages={7}
+                className="border-t pt-4"
+              />
+            </div>
           </CardContent>
         </Card>
 
