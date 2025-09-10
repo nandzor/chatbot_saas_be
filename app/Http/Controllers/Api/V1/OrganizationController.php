@@ -777,6 +777,29 @@ class OrganizationController extends BaseApiController
     }
 
     /**
+     * Get analytics for all organizations
+     */
+    public function getAllOrganizationsAnalytics(Request $request): JsonResponse
+    {
+        try {
+            $params = $request->only(['time_range', 'start_date', 'end_date']);
+            $analytics = $this->organizationService->getAllOrganizationsAnalytics($params);
+
+            return $this->successResponse(
+                'All organizations analytics retrieved successfully',
+                $analytics
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithDebug(
+                message: 'Failed to get all organizations analytics',
+                statusCode: 500,
+                errors: $e->getMessage(),
+                exception: $e
+            );
+        }
+    }
+
+    /**
      * Get organization analytics
      */
     public function getAnalytics(Request $request, $organizationId): JsonResponse

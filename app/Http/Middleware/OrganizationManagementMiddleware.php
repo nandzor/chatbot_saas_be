@@ -20,6 +20,14 @@ class OrganizationManagementMiddleware
         // Get organization ID from route
         $organizationId = $request->route('organization');
 
+        // Get user for access checks
+        $user = $request->user();
+
+        // Check if user is superadmin - if so, allow access without organization ID
+        if ($user && $this->isSuperAdmin($user) && !$organizationId) {
+            return $next($request);
+        }
+
         if (!$organizationId) {
             return response()->json([
                 'success' => false,
@@ -43,7 +51,6 @@ class OrganizationManagementMiddleware
         }
 
         // Check if user has access to this organization
-        $user = $request->user();
         if ($user) {
             // Check if user belongs to this organization or is superadmin
             $userOrganization = DB::table('users')
@@ -74,7 +81,12 @@ class OrganizationManagementMiddleware
      */
     private function isSuperAdmin($user): bool
     {
-        // Check if user has superadmin role
+        // Use the User model's isSuperAdmin method for consistency
+        if (method_exists($user, 'isSuperAdmin')) {
+            return $user->isSuperAdmin();
+        }
+
+        // Fallback: Check if user has superadmin role
         $superAdminRole = DB::table('user_roles')
             ->join('organization_roles', 'user_roles.role_id', '=', 'organization_roles.id')
             ->where('user_roles.user_id', $user->id)

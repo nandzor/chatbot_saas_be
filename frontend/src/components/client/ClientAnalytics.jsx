@@ -44,6 +44,10 @@ const ClientAnalytics = () => {
     refreshAnalytics();
   }, [refreshAnalytics]);
 
+  const handleMetricTypeChange = useCallback((value) => {
+    setMetricType(value);
+  }, []);
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -118,12 +122,25 @@ const ClientAnalytics = () => {
     );
   }
 
-  // Use analytics data from hook
-  const { overview, trends, topPerformingOrgs, industryDistribution, subscriptionBreakdown, recentActivity, metrics } = analyticsData;
+  // Use analytics data from hook with safe destructuring
+  const {
+    overview = {},
+    trends = [],
+    topPerformingOrgs = [],
+    industryDistribution = [],
+    subscriptionBreakdown = [],
+    recentActivity = [],
+    metrics = {}
+  } = analyticsData || {};
 
-  const handleMetricTypeChange = useCallback((value) => {
-    setMetricType(value);
-  }, []);
+  // Safe access to overview properties with defaults
+  const {
+    totalOrganizations = 0,
+    totalUsers = 0,
+    totalRevenue = 0,
+    growthRate = 0,
+    churnRate = 0
+  } = overview;
 
   return (
     <div className="space-y-6">
@@ -172,10 +189,10 @@ const ClientAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Organizations</p>
-                <p className="text-2xl font-bold text-gray-900">{overview.totalOrganizations}</p>
+                <p className="text-2xl font-bold text-gray-900">{totalOrganizations}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                  <span className="text-sm text-green-600">+{overview.growthRate}%</span>
+                  <span className="text-sm text-green-600">+{growthRate}%</span>
                 </div>
               </div>
               <div className="h-12 w-12 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -190,7 +207,7 @@ const ClientAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900">{overview.totalUsers.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{totalUsers.toLocaleString()}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
                   <span className="text-sm text-green-600">+8.2%</span>
@@ -208,7 +225,7 @@ const ClientAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">${overview.totalRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">${totalRevenue.toLocaleString()}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
                   <span className="text-sm text-green-600">+15.3%</span>
@@ -226,7 +243,7 @@ const ClientAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Churn Rate</p>
-                <p className="text-2xl font-bold text-gray-900">{overview.churnRate}%</p>
+                <p className="text-2xl font-bold text-gray-900">{churnRate}%</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-red-600 mr-1" />
                   <span className="text-sm text-red-600">+0.2%</span>

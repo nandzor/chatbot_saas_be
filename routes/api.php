@@ -361,6 +361,7 @@ Route::prefix('v1')->group(function () {
 
             // Advanced features
             Route::get('/statistics', [OrganizationController::class, 'statistics']);
+            Route::get('/analytics', [OrganizationController::class, 'getAllOrganizationsAnalytics']);
             Route::get('/export', [OrganizationController::class, 'export']);
             Route::middleware(['permission:organizations.bulk_actions'])->post('/bulk-action', [OrganizationController::class, 'bulkAction']);
             Route::middleware(['permission:organizations.import'])->post('/import', [OrganizationController::class, 'import']);
