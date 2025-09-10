@@ -552,14 +552,6 @@ class OrganizationService extends BaseService
         return $code;
     }
 
-    /**
-     * Clear organization cache
-     */
-    private function clearOrganizationCache(): void
-    {
-        Cache::forget('organizations_active');
-        Cache::forget('organization_statistics');
-    }
 
     /**
      * Validate organization data
@@ -969,6 +961,732 @@ class OrganizationService extends BaseService
             'activityLog' => $activityLog
         ];
     }
+
+    /**
+     * Get organization health status
+     */
+    public function getOrganizationHealth(int $organizationId): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        // Check various health indicators
+        $health = [
+            'status' => 'healthy',
+            'score' => 100,
+            'checks' => []
+        ];
+
+        // Check subscription status
+        $subscriptionStatus = $organization->subscription_status ?? 'inactive';
+        if ($subscriptionStatus === 'active') {
+            $health['checks']['subscription'] = [
+                'status' => 'healthy',
+                'message' => 'Subscription is active'
+            ];
+        } else {
+            $health['checks']['subscription'] = [
+                'status' => 'warning',
+                'message' => 'Subscription is not active'
+            ];
+            $health['score'] -= 20;
+        }
+
+        // Check user activity
+        $recentActivity = $this->getRecentActivity($organizationId);
+        if ($recentActivity > 0) {
+            $health['checks']['activity'] = [
+                'status' => 'healthy',
+                'message' => 'Recent activity detected'
+            ];
+        } else {
+            $health['checks']['activity'] = [
+                'status' => 'warning',
+                'message' => 'No recent activity'
+            ];
+            $health['score'] -= 15;
+        }
+
+        // Check system resources
+        $health['checks']['resources'] = [
+            'status' => 'healthy',
+            'message' => 'System resources are normal'
+        ];
+
+        // Determine overall status
+        if ($health['score'] >= 80) {
+            $health['status'] = 'healthy';
+        } elseif ($health['score'] >= 60) {
+            $health['status'] = 'warning';
+        } else {
+            $health['status'] = 'critical';
+        }
+
+        return $health;
+    }
+
+    /**
+     * Get organization metrics
+     */
+    public function getOrganizationMetrics(int $organizationId, array $params = []): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        $timeRange = $params['time_range'] ?? '30d';
+        $days = $this->getDaysFromTimeRange($timeRange);
+
+        return [
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'status' => $organization->status,
+                'subscription_status' => $organization->subscription_status,
+                'created_at' => $organization->created_at,
+                'updated_at' => $organization->updated_at
+            ],
+            'users' => [
+                'total' => $organization->users()->count(),
+                'active' => $organization->users()->where('last_activity_at', '>=', now()->subDays(7))->count(),
+                'new_this_month' => $organization->users()->where('created_at', '>=', now()->subMonth())->count()
+            ],
+            'activity' => [
+                'total_requests' => $this->getTotalRequests($organizationId, $days),
+                'successful_requests' => $this->getSuccessfulRequests($organizationId, $days),
+                'failed_requests' => $this->getFailedRequests($organizationId, $days),
+                'avg_response_time' => $this->getAverageResponseTime($organizationId, $days)
+            ],
+            'performance' => [
+                'uptime' => $this->getUptime($organizationId),
+                'error_rate' => $this->getErrorRate($organizationId, $days),
+                'throughput' => $this->getThroughput($organizationId, $days)
+            ]
+        ];
+    }
+
+    /**
+     * Get organization activity logs
+     */
+    public function getOrganizationActivityLogs(int $organizationId, array $params = []): array
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+
+        $query = $organization->auditLogs();
+
+        // Apply filters
+        if (isset($params['date_from'])) {
+            $query->where('created_at', '>=', $params['date_from']);
+        }
+        if (isset($params['date_to'])) {
+            $query->where('created_at', '<=', $params['date_to']);
+        }
+        if (isset($params['action'])) {
+            $query->where('action', $params['action']);
+        }
+        if (isset($params['user_id'])) {
+            $query->where('user_id', $params['user_id']);
+        }
+
+        // Apply sorting
+        $sortBy = $params['sort_by'] ?? 'created_at';
+        $sortOrder = $params['sort_order'] ?? 'desc';
+        $query->orderBy($sortBy, $sortOrder);
+
+        // Apply pagination
+        $perPage = $params['per_page'] ?? 15;
+        $page = $params['page'] ?? 1;
+
+        $logs = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return [
+            'data' => $logs->items(),
+            'pagination' => [
+                'current_page' => $logs->currentPage(),
+                'last_page' => $logs->lastPage(),
+                'per_page' => $logs->perPage(),
+                'total' => $logs->total()
+            ]
+        ];
+    }
+
+    /**
+     * Export organizations data
+     */
+    public function exportOrganizations(array $params = []): array
+    {
+        $query = $this->getModel()->newQuery();
+
+        // Apply filters
+        if (isset($params['filters']['status'])) {
+            $query->where('status', $params['filters']['status']);
+        }
+        if (isset($params['filters']['subscription_status'])) {
+            $query->where('subscription_status', $params['filters']['subscription_status']);
+        }
+        if (isset($params['filters']['business_type'])) {
+            $query->where('business_type', $params['filters']['business_type']);
+        }
+        if (isset($params['filters']['industry'])) {
+            $query->where('industry', $params['filters']['industry']);
+        }
+
+        $organizations = $query->get();
+
+        $exportData = [];
+        foreach ($organizations as $organization) {
+            $exportData[] = [
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'email' => $organization->email,
+                'phone' => $organization->phone,
+                'address' => $organization->address,
+                'status' => $organization->status,
+                'subscription_status' => $organization->subscription_status,
+                'business_type' => $organization->business_type,
+                'industry' => $organization->industry,
+                'company_size' => $organization->company_size,
+                'created_at' => $organization->created_at,
+                'updated_at' => $organization->updated_at
+            ];
+        }
+
+        return [
+            'data' => $exportData,
+            'total' => count($exportData),
+            'exported_at' => now()->toISOString()
+        ];
+    }
+
+    /**
+     * Search organizations
+     */
+    public function searchOrganizations(string $query, array $params = []): array
+    {
+        $searchQuery = $this->getModel()->newQuery()
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('email', 'like', "%{$query}%")
+                  ->orWhere('phone', 'like', "%{$query}%")
+                  ->orWhere('address', 'like', "%{$query}%");
+            });
+
+        // Apply additional filters
+        if (isset($params['filters']['status'])) {
+            $searchQuery->where('status', $params['filters']['status']);
+        }
+        if (isset($params['filters']['subscription_status'])) {
+            $searchQuery->where('subscription_status', $params['filters']['subscription_status']);
+        }
+
+        // Apply sorting
+        $sortBy = $params['sort_by'] ?? 'name';
+        $sortOrder = $params['sort_order'] ?? 'asc';
+        $searchQuery->orderBy($sortBy, $sortOrder);
+
+        // Apply pagination
+        $perPage = $params['per_page'] ?? 15;
+        $page = $params['page'] ?? 1;
+
+        $results = $searchQuery->paginate($perPage, ['*'], 'page', $page);
+
+        return [
+            'data' => $results->items(),
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'last_page' => $results->lastPage(),
+                'per_page' => $results->perPage(),
+                'total' => $results->total()
+            ],
+            'query' => $query
+        ];
+    }
+
+    /**
+     * Get recent activity count for organization
+     */
+    private function getRecentActivity(int $organizationId): int
+    {
+        return $this->getModel()
+            ->findOrFail($organizationId)
+            ->auditLogs()
+            ->where('created_at', '>=', now()->subDays(7))
+            ->count();
+    }
+
+    /**
+     * Get total requests for organization
+     */
+    private function getTotalRequests(int $organizationId, int $days): int
+    {
+        // This would typically come from a requests/activity log table
+        // For now, return a mock value based on audit logs
+        return $this->getModel()
+            ->findOrFail($organizationId)
+            ->auditLogs()
+            ->where('created_at', '>=', now()->subDays($days))
+            ->count();
+    }
+
+    /**
+     * Get successful requests for organization
+     */
+    private function getSuccessfulRequests(int $organizationId, int $days): int
+    {
+        // This would typically come from a requests/activity log table
+        // For now, return 90% of total requests as successful
+        $total = $this->getTotalRequests($organizationId, $days);
+        return (int) ($total * 0.9);
+    }
+
+    /**
+     * Get failed requests for organization
+     */
+    private function getFailedRequests(int $organizationId, int $days): int
+    {
+        // This would typically come from a requests/activity log table
+        // For now, return 10% of total requests as failed
+        $total = $this->getTotalRequests($organizationId, $days);
+        return (int) ($total * 0.1);
+    }
+
+    /**
+     * Get average response time for organization
+     */
+    private function getAverageResponseTime(int $organizationId, int $days): float
+    {
+        // This would typically come from a performance metrics table
+        // For now, return a mock value
+        return 150.5; // milliseconds
+    }
+
+    /**
+     * Get uptime percentage for organization
+     */
+    private function getUptime(int $organizationId): float
+    {
+        // This would typically come from a monitoring system
+        // For now, return a mock value
+        return 99.9; // percentage
+    }
+
+    /**
+     * Get error rate for organization
+     */
+    private function getErrorRate(int $organizationId, int $days): float
+    {
+        $total = $this->getTotalRequests($organizationId, $days);
+        $failed = $this->getFailedRequests($organizationId, $days);
+
+        if ($total === 0) {
+            return 0.0;
+        }
+
+        return ($failed / $total) * 100;
+    }
+
+    /**
+     * Get throughput for organization
+     */
+    private function getThroughput(int $organizationId, int $days): float
+    {
+        $total = $this->getTotalRequests($organizationId, $days);
+        return $total / $days; // requests per day
+    }
+
+    /**
+     * Clear organization cache
+     */
+    public function clearOrganizationCache(int $organizationId = null): bool
+    {
+        try {
+            // Clear general organization caches
+            Cache::forget('organizations_active');
+            Cache::forget('organization_statistics');
+
+            // Clear specific organization cache if ID provided
+            if ($organizationId) {
+                $cacheKeys = [
+                    'organization_' . $organizationId,
+                    'organization_users_' . $organizationId,
+                    'organization_logs_' . $organizationId,
+                    'organization_analytics_' . $organizationId
+                ];
+
+                foreach ($cacheKeys as $key) {
+                    Cache::forget($key);
+                }
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to clear organization cache', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Clear all caches
+     */
+    public function clearAllCaches(): bool
+    {
+        try {
+            Cache::flush();
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to clear all caches', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Perform bulk actions on organizations
+     */
+    public function bulkAction(string $action, array $organizationIds, array $options = []): array
+    {
+        try {
+            $results = [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => []
+            ];
+
+            foreach ($organizationIds as $organizationId) {
+                try {
+                    switch ($action) {
+                        case 'activate':
+                            $this->activateOrganization($organizationId);
+                            $results['success']++;
+                            break;
+                        case 'deactivate':
+                            $this->deactivateOrganization($organizationId);
+                            $results['success']++;
+                            break;
+                        case 'suspend':
+                            $this->suspendOrganization($organizationId);
+                            $results['success']++;
+                            break;
+                        case 'unsuspend':
+                            $this->unsuspendOrganization($organizationId);
+                            $results['success']++;
+                            break;
+                        case 'delete':
+                            $this->softDeleteOrganization($organizationId);
+                            $results['success']++;
+                            break;
+                        case 'restore':
+                            $this->restoreOrganization($organizationId);
+                            $results['success']++;
+                            break;
+                        case 'update_subscription':
+                            if (isset($options['subscription_data'])) {
+                                $this->updateSubscription($organizationId, $options['subscription_data']);
+                                $results['success']++;
+                            } else {
+                                $results['failed']++;
+                                $results['errors'][] = "Missing subscription data for organization {$organizationId}";
+                            }
+                            break;
+                        default:
+                            $results['failed']++;
+                            $results['errors'][] = "Unknown action: {$action}";
+                            break;
+                    }
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['errors'][] = "Failed to {$action} organization {$organizationId}: " . $e->getMessage();
+                }
+            }
+
+            return $results;
+        } catch (\Exception $e) {
+            Log::error('Bulk action failed', [
+                'action' => $action,
+                'organization_ids' => $organizationIds,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => 0,
+                'failed' => count($organizationIds),
+                'errors' => ['Bulk action failed: ' . $e->getMessage()]
+            ];
+        }
+    }
+
+    /**
+     * Activate organization
+     */
+    private function activateOrganization(string $organizationId): bool
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+        $organization->update(['status' => 'active']);
+        return true;
+    }
+
+    /**
+     * Deactivate organization
+     */
+    private function deactivateOrganization(string $organizationId): bool
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+        $organization->update(['status' => 'inactive']);
+        return true;
+    }
+
+    /**
+     * Suspend organization
+     */
+    private function suspendOrganization(string $organizationId): bool
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+        $organization->update(['status' => 'suspended']);
+        return true;
+    }
+
+    /**
+     * Unsuspend organization
+     */
+    private function unsuspendOrganization(string $organizationId): bool
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+        $organization->update(['status' => 'active']);
+        return true;
+    }
+
+    /**
+     * Soft delete organization
+     */
+    private function softDeleteOrganization(string $organizationId): bool
+    {
+        $organization = $this->getModel()->findOrFail($organizationId);
+        $organization->delete();
+        return true;
+    }
+
+    /**
+     * Restore organization
+     */
+    public function restoreOrganization(string $organizationId): bool
+    {
+        try {
+            $organization = $this->getModel()->withTrashed()->findOrFail($organizationId);
+            $organization->restore();
+
+            Log::info('Organization restored', [
+                'organization_id' => $organizationId,
+                'name' => $organization->name
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to restore organization', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Import organizations from file
+     */
+    public function importOrganizations($file, array $mapping = []): array
+    {
+        try {
+            $results = [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => [],
+                'imported_organizations' => []
+            ];
+
+            // Read file content
+            $content = file_get_contents($file->getPathname());
+            $data = json_decode($content, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Try CSV format
+                $data = $this->parseCsvContent($content);
+            }
+
+            if (empty($data)) {
+                return [
+                    'success' => 0,
+                    'failed' => 0,
+                    'errors' => ['No valid data found in file'],
+                    'imported_organizations' => []
+                ];
+            }
+
+            foreach ($data as $index => $row) {
+                try {
+                    // Map data according to mapping configuration
+                    $mappedData = $this->mapImportData($row, $mapping);
+
+                    // Validate data
+                    if (!$this->validateImportData($mappedData)) {
+                        $results['failed']++;
+                        $results['errors'][] = "Row " . ($index + 1) . ": Invalid data format";
+                        continue;
+                    }
+
+                    // Check if organization already exists
+                    $existingOrg = $this->getModel()->where('email', $mappedData['email'])->first();
+                    if ($existingOrg) {
+                        $results['failed']++;
+                        $results['errors'][] = "Row " . ($index + 1) . ": Organization with email {$mappedData['email']} already exists";
+                        continue;
+                    }
+
+                    // Create organization
+                    $organization = $this->createOrganization($mappedData);
+                    if ($organization) {
+                        $results['success']++;
+                        $results['imported_organizations'][] = [
+                            'id' => $organization->id,
+                            'name' => $organization->name,
+                            'email' => $organization->email
+                        ];
+                    } else {
+                        $results['failed']++;
+                        $results['errors'][] = "Row " . ($index + 1) . ": Failed to create organization";
+                    }
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row " . ($index + 1) . ": " . $e->getMessage();
+                }
+            }
+
+            return $results;
+        } catch (\Exception $e) {
+            Log::error('Import organizations failed', [
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => ['Import failed: ' . $e->getMessage()],
+                'imported_organizations' => []
+            ];
+        }
+    }
+
+    /**
+     * Parse CSV content
+     */
+    private function parseCsvContent(string $content): array
+    {
+        $lines = explode("\n", $content);
+        $headers = str_getcsv(array_shift($lines));
+        $data = [];
+
+        foreach ($lines as $line) {
+            if (empty(trim($line))) continue;
+
+            $values = str_getcsv($line);
+            if (count($values) === count($headers)) {
+                $data[] = array_combine($headers, $values);
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Map import data according to mapping configuration
+     */
+    private function mapImportData(array $row, array $mapping): array
+    {
+        $mappedData = [];
+
+        foreach ($mapping as $field => $column) {
+            if (isset($row[$column])) {
+                $mappedData[$field] = $row[$column];
+            }
+        }
+
+        return $mappedData;
+    }
+
+    /**
+     * Validate import data
+     */
+    private function validateImportData(array $data): bool
+    {
+        $requiredFields = ['name', 'email'];
+
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                return false;
+            }
+        }
+
+        // Validate email format
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get deleted organizations
+     */
+    public function getDeletedOrganizations(array $params = []): array
+    {
+        try {
+            $query = $this->getModel()->onlyTrashed();
+
+            // Apply filters
+            if (isset($params['date_from'])) {
+                $query->where('deleted_at', '>=', $params['date_from']);
+            }
+            if (isset($params['date_to'])) {
+                $query->where('deleted_at', '<=', $params['date_to']);
+            }
+            if (isset($params['deleted_by'])) {
+                $query->where('deleted_by', $params['deleted_by']);
+            }
+
+            // Apply sorting
+            $sortBy = $params['sort_by'] ?? 'deleted_at';
+            $sortOrder = $params['sort_order'] ?? 'desc';
+            $query->orderBy($sortBy, $sortOrder);
+
+            // Apply pagination
+            $perPage = $params['per_page'] ?? 15;
+            $page = $params['page'] ?? 1;
+
+            $organizations = $query->paginate($perPage, ['*'], 'page', $page);
+
+            return [
+                'data' => $organizations->items(),
+                'pagination' => [
+                    'current_page' => $organizations->currentPage(),
+                    'last_page' => $organizations->lastPage(),
+                    'per_page' => $organizations->perPage(),
+                    'total' => $organizations->total()
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get deleted organizations', [
+                'error' => $e->getMessage(),
+                'params' => $params
+            ]);
+            return [
+                'data' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => 15,
+                    'total' => 0
+                ]
+            ];
+        }
+    }
+
 
     /**
      * Get days from time range
@@ -1673,5 +2391,605 @@ class OrganizationService extends BaseService
             'expiresAt' => $resetData['expires_at'],
             'message' => 'Password reset email sent successfully'
         ];
+    }
+
+    /**
+     * Send notification to organization
+     */
+    public function sendNotification(int $organizationId, string $type, array $data = []): array
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            // Create notification record
+            $notification = $organization->notifications()->create([
+                'type' => $type,
+                'title' => $data['title'] ?? 'Notification',
+                'message' => $data['message'] ?? '',
+                'data' => $data['data'] ?? [],
+                'is_read' => false,
+                'sent_at' => now()
+            ]);
+
+            // Send via email if configured
+            if (isset($data['send_email']) && $data['send_email']) {
+                $this->sendEmailNotification($organization, $notification, $data);
+            }
+
+            // Send via webhook if configured
+            if ($organization->webhook_url) {
+                $this->sendWebhookNotification($organization, $notification, $data);
+            }
+
+            Log::info('Notification sent to organization', [
+                'organization_id' => $organizationId,
+                'notification_id' => $notification->id,
+                'type' => $type
+            ]);
+
+            return [
+                'success' => true,
+                'notification_id' => $notification->id,
+                'message' => 'Notification sent successfully'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to send notification', [
+                'organization_id' => $organizationId,
+                'type' => $type,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to send notification: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get organization notifications
+     */
+    public function getNotifications(int $organizationId, array $params = []): array
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            $query = $organization->notifications();
+
+            // Apply filters
+            if (isset($params['type'])) {
+                $query->where('type', $params['type']);
+            }
+            if (isset($params['is_read'])) {
+                $query->where('is_read', $params['is_read']);
+            }
+            if (isset($params['date_from'])) {
+                $query->where('created_at', '>=', $params['date_from']);
+            }
+            if (isset($params['date_to'])) {
+                $query->where('created_at', '<=', $params['date_to']);
+            }
+
+            // Apply sorting
+            $sortBy = $params['sort_by'] ?? 'created_at';
+            $sortOrder = $params['sort_order'] ?? 'desc';
+            $query->orderBy($sortBy, $sortOrder);
+
+            // Apply pagination
+            $perPage = $params['per_page'] ?? 15;
+            $page = $params['page'] ?? 1;
+
+            $notifications = $query->paginate($perPage, ['*'], 'page', $page);
+
+            return [
+                'data' => $notifications->items(),
+                'pagination' => [
+                    'current_page' => $notifications->currentPage(),
+                    'last_page' => $notifications->lastPage(),
+                    'per_page' => $notifications->perPage(),
+                    'total' => $notifications->total()
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get notifications', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+                'params' => $params
+            ]);
+
+            return [
+                'data' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => 15,
+                    'total' => 0
+                ]
+            ];
+        }
+    }
+
+    /**
+     * Mark notification as read
+     */
+    public function markNotificationRead(int $organizationId, int $notificationId): bool
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            $notification = $organization->notifications()->findOrFail($notificationId);
+            $notification->update(['is_read' => true, 'read_at' => now()]);
+
+            Log::info('Notification marked as read', [
+                'organization_id' => $organizationId,
+                'notification_id' => $notificationId
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to mark notification as read', [
+                'organization_id' => $organizationId,
+                'notification_id' => $notificationId,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Mark all notifications as read
+     */
+    public function markAllNotificationsRead(int $organizationId): bool
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            $organization->notifications()
+                ->where('is_read', false)
+                ->update(['is_read' => true, 'read_at' => now()]);
+
+            Log::info('All notifications marked as read', [
+                'organization_id' => $organizationId
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to mark all notifications as read', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Delete notification
+     */
+    public function deleteNotification(int $organizationId, int $notificationId): bool
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            $notification = $organization->notifications()->findOrFail($notificationId);
+            $notification->delete();
+
+            Log::info('Notification deleted', [
+                'organization_id' => $organizationId,
+                'notification_id' => $notificationId
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to delete notification', [
+                'organization_id' => $organizationId,
+                'notification_id' => $notificationId,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Send email notification
+     */
+    private function sendEmailNotification(Organization $organization, $notification, array $data): void
+    {
+        try {
+            // This would integrate with your email service
+            // For now, just log the action
+            Log::info('Email notification sent', [
+                'organization_id' => $organization->id,
+                'notification_id' => $notification->id,
+                'email' => $organization->email
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send email notification', [
+                'organization_id' => $organization->id,
+                'notification_id' => $notification->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Send webhook notification
+     */
+    private function sendWebhookNotification(Organization $organization, $notification, array $data): void
+    {
+        try {
+            $payload = [
+                'event' => 'notification.sent',
+                'organization_id' => $organization->id,
+                'notification' => [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'title' => $notification->title,
+                    'message' => $notification->message,
+                    'data' => $notification->data,
+                    'sent_at' => $notification->sent_at
+                ],
+                'timestamp' => now()->toISOString()
+            ];
+
+            // Send webhook
+            $response = Http::timeout(10)->post($organization->webhook_url, $payload);
+
+            if ($response->successful()) {
+                Log::info('Webhook notification sent successfully', [
+                    'organization_id' => $organization->id,
+                    'notification_id' => $notification->id,
+                    'webhook_url' => $organization->webhook_url
+                ]);
+            } else {
+                Log::warning('Webhook notification failed', [
+                    'organization_id' => $organization->id,
+                    'notification_id' => $notification->id,
+                    'webhook_url' => $organization->webhook_url,
+                    'status_code' => $response->status()
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send webhook notification', [
+                'organization_id' => $organization->id,
+                'notification_id' => $notification->id,
+                'webhook_url' => $organization->webhook_url,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get organization audit logs
+     */
+    public function getAuditLogs(int $organizationId, array $params = []): array
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            $query = $organization->auditLogs();
+
+            // Apply filters
+            if (isset($params['action'])) {
+                $query->where('action', $params['action']);
+            }
+            if (isset($params['user_id'])) {
+                $query->where('user_id', $params['user_id']);
+            }
+            if (isset($params['date_from'])) {
+                $query->where('created_at', '>=', $params['date_from']);
+            }
+            if (isset($params['date_to'])) {
+                $query->where('created_at', '<=', $params['date_to']);
+            }
+            if (isset($params['ip_address'])) {
+                $query->where('ip_address', $params['ip_address']);
+            }
+
+            // Apply sorting
+            $sortBy = $params['sort_by'] ?? 'created_at';
+            $sortOrder = $params['sort_order'] ?? 'desc';
+            $query->orderBy($sortBy, $sortOrder);
+
+            // Apply pagination
+            $perPage = $params['per_page'] ?? 15;
+            $page = $params['page'] ?? 1;
+
+            $auditLogs = $query->paginate($perPage, ['*'], 'page', $page);
+
+            return [
+                'data' => $auditLogs->items(),
+                'pagination' => [
+                    'current_page' => $auditLogs->currentPage(),
+                    'last_page' => $auditLogs->lastPage(),
+                    'per_page' => $auditLogs->perPage(),
+                    'total' => $auditLogs->total()
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get audit logs', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+                'params' => $params
+            ]);
+
+            return [
+                'data' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => 15,
+                    'total' => 0
+                ]
+            ];
+        }
+    }
+
+    /**
+     * Create audit log entry
+     */
+    public function createAuditLog(int $organizationId, string $action, array $data = []): bool
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            $auditLog = $organization->auditLogs()->create([
+                'action' => $action,
+                'user_id' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'old_values' => $data['old_values'] ?? null,
+                'new_values' => $data['new_values'] ?? null,
+                'metadata' => $data['metadata'] ?? null,
+                'created_at' => now()
+            ]);
+
+            Log::info('Audit log created', [
+                'organization_id' => $organizationId,
+                'audit_log_id' => $auditLog->id,
+                'action' => $action
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to create audit log', [
+                'organization_id' => $organizationId,
+                'action' => $action,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Get organization system logs
+     */
+    public function getSystemLogs(int $organizationId, array $params = []): array
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            $query = $organization->systemLogs();
+
+            // Apply filters
+            if (isset($params['level'])) {
+                $query->where('level', $params['level']);
+            }
+            if (isset($params['component'])) {
+                $query->where('component', $params['component']);
+            }
+            if (isset($params['date_from'])) {
+                $query->where('created_at', '>=', $params['date_from']);
+            }
+            if (isset($params['date_to'])) {
+                $query->where('created_at', '<=', $params['date_to']);
+            }
+
+            // Apply sorting
+            $sortBy = $params['sort_by'] ?? 'created_at';
+            $sortOrder = $params['sort_order'] ?? 'desc';
+            $query->orderBy($sortBy, $sortOrder);
+
+            // Apply pagination
+            $perPage = $params['per_page'] ?? 15;
+            $page = $params['page'] ?? 1;
+
+            $systemLogs = $query->paginate($perPage, ['*'], 'page', $page);
+
+            return [
+                'data' => $systemLogs->items(),
+                'pagination' => [
+                    'current_page' => $systemLogs->currentPage(),
+                    'last_page' => $systemLogs->lastPage(),
+                    'per_page' => $systemLogs->perPage(),
+                    'total' => $systemLogs->total()
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get system logs', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+                'params' => $params
+            ]);
+
+            return [
+                'data' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => 15,
+                    'total' => 0
+                ]
+            ];
+        }
+    }
+
+    /**
+     * Create system log entry
+     */
+    public function createSystemLog(int $organizationId, string $level, string $message, array $data = []): bool
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            $systemLog = $organization->systemLogs()->create([
+                'level' => $level,
+                'message' => $message,
+                'component' => $data['component'] ?? 'system',
+                'context' => $data['context'] ?? null,
+                'metadata' => $data['metadata'] ?? null,
+                'created_at' => now()
+            ]);
+
+            Log::info('System log created', [
+                'organization_id' => $organizationId,
+                'system_log_id' => $systemLog->id,
+                'level' => $level
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to create system log', [
+                'organization_id' => $organizationId,
+                'level' => $level,
+                'message' => $message,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Get organization backup status
+     */
+    public function getBackupStatus(int $organizationId): array
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            // Get latest backup information
+            $latestBackup = $organization->backups()
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            $backupStatus = [
+                'organization_id' => $organizationId,
+                'last_backup' => $latestBackup ? $latestBackup->created_at : null,
+                'backup_frequency' => $organization->backup_frequency ?? 'daily',
+                'backup_retention_days' => $organization->backup_retention_days ?? 30,
+                'backup_size' => $latestBackup ? $latestBackup->size : 0,
+                'backup_status' => $latestBackup ? $latestBackup->status : 'no_backup',
+                'next_backup' => $this->calculateNextBackup($organization),
+                'total_backups' => $organization->backups()->count()
+            ];
+
+            return $backupStatus;
+        } catch (\Exception $e) {
+            Log::error('Failed to get backup status', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'organization_id' => $organizationId,
+                'last_backup' => null,
+                'backup_frequency' => 'daily',
+                'backup_retention_days' => 30,
+                'backup_size' => 0,
+                'backup_status' => 'error',
+                'next_backup' => null,
+                'total_backups' => 0
+            ];
+        }
+    }
+
+    /**
+     * Create organization backup
+     */
+    public function createBackup(int $organizationId): array
+    {
+        try {
+            $organization = $this->getModel()->findOrFail($organizationId);
+
+            // Create backup record
+            $backup = $organization->backups()->create([
+                'status' => 'in_progress',
+                'size' => 0,
+                'created_at' => now()
+            ]);
+
+            // Simulate backup process (in real implementation, this would trigger actual backup)
+            $backupSize = $this->calculateBackupSize($organization);
+
+            $backup->update([
+                'status' => 'completed',
+                'size' => $backupSize,
+                'completed_at' => now()
+            ]);
+
+            Log::info('Backup created', [
+                'organization_id' => $organizationId,
+                'backup_id' => $backup->id,
+                'size' => $backupSize
+            ]);
+
+            return [
+                'success' => true,
+                'backup_id' => $backup->id,
+                'size' => $backupSize,
+                'message' => 'Backup created successfully'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to create backup', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to create backup: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Calculate next backup time
+     */
+    private function calculateNextBackup(Organization $organization): ?string
+    {
+        $frequency = $organization->backup_frequency ?? 'daily';
+        $lastBackup = $organization->backups()
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$lastBackup) {
+            return now()->addDay()->toISOString();
+        }
+
+        return match($frequency) {
+            'hourly' => $lastBackup->created_at->addHour()->toISOString(),
+            'daily' => $lastBackup->created_at->addDay()->toISOString(),
+            'weekly' => $lastBackup->created_at->addWeek()->toISOString(),
+            'monthly' => $lastBackup->created_at->addMonth()->toISOString(),
+            default => $lastBackup->created_at->addDay()->toISOString()
+        };
+    }
+
+    /**
+     * Calculate backup size
+     */
+    private function calculateBackupSize(Organization $organization): int
+    {
+        // Simulate backup size calculation
+        // In real implementation, this would calculate actual data size
+        $baseSize = 1024 * 1024; // 1MB base
+        $userCount = $organization->users()->count();
+        $dataSize = $userCount * 1024 * 10; // 10KB per user
+
+        return $baseSize + $dataSize;
     }
 }

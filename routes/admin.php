@@ -21,6 +21,34 @@ use Illuminate\Support\Facades\DB;
 Route::prefix('admin')->middleware(['unified.auth', 'can:access-admin-panel'])->group(function () {
 
     // ========================================
+    // CLIENT MANAGEMENT ROUTES
+    // ========================================
+    Route::prefix('clients')->middleware(['client.management'])->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'index'])->name('admin.clients.index');
+        Route::get('/search', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'search'])->name('admin.clients.search');
+        Route::get('/statistics', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'statistics'])->name('admin.clients.statistics');
+        Route::get('/deleted', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'deleted'])->name('admin.clients.deleted');
+        Route::get('/export', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'export'])->name('admin.clients.export');
+        Route::post('/import', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'import'])->name('admin.clients.import');
+        Route::post('/bulk-action', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'bulkAction'])->name('admin.clients.bulk-action');
+        Route::post('/clear-cache', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'clearAllCaches'])->name('admin.clients.clear-cache');
+
+        Route::get('/{id}', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'show'])->name('admin.clients.show');
+        Route::post('/', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'store'])->name('admin.clients.store');
+        Route::put('/{id}', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'update'])->name('admin.clients.update');
+        Route::delete('/{id}', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'destroy'])->name('admin.clients.destroy');
+        Route::delete('/{id}/soft', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'softDelete'])->name('admin.clients.soft-delete');
+        Route::post('/{id}/restore', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'restore'])->name('admin.clients.restore');
+        Route::patch('/{id}/status', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'updateStatus'])->name('admin.clients.update-status');
+        Route::get('/{id}/health', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'health'])->name('admin.clients.health');
+        Route::get('/{id}/analytics', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'analytics'])->name('admin.clients.analytics');
+        Route::get('/{id}/metrics', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'metrics'])->name('admin.clients.metrics');
+        Route::get('/{id}/users', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'users'])->name('admin.clients.users');
+        Route::get('/{id}/activity-logs', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'activityLogs'])->name('admin.clients.activity-logs');
+        Route::post('/{id}/clear-cache', [\App\Http\Controllers\Api\V1\ClientManagementController::class, 'clearCache'])->name('admin.clients.clear-cache-single');
+    });
+
+    // ========================================
     // ADMIN DASHBOARD & MONITORING
     // ========================================
     Route::prefix('dashboard')->middleware(['can:access-admin-dashboard'])->group(function () {
