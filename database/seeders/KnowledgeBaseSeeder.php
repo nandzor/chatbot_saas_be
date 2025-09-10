@@ -109,9 +109,9 @@ class KnowledgeBaseSeeder extends Seeder
         foreach ($mainCategories as $categoryData) {
             $category = KnowledgeBaseCategory::firstOrCreate([
                 'organization_id' => $organization->id,
-                'slug' => $categoryData['slug'],
-            ], [
                 'name' => $categoryData['name'],
+            ], [
+                'slug' => $categoryData['slug'],
                 'description' => $categoryData['description'],
                 'icon' => $categoryData['icon'],
                 'color' => $categoryData['color'],
