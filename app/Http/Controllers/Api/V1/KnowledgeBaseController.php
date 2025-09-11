@@ -9,6 +9,7 @@ use App\Http\Requests\KnowledgeBase\SearchKnowledgeBaseRequest;
 use App\Http\Resources\KnowledgeBase\KnowledgeBaseItemResource;
 use App\Http\Resources\KnowledgeBase\KnowledgeBaseItemCollection;
 use App\Services\KnowledgeBaseService;
+use App\Models\KnowledgeBaseCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -232,6 +233,36 @@ class KnowledgeBaseController extends BaseApiController
             ]);
 
             return $this->errorResponse('Failed to search knowledge base items', 500);
+        }
+    }
+
+    /**
+     * List knowledge base categories for current organization.
+     */
+    public function categories(Request $request): JsonResponse
+    {
+        try {
+            $orgId = $this->getCurrentUser()?->organization_id;
+            $query = KnowledgeBaseCategory::query()
+                ->where('organization_id', $orgId)
+                ->orderBy('order_index')
+                ->orderBy('name');
+
+            // Optional filters
+            if ($request->boolean('only_public')) {
+                $query->where('is_public', true);
+            }
+
+            $categories = $query->get(['id','name','slug','description','icon','color','order_index','is_public']);
+
+            return $this->successResponse('Categories retrieved successfully', $categories);
+        } catch (\Exception $e) {
+            Log::error('Error retrieving knowledge base categories', [
+                'error' => $e->getMessage(),
+                'user_id' => $this->getCurrentUser()?->id
+            ]);
+
+            return $this->errorResponse('Failed to retrieve categories', 500);
         }
     }
 

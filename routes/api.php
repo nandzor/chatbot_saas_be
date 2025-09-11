@@ -651,6 +651,7 @@ Route::prefix('v1')->group(function () {
 
             // Basic CRUD operations
             Route::get('/', [KnowledgeBaseController::class, 'index']);
+            Route::get('/categories', [KnowledgeBaseController::class, 'categories']);
             Route::get('/search', [KnowledgeBaseController::class, 'search']);
             Route::get('/slug/{slug}', [KnowledgeBaseController::class, 'showBySlug']);
 

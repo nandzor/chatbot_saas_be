@@ -127,7 +127,14 @@ export const router = createBrowserRouter([
               </RoleBasedRoute>
             )
           },
-          { path: 'knowledge', element: <Knowledge /> },
+          {
+            path: 'knowledge',
+            element: (
+              <RoleBasedRoute requiredPermission="knowledge.view">
+                <Knowledge />
+              </RoleBasedRoute>
+            )
+          },
           {
             path: 'automations',
             element: (

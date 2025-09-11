@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Button,
   Badge,
@@ -31,12 +31,12 @@ import {
   Progress,
   Separator
 } from '@/components/ui';
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  BookOpen, 
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  BookOpen,
   Calendar,
   AlertCircle,
   Save,
@@ -67,13 +67,13 @@ import {
   Settings,
   HelpCircle
 } from 'lucide-react';
-import { knowledgeArticles } from '@/data/sampleData';
+import KnowledgeBaseService from '@/services/KnowledgeBaseService';
 
 // Utility function to safely parse and format dates
 const parseDate = (dateString) => {
   try {
     let date = new Date(dateString);
-    
+
     // If invalid, try parsing "YYYY-MM-DD HH:mm:ss" format
     if (isNaN(date.getTime()) && typeof dateString === 'string') {
       // Convert "YYYY-MM-DD HH:mm:ss" to ISO format
@@ -81,7 +81,7 @@ const parseDate = (dateString) => {
         date = new Date(dateString.replace(' ', 'T') + 'Z');
       }
     }
-    
+
     return isNaN(date.getTime()) ? new Date() : date;
   } catch (error) {
     return new Date();
@@ -90,11 +90,15 @@ const parseDate = (dateString) => {
 
 const Knowledge = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [articles, setArticles] = useState(knowledgeArticles.filter(article => article.status !== 'deleted'));
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [defaultCategoryId, setDefaultCategoryId] = useState(null);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingArticle, setEditingArticle] = useState(null);
   const [activeTab, setActiveTab] = useState('qa');
-  
+
   // Enhanced form data with professional fields
   const [formData, setFormData] = useState({
     title: '',
@@ -116,7 +120,7 @@ const Knowledge = () => {
       }
     ]
   });
-  
+
   const [charCount, setCharCount] = useState(0);
   const [testMessage, setTestMessage] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -137,12 +141,12 @@ const Knowledge = () => {
     }
   ]);
   const MAX_CHARS = 7000;
-  
+
   // Ref untuk chat container
   const chatContainerRef = useRef(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  
+
   // Enhanced auto-scroll function with smooth behavior
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -151,19 +155,19 @@ const Knowledge = () => {
         top: chatContainerRef.current.scrollHeight,
         behavior: 'smooth'
       });
-      
+
       // Reset scrolling state after animation
       setTimeout(() => setIsScrolling(false), 500);
     }
   };
-  
+
   // Force scroll to bottom (for immediate scroll)
   const forceScrollToBottom = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   };
-  
+
   // Check scroll position and show/hide scroll button
   const handleScroll = () => {
     if (chatContainerRef.current) {
@@ -172,35 +176,35 @@ const Knowledge = () => {
       setShowScrollButton(!isAtBottom);
     }
   };
-  
+
   // Auto-scroll when conversation updates
   useEffect(() => {
     // Use force scroll for immediate response
     forceScrollToBottom();
-    
+
     // Add a small delay for smooth scroll effect
     const timer = setTimeout(() => {
       scrollToBottom();
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, [conversationHistory]);
-  
+
   // Add scroll event listener
   useEffect(() => {
     const chatContainer = chatContainerRef.current;
     if (chatContainer) {
       chatContainer.addEventListener('scroll', handleScroll);
-      
+
       // Initial check
       handleScroll();
-      
+
       return () => {
         chatContainer.removeEventListener('scroll', handleScroll);
       };
     }
   }, []);
-  
+
   // Predefined categories and priorities
   const categories = [
     { value: 'general', label: 'Umum', icon: Info },
@@ -210,14 +214,14 @@ const Knowledge = () => {
     { value: 'policy', label: 'Kebijakan', icon: Shield },
     { value: 'faq', label: 'FAQ', icon: HelpCircle }
   ];
-  
+
   const priorities = [
     { value: 'low', label: 'Rendah', color: 'text-gray-500' },
     { value: 'medium', label: 'Sedang', color: 'text-blue-600' },
     { value: 'high', label: 'Tinggi', color: 'text-orange-600' },
     { value: 'critical', label: 'Kritis', color: 'text-red-600' }
   ];
-  
+
   const languages = [
     { value: 'id', label: 'Bahasa Indonesia' },
     { value: 'en', label: 'English' },
@@ -225,7 +229,7 @@ const Knowledge = () => {
     { value: 'ko', label: '한국어' },
     { value: 'zh', label: '中文' }
   ];
-  
+
   const confidenceLevels = [
     { value: 'low', label: 'Rendah', color: 'text-red-500' },
     { value: 'medium', label: 'Sedang', color: 'text-yellow-500' },
@@ -236,8 +240,82 @@ const Knowledge = () => {
   const activeArticleCount = articles.filter(article => article.status === 'active').length;
   const activeArticle = articles.find(article => article.status === 'active');
 
+  // Load list from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setLoadError('');
+      const [itemsRes, catsRes] = await Promise.all([
+        KnowledgeBaseService.list({ per_page: 50 }),
+        KnowledgeBaseService.getCategories({ only_public: false })
+      ]);
+      if (catsRes.success) {
+        setCategoryOptions(catsRes.data || []);
+        if (!defaultCategoryId && (catsRes.data?.length || 0) > 0) {
+          setDefaultCategoryId(catsRes.data[0].id);
+        }
+      }
+      if (itemsRes.success) {
+        const items = (itemsRes.data?.data || []).map(it => transformBackendToFrontend(it));
+        setArticles(items);
+        if (!defaultCategoryId && items.length > 0 && items[0].category_id) {
+          setDefaultCategoryId(items[0].category_id);
+        }
+      } else {
+        setLoadError(itemsRes.message || 'Gagal memuat data');
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  const transformBackendToFrontend = (item) => {
+    const isQA = (item.content_type === 'qa_collection');
+    return {
+      id: item.id,
+      title: item.title,
+      description: item.description || '',
+      content: item.content || '',
+      category: item.category?.name || 'general',
+      category_id: item.category_id,
+      priority: item.priority || 'medium',
+      tags: (item.knowledge_tags || item.tags || []).map(t => (typeof t === 'string' ? t : (t?.name || ''))).filter(Boolean),
+      language: mapLanguageBackendToUi(item.language),
+      isPublic: !!item.is_public,
+      requiresApproval: !!item.requires_approval,
+      metadata: isQA ? { type: 'qa', qaItems: (item.qa_items || item.qaItems || []).map(q => ({ question: q.question, answer: q.answer })) } : { type: 'article', wordCount: item.word_count || 0 },
+      status: (item.workflow_status === 'published') ? 'active' : 'inactive',
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      version: item.version || 1,
+      created_by: item.author?.full_name || '—'
+    };
+  };
+
+  const mapLanguageUiToBackend = (lang) => {
+    switch (lang) {
+      case 'id': return 'indonesia';
+      case 'en': return 'english';
+      case 'ja': return 'japanese';
+      case 'ko': return 'korean';
+      case 'zh': return 'chinese';
+      default: return 'indonesia';
+    }
+  };
+
+  const mapLanguageBackendToUi = (lang) => {
+    switch (lang) {
+      case 'indonesia': return 'id';
+      case 'english': return 'en';
+      case 'japanese': return 'ja';
+      case 'korean': return 'ko';
+      case 'chinese': return 'zh';
+      default: return 'id';
+    }
+  };
+
   // Filter articles berdasarkan search term
-  const filteredArticles = articles.filter(article => 
+  const filteredArticles = articles.filter(article =>
     article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     article.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -246,7 +324,7 @@ const Knowledge = () => {
   const toggleStatus = (id) => {
     const targetArticle = articles.find(article => article.id === id);
     const currentActiveArticle = articles.find(article => article.status === 'active');
-    
+
     if (targetArticle.status === 'active') {
       // Jika knowledge sedang aktif, nonaktifkan
       setArticles(prevArticles =>
@@ -264,7 +342,7 @@ const Knowledge = () => {
         );
         if (!confirmed) return;
       }
-      
+
       // Aktifkan knowledge target dan nonaktifkan yang lain
       setArticles(prevArticles =>
         prevArticles.map(article =>
@@ -277,15 +355,13 @@ const Knowledge = () => {
   };
 
   // Fungsi untuk soft delete
-  const handleDelete = (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus knowledge ini?')) {
-      setArticles(prevArticles =>
-        prevArticles.map(article =>
-          article.id === id
-            ? { ...article, status: 'deleted' }
-            : article
-        ).filter(article => article.status !== 'deleted')
-      );
+  const handleDelete = async (id) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus knowledge ini?')) return;
+    const res = await KnowledgeBaseService.remove(id);
+    if (res.success) {
+      setArticles(prev => prev.filter(a => a.id !== id));
+    } else {
+      setFormErrors({ submit: res.message || 'Gagal menghapus' });
     }
   };
 
@@ -314,7 +390,7 @@ const Knowledge = () => {
   const updateQAItem = (index, field, value) => {
     setFormData(prev => ({
       ...prev,
-      qaItems: prev.qaItems.map((item, i) => 
+      qaItems: prev.qaItems.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
       )
     }));
@@ -323,7 +399,7 @@ const Knowledge = () => {
   // Fungsi untuk handle form input
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Update character count untuk content
     if (field === 'content') {
       setCharCount(value.length);
@@ -333,26 +409,26 @@ const Knowledge = () => {
   // Enhanced form validation
   const validateForm = () => {
     const errors = {};
-    
+
     if (!formData.title.trim()) {
       errors.title = 'Judul knowledge wajib diisi';
     } else if (formData.title.length < 10) {
       errors.title = 'Judul minimal 10 karakter';
     }
-    
+
     if (!formData.description.trim()) {
       errors.description = 'Deskripsi knowledge wajib diisi';
     }
-    
+
     if (activeTab === 'qa') {
-      const hasValidQA = formData.qaItems.some(item => 
+      const hasValidQA = formData.qaItems.some(item =>
         item.question.trim() && item.answer.trim()
       );
-      
+
       if (!hasValidQA) {
         errors.qa = 'Minimal satu Q&A harus diisi dengan lengkap';
       }
-      
+
       // Validate individual QA items
       formData.qaItems.forEach((item, index) => {
         if (item.question.trim() && !item.answer.trim()) {
@@ -369,86 +445,74 @@ const Knowledge = () => {
         errors.content = 'Konten minimal 100 karakter';
       }
     }
-    
+
     if (formData.tags.length === 0) {
       errors.tags = 'Minimal satu tag harus dipilih';
     }
-    
+
     return errors;
   };
 
   // Enhanced form submission with validation
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Prepare enhanced data untuk disimpan
-      const articleData = {
-        id: editingArticle ? editingArticle.id : Date.now().toString(),
+      // Build backend payload
+      const payload = {
+        category_id: formData.category_id || editingArticle?.category_id || defaultCategoryId,
         title: formData.title.trim(),
         description: formData.description.trim(),
-        content: activeTab === 'qa' ? '' : formData.content.trim(),
-        category: formData.category,
-        priority: formData.priority,
+        content_type: activeTab === 'qa' ? 'qa_collection' : 'article',
+        content: activeTab === 'qa' ? (formData.qaItems.map(q => `${q.question}\n\n${q.answer}`).join('\n\n') || 'Q&A') : formData.content.trim(),
         tags: formData.tags,
-        language: formData.language,
-        isPublic: formData.isPublic,
-        requiresApproval: formData.requiresApproval,
-        metadata: activeTab === 'qa' ? {
-          type: 'qa',
-          qaItems: formData.qaItems.filter(item => 
-            item.question.trim() && item.answer.trim()
-          ).map(item => ({
-            ...item,
-            keywords: item.keywords.length > 0 ? item.keywords : 
-              item.question.toLowerCase().split(' ').filter(word => word.length > 3)
-          }))
-        } : {
-          type: 'article',
-          wordCount: formData.content.trim().split(/\s+/).length,
-          readingTime: Math.ceil(formData.content.trim().split(/\s+/).length / 200) // 200 words per minute
-        },
-        status: 'inactive',
-        created_at: editingArticle ? editingArticle.created_at : new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        created_by: editingArticle ? editingArticle.created_by : 'Current User',
-        version: editingArticle ? (editingArticle.version || 1) + 1 : 1
+        language: mapLanguageUiToBackend(formData.language),
+        priority: formData.priority,
+        is_public: !!formData.isPublic,
+        requires_approval: !!formData.requiresApproval,
+        qa_items: activeTab === 'qa' ? formData.qaItems.filter(i => i.question.trim() && i.answer.trim()).map(i => ({
+          question: i.question,
+          answer: i.answer,
+          confidence_level: (i.confidence || 'high')
+        })) : undefined
       };
 
-      if (editingArticle) {
-        // Update existing article
-        setArticles(prevArticles =>
-          prevArticles.map(article =>
-            article.id === editingArticle.id ? articleData : article
-          )
-        );
-      } else {
-        // Create new article
-        setArticles(prevArticles => [...prevArticles, articleData]);
+      if (!payload.category_id) {
+        setFormErrors({ submit: 'Kategori belum tersedia. Silakan buat kategori terlebih dahulu.' });
+        setIsSubmitting(false);
+        return;
       }
 
-      // Reset form dan close modal
-      resetForm();
-      setIsCreating(false);
-      setEditingArticle(null);
-      setFormErrors({});
-      
-      // Show success message (in real app, use toast notification)
-      console.log('Knowledge saved successfully!');
-      
+      let res;
+      if (editingArticle?.id) {
+        res = await KnowledgeBaseService.update(editingArticle.id, payload);
+      } else {
+        res = await KnowledgeBaseService.create(payload);
+      }
+
+      if (res.success) {
+        // Refresh list
+        const list = await KnowledgeBaseService.list({ per_page: 50 });
+        if (list.success) {
+          setArticles((list.data?.data || []).map(transformBackendToFrontend));
+        }
+        // Reset form and close
+        resetForm();
+        setIsCreating(false);
+        setEditingArticle(null);
+        setFormErrors({});
+      } else {
+        setFormErrors({ submit: res.message || 'Gagal menyimpan data' });
+      }
     } catch (error) {
-      console.error('Error saving knowledge:', error);
       setFormErrors({ submit: 'Terjadi kesalahan saat menyimpan. Silakan coba lagi.' });
     } finally {
       setIsSubmitting(false);
@@ -537,12 +601,12 @@ const Knowledge = () => {
       language: article.language || 'id',
       isPublic: article.isPublic !== undefined ? article.isPublic : true,
       requiresApproval: article.requiresApproval || false,
-      qaItems: article.metadata?.type === 'qa' ? 
+      qaItems: article.metadata?.type === 'qa' ?
         article.metadata.qaItems.map(qa => ({
           ...qa,
           confidence: qa.confidence || 'high',
           keywords: qa.keywords || []
-        })) : 
+        })) :
         [{ question: '', variations: '', answer: '', confidence: 'high', keywords: [] }]
     });
     setActiveTab(article.metadata?.type === 'qa' ? 'qa' : 'article');
@@ -556,7 +620,7 @@ const Knowledge = () => {
     if (testMessage.trim()) {
       // Generate AI response
       const response = generateAIResponse(testMessage, formData.content);
-      
+
       // Add user message to conversation
       const userMessage = {
         id: Date.now(),
@@ -564,7 +628,7 @@ const Knowledge = () => {
         message: testMessage,
         timestamp: new Date()
       };
-      
+
       // Add bot response to conversation
       const botMessage = {
         id: Date.now() + 1,
@@ -572,17 +636,17 @@ const Knowledge = () => {
         message: response,
         timestamp: new Date()
       };
-      
+
       // Update conversation history
       setConversationHistory(prev => [...prev, userMessage, botMessage]);
-      
+
       // Log for debugging
       console.log('Test message:', testMessage);
       console.log('AI Response:', response);
-      
+
       // Clear the input after sending
       setTestMessage('');
-      
+
       // In a real implementation, you might want to:
       // 1. Call actual AI API
       // 2. Track usage metrics
@@ -594,10 +658,10 @@ const Knowledge = () => {
   // Enhanced AI response generation with random responses
   const generateAIResponse = (message, knowledgeContent) => {
     if (!message.trim()) return "Silakan ketik pesan untuk mendapatkan respons dari AI.";
-    
+
     // Enhanced random responses based on message content
     const messageLower = message.toLowerCase();
-    
+
     // Context-aware responses
     if (messageLower.includes('hallo') || messageLower.includes('hai') || messageLower.includes('hello')) {
       const greetings = [
@@ -608,7 +672,7 @@ const Knowledge = () => {
       ];
       return greetings[Math.floor(Math.random() * greetings.length)];
     }
-    
+
     if (messageLower.includes('gadai') || messageLower.includes('emas')) {
       const gadaiResponses = [
         "Untuk layanan gadai emas, kami menyediakan berbagai pilihan dengan proses yang mudah dan cepat. Berdasarkan knowledge base kami, Anda dapat mengajukan gadai emas dengan dokumen yang diperlukan.",
@@ -617,7 +681,7 @@ const Knowledge = () => {
       ];
       return gadaiResponses[Math.floor(Math.random() * gadaiResponses.length)];
     }
-    
+
     if (messageLower.includes('cicilan') || messageLower.includes('bayar') || messageLower.includes('pembayaran')) {
       const paymentResponses = [
         "Untuk pembayaran cicilan, kami menyediakan berbagai metode pembayaran yang fleksibel. Anda dapat memilih tenor 3, 6, 12, atau 24 bulan sesuai kemampuan finansial.",
@@ -626,7 +690,7 @@ const Knowledge = () => {
       ];
       return paymentResponses[Math.floor(Math.random() * paymentResponses.length)];
     }
-    
+
     if (messageLower.includes('proses') || messageLower.includes('cara') || messageLower.includes('langkah')) {
       const processResponses = [
         "Proses pengajuan sangat sederhana. Pertama, siapkan dokumen yang diperlukan. Kedua, ajukan melalui aplikasi atau datang ke kantor kami. Ketiga, tunggu approval yang biasanya 1-3 hari kerja.",
@@ -635,7 +699,7 @@ const Knowledge = () => {
       ];
       return processResponses[Math.floor(Math.random() * processResponses.length)];
     }
-    
+
     if (messageLower.includes('biaya') || messageLower.includes('harga') || messageLower.includes('tarif')) {
       const costResponses = [
         "Biaya layanan kami sangat transparan dan kompetitif. Untuk detail lengkap, saya dapat memberikan breakdown biaya administrasi, bunga, dan biaya lainnya.",
@@ -644,7 +708,7 @@ const Knowledge = () => {
       ];
       return costResponses[Math.floor(Math.random() * costResponses.length)];
     }
-    
+
     // Default responses for other questions
     const defaultResponses = [
       "Terima kasih atas pertanyaannya. Berdasarkan knowledge base kami, saya dapat membantu menjelaskan detail layanan yang Anda butuhkan.",
@@ -656,7 +720,7 @@ const Knowledge = () => {
       "Berdasarkan knowledge yang tersedia, saya dapat memberikan panduan lengkap untuk pertanyaan Anda. Ada aspek tertentu yang ingin Anda ketahui lebih detail?",
       "Saya di sini untuk membantu! Knowledge base kami memiliki informasi yang dapat menjawab pertanyaan Anda dengan lengkap dan akurat."
     ];
-    
+
     return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
   };
 
@@ -712,10 +776,16 @@ const Knowledge = () => {
         <CardHeader>
           <CardTitle>Daftar Knowledge</CardTitle>
           <CardDescription>
-            {filteredArticles.length} knowledge tersedia
+            {loading ? 'Memuat...' : `${filteredArticles.length} knowledge tersedia`}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {loadError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{loadError}</AlertDescription>
+            </Alert>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -734,8 +804,8 @@ const Knowledge = () => {
                     <div>
                       <div className="font-medium">{article.title}</div>
                       <div className="text-sm text-gray-500">
-                        {article.metadata?.type === 'qa' ? 
-                          `${article.metadata.qaItems.length} Q&A` : 
+                        {article.metadata?.type === 'qa' ?
+                          `${article.metadata.qaItems.length} Q&A` :
                           `${article.metadata?.wordCount || 0} kata`
                         }
                       </div>
@@ -798,7 +868,7 @@ const Knowledge = () => {
 
       {/* Create/Edit Modal */}
       {isCreating && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -806,7 +876,7 @@ const Knowledge = () => {
             }
           }}
         >
-          <div 
+          <div
             className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
@@ -900,22 +970,19 @@ const Knowledge = () => {
                       <Tag className="w-4 h-4 text-purple-600" />
                       Kategori *
                     </Label>
-                    <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                    <Select value={formData.category_id || defaultCategoryId || ''} onValueChange={(value) => handleInputChange('category_id', value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories.map((category) => {
-                          const IconComponent = category.icon;
-                          return (
-                            <SelectItem key={category.value} value={category.value}>
-                              <div className="flex items-center gap-2">
-                                <IconComponent className="w-4 h-4" />
-                                {category.label}
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
+                        {categoryOptions.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            <div className="flex items-center gap-2">
+                              {c.icon ? <span className="w-4 h-4" /> : null}
+                              {c.name}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1009,7 +1076,7 @@ const Knowledge = () => {
                         ))}
                       </div>
                     )}
-                    
+
                     {/* Tag Input */}
                     <div className="flex gap-2">
                       <Input
@@ -1037,7 +1104,7 @@ const Knowledge = () => {
                         Tambah
                       </Button>
                     </div>
-                    
+
                     {/* Tag Suggestions */}
                     <div className="space-y-2">
                       <p className="text-xs text-gray-500">Tag yang sering digunakan:</p>
@@ -1054,7 +1121,7 @@ const Knowledge = () => {
                         ))}
                       </div>
                     </div>
-                    
+
                     {formErrors.tags && (
                       <p className="text-sm text-red-600 flex items-center gap-1">
                         <AlertCircle className="w-4 h-4" />
@@ -1197,7 +1264,7 @@ const Knowledge = () => {
                           <span>{charCount} karakter</span>
                           <span>{MAX_CHARS - charCount} tersisa</span>
                         </div>
-                        
+
                         {/* Testing Tips - Moved here below Konten Knowledge */}
                         <div className="space-y-3 pt-4 border-t border-gray-200">
                           <Label className="text-sm font-medium flex items-center gap-2">
@@ -1238,8 +1305,8 @@ const Knowledge = () => {
                                   </div>
                                 </div>
                               )}
-                              
-                              <div 
+
+                              <div
                                 ref={chatContainerRef}
                                 className={`space-y-3 mb-4 max-h-48 overflow-y-auto scroll-smooth transition-all duration-200 ${
                                   isScrolling ? 'ring-2 ring-green-500 ring-opacity-50' : ''
@@ -1249,29 +1316,29 @@ const Knowledge = () => {
                                 {conversationHistory.map((msg) => (
                                   <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`px-3 py-2 rounded-2xl max-w-[85%] shadow-sm ${
-                                      msg.type === 'user' 
-                                        ? 'bg-blue-500 text-white' 
+                                      msg.type === 'user'
+                                        ? 'bg-blue-500 text-white'
                                         : 'bg-white border border-gray-200 text-gray-800'
                                     }`}>
                                       <p className="text-sm font-medium">{msg.message}</p>
                                       <div className={`text-xs mt-1 ${
                                         msg.type === 'user' ? 'text-blue-100' : 'text-gray-500'
                                       }`}>
-                                        {msg.timestamp.toLocaleTimeString('id-ID', { 
-                                          hour: '2-digit', 
-                                          minute: '2-digit' 
+                                        {msg.timestamp.toLocaleTimeString('id-ID', {
+                                          hour: '2-digit',
+                                          minute: '2-digit'
                                         })}
                                       </div>
                                     </div>
                                   </div>
                                 ))}
                               </div>
-                              
+
                               {/* Scroll to Bottom Button - Only show when not at bottom */}
-                              <div 
+                              <div
                                 className={`absolute bottom-2 right-2 transition-all duration-300 group ${
-                                  showScrollButton 
-                                    ? 'opacity-100 translate-y-0' 
+                                  showScrollButton
+                                    ? 'opacity-100 translate-y-0'
                                     : 'opacity-0 translate-y-2 pointer-events-none'
                                 }`}
                               >
@@ -1279,8 +1346,8 @@ const Knowledge = () => {
                                   type="button"
                                   onClick={scrollToBottom}
                                   className={`w-8 h-8 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 ${
-                                    isScrolling 
-                                      ? 'bg-green-600 hover:bg-green-700' 
+                                    isScrolling
+                                      ? 'bg-green-600 hover:bg-green-700'
                                       : 'bg-blue-600 hover:bg-blue-700'
                                   }`}
                                   title={isScrolling ? 'Scrolling...' : 'Scroll ke pesan terbaru'}
@@ -1294,7 +1361,7 @@ const Knowledge = () => {
                                     </svg>
                                   )}
                                 </button>
-                                
+
                                 {/* Scroll Status Indicator */}
                                 {showScrollButton && !isScrolling && (
                                   <div className="absolute -top-8 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -1304,7 +1371,7 @@ const Knowledge = () => {
                                 )}
                               </div>
                             </div>
-                            
+
                             {/* Test Input */}
                             <div className="space-y-3">
                               <div className="flex gap-2">
@@ -1325,13 +1392,13 @@ const Knowledge = () => {
                                   <Send className="w-4 h-4" />
                                 </Button>
                               </div>
-                              
+
                               {/* Character count */}
                               <div className="text-xs text-gray-500 text-center">
                                 {testMessage.length}/500 karakter
                               </div>
                             </div>
-                            
+
                             {/* AI Credits Info & Actions */}
                             <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pt-3 border-t border-gray-200">
                               <div className="flex items-center gap-3">
@@ -1425,7 +1492,7 @@ const Knowledge = () => {
                                 </div>
                               )}
                             </div>
-                            
+
                             {/* Response Stats */}
                             {testMessage && (
                               <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pt-3 border-t border-gray-200">
@@ -1454,7 +1521,7 @@ const Knowledge = () => {
                     <X className="w-4 h-4 mr-2" />
                     Batal
                   </Button>
-                  
+
                   <div className="flex gap-3 flex-1">
                     <Button
                       type="button"
@@ -1465,9 +1532,9 @@ const Knowledge = () => {
                     >
                       Reset
                     </Button>
-                    
-                    <Button 
-                      type="submit" 
+
+                    <Button
+                      type="submit"
                       className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all"
                       disabled={isSubmitting}
                     >
