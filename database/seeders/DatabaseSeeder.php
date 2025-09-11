@@ -36,17 +36,17 @@ class DatabaseSeeder extends Seeder
             // Billing Invoice Seeder
             BillingInvoiceSeeder::class,
 
-            // Webhook Event Seeder
-            WebhookEventSeeder::class,
+            // // Webhook Event Seeder
+            // WebhookEventSeeder::class,
 
-            // Queue Job Seeder
-            QueueJobSeeder::class,
+            // // Queue Job Seeder
+            // QueueJobSeeder::class,
 
             // Audit Log Seeder
-            AuditLogSeeder::class,
+            // AuditLogSeeder::class,
 
             // Notification Template Seeder
-            NotificationTemplateSeeder::class,
+            // NotificationTemplateSeeder::class,
         ]);
     }
 }

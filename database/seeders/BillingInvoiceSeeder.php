@@ -87,15 +87,14 @@ class BillingInvoiceSeeder extends Seeder
                 'subscription_id' => $subscription->id,
                 'invoice_date' => $invoiceDate,
                 'due_date' => $dueDate,
-                'period_start' => $periodStart,
-                'period_end' => $periodEnd,
-                'billing_cycle' => $billingCycle,
                 'status' => $status,
-                'paid_date' => $status === 'paid' ? $this->getPaidDate($invoiceDate, $dueDate) : null,
+                'paid_date' => $status === 'success' ? $this->getPaidDate($invoiceDate, $dueDate) : null,
                 'total_amount' => $subscription->unit_amount,
                 'currency' => $subscription->currency,
-                'customer_name' => $subscription->organization->name,
-                'customer_email' => $subscription->organization->email,
+                'billing_address' => [
+                    'name' => $subscription->organization->name,
+                    'email' => $subscription->organization->email,
+                ],
             ]);
         }
 
@@ -118,13 +117,12 @@ class BillingInvoiceSeeder extends Seeder
                 'subscription_id' => null,
                 'invoice_date' => $invoiceDate,
                 'due_date' => $dueDate,
-                'period_start' => $invoiceDate,
-                'period_end' => $invoiceDate->copy()->addDays(30),
-                'billing_cycle' => 'monthly',
                 'status' => $this->determineInvoiceStatus($invoiceDate, $dueDate),
                 'paid_date' => $this->getPaidDate($invoiceDate, $dueDate),
-                'customer_name' => $organization->name,
-                'customer_email' => $organization->email,
+                'billing_address' => [
+                    'name' => $organization->name,
+                    'email' => $organization->email,
+                ],
             ]);
         }
 
@@ -140,13 +138,13 @@ class BillingInvoiceSeeder extends Seeder
 
         if ($now->isAfter($dueDate)) {
             // Past due date
-            return fake()->randomElement(['paid', 'overdue', 'overdue']);
+            return fake()->randomElement(['success', 'expired', 'expired']);
         } elseif ($now->isAfter($invoiceDate)) {
             // Between invoice date and due date
-            return fake()->randomElement(['paid', 'pending', 'pending']);
+            return fake()->randomElement(['success', 'pending', 'pending']);
         } else {
             // Future invoice
-            return fake()->randomElement(['draft', 'pending']);
+            return fake()->randomElement(['pending', 'pending']);
         }
     }
 

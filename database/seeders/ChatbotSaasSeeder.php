@@ -340,14 +340,18 @@ class ChatbotSaasSeeder extends Seeder
             }
 
             // Create Agent profiles for agent users (no factory dependency)
+            $agentCounter = 1;
             foreach ($agents as $agentUser) {
+                // Generate unique agent code using counter to avoid collisions
+                $agentCode = 'AGT' . str_pad($agentCounter, 3, '0', STR_PAD_LEFT);
+
                 Agent::updateOrCreate(
                     [
                         'user_id' => $agentUser->id,
                         'organization_id' => $organization->id,
                     ],
                     [
-                        'agent_code' => 'AGT' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT),
+                        'agent_code' => $agentCode,
                         'display_name' => $agentUser->full_name ?? $agentUser->username,
                         'availability_status' => 'online',
                         'max_concurrent_chats' => 3,
@@ -355,6 +359,8 @@ class ChatbotSaasSeeder extends Seeder
                         'status' => 'active',
                     ]
                 );
+
+                $agentCounter++;
             }
 
             // Create customer users (5-10 per organization) - idempotent by username
@@ -715,12 +721,13 @@ class ChatbotSaasSeeder extends Seeder
                 $permissions[$permData['code']] = Permission::updateOrCreate(
                     [
                         'organization_id' => $organization->id,
-                        'code' => $permData['code'],
+                        'resource' => $permData['resource'],
+                        'action' => $permData['action'],
+                        'scope' => 'organization', // Explicitly set scope to match unique constraint
                     ],
                     [
                         'name' => $permData['name'],
-                        'resource' => $permData['resource'],
-                        'action' => $permData['action'],
+                        'code' => $permData['code'],
                     ]
                 );
             }

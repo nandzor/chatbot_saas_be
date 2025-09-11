@@ -39,7 +39,7 @@ return new class extends Migration
 
             // System fields
             $table->timestamp('created_at')->useCurrent();
-
+            $table->timestamp('updated_at')->useCurrent();
             // Primary key and unique constraints
             $table->primary(['id', 'created_at']);
             $table->unique(['organization_id', 'resource_type', 'resource_id', 'created_at'], 'audit_logs_org_resource_time_unique');
