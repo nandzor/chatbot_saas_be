@@ -5,41 +5,46 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| n8n API Routes
+| N8N API Routes
 |--------------------------------------------------------------------------
 |
-| This file contains all the API routes for n8n workflow integration
-| and testing functionality.
+| Here are the routes for N8N workflow automation integration.
+| These routes provide endpoints to manage workflows, executions,
+| credentials, and webhook operations.
 |
 */
 
-Route::prefix('v1/n8n')->middleware(['unified.auth'])->group(function () {
+Route::prefix('n8n')->group(function () {
+    // Workflow management routes
+    Route::get('/workflows', [N8nController::class, 'getWorkflows']);
+    Route::get('/workflows/{workflowId}', [N8nController::class, 'getWorkflow']);
+    Route::post('/workflows', [N8nController::class, 'createWorkflow']);
+    Route::put('/workflows/{workflowId}', [N8nController::class, 'updateWorkflow']);
+    Route::delete('/workflows/{workflowId}', [N8nController::class, 'deleteWorkflow']);
 
-    // Connection & Health Check
-    Route::prefix('connection')->group(function () {
-        Route::get('/test', [N8nController::class, 'testConnection']);
-    });
+    // Workflow execution routes
+    Route::post('/workflows/{workflowId}/activate', [N8nController::class, 'activateWorkflow']);
+    Route::post('/workflows/{workflowId}/deactivate', [N8nController::class, 'deactivateWorkflow']);
+    Route::post('/workflows/{workflowId}/execute', [N8nController::class, 'executeWorkflow']);
+    Route::get('/workflows/{workflowId}/executions', [N8nController::class, 'getWorkflowExecutions']);
 
-    // Workflow Management
-    Route::prefix('workflows')->group(function () {
-        Route::get('/', [N8nController::class, 'getWorkflows']);
-        Route::post('/', [N8nController::class, 'createWorkflow']);
-        Route::get('/{workflowId}', [N8nController::class, 'getWorkflow']);
-        Route::put('/{workflowId}', [N8nController::class, 'updateWorkflow']);
-        Route::delete('/{workflowId}', [N8nController::class, 'deleteWorkflow']);
-        Route::post('/{workflowId}/execute', [N8nController::class, 'executeWorkflow']);
-        Route::post('/{workflowId}/activate', [N8nController::class, 'activateWorkflow']);
-        Route::post('/{workflowId}/deactivate', [N8nController::class, 'deactivateWorkflow']);
-        Route::get('/{workflowId}/stats', [N8nController::class, 'getWorkflowStats']);
-    });
+    // Execution routes
+    Route::get('/executions/{executionId}', [N8nController::class, 'getExecution']);
 
-    // Workflow Testing
-    Route::prefix('testing')->group(function () {
-        Route::post('/workflows/{workflowId}/test', [N8nController::class, 'testWorkflow']);
-    });
+    // Credential management routes
+    Route::get('/credentials', [N8nController::class, 'getCredentials']);
+    Route::get('/credentials/{credentialId}', [N8nController::class, 'getCredential']);
+    Route::post('/credentials', [N8nController::class, 'createCredential']);
+    Route::put('/credentials/{credentialId}', [N8nController::class, 'updateCredential']);
+    Route::delete('/credentials/{credentialId}', [N8nController::class, 'deleteCredential']);
+    Route::post('/credentials/{credentialId}/test', [N8nController::class, 'testCredential']);
 
-    // Execution History
-    Route::prefix('executions')->group(function () {
-        Route::get('/workflows/{workflowId}', [N8nController::class, 'getWorkflowExecutions']);
-    });
+    // Webhook routes
+    Route::get('/workflows/{workflowId}/webhook/{nodeId}/url', [N8nController::class, 'getWebhookUrl']);
+    Route::post('/workflows/{workflowId}/webhook/{nodeId}', [N8nController::class, 'sendWebhook']);
+    Route::post('/workflows/{workflowId}/webhook/{nodeId}/test', [N8nController::class, 'testWebhookConnectivity']);
+
+    // Statistics and monitoring routes
+    Route::get('/workflows/{workflowId}/active', [N8nController::class, 'isWorkflowActive']);
+    Route::get('/workflows/{workflowId}/stats', [N8nController::class, 'getWorkflowStats']);
 });

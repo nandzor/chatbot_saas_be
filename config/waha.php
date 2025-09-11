@@ -7,16 +7,24 @@ return [
     |--------------------------------------------------------------------------
     |
     | This file contains configuration options for WAHA (WhatsApp HTTP API)
-    | integration and API testing. Using chengkangzai/laravel-waha-saloon-sdk
-    | package for WhatsApp API operations.
+    | integration. Our custom WAHA service provides a clean interface to
+    | interact with WAHA server.
     |
     */
 
     // WAHA Server Configuration
     'server' => [
-        'url' => env('WAHA_BASE_URL', 'http://localhost:3000'),
+        'base_url' => env('WAHA_BASE_URL', 'http://localhost:3000'),
         'api_key' => env('WAHA_API_KEY', ''),
         'timeout' => env('WAHA_TIMEOUT', 30),
+    ],
+
+    // HTTP Client Configuration
+    'http' => [
+        'retry_attempts' => env('WAHA_RETRY_ATTEMPTS', 3),
+        'retry_delay' => env('WAHA_RETRY_DELAY', 1000), // milliseconds
+        'log_requests' => env('WAHA_LOG_REQUESTS', true),
+        'log_responses' => env('WAHA_LOG_RESPONSES', true),
     ],
 
     // Session Configuration
@@ -36,11 +44,11 @@ return [
     'messages' => [
         'default_limit' => 50,
         'max_limit' => 100,
-        'retry_attempts' => env('WAHA_RETRY_ATTEMPTS', 3),
-        'retry_delay' => env('WAHA_RETRY_DELAY', 1000), // milliseconds
+        'retry_attempts' => env('WAHA_MESSAGE_RETRY_ATTEMPTS', 3),
+        'retry_delay' => env('WAHA_MESSAGE_RETRY_DELAY', 1000), // milliseconds
     ],
 
-    // API Testing Configuration
+    // Testing Configuration
     'testing' => [
         'enabled' => env('WAHA_TESTING_ENABLED', true),
         'mock_responses' => env('WAHA_MOCK_RESPONSES', false),
@@ -67,5 +75,17 @@ return [
         'allowed_phone_numbers' => explode(',', env('WAHA_ALLOWED_PHONE_NUMBERS', '')),
         'blocked_phone_numbers' => explode(',', env('WAHA_BLOCKED_PHONE_NUMBERS', '')),
         'require_authentication' => env('WAHA_REQUIRE_AUTH', true),
+    ],
+
+    // Default session configuration for new sessions
+    'default_session' => [
+        'name' => 'default',
+        'config' => [
+            'webhook' => env('WAHA_WEBHOOK_URL', ''),
+            'webhook_by_events' => false,
+            'events' => ['message', 'session.status'],
+            'reject_calls' => false,
+            'mark_online_on_chat' => true,
+        ],
     ],
 ];

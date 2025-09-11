@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->registerObservers();
 
-        // Allow publishing our custom WAHA config via: php artisan vendor:publish --tag="waha-config"
+        // Allow publishing our custom config files via: php artisan vendor:publish --tag="waha-config" or --tag="n8n-config"
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 base_path('config/waha.php') => config_path('waha.php'),

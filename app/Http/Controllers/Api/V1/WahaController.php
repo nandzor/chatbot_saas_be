@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Services\WahaService;
+use App\Services\Waha\WahaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Exception;
 
 class WahaController extends BaseApiController
@@ -20,105 +19,41 @@ class WahaController extends BaseApiController
     }
 
     /**
-     * Test WAHA connection
-     */
-    public function testConnection(): JsonResponse
-    {
-        try {
-            $result = $this->wahaService->testConnection();
-
-            if ($result['success']) {
-                return $this->successResponse($result['message'], $result['server_info'] ?? []);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
-        } catch (Exception $e) {
-            Log::error('Failed to test WAHA connection in controller', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return $this->errorResponse('Failed to test connection: ' . $e->getMessage(), 500);
-        }
-    }
-
-    /**
      * Get all sessions
      */
     public function getSessions(): JsonResponse
     {
         try {
-            $result = $this->wahaService->getSessions();
-
-            if ($result['success']) {
-                return $this->successResponse('Sessions retrieved successfully', $result['data']);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
+            $sessions = $this->wahaService->getSessions();
+            return $this->successResponse($sessions, 'Sessions retrieved successfully');
         } catch (Exception $e) {
-            Log::error('Failed to get WAHA sessions in controller', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return $this->errorResponse('Failed to retrieve sessions: ' . $e->getMessage(), 500);
+            Log::error('Failed to get WAHA sessions', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to retrieve sessions', 500);
         }
     }
 
     /**
-     * Get session information
-     */
-    public function getSession(string $sessionId): JsonResponse
-    {
-        try {
-            $result = $this->wahaService->getSession($sessionId);
-
-            if ($result['success']) {
-                return $this->successResponse('Session information retrieved successfully', $result['data']);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
-        } catch (Exception $e) {
-            Log::error('Failed to get WAHA session in controller', [
-                'session_id' => $sessionId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return $this->errorResponse('Failed to retrieve session: ' . $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * Start a session
+     * Start a new session
      */
     public function startSession(Request $request, string $sessionId): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'config' => 'array',
+            $config = $request->validate([
+                'webhook' => 'nullable|string|url',
+                'webhook_by_events' => 'boolean',
+                'events' => 'array',
+                'reject_calls' => 'boolean',
+                'mark_online_on_chat' => 'boolean',
             ]);
 
-            if ($validator->fails()) {
-                return $this->errorResponse('Validation failed', $validator->errors()->toArray(), 422);
-            }
-
-            $config = $request->input('config', []);
             $result = $this->wahaService->startSession($sessionId, $config);
-
-            if ($result['success']) {
-                return $this->successResponse($result['message'], $result['data'] ?? []);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
+            return $this->successResponse($result, 'Session started successfully');
         } catch (Exception $e) {
-            Log::error('Failed to start WAHA session in controller', [
+            Log::error('Failed to start WAHA session', [
                 'session_id' => $sessionId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $e->getMessage()
             ]);
-
-            return $this->errorResponse('Failed to start session: ' . $e->getMessage(), 500);
+            return $this->errorResponse('Failed to start session', 500);
         }
     }
 
@@ -129,137 +64,113 @@ class WahaController extends BaseApiController
     {
         try {
             $result = $this->wahaService->stopSession($sessionId);
-
-            if ($result['success']) {
-                return $this->successResponse($result['message'], $result['data'] ?? []);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
+            return $this->successResponse($result, 'Session stopped successfully');
         } catch (Exception $e) {
-            Log::error('Failed to stop WAHA session in controller', [
+            Log::error('Failed to stop WAHA session', [
                 'session_id' => $sessionId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $e->getMessage()
             ]);
-
-            return $this->errorResponse('Failed to stop session: ' . $e->getMessage(), 500);
+            return $this->errorResponse('Failed to stop session', 500);
         }
     }
 
     /**
-     * Delete a session
+     * Get session status
      */
-    public function deleteSession(string $sessionId): JsonResponse
+    public function getSessionStatus(string $sessionId): JsonResponse
     {
         try {
-            $result = $this->wahaService->deleteSession($sessionId);
-
-            if ($result['success']) {
-                return $this->successResponse($result['message'], $result['data'] ?? []);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
+            $status = $this->wahaService->getSessionStatus($sessionId);
+            return $this->successResponse($status, 'Session status retrieved successfully');
         } catch (Exception $e) {
-            Log::error('Failed to delete WAHA session in controller', [
+            Log::error('Failed to get WAHA session status', [
                 'session_id' => $sessionId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $e->getMessage()
             ]);
-
-            return $this->errorResponse('Failed to delete session: ' . $e->getMessage(), 500);
+            return $this->errorResponse('Failed to retrieve session status', 500);
         }
     }
 
     /**
-     * Send text message
+     * Send a text message
      */
     public function sendTextMessage(Request $request, string $sessionId): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
+            $data = $request->validate([
                 'to' => 'required|string',
-                'text' => 'required|string',
+                'text' => 'required|string|max:4096',
             ]);
 
-            if ($validator->fails()) {
-                return $this->errorResponse('Validation failed', $validator->errors()->toArray(), 422);
-            }
+            $result = $this->wahaService->sendTextMessage(
+                $sessionId,
+                $data['to'],
+                $data['text']
+            );
 
-            $to = $request->input('to');
-            $text = $request->input('text');
-            $result = $this->wahaService->sendTextMessage($sessionId, $to, $text);
-
-            if ($result['success']) {
-                return $this->successResponse($result['message'], $result['data']);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
+            return $this->successResponse($result, 'Message sent successfully');
         } catch (Exception $e) {
-            Log::error('Failed to send WAHA text message in controller', [
+            Log::error('Failed to send WAHA text message', [
                 'session_id' => $sessionId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $e->getMessage()
             ]);
-
-            return $this->errorResponse('Failed to send message: ' . $e->getMessage(), 500);
+            return $this->errorResponse('Failed to send message', 500);
         }
     }
 
     /**
-     * Get chats
+     * Send a media message
      */
-    public function getChats(string $sessionId): JsonResponse
+    public function sendMediaMessage(Request $request, string $sessionId): JsonResponse
     {
         try {
-            $result = $this->wahaService->getChats($sessionId);
-
-            if ($result['success']) {
-                return $this->successResponse('Chats retrieved successfully', $result['data']);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
-        } catch (Exception $e) {
-            Log::error('Failed to get WAHA chats in controller', [
-                'session_id' => $sessionId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+            $data = $request->validate([
+                'to' => 'required|string',
+                'media_url' => 'required|string|url',
+                'caption' => 'nullable|string|max:1024',
             ]);
 
-            return $this->errorResponse('Failed to retrieve chats: ' . $e->getMessage(), 500);
+            $result = $this->wahaService->sendMediaMessage(
+                $sessionId,
+                $data['to'],
+                $data['media_url'],
+                $data['caption'] ?? ''
+            );
+
+            return $this->successResponse($result, 'Media message sent successfully');
+        } catch (Exception $e) {
+            Log::error('Failed to send WAHA media message', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to send media message', 500);
         }
     }
 
     /**
      * Get messages
      */
-    public function getMessages(Request $request, string $sessionId, string $chatId): JsonResponse
+    public function getMessages(Request $request, string $sessionId): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
+            $data = $request->validate([
                 'limit' => 'integer|min:1|max:100',
+                'page' => 'integer|min:1',
             ]);
 
-            if ($validator->fails()) {
-                return $this->errorResponse('Validation failed', $validator->errors()->toArray(), 422);
-            }
+            $messages = $this->wahaService->getMessages(
+                $sessionId,
+                $data['limit'] ?? 50,
+                $data['page'] ?? 1
+            );
 
-            $limit = $request->input('limit', 50);
-            $result = $this->wahaService->getMessages($sessionId, $chatId, $limit);
-
-            if ($result['success']) {
-                return $this->successResponse('Messages retrieved successfully', $result['data']);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
+            return $this->successResponse($messages, 'Messages retrieved successfully');
         } catch (Exception $e) {
-            Log::error('Failed to get WAHA messages in controller', [
+            Log::error('Failed to get WAHA messages', [
                 'session_id' => $sessionId,
-                'chat_id' => $chatId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $e->getMessage()
             ]);
-
-            return $this->errorResponse('Failed to retrieve messages: ' . $e->getMessage(), 500);
+            return $this->errorResponse('Failed to retrieve messages', 500);
         }
     }
 
@@ -269,21 +180,116 @@ class WahaController extends BaseApiController
     public function getContacts(string $sessionId): JsonResponse
     {
         try {
-            $result = $this->wahaService->getContacts($sessionId);
-
-            if ($result['success']) {
-                return $this->successResponse('Contacts retrieved successfully', $result['data']);
-            }
-
-            return $this->errorResponse($result['message'], $result['error'] ?? null, 500);
+            $contacts = $this->wahaService->getContacts($sessionId);
+            return $this->successResponse($contacts, 'Contacts retrieved successfully');
         } catch (Exception $e) {
-            Log::error('Failed to get WAHA contacts in controller', [
+            Log::error('Failed to get WAHA contacts', [
                 'session_id' => $sessionId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $e->getMessage()
             ]);
+            return $this->errorResponse('Failed to retrieve contacts', 500);
+        }
+    }
 
-            return $this->errorResponse('Failed to retrieve contacts: ' . $e->getMessage(), 500);
+    /**
+     * Get groups
+     */
+    public function getGroups(string $sessionId): JsonResponse
+    {
+        try {
+            $groups = $this->wahaService->getGroups($sessionId);
+            return $this->successResponse($groups, 'Groups retrieved successfully');
+        } catch (Exception $e) {
+            Log::error('Failed to get WAHA groups', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to retrieve groups', 500);
+        }
+    }
+
+    /**
+     * Get QR code
+     */
+    public function getQrCode(string $sessionId): JsonResponse
+    {
+        try {
+            $qrCode = $this->wahaService->getQrCode($sessionId);
+            return $this->successResponse($qrCode, 'QR code retrieved successfully');
+        } catch (Exception $e) {
+            Log::error('Failed to get WAHA QR code', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to retrieve QR code', 500);
+        }
+    }
+
+    /**
+     * Delete session
+     */
+    public function deleteSession(string $sessionId): JsonResponse
+    {
+        try {
+            $result = $this->wahaService->deleteSession($sessionId);
+            return $this->successResponse($result, 'Session deleted successfully');
+        } catch (Exception $e) {
+            Log::error('Failed to delete WAHA session', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to delete session', 500);
+        }
+    }
+
+    /**
+     * Get session info
+     */
+    public function getSessionInfo(string $sessionId): JsonResponse
+    {
+        try {
+            $info = $this->wahaService->getSessionInfo($sessionId);
+            return $this->successResponse($info, 'Session info retrieved successfully');
+        } catch (Exception $e) {
+            Log::error('Failed to get WAHA session info', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to retrieve session info', 500);
+        }
+    }
+
+    /**
+     * Check if session is connected
+     */
+    public function isSessionConnected(string $sessionId): JsonResponse
+    {
+        try {
+            $connected = $this->wahaService->isSessionConnected($sessionId);
+            return $this->successResponse(['connected' => $connected], 'Session connection status retrieved successfully');
+        } catch (Exception $e) {
+            Log::error('Failed to check WAHA session connection', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to check session connection', 500);
+        }
+    }
+
+    /**
+     * Get session health status
+     */
+    public function getSessionHealth(string $sessionId): JsonResponse
+    {
+        try {
+            $health = $this->wahaService->getSessionHealth($sessionId);
+            return $this->successResponse($health, 'Session health status retrieved successfully');
+        } catch (Exception $e) {
+            Log::error('Failed to get WAHA session health', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to retrieve session health', 500);
         }
     }
 }

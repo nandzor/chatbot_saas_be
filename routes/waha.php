@@ -8,30 +8,32 @@ use Illuminate\Support\Facades\Route;
 | WAHA API Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register WAHA API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
+| Here are the routes for WAHA (WhatsApp HTTP API) integration.
+| These routes provide endpoints to manage WhatsApp sessions,
+| send messages, and handle WhatsApp-related operations.
 |
 */
 
-Route::prefix('v1/waha')->middleware(['unified.auth', 'permission:waha.view'])->group(function () {
-    // Connection test
-    Route::get('/connection/test', [WahaController::class, 'testConnection']);
+Route::prefix('waha')->group(function () {
+    // Session management routes
+    Route::get('/sessions', [WahaController::class, 'getSessions']);
+    Route::post('/sessions/{sessionId}/start', [WahaController::class, 'startSession']);
+    Route::post('/sessions/{sessionId}/stop', [WahaController::class, 'stopSession']);
+    Route::get('/sessions/{sessionId}/status', [WahaController::class, 'getSessionStatus']);
+    Route::get('/sessions/{sessionId}/info', [WahaController::class, 'getSessionInfo']);
+    Route::delete('/sessions/{sessionId}', [WahaController::class, 'deleteSession']);
+    Route::get('/sessions/{sessionId}/qr', [WahaController::class, 'getQrCode']);
 
-    // Sessions
-    Route::prefix('sessions')->group(function () {
-        Route::get('/', [WahaController::class, 'getSessions']);
-        Route::get('/{sessionId}', [WahaController::class, 'getSession']);
-        Route::post('/{sessionId}/start', [WahaController::class, 'startSession']);
-        Route::post('/{sessionId}/stop', [WahaController::class, 'stopSession']);
-        Route::delete('/{sessionId}', [WahaController::class, 'deleteSession']);
-    });
+    // Message routes
+    Route::post('/sessions/{sessionId}/send-text', [WahaController::class, 'sendTextMessage']);
+    Route::post('/sessions/{sessionId}/send-media', [WahaController::class, 'sendMediaMessage']);
+    Route::get('/sessions/{sessionId}/messages', [WahaController::class, 'getMessages']);
 
-    // Messages
-    Route::prefix('sessions/{sessionId}')->group(function () {
-        Route::post('/send/text', [WahaController::class, 'sendTextMessage']);
-        Route::get('/chats', [WahaController::class, 'getChats']);
-        Route::get('/chats/{chatId}/messages', [WahaController::class, 'getMessages']);
-        Route::get('/contacts', [WahaController::class, 'getContacts']);
-    });
+    // Contact and group routes
+    Route::get('/sessions/{sessionId}/contacts', [WahaController::class, 'getContacts']);
+    Route::get('/sessions/{sessionId}/groups', [WahaController::class, 'getGroups']);
+
+    // Health and status routes
+    Route::get('/sessions/{sessionId}/connected', [WahaController::class, 'isSessionConnected']);
+    Route::get('/sessions/{sessionId}/health', [WahaController::class, 'getSessionHealth']);
 });
