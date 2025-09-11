@@ -515,9 +515,11 @@ Route::prefix('v1')->group(function () {
             Route::get('/code/{orgCode}', [OrganizationController::class, 'showByCode']);
 
             // Advanced features
-            Route::get('/statistics', [OrganizationController::class, 'statistics']);
+            Route::get('/statistics', [OrganizationController::class, 'getStatistics']);
+            Route::get('/search', [OrganizationController::class, 'search']);
             Route::get('/analytics', [OrganizationController::class, 'getAllOrganizationsAnalytics']);
             Route::get('/export', [OrganizationController::class, 'export']);
+            Route::get('/deleted', [OrganizationController::class, 'deleted']);
             Route::middleware(['permission:organizations.bulk_actions'])->post('/bulk-action', [OrganizationController::class, 'bulkAction']);
             Route::middleware(['permission:organizations.import'])->post('/import', [OrganizationController::class, 'import']);
 
@@ -533,6 +535,10 @@ Route::prefix('v1')->group(function () {
 
                 // Advanced individual operations
                 Route::get('/activity-logs', [OrganizationController::class, 'activityLogs']);
+                Route::get('/health', [OrganizationController::class, 'health']);
+                Route::get('/analytics', [OrganizationController::class, 'analytics']);
+                Route::get('/metrics', [OrganizationController::class, 'metrics']);
+                Route::post('/restore', [OrganizationController::class, 'restore']);
                 Route::middleware(['permission:organizations.update'])->patch('/status', [OrganizationController::class, 'updateStatus']);
 
                 // Organization settings

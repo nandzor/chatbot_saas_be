@@ -11,7 +11,7 @@ class BulkActionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true; // Authorization handled by middleware
+        return $this->user()?->hasRole('super_admin') ?? false;
     }
 
     /**
@@ -20,29 +20,32 @@ class BulkActionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => 'required|in:activate,suspend,delete,export,import',
-            'organization_ids' => 'required|array|min:1',
-            'organization_ids.*' => 'required|string|exists:organizations,id',
-            'reason' => 'nullable|string|max:500',
-            'notify_users' => 'nullable|boolean'
+            'action' => 'required|string|in:activate,suspend,inactivate,delete',
+            'organization_ids' => 'required|array|min:1|max:100',
+            'organization_ids.*' => 'required|uuid|exists:organizations,id',
+            'options' => 'sometimes|array',
+            'options.batch_size' => 'sometimes|integer|min:1|max:100',
+            'options.continue_on_error' => 'sometimes|boolean'
         ];
     }
 
     /**
-     * Get custom messages for validator errors.
+     * Get custom validation messages.
      */
     public function messages(): array
     {
         return [
-            'action.required' => 'Action is required.',
-            'action.in' => 'Invalid action. Allowed actions are: activate, suspend, delete, export, import.',
-            'organization_ids.required' => 'At least one organization must be selected.',
-            'organization_ids.array' => 'Organization IDs must be provided as an array.',
-            'organization_ids.min' => 'At least one organization must be selected.',
-            'organization_ids.*.required' => 'Organization ID is required.',
-            'organization_ids.*.string' => 'Organization ID must be a string.',
-            'organization_ids.*.exists' => 'One or more selected organizations do not exist.',
-            'reason.max' => 'Reason may not be greater than 500 characters.'
+            'action.required' => 'Action tidak boleh kosong',
+            'action.in' => 'Action harus salah satu dari: activate, suspend, inactivate, delete',
+            'organization_ids.required' => 'Pilih minimal satu organisasi',
+            'organization_ids.array' => 'Organization IDs harus berupa array',
+            'organization_ids.min' => 'Pilih minimal satu organisasi',
+            'organization_ids.max' => 'Maksimal 100 organisasi per batch',
+            'organization_ids.*.required' => 'Organization ID tidak boleh kosong',
+            'organization_ids.*.uuid' => 'Organization ID harus berupa UUID yang valid',
+            'organization_ids.*.exists' => 'Organization tidak ditemukan',
+            'options.batch_size.min' => 'Batch size minimal 1',
+            'options.batch_size.max' => 'Batch size maksimal 100'
         ];
     }
 
@@ -52,24 +55,11 @@ class BulkActionRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'action' => 'action',
-            'organization_ids' => 'organization IDs',
-            'organization_ids.*' => 'organization ID',
-            'reason' => 'reason',
-            'notify_users' => 'notify users'
+            'action' => 'Action',
+            'organization_ids' => 'Daftar Organisasi',
+            'organization_ids.*' => 'ID Organisasi',
+            'options.batch_size' => 'Ukuran Batch',
+            'options.continue_on_error' => 'Lanjutkan Jika Error'
         ];
-    }
-
-    /**
-     * Prepare the data for validation.
-     */
-    protected function prepareForValidation(): void
-    {
-        // Ensure organization_ids is an array
-        if ($this->has('organization_ids') && !is_array($this->organization_ids)) {
-            $this->merge([
-                'organization_ids' => [$this->organization_ids]
-            ]);
-        }
     }
 }
