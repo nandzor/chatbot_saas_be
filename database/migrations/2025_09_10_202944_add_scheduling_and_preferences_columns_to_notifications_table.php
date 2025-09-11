@@ -18,8 +18,7 @@ return new class extends Migration
             $table->timestamp('cancelled_at')->nullable()->after('timezone');
 
             // Read receipt and tracking
-            $table->timestamp('read_at')->nullable()->after('is_read');
-            $table->string('user_agent')->nullable()->after('read_at');
+            $table->string('user_agent')->nullable()->after('is_read');
             $table->string('ip_address')->nullable()->after('user_agent');
 
             // Additional metadata
@@ -34,7 +33,6 @@ return new class extends Migration
 
             // Add indexes for performance
             $table->index(['status', 'scheduled_at']);
-            $table->index(['organization_id', 'type']);
             $table->index(['correlation_id']);
             $table->index(['created_at', 'status']);
         });
@@ -47,7 +45,6 @@ return new class extends Migration
     {
         Schema::table('notifications', function (Blueprint $table) {
             $table->dropIndex(['status', 'scheduled_at']);
-            $table->dropIndex(['organization_id', 'type']);
             $table->dropIndex(['correlation_id']);
             $table->dropIndex(['created_at', 'status']);
 
@@ -55,7 +52,6 @@ return new class extends Migration
                 'scheduled_at',
                 'timezone',
                 'cancelled_at',
-                'read_at',
                 'user_agent',
                 'ip_address',
                 'metadata',

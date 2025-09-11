@@ -13,12 +13,9 @@ return new class extends Migration
     {
         Schema::table('organizations', function (Blueprint $table) {
             $table->json('notification_preferences')->nullable()->after('settings');
-            $table->string('phone')->nullable()->after('email');
         });
 
         Schema::table('users', function (Blueprint $table) {
-            $table->json('notification_preferences')->nullable()->after('settings');
-            $table->string('phone')->nullable()->after('email');
             $table->json('device_tokens')->nullable()->after('notification_preferences');
         });
     }
@@ -29,11 +26,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('organizations', function (Blueprint $table) {
-            $table->dropColumn(['notification_preferences', 'phone']);
+            $table->dropColumn(['notification_preferences']);
         });
 
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['notification_preferences', 'phone', 'device_tokens']);
+            $table->dropColumn(['device_tokens']);
         });
     }
 };
