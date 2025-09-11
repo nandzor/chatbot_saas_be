@@ -2,452 +2,273 @@
 
 namespace App\Services;
 
-use App\Models\NotificationTemplate;
+use App\Models\Organization;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Cache;
 
 class NotificationTemplateService
 {
     /**
      * Get notification template
      */
-    public function getTemplate(string $name, string $type = null, string $language = 'id'): ?NotificationTemplate
+    public function getTemplate(string $type, Organization $organization = null): array
     {
-        try {
-            return NotificationTemplate::getTemplate($name, $type, $language);
-        } catch (\Exception $e) {
-            Log::error('Failed to get notification template', [
-                'name' => $name,
-                'type' => $type,
-                'language' => $language,
-                'error' => $e->getMessage(),
-            ]);
-            return null;
+        $cacheKey = "notification_template_{$type}";
+
+        if ($organization) {
+            $cacheKey .= "_org_{$organization->id}";
         }
+
+        return Cache::remember($cacheKey, 3600, function () use ($type, $organization) {
+            return $this->buildTemplate($type, $organization);
+        });
     }
 
     /**
-     * Get templates by category
+     * Build notification template
      */
-    public function getTemplatesByCategory(string $category, string $type = null, string $language = 'id'): array
+    private function buildTemplate(string $type, Organization $organization = null): array
     {
-        try {
-            return NotificationTemplate::getTemplatesByCategory($category, $type, $language);
-        } catch (\Exception $e) {
-            Log::error('Failed to get notification templates by category', [
-                'category' => $category,
-                'type' => $type,
-                'language' => $language,
-                'error' => $e->getMessage(),
-            ]);
-            return [];
+        $templates = [
+            'welcome' => [
+                'title' => 'Welcome to {{app_name}}!',
+                'message' => 'Thank you for joining {{organization_name}}. We\'re excited to have you on board!',
+                'channels' => ['in_app', 'email'],
+                'priority' => 'normal',
+                'email_template' => 'welcome',
+                'email_subject' => 'Welcome to {{app_name}}!',
+                'data' => [
+                    'action_url' => '{{dashboard_url}}',
+                    'action_text' => 'Get Started',
+                    'trial_info' => [
+                        'duration' => '30 days',
+                        'features' => ['Unlimited chatbots', 'Analytics dashboard', 'API access']
+                    ]
+                ]
+            ],
+            'urgent' => [
+                'title' => 'Urgent: {{title}}',
+                'message' => '{{message}}',
+                'channels' => ['in_app', 'email', 'webhook'],
+                'priority' => 'urgent',
+                'email_template' => 'urgent',
+                'email_subject' => 'URGENT: {{title}}',
+                'data' => [
+                    'urgency' => 'high',
+                    'requires_action' => true
+                ]
+            ],
+            'system' => [
+                'title' => 'System Notification: {{title}}',
+                'message' => '{{message}}',
+                'channels' => ['in_app', 'email'],
+                'priority' => 'high',
+                'email_template' => 'default',
+                'email_subject' => 'System Update: {{title}}',
+                'data' => [
+                    'system_notification' => true,
+                    'category' => 'system'
+                ]
+            ],
+            'newsletter' => [
+                'title' => '{{title}}',
+                'message' => '{{message}}',
+                'channels' => ['email'],
+                'priority' => 'low',
+                'email_template' => 'newsletter',
+                'email_subject' => '{{title}}',
+                'data' => [
+                    'newsletter' => true,
+                    'unsubscribe_url' => '{{unsubscribe_url}}'
+                ]
+            ],
+            'reminder' => [
+                'title' => 'Reminder: {{title}}',
+                'message' => '{{message}}',
+                'channels' => ['in_app', 'email'],
+                'priority' => 'normal',
+                'email_template' => 'default',
+                'email_subject' => 'Reminder: {{title}}',
+                'data' => [
+                    'reminder' => true,
+                    'reminder_type' => '{{reminder_type}}'
+                ]
+            ],
+            'subscription_expiring' => [
+                'title' => 'Subscription Expiring Soon',
+                'message' => 'Your {{subscription_plan}} subscription will expire on {{expiry_date}}. Renew now to continue enjoying our services.',
+                'channels' => ['in_app', 'email', 'webhook'],
+                'priority' => 'high',
+                'email_template' => 'subscription',
+                'email_subject' => 'Subscription Expiring - Action Required',
+                'data' => [
+                    'subscription_reminder' => true,
+                    'action_url' => '{{renewal_url}}',
+                    'action_text' => 'Renew Now',
+                    'expiry_date' => '{{expiry_date}}',
+                    'subscription_plan' => '{{subscription_plan}}'
+                ]
+            ],
+            'payment_failed' => [
+                'title' => 'Payment Failed',
+                'message' => 'We were unable to process your payment. Please update your payment method to continue using our services.',
+                'channels' => ['in_app', 'email', 'webhook'],
+                'priority' => 'urgent',
+                'email_template' => 'payment',
+                'email_subject' => 'Payment Failed - Immediate Action Required',
+                'data' => [
+                    'payment_issue' => true,
+                    'action_url' => '{{payment_url}}',
+                    'action_text' => 'Update Payment Method',
+                    'retry_count' => '{{retry_count}}'
+                ]
+            ],
+            'feature_update' => [
+                'title' => 'New Feature: {{feature_name}}',
+                'message' => 'We\'ve added a new feature: {{feature_name}}. {{feature_description}}',
+                'channels' => ['in_app', 'email'],
+                'priority' => 'normal',
+                'email_template' => 'feature',
+                'email_subject' => 'New Feature Available: {{feature_name}}',
+                'data' => [
+                    'feature_update' => true,
+                    'feature_name' => '{{feature_name}}',
+                    'feature_description' => '{{feature_description}}',
+                    'action_url' => '{{feature_url}}',
+                    'action_text' => 'Try It Now'
+                ]
+            ],
+            'security_alert' => [
+                'title' => 'Security Alert: {{alert_type}}',
+                'message' => 'We detected {{alert_description}}. Please review your account security settings.',
+                'channels' => ['in_app', 'email', 'webhook', 'sms'],
+                'priority' => 'urgent',
+                'email_template' => 'security',
+                'email_subject' => 'SECURITY ALERT: {{alert_type}}',
+                'data' => [
+                    'security_alert' => true,
+                    'alert_type' => '{{alert_type}}',
+                    'alert_description' => '{{alert_description}}',
+                    'action_url' => '{{security_url}}',
+                    'action_text' => 'Review Security'
+                ]
+            ]
+        ];
+
+        $template = $templates[$type] ?? $templates['system'];
+
+        // Replace placeholders if organization is provided
+        if ($organization) {
+            $template = $this->replacePlaceholders($template, $organization);
         }
+
+        return $template;
     }
 
     /**
-     * Send notification using template
+     * Replace placeholders in template
      */
-    public function send(string $templateName, array $data, array $recipients, string $type = null, string $language = 'id'): array
+    private function replacePlaceholders(array $template, Organization $organization): array
     {
-        try {
-            $template = $this->getTemplate($templateName, $type, $language);
+        $placeholders = [
+            '{{app_name}}' => config('app.name', 'ChatBot SaaS'),
+            '{{organization_name}}' => $organization->name,
+            '{{organization_code}}' => $organization->code,
+            '{{organization_email}}' => $organization->email,
+            '{{dashboard_url}}' => config('app.url') . '/dashboard',
+            '{{unsubscribe_url}}' => config('app.url') . '/unsubscribe/' . $organization->id,
+            '{{renewal_url}}' => config('app.url') . '/billing/renew',
+            '{{payment_url}}' => config('app.url') . '/billing/payment',
+            '{{security_url}}' => config('app.url') . '/security',
+            '{{subscription_plan}}' => $organization->subscription_plan ?? 'Trial',
+            '{{expiry_date}}' => $organization->subscription_expires_at?->format('M j, Y') ?? 'N/A'
+        ];
 
-            if (!$template) {
-                throw new \Exception("Template '{$templateName}' not found");
+        $replaceInArray = function ($value) use ($placeholders, &$replaceInArray) {
+            if (is_string($value)) {
+                return str_replace(array_keys($placeholders), array_values($placeholders), $value);
+            } elseif (is_array($value)) {
+                return array_map($replaceInArray, $value);
             }
+            return $value;
+        };
 
-            // Validate data
-            $errors = $template->validateData($data);
-            if (!empty($errors)) {
-                throw new \Exception('Template validation failed: ' . implode(', ', $errors));
+        return array_map($replaceInArray, $template);
+    }
+
+    /**
+     * Get available notification types
+     */
+    public function getAvailableTypes(): array
+    {
+        return [
+            'welcome' => 'Welcome Notification',
+            'urgent' => 'Urgent Notification',
+            'system' => 'System Notification',
+            'newsletter' => 'Newsletter',
+            'reminder' => 'Reminder',
+            'subscription_expiring' => 'Subscription Expiring',
+            'payment_failed' => 'Payment Failed',
+            'feature_update' => 'Feature Update',
+            'security_alert' => 'Security Alert'
+        ];
+    }
+
+    /**
+     * Validate notification data against template
+     */
+    public function validateNotificationData(array $data, string $type): array
+    {
+        $template = $this->getTemplate($type);
+        $errors = [];
+
+        // Check required fields
+        $requiredFields = ['title', 'message'];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                $errors[] = "Field '{$field}' is required for notification type '{$type}'";
             }
-
-            // Render template
-            $rendered = $template->render($data);
-
-            // Send based on type
-            $results = [];
-            foreach ($recipients as $recipient) {
-                $results[] = $this->sendNotification($template, $rendered, $recipient);
-            }
-
-            Log::info('Notification sent using template', [
-                'template' => $templateName,
-                'type' => $template->type,
-                'recipients_count' => count($recipients),
-            ]);
-
-            return $results;
-        } catch (\Exception $e) {
-            Log::error('Failed to send notification using template', [
-                'template' => $templateName,
-                'type' => $type,
-                'language' => $language,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
         }
-    }
 
-    /**
-     * Send email notification
-     */
-    public function sendEmail(string $templateName, array $data, string $to, string $language = 'id'): array
-    {
-        return $this->send($templateName, $data, [$to], 'email', $language);
-    }
-
-    /**
-     * Send SMS notification
-     */
-    public function sendSms(string $templateName, array $data, string $to, string $language = 'id'): array
-    {
-        return $this->send($templateName, $data, [$to], 'sms', $language);
-    }
-
-    /**
-     * Send push notification
-     */
-    public function sendPush(string $templateName, array $data, string $to, string $language = 'id'): array
-    {
-        return $this->send($templateName, $data, [$to], 'push', $language);
-    }
-
-    /**
-     * Send webhook notification
-     */
-    public function sendWebhook(string $templateName, array $data, string $url, string $language = 'id'): array
-    {
-        return $this->send($templateName, $data, [$url], 'webhook', $language);
-    }
-
-    /**
-     * Create or update template
-     */
-    public function createOrUpdate(array $data): NotificationTemplate
-    {
-        try {
-            $template = NotificationTemplate::updateOrCreate(
-                [
-                    'name' => $data['name'],
-                    'type' => $data['type'],
-                    'language' => $data['language'] ?? 'id',
-                ],
-                $data
-            );
-
-            // Clear cache
-            NotificationTemplate::clearCache($template->name);
-
-            Log::info('Notification template created/updated', [
-                'name' => $template->name,
-                'type' => $template->type,
-                'language' => $template->language,
-            ]);
-
-            return $template;
-        } catch (\Exception $e) {
-            Log::error('Failed to create/update notification template', [
-                'data' => $data,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+        // Validate channels
+        if (isset($data['channels']) && is_array($data['channels'])) {
+            $allowedChannels = ['in_app', 'email', 'webhook', 'sms', 'push'];
+            $invalidChannels = array_diff($data['channels'], $allowedChannels);
+            if (!empty($invalidChannels)) {
+                $errors[] = "Invalid channels: " . implode(', ', $invalidChannels);
+            }
         }
-    }
 
-    /**
-     * Delete template
-     */
-    public function delete(string $name, string $type = null, string $language = 'id'): bool
-    {
-        try {
-            $query = NotificationTemplate::where('name', $name)
-                ->where('language', $language);
-
-            if ($type) {
-                $query->where('type', $type);
+        // Validate priority
+        if (isset($data['priority'])) {
+            $allowedPriorities = ['low', 'normal', 'high', 'urgent'];
+            if (!in_array($data['priority'], $allowedPriorities)) {
+                $errors[] = "Invalid priority. Must be one of: " . implode(', ', $allowedPriorities);
             }
-
-            $template = $query->first();
-
-            if ($template) {
-                $template->delete();
-                NotificationTemplate::clearCache($name);
-
-                Log::info('Notification template deleted', [
-                    'name' => $name,
-                    'type' => $type,
-                    'language' => $language,
-                ]);
-
-                return true;
-            }
-
-            return false;
-        } catch (\Exception $e) {
-            Log::error('Failed to delete notification template', [
-                'name' => $name,
-                'type' => $type,
-                'language' => $language,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
         }
-    }
 
-    /**
-     * Get template preview
-     */
-    public function getPreview(string $name, string $type = null, string $language = 'id'): array
-    {
-        try {
-            $template = $this->getTemplate($name, $type, $language);
-
-            if (!$template) {
-                throw new \Exception("Template '{$name}' not found");
-            }
-
-            $previewData = $template->getPreviewData();
-            $rendered = $template->render($previewData);
-
-            return [
-                'template' => $template->toArray(),
-                'preview_data' => $previewData,
-                'rendered' => $rendered,
-            ];
-        } catch (\Exception $e) {
-            Log::error('Failed to get template preview', [
-                'name' => $name,
-                'type' => $type,
-                'language' => $language,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Validate template data
-     */
-    public function validateTemplateData(string $name, array $data, string $type = null, string $language = 'id'): array
-    {
-        try {
-            $template = $this->getTemplate($name, $type, $language);
-
-            if (!$template) {
-                return ['Template not found'];
-            }
-
-            return $template->validateData($data);
-        } catch (\Exception $e) {
-            Log::error('Failed to validate template data', [
-                'name' => $name,
-                'type' => $type,
-                'language' => $language,
-                'error' => $e->getMessage(),
-            ]);
-
-            return ['Validation failed: ' . $e->getMessage()];
-        }
-    }
-
-    /**
-     * Get available templates
-     */
-    public function getAvailableTemplates(string $category = null, string $type = null, string $language = 'id'): array
-    {
-        try {
-            $query = NotificationTemplate::active()->byLanguage($language);
-
-            if ($category) {
-                $query->byCategory($category);
-            }
-
-            if ($type) {
-                $query->byType($type);
-            }
-
-            return $query->get()->toArray();
-        } catch (\Exception $e) {
-            Log::error('Failed to get available templates', [
-                'category' => $category,
-                'type' => $type,
-                'language' => $language,
-                'error' => $e->getMessage(),
-            ]);
-            return [];
-        }
+        return $errors;
     }
 
     /**
      * Clear template cache
      */
-    public function clearCache(?string $name = null): void
+    public function clearTemplateCache(string $type = null, Organization $organization = null): void
     {
-        try {
-            NotificationTemplate::clearCache($name);
-        } catch (\Exception $e) {
-            Log::error('Failed to clear notification template cache', [
-                'name' => $name,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
-     * Send notification based on template type
-     */
-    protected function sendNotification(NotificationTemplate $template, array $rendered, string $recipient): array
-    {
-        try {
-            switch ($template->type) {
-                case 'email':
-                    return $this->sendEmailNotification($rendered, $recipient);
-                case 'sms':
-                    return $this->sendSmsNotification($rendered, $recipient);
-                case 'push':
-                    return $this->sendPushNotification($rendered, $recipient);
-                case 'webhook':
-                    return $this->sendWebhookNotification($rendered, $recipient);
-                default:
-                    throw new \Exception("Unsupported notification type: {$template->type}");
+        if ($type) {
+            $cacheKey = "notification_template_{$type}";
+            if ($organization) {
+                $cacheKey .= "_org_{$organization->id}";
             }
-        } catch (\Exception $e) {
-            Log::error('Failed to send notification', [
-                'type' => $template->type,
-                'recipient' => $recipient,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
+            Cache::forget($cacheKey);
+        } else {
+            // Clear all template caches
+            Cache::flush();
         }
-    }
 
-    /**
-     * Send email notification
-     */
-    protected function sendEmailNotification(array $rendered, string $to): array
-    {
-        try {
-            // Here you would implement actual email sending
-            // For now, we'll just log it
-            Log::info('Email notification sent', [
-                'to' => $to,
-                'subject' => $rendered['subject'],
-            ]);
-
-            return [
-                'success' => true,
-                'type' => 'email',
-                'recipient' => $to,
-                'message_id' => 'email_' . uniqid(),
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'type' => 'email',
-                'recipient' => $to,
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Send SMS notification
-     */
-    protected function sendSmsNotification(array $rendered, string $to): array
-    {
-        try {
-            // Here you would implement actual SMS sending
-            // For now, we'll just log it
-            Log::info('SMS notification sent', [
-                'to' => $to,
-                'body' => $rendered['body'],
-            ]);
-
-            return [
-                'success' => true,
-                'type' => 'sms',
-                'recipient' => $to,
-                'message_id' => 'sms_' . uniqid(),
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'type' => 'sms',
-                'recipient' => $to,
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Send push notification
-     */
-    protected function sendPushNotification(array $rendered, string $to): array
-    {
-        try {
-            // Here you would implement actual push notification sending
-            // For now, we'll just log it
-            Log::info('Push notification sent', [
-                'to' => $to,
-                'title' => $rendered['subject'],
-                'body' => $rendered['body'],
-            ]);
-
-            return [
-                'success' => true,
-                'type' => 'push',
-                'recipient' => $to,
-                'message_id' => 'push_' . uniqid(),
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'type' => 'push',
-                'recipient' => $to,
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Send webhook notification
-     */
-    protected function sendWebhookNotification(array $rendered, string $url): array
-    {
-        try {
-            // Here you would implement actual webhook sending
-            // For now, we'll just log it
-            Log::info('Webhook notification sent', [
-                'url' => $url,
-                'payload' => $rendered,
-            ]);
-
-            return [
-                'success' => true,
-                'type' => 'webhook',
-                'recipient' => $url,
-                'message_id' => 'webhook_' . uniqid(),
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'type' => 'webhook',
-                'recipient' => $url,
-                'error' => $e->getMessage(),
-            ];
-        }
+        Log::info('Notification template cache cleared', [
+            'type' => $type,
+            'organization_id' => $organization?->id
+        ]);
     }
 }

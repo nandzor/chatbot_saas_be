@@ -2394,7 +2394,7 @@ class OrganizationService extends BaseService
     }
 
     /**
-     * Send notification to organization
+     * Send notification to organization using event system
      */
     public function sendNotification(int $organizationId, string $type, array $data = []): array
     {
@@ -2408,29 +2408,24 @@ class OrganizationService extends BaseService
                 'message' => $data['message'] ?? '',
                 'data' => $data['data'] ?? [],
                 'is_read' => false,
+                'status' => 'pending',
                 'sent_at' => now()
             ]);
 
-            // Send via email if configured
-            if (isset($data['send_email']) && $data['send_email']) {
-                $this->sendEmailNotification($organization, $notification, $data);
-            }
+            // Dispatch event to trigger notification processing
+            event(new \App\Events\NotificationSent($organization, $notification, $type, $data));
 
-            // Send via webhook if configured
-            if ($organization->webhook_url) {
-                $this->sendWebhookNotification($organization, $notification, $data);
-            }
-
-            Log::info('Notification sent to organization', [
+            Log::info('Notification event dispatched', [
                 'organization_id' => $organizationId,
                 'notification_id' => $notification->id,
-                'type' => $type
+                'type' => $type,
+                'channels' => $data['channels'] ?? ['in_app']
             ]);
 
             return [
                 'success' => true,
                 'notification_id' => $notification->id,
-                'message' => 'Notification sent successfully'
+                'message' => 'Notification queued for processing'
             ];
         } catch (\Exception $e) {
             Log::error('Failed to send notification', [
@@ -2592,74 +2587,6 @@ class OrganizationService extends BaseService
         }
     }
 
-    /**
-     * Send email notification
-     */
-    private function sendEmailNotification(Organization $organization, $notification, array $data): void
-    {
-        try {
-            // This would integrate with your email service
-            // For now, just log the action
-            Log::info('Email notification sent', [
-                'organization_id' => $organization->id,
-                'notification_id' => $notification->id,
-                'email' => $organization->email
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to send email notification', [
-                'organization_id' => $organization->id,
-                'notification_id' => $notification->id,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Send webhook notification
-     */
-    private function sendWebhookNotification(Organization $organization, $notification, array $data): void
-    {
-        try {
-            $payload = [
-                'event' => 'notification.sent',
-                'organization_id' => $organization->id,
-                'notification' => [
-                    'id' => $notification->id,
-                    'type' => $notification->type,
-                    'title' => $notification->title,
-                    'message' => $notification->message,
-                    'data' => $notification->data,
-                    'sent_at' => $notification->sent_at
-                ],
-                'timestamp' => now()->toISOString()
-            ];
-
-            // Send webhook
-            $response = Http::timeout(10)->post($organization->webhook_url, $payload);
-
-            if ($response->successful()) {
-                Log::info('Webhook notification sent successfully', [
-                    'organization_id' => $organization->id,
-                    'notification_id' => $notification->id,
-                    'webhook_url' => $organization->webhook_url
-                ]);
-            } else {
-                Log::warning('Webhook notification failed', [
-                    'organization_id' => $organization->id,
-                    'notification_id' => $notification->id,
-                    'webhook_url' => $organization->webhook_url,
-                    'status_code' => $response->status()
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to send webhook notification', [
-                'organization_id' => $organization->id,
-                'notification_id' => $notification->id,
-                'webhook_url' => $organization->webhook_url,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
 
     /**
      * Get organization audit logs

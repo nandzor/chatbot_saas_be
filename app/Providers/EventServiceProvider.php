@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Events\OrganizationCreated;
 use App\Events\OrganizationUpdated;
 use App\Events\OrganizationDeleted;
+use App\Events\NotificationSent;
 use App\Listeners\LogOrganizationActivity;
 use App\Listeners\SendOrganizationNotification;
+use App\Listeners\ProcessNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -38,6 +40,11 @@ class EventServiceProvider extends ServiceProvider
         OrganizationDeleted::class => [
             LogOrganizationActivity::class,
             SendOrganizationNotification::class,
+        ],
+
+        // Notification Events
+        NotificationSent::class => [
+            ProcessNotification::class,
         ],
     ];
 
