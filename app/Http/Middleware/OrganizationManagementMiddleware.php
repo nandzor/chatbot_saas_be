@@ -67,8 +67,8 @@ class OrganizationManagementMiddleware
             }
         }
 
-        // Add organization data to request
-        $request->merge(['organization_data' => $organization]);
+        // Add organization data to request attributes to avoid InputBag scalar/array constraint
+        $request->attributes->set('organization_data', $organization);
 
         // Log organization access
         $this->logOrganizationAccess($request, $organization);
