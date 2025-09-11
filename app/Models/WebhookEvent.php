@@ -84,7 +84,7 @@ class WebhookEvent extends Model
         return $query->where('event_type', $eventType);
     }
 
-    public function scopeByOrganization($query, int $organizationId)
+    public function scopeByOrganization($query, string $organizationId)
     {
         return $query->where('organization_id', $organizationId);
     }

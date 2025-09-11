@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('webhook_events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained()->onDelete('cascade');
-            $table->foreignId('subscription_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('subscription_id')->nullable()->constrained()->onDelete('set null');
             $table->string('gateway', 50)->index(); // stripe, midtrans, xendit
             $table->string('event_type', 100)->index(); // payment_intent.succeeded, payment.success, etc.
             $table->string('event_id', 100)->index(); // External event ID from gateway
@@ -27,6 +27,7 @@ return new class extends Migration
             $table->text('error_message')->nullable(); // Error message if processing failed
             $table->json('metadata')->nullable(); // Additional metadata
             $table->timestamps();
+            $table->softDeletes();
 
             // Indexes for performance
             $table->index(['organization_id', 'gateway', 'status']);
