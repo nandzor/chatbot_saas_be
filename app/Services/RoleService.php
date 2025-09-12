@@ -206,6 +206,11 @@ class RoleService extends BaseService
      */
     public function getRoleWithDetails(string $id): ?Role
     {
+        // Validate UUID format before database query
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id)) {
+            return null;
+        }
+
         return Role::with([
             'permissions' => function ($query) {
                 $query->wherePivot('is_granted', true);
@@ -257,6 +262,11 @@ class RoleService extends BaseService
      */
     public function updateRole(string $id, array $data): ?Role
     {
+        // Validate UUID format before database query
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id)) {
+            return null;
+        }
+
         $role = Role::find($id);
 
         if (!$role) {
@@ -480,7 +490,7 @@ class RoleService extends BaseService
      */
     public function getAvailableRoles(): \Illuminate\Database\Eloquent\Collection
     {
-        return Role::where('is_active', true)
+        return Role::where('status', 'active')
             ->where('is_system_role', false)
             ->orderBy('name')
             ->get();
@@ -492,7 +502,7 @@ class RoleService extends BaseService
     public function getRoleStatistics(): array
     {
         $totalRoles = Role::count();
-        $activeRoles = Role::where('is_active', true)->count();
+        $activeRoles = Role::where('status', 'active')->count();
         $systemRoles = Role::where('is_system_role', true)->count();
         $customRoles = Role::where('is_system_role', false)->count();
 
@@ -527,7 +537,7 @@ class RoleService extends BaseService
      */
     public function getPermissionsForRole(): \Illuminate\Database\Eloquent\Collection
     {
-        return Permission::where('is_active', true)
+        return Permission::where('status', 'active')
             ->orderBy('category')
             ->orderBy('name')
             ->get()

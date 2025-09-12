@@ -34,7 +34,6 @@ class Role extends Model
         'badge_text',
         'metadata',
         'status',
-        'is_active',
     ];
 
     protected $casts = [

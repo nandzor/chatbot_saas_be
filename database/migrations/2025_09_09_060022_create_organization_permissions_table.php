@@ -17,7 +17,7 @@ return new class extends Migration
             $table->uuid('organization_id');
             $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
             $table->string('name');
-            $table->string('slug')->unique();
+            $table->string('slug');
             $table->text('description')->nullable();
             $table->string('category')->nullable();
             $table->json('metadata')->nullable();

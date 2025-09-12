@@ -68,6 +68,11 @@ class RoleManagementController extends BaseApiController
                 return $this->errorResponse('Role ID is required', null, 400);
             }
 
+            // Validate UUID format
+            if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $roleId)) {
+                return $this->errorResponse('Invalid role ID format. Must be a valid UUID.', null, 400);
+            }
+
             $role = $this->roleService->getRoleWithDetails($roleId);
 
             if (!$role) {
@@ -137,6 +142,11 @@ class RoleManagementController extends BaseApiController
             // Validate roleId parameter
             if (empty($roleId)) {
                 return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            // Validate UUID format
+            if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $roleId)) {
+                return $this->errorResponse('Invalid role ID format. Must be a valid UUID.', null, 400);
             }
 
             $role = $this->roleService->getRoleWithDetails($roleId);
@@ -210,6 +220,11 @@ class RoleManagementController extends BaseApiController
                 return $this->errorResponse('Role ID is required', null, 400);
             }
 
+            // Validate UUID format
+            if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $roleId)) {
+                return $this->errorResponse('Invalid role ID format. Must be a valid UUID.', null, 400);
+            }
+
             $role = $this->roleService->getRoleWithDetails($roleId);
 
             if (!$role) {
@@ -271,6 +286,11 @@ class RoleManagementController extends BaseApiController
             // Validate roleId parameter
             if (empty($roleId)) {
                 return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            // Validate UUID format
+            if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $roleId)) {
+                return $this->errorResponse('Invalid role ID format. Must be a valid UUID.', null, 400);
             }
 
             $role = $this->roleService->getRoleWithDetails($roleId);
@@ -382,6 +402,11 @@ class RoleManagementController extends BaseApiController
             // Validate roleId parameter
             if (empty($roleId)) {
                 return $this->errorResponse('Role ID is required', null, 400);
+            }
+
+            // Validate UUID format
+            if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $roleId)) {
+                return $this->errorResponse('Invalid role ID format. Must be a valid UUID.', null, 400);
             }
 
             $role = $this->roleService->getRoleWithDetails($roleId);

@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Organization;
+use Illuminate\Database\Seeder;
 use App\Models\SubscriptionPlan;
 
 class OrganizationSeeder extends Seeder
@@ -13,6 +13,8 @@ class OrganizationSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->command->info('Starting Organization seeders...');
+
         // Get subscription plans
         $starterPlan = SubscriptionPlan::where('name', 'starter')->first();
         $professionalPlan = SubscriptionPlan::where('name', 'professional')->first();
@@ -337,6 +339,17 @@ class OrganizationSeeder extends Seeder
             );
         }
 
-        $this->command->info('Organizations seeded successfully!');
+        // Run organization-related seeders in order
+        $this->call([
+            OrganizationPermissionSeeder::class,
+            OrganizationRoleSeeder::class,
+            OrganizationRolePermissionSeeder::class,
+            OrganizationAnalyticsSeeder::class,
+            OrganizationAuditLogSeeder::class,
+        ]);
+
+
+
+        $this->command->info('Organization seeders completed successfully!');
     }
 }

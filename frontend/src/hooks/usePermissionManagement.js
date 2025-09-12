@@ -84,7 +84,9 @@ export const usePermissionManagement = () => {
               is_system: true,
               is_visible: true,
               status: 'active',
-              metadata: { scope: 'global' }
+              metadata: { scope: 'global' },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             },
             {
               id: 2,
@@ -97,7 +99,39 @@ export const usePermissionManagement = () => {
               is_system: false,
               is_visible: true,
               status: 'active',
-              metadata: { scope: 'organization' }
+              metadata: { scope: 'organization' },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            },
+            {
+              id: 3,
+              name: 'View Permissions',
+              code: 'permissions.view',
+              description: 'Allow user to view permissions list',
+              category: 'permission_management',
+              resource: 'permissions',
+              action: 'view',
+              is_system: true,
+              is_visible: true,
+              status: 'active',
+              metadata: { scope: 'global' },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            },
+            {
+              id: 4,
+              name: 'Create Permissions',
+              code: 'permissions.create',
+              description: 'Allow user to create new permissions',
+              category: 'permission_management',
+              resource: 'permissions',
+              action: 'create',
+              is_system: false,
+              is_visible: true,
+              status: 'active',
+              metadata: { scope: 'organization' },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             }
           ];
 

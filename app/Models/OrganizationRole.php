@@ -11,6 +11,9 @@ class OrganizationRole extends Model
 {
     use HasFactory;
 
+    protected $keyType = 'string';
+    public $incrementing = false;
+
     protected $fillable = [
         'organization_id',
         'name',
