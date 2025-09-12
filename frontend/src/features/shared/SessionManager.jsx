@@ -58,7 +58,7 @@ import {
   agentsData, 
   sessionsMessagesData 
 } from '@/data/sampleData';
-import { formatTimeAgo, formatTime } from '../../utils/dateUtils';
+import { formatTimeAgo, formatTime } from '@/utils/dateUtils';
 
 const SessionManager = () => {
   // Main view state
@@ -173,7 +173,6 @@ const SessionManager = () => {
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file && selectedSession) {
-      console.log('Uploading file:', file.name, 'to session:', selectedSession.id);
       // Implementasi upload file akan ditambahkan di sini
     }
   };
@@ -182,7 +181,6 @@ const SessionManager = () => {
   const handleSendMessage = () => {
     if (!messageInput.trim() || !selectedSession) return;
     
-    console.log('Sending message:', messageInput, 'to session:', selectedSession.id);
     setMessageInput('');
   };
 
@@ -190,7 +188,6 @@ const SessionManager = () => {
   const handleStatusChange = (newStatus) => {
     if (!selectedSession) return;
     
-    console.log('Changing session status to:', newStatus, 'for session:', selectedSession.id);
     setSessionStatus(newStatus);
   };
 
@@ -198,7 +195,6 @@ const SessionManager = () => {
   const handleAssignAgent = (agentId) => {
     if (!selectedSession) return;
     
-    console.log('Assigning agent:', agentId, 'to session:', selectedSession.id);
     setAssignedAgent(agentId);
   };
 
@@ -206,7 +202,6 @@ const SessionManager = () => {
   const handleAddTag = () => {
     if (!newTag.trim() || !selectedSession) return;
     
-    console.log('Adding tag:', newTag, 'to session:', selectedSession.id);
     setNewTag('');
   };
 

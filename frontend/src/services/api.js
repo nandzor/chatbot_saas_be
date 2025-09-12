@@ -44,7 +44,6 @@ api.interceptors.response.use(
     // Log successful requests in development
     if (import.meta.env.DEV) {
       const duration = new Date() - response.config.metadata.startTime;
-      console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} (${duration}ms)`);
     }
 
     return response;
@@ -53,7 +52,6 @@ api.interceptors.response.use(
     // Log errors in development
     if (import.meta.env.DEV) {
       const duration = error.config?.metadata ? new Date() - error.config.metadata.startTime : 0;
-      console.error(`❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} (${duration}ms)`, error.response?.data || error.message);
     }
 
     // Handle common error cases
@@ -84,14 +82,11 @@ api.interceptors.response.use(
 
       // Handle server errors
       if (status >= 500) {
-        console.error('Server error:', data);
       }
     } else if (error.request) {
       // Network error
-      console.error('Network error:', error.message);
     } else {
       // Other error
-      console.error('Error:', error.message);
     }
 
     return Promise.reject(error);

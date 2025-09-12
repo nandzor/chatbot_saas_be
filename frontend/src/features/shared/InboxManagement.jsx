@@ -285,7 +285,6 @@ const InboxManagement = () => {
         setShowDeleteDialog(true);
         break;
       default:
-        console.log(`${action} inbox:`, inboxId);
     }
   };
 
@@ -329,7 +328,6 @@ const InboxManagement = () => {
         platformId={selectedPlatformId}
         onBack={handleBackToMain}
         onSave={(config) => {
-          console.log('Saving configuration:', config);
           handleBackToMain();
         }}
       />
@@ -351,7 +349,6 @@ const InboxManagement = () => {
         platformId={selectedPlatformId}
         onBack={handleBackToMain}
         onSave={(settings) => {
-          console.log('Saving AI settings:', settings);
           handleBackToMain();
         }}
       />

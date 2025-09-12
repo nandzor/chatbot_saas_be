@@ -38,27 +38,21 @@ const UserPermissionsTab = ({ userId, user }) => {
   // Load user permissions
   const loadUserPermissions = useCallback(async () => {
     if (!userId) {
-      console.log('🔍 UserPermissionsTab: No user ID provided');
       return;
     }
 
     try {
-      console.log('🔍 UserPermissionsTab: Loading permissions for user:', userId);
       setLoading(true);
       setError(null);
 
       const result = await getUserPermissions(userId, filters);
-      console.log('🔍 UserPermissionsTab: Permissions API result:', result);
 
       if (result.success) {
-        console.log('🔍 UserPermissionsTab: Permissions data received:', result.data);
         setPermissions(result.data.permissions || []);
       } else {
-        console.error('❌ UserPermissionsTab: Permissions API failed:', result.error);
         setError(result.error || 'Failed to load user permissions');
       }
     } catch (err) {
-      console.error('❌ UserPermissionsTab: Permissions loading error:', err);
       setError('Failed to load user permissions');
     } finally {
       setLoading(false);
@@ -68,7 +62,6 @@ const UserPermissionsTab = ({ userId, user }) => {
   // Load permissions when component mounts or filters change
   useEffect(() => {
     if (userId) {
-      console.log('🔍 UserPermissionsTab: User ID changed, loading permissions');
       loadUserPermissions();
     }
   }, [userId, loadUserPermissions]);

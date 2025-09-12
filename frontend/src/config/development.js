@@ -42,7 +42,6 @@ export const devUtils = {
 
       switch (level) {
         case 'error':
-          console.error(prefix, message, data);
           break;
         case 'warn':
           console.warn(prefix, message, data);
@@ -51,7 +50,6 @@ export const devUtils = {
           console.debug(prefix, message, data);
           break;
         default:
-          console.log(prefix, message, data);
       }
     }
   },
@@ -62,7 +60,6 @@ export const devUtils = {
       const start = performance.now();
       const result = fn();
       const end = performance.now();
-      console.log(`⏱️ ${name} took ${(end - start).toFixed(2)}ms`);
       return result;
     }
     return fn();
@@ -72,9 +69,6 @@ export const devUtils = {
   trackError: (error, context = {}) => {
     if (devConfig.enableErrorTracking) {
       console.group('🚨 Error Tracked');
-      console.error('Error:', error);
-      console.error('Context:', context);
-      console.error('Stack:', error.stack);
       console.groupEnd();
     }
   }

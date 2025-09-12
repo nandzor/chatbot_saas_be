@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import clientManagementService from '../services/ClientManagementService';
+import clientManagementService from '@/services/ClientManagementService';
 import toast from 'react-hot-toast';
 
 export const useClientManagement = () => {
@@ -52,34 +52,22 @@ export const useClientManagement = () => {
       // Check if params have changed to prevent unnecessary API calls
       const paramsString = JSON.stringify(params);
       if (!forceReload && lastLoadParams.current === paramsString) {
-        console.log('🔍 useClientManagement: Skipping duplicate API call with same params');
         setLoading(false);
         return;
       }
 
       lastLoadParams.current = paramsString;
-      console.log('🔍 useClientManagement: Loading organizations with params:', params);
 
       const response = await clientManagementService.getOrganizations(params);
-      console.log('🔍 useClientManagement: Full service response:', response);
 
       if (response.success) {
-        console.log('🔍 useClientManagement: Response data structure:', response.data);
-        console.log('🔍 useClientManagement: Response data type:', typeof response.data);
-        console.log('🔍 useClientManagement: Response data keys:', Object.keys(response.data || {}));
 
         // Handle different response structures
         const organizationsData = response.data.data || response.data.organizations || response.data || [];
         const paginationData = response.data.pagination || response.data;
 
-        console.log('🔍 useClientManagement: Organizations data:', organizationsData);
-        console.log('🔍 useClientManagement: Organizations data type:', typeof organizationsData);
-        console.log('🔍 useClientManagement: Organizations data length:', Array.isArray(organizationsData) ? organizationsData.length : 'not array');
-        console.log('🔍 useClientManagement: Pagination data:', paginationData);
 
         const finalOrganizations = Array.isArray(organizationsData) ? organizationsData : [];
-        console.log('🔍 useClientManagement: Setting organizations:', finalOrganizations);
-        console.log('🔍 useClientManagement: Organizations count:', finalOrganizations.length);
 
         setOrganizations(finalOrganizations);
         setPagination(prev => ({
@@ -95,7 +83,7 @@ export const useClientManagement = () => {
           setError(null);
         }
       } else {
-        console.error('❌ useClientManagement: API response failed:', response);
+        // API response failed
         setError(response.message);
         toast.error(response.message);
       }
@@ -239,11 +227,10 @@ export const useClientManagement = () => {
       if (response.success) {
         return { success: true, data: response.data };
       } else {
-        console.error('❌ useClientManagement: Statistics API failed:', response.message);
+        // Statistics API failed
         return { success: false, error: response.message };
       }
     } catch (err) {
-      console.error('❌ useClientManagement: Statistics error:', err);
       return { success: false, error: 'Failed to fetch organization statistics' };
     }
   }, []);

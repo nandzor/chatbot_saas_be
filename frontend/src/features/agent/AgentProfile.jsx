@@ -217,12 +217,10 @@ const AgentProfile = () => {
 
   const handleProfileUpdate = () => {
     // Logic to update profile
-    console.log('Profile updated:', profileData);
   };
 
   const handlePasswordChange = () => {
     // Logic to change password
-    console.log('Password change requested');
   };
 
   const handleAvatarUpload = (event) => {

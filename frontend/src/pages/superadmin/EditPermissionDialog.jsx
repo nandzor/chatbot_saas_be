@@ -172,7 +172,6 @@ const EditPermissionDialog = ({ isOpen, onClose, permission, onSubmit, loading =
       await onSubmit(formData);
       toast.success('Permission updated successfully!');
     } catch (error) {
-      console.error('Failed to update permission:', error);
       toast.error('Failed to update permission. Please try again.');
     } finally {
       setIsSubmitting(false);

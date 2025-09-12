@@ -65,7 +65,6 @@ const RoleAnalytics = () => {
         toast.error('Failed to load analytics data');
       }
     } catch (error) {
-      console.error('Error loading analytics:', error);
       toast.error('Failed to load analytics data');
     } finally {
       setLoading(false);

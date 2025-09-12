@@ -62,11 +62,6 @@ const ClientManagementTable = () => {
 
   // Debug logging
   React.useEffect(() => {
-    console.log('🔍 ClientManagementTable: organizations state:', organizations);
-    console.log('🔍 ClientManagementTable: organizations length:', organizations?.length);
-    console.log('🔍 ClientManagementTable: loading state:', loading);
-    console.log('🔍 ClientManagementTable: error state:', error);
-    console.log('🔍 ClientManagementTable: pagination state:', pagination);
   }, [organizations, loading, error, pagination]);
 
   // Local state for search
@@ -168,7 +163,6 @@ const ClientManagementTable = () => {
         toast.error(errorData.message || 'Failed to login as admin');
       }
     } catch (error) {
-      console.error('Error logging in as admin:', error);
       toast.error('Failed to login as admin');
     }
   }, []);
@@ -197,7 +191,6 @@ const ClientManagementTable = () => {
         toast.error(errorData.message || 'Failed to send password reset email');
       }
     } catch (error) {
-      console.error('Error sending password reset:', error);
       toast.error('Failed to send password reset email');
     }
   }, []);
@@ -251,13 +244,6 @@ const ClientManagementTable = () => {
           <Button
             variant="outline"
             onClick={() => {
-              console.log('🔍 Manual Debug - Current state:');
-              console.log('organizations:', organizations);
-              console.log('loading:', loading);
-              console.log('error:', error);
-              console.log('pagination:', pagination);
-              console.log('filters:', filters);
-              console.log('sorting:', sorting);
             }}
           >
             Debug

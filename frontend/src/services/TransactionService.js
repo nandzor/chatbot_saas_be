@@ -31,7 +31,6 @@ class TransactionService {
    */
   async getTransactions(params = {}) {
     try {
-      console.log('🔍 TransactionService: Fetching transactions with params:', params);
 
       const queryParams = new URLSearchParams();
 
@@ -59,16 +58,11 @@ class TransactionService {
       if (params.currency) queryParams.append('currency', params.currency);
 
       const url = `${this.baseURL}?${queryParams.toString()}`;
-      console.log('🌐 TransactionService: Making API call to:', url);
 
       const response = await authService.api.get(url);
-      console.log('📡 TransactionService: Full API response:', response);
-      console.log('📡 TransactionService: Response data:', response.data);
-      console.log('📡 TransactionService: Response status:', response.status);
 
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error fetching transactions:', error);
       throw this.handleError(error);
     }
   }
@@ -80,14 +74,11 @@ class TransactionService {
    */
   async getTransactionById(id) {
     try {
-      console.log('🔍 TransactionService: Fetching transaction by ID:', id);
 
       const response = await authService.api.get(`${this.baseURL}/${id}`);
-      console.log('📡 TransactionService: Transaction response:', response.data);
 
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error fetching transaction:', error);
       throw this.handleError(error);
     }
   }
@@ -98,14 +89,11 @@ class TransactionService {
    */
   async getTransactionStatistics() {
     try {
-      console.log('🔍 TransactionService: Fetching transaction statistics');
 
       const response = await authService.api.get(`${this.baseURL}/statistics`);
-      console.log('📡 TransactionService: Statistics response:', response.data);
 
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error fetching statistics:', error);
       throw this.handleError(error);
     }
   }
@@ -117,7 +105,6 @@ class TransactionService {
    */
   async exportTransactions(params = {}) {
     try {
-      console.log('🔍 TransactionService: Exporting transactions with params:', params);
 
       const queryParams = new URLSearchParams();
 
@@ -129,16 +116,13 @@ class TransactionService {
       });
 
       const url = `${this.baseURL}/export?${queryParams.toString()}`;
-      console.log('🌐 TransactionService: Making export API call to:', url);
 
       const response = await authService.api.get(url, {
         responseType: 'blob'
       });
 
-      console.log('📡 TransactionService: Export response received');
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error exporting transactions:', error);
       throw this.handleError(error);
     }
   }
@@ -151,7 +135,6 @@ class TransactionService {
    */
   async getTransactionsByStatus(status, params = {}) {
     try {
-      console.log('🔍 TransactionService: Fetching transactions by status:', status);
 
       const queryParams = new URLSearchParams();
       Object.keys(params).forEach(key => {
@@ -161,14 +144,11 @@ class TransactionService {
       });
 
       const url = `${this.baseURL}/status/${status}?${queryParams.toString()}`;
-      console.log('🌐 TransactionService: Making API call to:', url);
 
       const response = await authService.api.get(url);
-      console.log('📡 TransactionService: Status filtered response:', response.data);
 
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error fetching transactions by status:', error);
       throw this.handleError(error);
     }
   }
@@ -181,7 +161,6 @@ class TransactionService {
    */
   async getTransactionsByPaymentMethod(method, params = {}) {
     try {
-      console.log('🔍 TransactionService: Fetching transactions by payment method:', method);
 
       const queryParams = new URLSearchParams();
       Object.keys(params).forEach(key => {
@@ -191,14 +170,11 @@ class TransactionService {
       });
 
       const url = `${this.baseURL}/payment-method/${method}?${queryParams.toString()}`;
-      console.log('🌐 TransactionService: Making API call to:', url);
 
       const response = await authService.api.get(url);
-      console.log('📡 TransactionService: Payment method filtered response:', response.data);
 
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error fetching transactions by payment method:', error);
       throw this.handleError(error);
     }
   }
@@ -211,7 +187,6 @@ class TransactionService {
    */
   async getTransactionsByPaymentGateway(gateway, params = {}) {
     try {
-      console.log('🔍 TransactionService: Fetching transactions by payment gateway:', gateway);
 
       const queryParams = new URLSearchParams();
       Object.keys(params).forEach(key => {
@@ -221,14 +196,11 @@ class TransactionService {
       });
 
       const url = `${this.baseURL}/payment-gateway/${gateway}?${queryParams.toString()}`;
-      console.log('🌐 TransactionService: Making API call to:', url);
 
       const response = await authService.api.get(url);
-      console.log('📡 TransactionService: Payment gateway filtered response:', response.data);
 
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error fetching transactions by payment gateway:', error);
       throw this.handleError(error);
     }
   }
@@ -241,7 +213,6 @@ class TransactionService {
    */
   async getPlanTransactionHistory(planId, params = {}) {
     try {
-      console.log('🔍 TransactionService: Fetching plan transaction history:', planId);
 
       const queryParams = new URLSearchParams();
       Object.keys(params).forEach(key => {
@@ -251,14 +222,11 @@ class TransactionService {
       });
 
       const url = `${this.baseURL}/plan/${planId}/history?${queryParams.toString()}`;
-      console.log('🌐 TransactionService: Making API call to:', url);
 
       const response = await authService.api.get(url);
-      console.log('📡 TransactionService: Plan history response:', response.data);
 
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error fetching plan transaction history:', error);
       throw this.handleError(error);
     }
   }
@@ -271,7 +239,6 @@ class TransactionService {
    */
   async getOrganizationTransactionHistory(organizationId, params = {}) {
     try {
-      console.log('🔍 TransactionService: Fetching organization transaction history:', organizationId);
 
       const queryParams = new URLSearchParams();
       Object.keys(params).forEach(key => {
@@ -281,14 +248,11 @@ class TransactionService {
       });
 
       const url = `${this.baseURL}/organization/${organizationId}/history?${queryParams.toString()}`;
-      console.log('🌐 TransactionService: Making API call to:', url);
 
       const response = await authService.api.get(url);
-      console.log('📡 TransactionService: Organization history response:', response.data);
 
       return response.data;
     } catch (error) {
-      console.error('❌ TransactionService: Error fetching organization transaction history:', error);
       throw this.handleError(error);
     }
   }
@@ -299,7 +263,6 @@ class TransactionService {
    * @returns {Error} Formatted error
    */
   handleError(error) {
-    console.error('❌ TransactionService: API Error:', error);
 
     if (error.response) {
       // Server responded with error status

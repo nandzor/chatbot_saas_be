@@ -1,5 +1,35 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Button,
+  Input,
+  Label,
+  Alert,
+  AlertDescription,
+  Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui';
+import {
   Shield,
   Users,
   Edit,
@@ -140,7 +170,6 @@ const RoleList = () => {
         setError(response.message || 'Failed to load roles');
       }
     } catch (err) {
-      console.error('Error loading roles:', err);
       setError(err.message || 'Failed to load roles');
     } finally {
       setLoading(false);
@@ -216,7 +245,6 @@ const RoleList = () => {
         toast.error(response.message || 'Failed to create role');
       }
     } catch (error) {
-      console.error('Error creating role:', error);
       toast.error(error.message || 'Failed to create role');
     } finally {
       setActionLoading(false);
@@ -248,7 +276,6 @@ const RoleList = () => {
         toast.error(response.message || 'Failed to clone role');
       }
     } catch (error) {
-      console.error('Error cloning role:', error);
       toast.error(error.message || 'Failed to clone role');
     } finally {
       setActionLoading(false);
@@ -261,7 +288,6 @@ const RoleList = () => {
 
       // Ensure we have valid role data
       if (!updatedRoleData || !updatedRoleData.id) {
-        console.error('Invalid role data received:', updatedRoleData);
         toast.error('Invalid role data received');
         return;
       }
@@ -279,7 +305,6 @@ const RoleList = () => {
       // Reload roles to ensure data consistency with backend
       loadRoles(pagination.current_page, filters);
     } catch (error) {
-      console.error('Error handling role update:', error);
       toast.error('Failed to update role list');
     } finally {
       setActionLoading(false);
@@ -314,7 +339,6 @@ const RoleList = () => {
         toast.error(response.message || 'Failed to delete role');
       }
     } catch (error) {
-      console.error('Error deleting role:', error);
       toast.error(error.message || 'Failed to delete role');
     } finally {
       setActionLoading(false);
@@ -506,12 +530,12 @@ const RoleList = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
-              <span className="text-red-800">{error}</span>
-            </div>
-          </div>
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Statistics Cards */}

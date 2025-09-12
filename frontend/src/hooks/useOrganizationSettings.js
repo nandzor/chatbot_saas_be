@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import organizationManagementService from '../services/OrganizationManagementService';
+import organizationManagementService from '@/services/OrganizationManagementService';
 import toast from 'react-hot-toast';
 
 export const useOrganizationSettings = (organizationId) => {
@@ -128,7 +128,6 @@ export const useOrganizationSettings = (organizationId) => {
   // Load organization settings
   const loadSettings = useCallback(async (forceRefresh = false) => {
     if (!organizationId) {
-      console.log('🔍 useOrganizationSettings: No organization ID provided');
       return;
     }
 
@@ -137,7 +136,6 @@ export const useOrganizationSettings = (organizationId) => {
     // Check if we need to load (avoid duplicate calls)
     if (!forceRefresh && !isInitialLoad.current &&
         JSON.stringify(currentParams) === JSON.stringify(lastLoadParams.current)) {
-      console.log('🔍 useOrganizationSettings: Skipping load - same parameters');
       return;
     }
 
@@ -146,13 +144,11 @@ export const useOrganizationSettings = (organizationId) => {
     lastLoadParams.current = currentParams;
 
     try {
-      console.log('🔍 useOrganizationSettings: Loading settings for organization:', organizationId);
 
       // Get organization settings from API
       const response = await organizationManagementService.getOrganizationSettings(organizationId);
 
       if (response.success) {
-        console.log('✅ useOrganizationSettings: Settings loaded successfully:', response.data);
         setSettings(response.data);
         setOriginalSettings(JSON.parse(JSON.stringify(response.data)));
         return;
@@ -275,12 +271,10 @@ export const useOrganizationSettings = (organizationId) => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 600));
 
-      console.log('✅ useOrganizationSettings: Settings loaded successfully:', mockSettings);
       setSettings(mockSettings);
       setOriginalSettings(JSON.parse(JSON.stringify(mockSettings)));
 
     } catch (error) {
-      console.error('❌ useOrganizationSettings: Error loading settings:', error);
       const errorMessage = error.response?.data?.message || 'Failed to load settings';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -336,13 +330,11 @@ export const useOrganizationSettings = (organizationId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 useOrganizationSettings: Saving settings for organization:', organizationId, settingsToSave || settings);
 
       // Save organization settings to API
       const response = await organizationManagementService.saveOrganizationSettings(organizationId, settingsToSave || settings);
 
       if (response.success) {
-        console.log('✅ useOrganizationSettings: Settings saved successfully');
         toast.success('Settings saved successfully');
 
         // Update original settings
@@ -352,12 +344,10 @@ export const useOrganizationSettings = (organizationId) => {
 
         return { success: true };
       } else {
-        console.error('❌ useOrganizationSettings: Failed to save settings:', response.error);
         toast.error(response.error || 'Failed to save settings');
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('❌ useOrganizationSettings: Error saving settings:', error);
       const errorMessage = error.response?.data?.message || 'Failed to save settings';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -399,7 +389,6 @@ export const useOrganizationSettings = (organizationId) => {
 
       toast.success('Webhook test successful');
     } catch (error) {
-      console.error('❌ useOrganizationSettings: Error testing webhook:', error);
       toast.error('Webhook test failed');
     } finally {
       setLoading(false);

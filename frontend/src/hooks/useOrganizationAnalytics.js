@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import organizationManagementService from '../services/OrganizationManagementService';
+import organizationManagementService from '@/services/OrganizationManagementService';
 import toast from 'react-hot-toast';
 
 export const useOrganizationAnalytics = (organizationId) => {
@@ -25,7 +25,6 @@ export const useOrganizationAnalytics = (organizationId) => {
   // Load analytics data
   const loadAnalytics = useCallback(async (forceRefresh = false) => {
     if (!organizationId) {
-      console.log('🔍 useOrganizationAnalytics: No organization ID provided');
       return;
     }
 
@@ -37,7 +36,6 @@ export const useOrganizationAnalytics = (organizationId) => {
     // Check if we need to load (avoid duplicate calls)
     if (!forceRefresh && !isInitialLoad.current &&
         JSON.stringify(currentParams) === JSON.stringify(lastLoadParams.current)) {
-      console.log('🔍 useOrganizationAnalytics: Skipping load - same parameters');
       return;
     }
 
@@ -46,13 +44,11 @@ export const useOrganizationAnalytics = (organizationId) => {
     lastLoadParams.current = currentParams;
 
     try {
-      console.log('🔍 useOrganizationAnalytics: Loading analytics for organization:', organizationId, currentParams);
 
       // Get organization analytics from API
       const response = await organizationManagementService.getOrganizationAnalytics(organizationId, currentParams);
 
       if (response.success) {
-        console.log('✅ useOrganizationAnalytics: Analytics loaded successfully:', response.data);
         setAnalyticsData(response.data);
         setMetrics(response.data.metrics || response.data);
         return;
@@ -112,12 +108,10 @@ export const useOrganizationAnalytics = (organizationId) => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      console.log('✅ useOrganizationAnalytics: Analytics loaded successfully:', mockAnalytics);
       setAnalyticsData(mockAnalytics);
       setMetrics(mockAnalytics.metrics);
 
     } catch (error) {
-      console.error('❌ useOrganizationAnalytics: Error loading analytics:', error);
       const errorMessage = error.response?.data?.message || 'Failed to load analytics';
       setError(errorMessage);
       toast.error(errorMessage);

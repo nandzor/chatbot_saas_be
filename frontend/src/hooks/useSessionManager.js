@@ -5,7 +5,7 @@ import {
   channelConfigsData, 
   agentsData, 
   sessionsMessagesData 
-} from '../data/sampleData';
+} from '@/data/sampleData';
 
 export const useSessionManager = () => {
   // State management
@@ -101,27 +101,22 @@ export const useSessionManager = () => {
 
   // Session actions
   const assignAgent = useCallback((sessionId, agentId) => {
-    console.log('Assigning agent:', agentId, 'to session:', sessionId);
     // Implementasi API call akan ditambahkan di sini
   }, []);
 
   const updateSessionStatus = useCallback((sessionId, status) => {
-    console.log('Updating session status:', status, 'for session:', sessionId);
     // Implementasi API call akan ditambahkan di sini
   }, []);
 
   const addTag = useCallback((sessionId, tag) => {
-    console.log('Adding tag:', tag, 'to session:', sessionId);
     // Implementasi API call akan ditambahkan di sini
   }, []);
 
   const removeTag = useCallback((sessionId, tag) => {
-    console.log('Removing tag:', tag, 'from session:', sessionId);
     // Implementasi API call akan ditambahkan di sini
   }, []);
 
   const sendMessage = useCallback((sessionId, content, type = 'text', mediaUrl = null) => {
-    console.log('Sending message to session:', sessionId, 'content:', content);
     // Implementasi API call akan ditambahkan di sini
   }, []);
 

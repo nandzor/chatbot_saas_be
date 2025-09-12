@@ -10,15 +10,12 @@ class PermissionManagementService {
    */
   async getPermissions(params = {}) {
     try {
-      console.log('PermissionManagementService: Fetching permissions with params:', params);
 
       const response = await api.get(this.baseUrl, { params });
-      console.log('PermissionManagementService: API response:', response);
 
       // Return the full response data structure
       return response.data;
     } catch (error) {
-      console.error('PermissionManagementService: Error fetching permissions:', error);
       throw this.handleError(error);
     }
   }

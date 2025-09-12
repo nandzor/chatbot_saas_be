@@ -21,7 +21,6 @@ export const formatCurrency = (amount, options = {}) => {
       maximumFractionDigits
     }).format(amount);
   } catch (error) {
-    console.error('Currency formatting error:', error);
     return `Rp ${amount.toLocaleString()}`;
   }
 };
@@ -44,7 +43,6 @@ export const formatNumber = (number, options = {}) => {
       maximumFractionDigits
     }).format(number);
   } catch (error) {
-    console.error('Number formatting error:', error);
     return number.toString();
   }
 };
@@ -70,7 +68,6 @@ export const formatDate = (date, options = {}) => {
 
     return new Intl.DateTimeFormat(locale, formatterOptions).format(dateObj);
   } catch (error) {
-    console.error('Date formatting error:', error);
     return dateObj.toLocaleDateString(locale);
   }
 };
@@ -159,7 +156,6 @@ export const formatRelativeTime = (date, options = {}) => {
       return rtf.format(-years, 'year');
     }
   } catch (error) {
-    console.error('Relative time formatting error:', error);
     return formatDate(date, { format: 'short' });
   }
 };
@@ -246,7 +242,6 @@ export const formatPercentage = (value, options = {}) => {
       maximumFractionDigits
     }).format(value / 100);
   } catch (error) {
-    console.error('Percentage formatting error:', error);
     return `${value.toFixed(maximumFractionDigits)}%`;
   }
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import ClientManagementService from '../services/ClientManagementService';
+import ClientManagementService from '@/services/ClientManagementService';
 
 export const useClientAnalytics = (timeRange = '30d') => {
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -17,13 +17,11 @@ export const useClientAnalytics = (timeRange = '30d') => {
       });
 
       if (response.success) {
-        console.log('✅ useClientAnalytics: Analytics loaded from API:', response.data);
         setAnalyticsData(response.data);
       } else {
         throw new Error(response.error || 'Failed to load analytics');
       }
     } catch (error) {
-      console.error('❌ useClientAnalytics: Failed to load analytics from API:', error);
       setError(error.message);
 
       // Fallback to mock data if API fails
@@ -115,7 +113,6 @@ export const useClientAnalytics = (timeRange = '30d') => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      console.log('✅ useClientAnalytics: Analytics loaded from fallback data:', mockAnalytics);
       setAnalyticsData(mockAnalytics);
     } finally {
       setLoading(false);

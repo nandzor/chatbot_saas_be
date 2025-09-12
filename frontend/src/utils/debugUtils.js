@@ -54,7 +54,6 @@ export const trackRender = (componentName) => {
 
   // Log every 10th render to avoid spam
   if (newCount % 10 === 0) {
-    console.log(`🔄 ${componentName} rendered ${newCount} times`);
   }
 
   // Check for excessive renders
@@ -88,7 +87,6 @@ export const trackStateChange = (contextName, stateName, oldValue, newValue) => 
 
   // Only log if values actually changed
   if (oldValue !== newValue) {
-    console.log(`📊 ${contextName}.${stateName} changed:`, {
       from: oldValue,
       to: newValue,
       timestamp: new Date().toISOString()
@@ -100,14 +98,12 @@ export const trackStateChange = (contextName, stateName, oldValue, newValue) => 
 export const trackEffectDependencies = (effectName, dependencies) => {
   if (!devConfig.enableDebugLogs) return;
 
-  console.log(`🔗 Effect ${effectName} dependencies:`, dependencies);
 };
 
 // Context usage tracker
 export const trackContextUsage = (contextName, hookName) => {
   if (!devConfig.enableDebugLogs) return;
 
-  console.log(`🎯 ${hookName} used in ${contextName}`);
 };
 
 // Memory leak detection
@@ -116,12 +112,10 @@ export const memoryLeakDetector = {
 
   trackSubscription(subscription) {
     this.subscriptions.add(subscription);
-    console.log(`📡 Subscription added, total: ${this.subscriptions.size}`);
   },
 
   cleanupSubscription(subscription) {
     this.subscriptions.delete(subscription);
-    console.log(`🧹 Subscription cleaned up, total: ${this.subscriptions.size}`);
   },
 
   checkForLeaks() {

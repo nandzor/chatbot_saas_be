@@ -66,7 +66,6 @@ const Settings = () => {
 
   const updateAgentPersonality = (agentId, personalityId) => {
     // Update agent personality logic here
-    console.log('Updating agent', agentId, 'with personality', personalityId);
     setEditingAgent(null);
   };
 

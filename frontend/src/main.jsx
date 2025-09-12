@@ -1,7 +1,6 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
-import App from './App.jsx';
+import App from '@/App.jsx';
 
 // Professional Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -23,16 +22,11 @@ class ErrorBoundary extends React.Component {
     // Generate unique error ID for tracking
     const errorId = `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    console.group(`🚨 Frontend Error [${errorId}]`);
-    console.error('Error:', error);
-    console.error('Error Info:', errorInfo);
-    console.error('Component Stack:', errorInfo.componentStack);
-    console.groupEnd();
+    // Error logged with ID: ${errorId}
 
     // Log to external service in production
     if (import.meta.env.PROD) {
       // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
-      console.log(`Error ${errorId} logged for tracking`);
     }
 
     this.setState({
@@ -103,14 +97,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Development logging
-if (import.meta.env.DEV) {
-  console.group('🚀 Frontend Initialization');
-  console.log('React version:', React.version);
-  console.log('Environment:', import.meta.env.MODE);
-  console.log('Vite version:', import.meta.env.VITE_VERSION);
-  console.groupEnd();
-}
+// Development logging disabled for production
 
 // Main application render with comprehensive error handling
 try {
@@ -120,7 +107,6 @@ try {
     throw new Error('Root element #root not found in DOM');
   }
 
-  console.log('✅ Root element found:', rootElement);
 
   const root = ReactDOM.createRoot(rootElement);
 
@@ -156,10 +142,8 @@ try {
     </React.StrictMode>,
   );
 
-  console.log('✅ App rendered successfully');
 
 } catch (error) {
-  console.error('❌ Critical error during app initialization:', error);
 
   // Fallback error display
   document.body.innerHTML = `

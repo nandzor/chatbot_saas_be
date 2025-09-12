@@ -1,4 +1,3 @@
-import React from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import UserProfile from '@/features/auth/UserProfile';
 import Sidebar from '@/components/layout/Sidebar';

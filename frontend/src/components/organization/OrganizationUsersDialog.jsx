@@ -169,7 +169,6 @@ const OrganizationUsersDialog = ({
 
   // Handle bulk actions
   const handleBulkAction = (action) => {
-    console.log(`Bulk action: ${action}`, selectedUsers);
     // Implement bulk actions
   };
 

@@ -3,7 +3,6 @@
  * For testing notification system
  */
 
-import React from 'react';
 import { notifySuccess, notifyError, notifyInfo, notifyWarning } from '@/utils/notify';
 
 const ToastDemo = () => {

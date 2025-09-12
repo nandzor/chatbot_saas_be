@@ -132,12 +132,6 @@ const TransactionHistory = () => {
   } = useTransactionHistory();
 
   // Debug authentication status
-  console.log('🔍 TransactionHistory: Authentication status:', isAuthenticated);
-  console.log('🔍 TransactionHistory: Auth loading state:', authLoading);
-  console.log('🔍 TransactionHistory: Data loading state:', loading);
-  console.log('🔍 TransactionHistory: Error state:', error);
-  console.log('🔍 TransactionHistory: Statistics state:', statistics);
-  console.log('🔍 TransactionHistory: Statistics loading state:', statisticsLoading);
 
   // Local state
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -201,7 +195,6 @@ const TransactionHistory = () => {
       setSelectedTransaction(transaction);
       setShowDetailsModal(true);
     } catch (error) {
-      console.error('Error viewing transaction details:', error);
     }
   }, []);
 
@@ -211,7 +204,6 @@ const TransactionHistory = () => {
     try {
       await exportTransactions();
     } catch (error) {
-      console.error('Error exporting transactions:', error);
     } finally {
       setExportLoading(false);
     }
@@ -253,7 +245,6 @@ const TransactionHistory = () => {
         transaction_ids: Array.from(selectedTransactions).join(',')
       });
     } catch (error) {
-      console.error('Error exporting selected transactions:', error);
     } finally {
       setExportLoading(false);
     }
@@ -271,7 +262,6 @@ const TransactionHistory = () => {
 
   // Memoized statistics cards
   const statisticsCards = useMemo(() => {
-    console.log('🔍 TransactionHistory: Statistics data for cards:', statistics);
     if (!statistics) return [];
 
     return [

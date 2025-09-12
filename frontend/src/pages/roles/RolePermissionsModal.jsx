@@ -67,7 +67,6 @@ const RolePermissionsModal = ({ isOpen, onClose, role, onSuccess }) => {
         toast.error('Failed to load permissions');
       }
     } catch (error) {
-      console.error('Error loading permissions:', error);
       toast.error('Failed to load permissions');
     } finally {
       setLoading(false);
@@ -85,7 +84,6 @@ const RolePermissionsModal = ({ isOpen, onClose, role, onSuccess }) => {
         toast.error('Failed to load role permissions');
       }
     } catch (error) {
-      console.error('Error loading role permissions:', error);
       toast.error('Failed to load role permissions');
     }
   }, [role]);
@@ -120,7 +118,6 @@ const RolePermissionsModal = ({ isOpen, onClose, role, onSuccess }) => {
         toast.error(response.message || 'Failed to update permissions');
       }
     } catch (error) {
-      console.error('Error updating permissions:', error);
       toast.error(error.message || 'Failed to update permissions');
     } finally {
       setSubmitting(false);

@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "paths": {
       "@/*": ["src/*"],
       "@/components/*": ["src/components/*"],
@@ -12,6 +10,7 @@
       "@/hooks/*": ["src/hooks/*"],
       "@/contexts/*": ["src/contexts/*"],
       "@/utils/*": ["src/utils/*"],
+      "@/lib/*": ["src/lib/*"],
       "@/config/*": ["src/config/*"],
       "@/assets/*": ["src/assets/*"],
       "@/styles/*": ["src/styles/*"],
@@ -19,8 +18,24 @@
       "@/routes/*": ["src/routes/*"],
       "@/layouts/*": ["src/layouts/*"],
       "@/services/*": ["src/services/*"]
-    }
+    },
+    "jsx": "react-jsx",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "build"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
 }

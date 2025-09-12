@@ -147,11 +147,9 @@ export const usePermissionManagement = () => {
         }
 
         const errorMsg = response.message || 'Failed to load permissions';
-        console.error('usePermissionManagement: API error:', errorMsg);
         setError(errorMsg);
       }
     } catch (err) {
-      console.error('usePermissionManagement: Exception error:', err);
 
       // Fallback to mock data for development
       if (err.message?.includes('Network Error') || err.message?.includes('Failed to fetch')) {
@@ -222,12 +220,10 @@ export const usePermissionManagement = () => {
         return { success: true, data: response.data };
       } else {
         const errorMsg = response.message || 'Failed to create permission';
-        console.error('usePermissionManagement: Create error:', errorMsg);
         toast.error(errorMsg);
         return { success: false, error: errorMsg };
       }
     } catch (error) {
-      console.error('usePermissionManagement: Create exception:', error);
       const errorMsg = error.message || 'Failed to create permission';
       toast.error(errorMsg);
       return { success: false, error: errorMsg };
@@ -253,12 +249,10 @@ export const usePermissionManagement = () => {
         return { success: true, data: response.data };
       } else {
         const errorMsg = response.message || 'Failed to update permission';
-        console.error('usePermissionManagement: Update error:', errorMsg);
         toast.error(errorMsg);
         return { success: false, error: errorMsg };
       }
     } catch (error) {
-      console.error('usePermissionManagement: Update exception:', error);
       const errorMsg = error.message || 'Failed to update permission';
       toast.error(errorMsg);
       return { success: false, error: errorMsg };
@@ -283,12 +277,10 @@ export const usePermissionManagement = () => {
         return { success: true };
       } else {
         const errorMsg = response.message || 'Failed to delete permission';
-        console.error('usePermissionManagement: Delete error:', errorMsg);
         toast.error(errorMsg);
         return { success: false, error: errorMsg };
       }
     } catch (error) {
-      console.error('usePermissionManagement: Delete exception:', error);
       const errorMsg = error.message || 'Failed to delete permission';
       toast.error(errorMsg);
       return { success: false, error: errorMsg };

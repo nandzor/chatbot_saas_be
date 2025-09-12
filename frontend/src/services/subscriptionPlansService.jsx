@@ -296,7 +296,6 @@ class SubscriptionPlansService {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error exporting data:', error);
       throw error;
     }
   }
@@ -305,7 +304,6 @@ class SubscriptionPlansService {
    * Handle API errors
    */
   handleError(error) {
-    console.error('SubscriptionPlansService Error:', error);
 
     if (error.response) {
       // Server responded with error status

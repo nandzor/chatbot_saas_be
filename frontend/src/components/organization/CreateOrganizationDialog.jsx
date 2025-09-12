@@ -171,7 +171,6 @@ const CreateOrganizationDialog = ({ isOpen, onClose, onSubmit, loading = false }
     try {
       await onSubmit(formData);
     } catch (error) {
-      console.error('Error creating organization:', error);
     }
   }, [formData, validateForm, onSubmit]);
 

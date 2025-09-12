@@ -141,7 +141,6 @@ const SecurityTab = () => {
 
   const handleSaveSettings = () => {
     // Here you would typically save to backend
-    console.log('Saving security settings:', securitySettings);
     // Show success message or handle response
     handleCloseSecurityDialog();
   };

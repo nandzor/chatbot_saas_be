@@ -172,7 +172,6 @@ const OnboardingPipeline = () => {
 
   const handleAddClient = () => {
     // Add client logic here
-    console.log('Adding new client:', newClient);
     setIsAddClientOpen(false);
     setNewClient({ name: '', plan: '', csm: '', expectedGoLive: '' });
   };

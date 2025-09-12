@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import userManagementService from '../services/UserManagementService';
+import userManagementService from '@/services/UserManagementService';
 import toast from 'react-hot-toast';
 
 export const useUserManagement = () => {
@@ -46,25 +46,20 @@ export const useUserManagement = () => {
       // Check if params have changed to prevent unnecessary API calls
       const paramsString = JSON.stringify(params);
       if (!forceReload && lastLoadParams.current === paramsString) {
-        console.log('🔍 useUserManagement: Skipping duplicate API call with same params');
         setLoading(false);
         return;
       }
 
       lastLoadParams.current = paramsString;
-      console.log('🔍 useUserManagement: Loading users with params:', params);
 
       const response = await userManagementService.getUsers(params);
 
       if (response.success) {
-        console.log('🔍 useUserManagement: Response data structure:', response.data);
 
         // Handle different response structures
         const usersData = response.data.data || response.data.users || response.data || [];
         const paginationData = response.data.pagination || response.data;
 
-        console.log('🔍 useUserManagement: Users data:', usersData);
-        console.log('🔍 useUserManagement: Pagination data:', paginationData);
 
         setUsers(Array.isArray(usersData) ? usersData : []);
         setPagination(prev => ({
@@ -75,7 +70,6 @@ export const useUserManagement = () => {
           totalPages: paginationData.last_page || paginationData.totalPages || 1
         }));
       } else {
-        console.error('❌ useUserManagement: API response failed:', response);
         setError(response.message);
         toast.error(response.message);
       }
@@ -244,11 +238,9 @@ export const useUserManagement = () => {
       if (response.success) {
         return { success: true, data: response.data };
       } else {
-        console.error('❌ useUserManagement: Statistics API failed:', response.message);
         return { success: false, error: response.message };
       }
     } catch (err) {
-      console.error('❌ useUserManagement: Statistics error:', err);
       return { success: false, error: 'Failed to fetch user statistics' };
     }
   }, []); // Empty dependency array - this function should be stable
@@ -256,19 +248,14 @@ export const useUserManagement = () => {
   // Get user activity
   const getUserActivity = useCallback(async (id) => {
     try {
-      console.log('🔍 useUserManagement: Getting activity for user ID:', id);
       const response = await userManagementService.getUserActivity(id);
-      console.log('🔍 useUserManagement: Activity service response:', response);
 
       if (response.success) {
-        console.log('🔍 useUserManagement: Activity data:', response.data);
         return { success: true, data: response.data };
       } else {
-        console.error('❌ useUserManagement: Activity service failed:', response.message);
         return { success: false, error: response.message };
       }
     } catch (err) {
-      console.error('❌ useUserManagement: Activity error:', err);
       return { success: false, error: 'Failed to fetch user activity' };
     }
   }, []);
@@ -291,19 +278,14 @@ export const useUserManagement = () => {
   // Get user permissions
   const getUserPermissions = useCallback(async (id, filters = {}) => {
     try {
-      console.log('🔍 useUserManagement: Getting permissions for user ID:', id, 'with filters:', filters);
       const response = await userManagementService.getUserPermissions(id, filters);
-      console.log('🔍 useUserManagement: Permissions service response:', response);
 
       if (response.success) {
-        console.log('🔍 useUserManagement: Permissions data:', response.data);
         return { success: true, data: response.data };
       } else {
-        console.error('❌ useUserManagement: Permissions service failed:', response.message);
         return { success: false, error: response.message };
       }
     } catch (err) {
-      console.error('❌ useUserManagement: Permissions error:', err);
       return { success: false, error: 'Failed to fetch user permissions' };
     }
   }, []);

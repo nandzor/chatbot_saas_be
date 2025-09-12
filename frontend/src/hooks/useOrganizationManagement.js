@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import organizationManagementService from '../services/OrganizationManagementService';
+import organizationManagementService from '@/services/OrganizationManagementService';
 import toast from 'react-hot-toast';
 
 export const useOrganizationManagement = () => {
@@ -47,25 +47,20 @@ export const useOrganizationManagement = () => {
       // Check if params have changed to prevent unnecessary API calls
       const paramsString = JSON.stringify(params);
       if (!forceReload && lastLoadParams.current === paramsString) {
-        console.log('🔍 useOrganizationManagement: Skipping duplicate API call with same params');
         setLoading(false);
         return;
       }
 
       lastLoadParams.current = paramsString;
-      console.log('🔍 useOrganizationManagement: Loading organizations with params:', params);
 
       const response = await organizationManagementService.getOrganizations(params);
 
       if (response.success) {
-        console.log('🔍 useOrganizationManagement: Response data structure:', response.data);
 
         // Handle different response structures
         const organizationsData = response.data.data || response.data.organizations || response.data || [];
         const paginationData = response.data.pagination || response.data;
 
-        console.log('🔍 useOrganizationManagement: Organizations data:', organizationsData);
-        console.log('🔍 useOrganizationManagement: Pagination data:', paginationData);
 
         setOrganizations(Array.isArray(organizationsData) ? organizationsData : []);
         setPagination(prev => ({
@@ -76,7 +71,6 @@ export const useOrganizationManagement = () => {
           totalPages: paginationData.last_page || paginationData.totalPages || 1
         }));
       } else {
-        console.error('❌ useOrganizationManagement: API response failed:', response);
         setError(response.message);
         toast.error(response.message);
       }
@@ -218,11 +212,9 @@ export const useOrganizationManagement = () => {
       if (response.success) {
         return { success: true, data: response.data };
       } else {
-        console.error('❌ useOrganizationManagement: Statistics API failed:', response.message);
         return { success: false, error: response.message };
       }
     } catch (err) {
-      console.error('❌ useOrganizationManagement: Statistics error:', err);
       return { success: false, error: 'Failed to fetch organization statistics' };
     }
   }, []); // Empty dependency array - this function should be stable
@@ -230,19 +222,14 @@ export const useOrganizationManagement = () => {
   // Get organization users
   const getOrganizationUsers = useCallback(async (id) => {
     try {
-      console.log('🔍 useOrganizationManagement: Getting users for organization ID:', id);
       const response = await organizationManagementService.getOrganizationUsers(id);
-      console.log('🔍 useOrganizationManagement: Users service response:', response);
 
       if (response.success) {
-        console.log('🔍 useOrganizationManagement: Users data:', response.data);
         return { success: true, data: response.data };
       } else {
-        console.error('❌ useOrganizationManagement: Users service failed:', response.message);
         return { success: false, error: response.message };
       }
     } catch (err) {
-      console.error('❌ useOrganizationManagement: Users error:', err);
       return { success: false, error: 'Failed to fetch organization users' };
     }
   }, []);

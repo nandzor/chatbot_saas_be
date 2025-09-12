@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from './index';
 
@@ -24,7 +23,6 @@ export class ErrorBoundary extends React.Component {
 
     // Log error to console in development
     if (process.env.NODE_ENV === 'development') {
-      console.error('Error caught by boundary:', error, errorInfo);
     }
 
     // You can also log the error to an error reporting service here

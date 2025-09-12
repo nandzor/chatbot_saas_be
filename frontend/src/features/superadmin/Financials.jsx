@@ -35,7 +35,6 @@ const Financials = () => {
         const message = plansResult?.message;
 
         // Ensure plans is always an array
-        console.log('Loaded plans:', plans, 'Is array:', Array.isArray(plans));
         setSubscriptionPlans(Array.isArray(plans) ? plans : []);
         setMetadata(planMetadata);
 
@@ -44,7 +43,6 @@ const Financials = () => {
           notifyInfo(message);
         }
       } catch (error) {
-        console.error('Error loading subscription plans:', error);
         // Fallback to sample data
         setSubscriptionPlans(subscriptionPlansData);
         setMetadata(subscriptionPlansMetadata);
@@ -110,17 +108,14 @@ const Financials = () => {
 
 
   const handleTransactionAction = (action, transactionId) => {
-    console.log(`${action} for transaction ${transactionId}`);
     // Implement transaction action logic here
   };
 
   const handleSavePlan = async (planData) => {
-    console.log('Saving plan:', planData);
 
     try {
       if (editingPlan) {
         // Update existing plan
-        console.log('Updating existing plan:', editingPlan.id, planData);
         const result = await subscriptionPlansService.updatePlan(editingPlan.id, planData);
         const updatedPlan = result.data || result;
 
@@ -133,7 +128,6 @@ const Financials = () => {
         notifySuccess(result.message || 'Paket berlangganan berhasil diperbarui');
       } else {
         // Create new plan
-        console.log('Creating new plan:', planData);
         const result = await subscriptionPlansService.createPlan(planData);
         const newPlan = result.data || result;
 
@@ -159,7 +153,6 @@ const Financials = () => {
       setIsModalOpen(false);
       setEditingPlan(null);
     } catch (error) {
-      console.error('Error saving plan:', error);
       const errorMessage = error?.response?.data?.message ||
                           error?.message ||
                           'Gagal menyimpan paket berlangganan';

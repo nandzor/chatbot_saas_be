@@ -127,7 +127,6 @@ const PlatformAISettings = ({ platformId, onBack, onSave }) => {
       
       setHasChanges(false);
     } catch (error) {
-      console.error('Failed to save AI settings:', error);
     } finally {
       setIsSaving(false);
     }

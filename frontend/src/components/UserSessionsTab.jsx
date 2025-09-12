@@ -40,7 +40,6 @@ const UserSessionsTab = ({ userId, user }) => {
       }
     } catch (err) {
       setSessionsError('Failed to load user sessions');
-      console.error('Failed to load user sessions:', err);
     } finally {
       setSessionsLoading(false);
     }

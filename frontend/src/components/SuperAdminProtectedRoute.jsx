@@ -1,6 +1,5 @@
-import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useSuperAdminAuth } from '../contexts/SuperAdminAuthContext';
+import { useSuperAdminAuth } from '@/contexts/SuperAdminAuthContext';
 
 /**
  * SuperAdminProtectedRoute - Protects routes that require SuperAdmin authentication

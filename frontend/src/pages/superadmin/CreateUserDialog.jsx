@@ -189,7 +189,6 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
       });
       setErrors({});
     } catch (error) {
-      console.error('Failed to create user:', error);
     }
   }, [formData, onSubmit, validateForm]);
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { TrendingUp, TrendingDown, Users, Building2, DollarSign } from 'lucide-react';
 

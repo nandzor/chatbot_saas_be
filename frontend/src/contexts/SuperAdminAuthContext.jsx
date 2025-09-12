@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import superAdminAuthService from '../services/SuperAdminAuthService';
+import superAdminAuthService from '@/services/SuperAdminAuthService';
 
 const SuperAdminAuthContext = createContext();
 
@@ -48,7 +48,6 @@ export const SuperAdminAuthProvider = ({ children }) => {
                 setIsAuthenticated(false);
             }
         } catch (error) {
-            console.error('Auth initialization error:', error);
             setError(error.message);
             setUser(null);
             setIsAuthenticated(false);
@@ -81,7 +80,6 @@ export const SuperAdminAuthProvider = ({ children }) => {
             setIsLoading(true);
             await superAdminAuthService.logout();
         } catch (error) {
-            console.error('Logout error:', error);
         } finally {
             setUser(null);
             setIsAuthenticated(false);
@@ -94,7 +92,6 @@ export const SuperAdminAuthProvider = ({ children }) => {
             setIsLoading(true);
             await superAdminAuthService.logoutAll();
         } catch (error) {
-            console.error('Logout all error:', error);
         } finally {
             setUser(null);
             setIsAuthenticated(false);

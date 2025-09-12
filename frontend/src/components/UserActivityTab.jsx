@@ -30,27 +30,21 @@ const UserActivityTab = ({ userId, user }) => {
   // Load user activity data
   const loadUserActivity = useCallback(async () => {
     if (!userId) {
-      console.log('🔍 UserActivityTab: No user ID provided for activity loading');
       return;
     }
 
     try {
-      console.log('🔍 UserActivityTab: Starting to load activity for user:', userId);
       setActivityLoading(true);
       setActivityError(null);
 
       const result = await getUserActivity(userId);
-      console.log('🔍 UserActivityTab: Activity API result:', result);
 
       if (result.success) {
-        console.log('🔍 UserActivityTab: Activity data received:', result.data);
         setActivityData(result.data);
       } else {
-        console.error('❌ UserActivityTab: Activity API failed:', result.error);
         setActivityError(result.error || 'Failed to load user activity');
       }
     } catch (err) {
-      console.error('❌ UserActivityTab: Activity loading error:', err);
       setActivityError('Failed to load user activity');
     } finally {
       setActivityLoading(false);
@@ -60,7 +54,6 @@ const UserActivityTab = ({ userId, user }) => {
   // Load data when component mounts
   useEffect(() => {
     if (userId && !activityData && !activityLoading) {
-      console.log('🔍 UserActivityTab: Loading activity for user:', userId);
       loadUserActivity();
     }
   }, [userId, activityData, activityLoading, loadUserActivity]);
@@ -68,7 +61,6 @@ const UserActivityTab = ({ userId, user }) => {
   // Reset data when user changes
   useEffect(() => {
     if (userId) {
-      console.log('🔍 UserActivityTab: User changed, resetting data');
       setActivityData(null);
       setActivityError(null);
     }

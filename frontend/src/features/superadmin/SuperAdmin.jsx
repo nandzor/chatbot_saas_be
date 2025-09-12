@@ -7,7 +7,7 @@ import Platform from './Platform';
 import SystemSettings from './SystemSettings';
 import RoleList from '@/pages/roles/RoleList';
 import PermissionList from '@/pages/permissions/PermissionList';
-import UserProfile from '../auth/UserProfile';
+import UserProfile from '@/pages/auth/UserProfile';
 
 const SuperAdmin = () => {
   const [activeMenu, setActiveMenu] = useState('dashboard');

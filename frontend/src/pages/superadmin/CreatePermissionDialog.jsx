@@ -189,7 +189,6 @@ const CreatePermissionDialog = ({ isOpen, onClose, onSubmit, loading = false }) 
       setErrors({});
       toast.success('Permission created successfully!');
     } catch (error) {
-      console.error('Failed to create permission:', error);
       toast.error('Failed to create permission. Please try again.');
     } finally {
       setIsSubmitting(false);

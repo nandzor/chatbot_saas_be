@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import useClientSettings from '../../hooks/useClientSettings';
+import useClientSettings from '@/hooks/useClientSettings';
 import {
   Card,
   CardContent,
@@ -21,7 +21,7 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from '../../components/ui';
+} from '@/components/ui';
 import {
   AlertCircle,
   CheckCircle,
@@ -68,7 +68,6 @@ const ClientSettings = () => {
     const result = await saveSettings(settings);
     if (result.success) {
       // Show success message
-      console.log('Settings saved successfully');
     }
   };
 
@@ -76,7 +75,6 @@ const ClientSettings = () => {
     const result = await resetToDefaults();
     if (result.success) {
       // Show success message
-      console.log('Settings reset to defaults');
     }
   };
 
@@ -84,7 +82,6 @@ const ClientSettings = () => {
     const result = await exportSettings();
     if (result.success) {
       // Show success message
-      console.log('Settings exported successfully');
     }
   };
 
@@ -92,7 +89,6 @@ const ClientSettings = () => {
     const result = await importSettings(file);
     if (result.success) {
       // Show success message
-      console.log('Settings imported successfully');
     }
   };
 

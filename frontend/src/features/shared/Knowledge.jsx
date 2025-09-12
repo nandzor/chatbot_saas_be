@@ -641,8 +641,6 @@ const Knowledge = () => {
       setConversationHistory(prev => [...prev, userMessage, botMessage]);
 
       // Log for debugging
-      console.log('Test message:', testMessage);
-      console.log('AI Response:', response);
 
       // Clear the input after sending
       setTestMessage('');

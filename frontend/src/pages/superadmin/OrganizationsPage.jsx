@@ -78,7 +78,6 @@ const OrganizationsPage = () => {
         setStatistics(response.data);
       }
     } catch (error) {
-      console.error('Error loading statistics:', error);
     } finally {
       setStatisticsLoading(false);
     }
@@ -99,7 +98,6 @@ const OrganizationsPage = () => {
       }
       return result;
     } catch (error) {
-      console.error('Error creating organization:', error);
       return { success: false, error: error.message };
     }
   }, [createOrganization, loadStatistics]);
@@ -115,7 +113,6 @@ const OrganizationsPage = () => {
       }
       return result;
     } catch (error) {
-      console.error('Error updating organization:', error);
       return { success: false, error: error.message };
     }
   }, [updateOrganization, loadStatistics]);
@@ -129,7 +126,6 @@ const OrganizationsPage = () => {
       }
       return result;
     } catch (error) {
-      console.error('Error deleting organization:', error);
       return { success: false, error: error.message };
     }
   }, [deleteOrganization, loadStatistics]);
@@ -143,7 +139,6 @@ const OrganizationsPage = () => {
         setShowDetailsModal(true);
       }
     } catch (error) {
-      console.error('Error fetching organization details:', error);
     }
   }, [getOrganizationById]);
 
@@ -156,7 +151,6 @@ const OrganizationsPage = () => {
         setShowEditDialog(true);
       }
     } catch (error) {
-      console.error('Error fetching organization for edit:', error);
     }
   }, [getOrganizationById]);
 
@@ -278,8 +272,6 @@ const OrganizationsPage = () => {
           statistics={statistics}
           onRefresh={handleRefresh}
           onCreateNew={() => setShowCreateDialog(true)}
-          onExport={() => console.log('Export functionality not implemented yet')}
-          onImport={() => console.log('Import functionality not implemented yet')}
           loading={loading}
         />
       )}

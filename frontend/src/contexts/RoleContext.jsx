@@ -88,7 +88,6 @@ export const RoleProvider = ({ children }) => {
       setRoleHistory(prev => [...prev, { role: currentRole, timestamp: new Date().toISOString() }]);
 
       setCurrentRole(role);
-      console.log('✅ Role set to:', role);
 
       // Store in localStorage for persistence
       try {
@@ -98,7 +97,6 @@ export const RoleProvider = ({ children }) => {
       }
 
     } catch (error) {
-      console.error('❌ Error setting role:', error);
       throw error;
     }
   }, [currentRole]);
@@ -111,7 +109,6 @@ export const RoleProvider = ({ children }) => {
       const rolePermissions = PERMISSIONS[currentRole.toUpperCase()] || [];
       return rolePermissions.includes(permission) || rolePermissions.includes('*');
     } catch (error) {
-      console.error('❌ Error checking permission:', error);
       return false;
     }
   }, [currentRole]);
@@ -121,7 +118,6 @@ export const RoleProvider = ({ children }) => {
     try {
       return currentRole === role;
     } catch (error) {
-      console.error('❌ Error checking role:', error);
       return false;
     }
   }, [currentRole]);
@@ -132,7 +128,6 @@ export const RoleProvider = ({ children }) => {
       if (!currentRole) return [];
       return PERMISSIONS[currentRole.toUpperCase()] || [];
     } catch (error) {
-      console.error('❌ Error getting role permissions:', error);
       return [];
     }
   }, [currentRole]);
@@ -144,7 +139,6 @@ export const RoleProvider = ({ children }) => {
       // For now, return all roles
       return Object.values(ROLES);
     } catch (error) {
-      console.error('❌ Error getting available roles:', error);
       return [];
     }
   }, []);
@@ -164,11 +158,9 @@ export const RoleProvider = ({ children }) => {
 
       setRole(newRole);
 
-      console.log('✅ Role switched to:', newRole);
       return { success: true, role: newRole };
 
     } catch (error) {
-      console.error('❌ Error switching role:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -181,10 +173,8 @@ export const RoleProvider = ({ children }) => {
       const savedRole = localStorage.getItem('chatbot_current_role');
       if (savedRole && Object.values(ROLES).includes(savedRole)) {
         setCurrentRole(savedRole);
-        console.log('✅ Role restored from localStorage:', savedRole);
       }
     } catch (error) {
-      console.error('❌ Error restoring role from localStorage:', error);
       localStorage.removeItem('chatbot_current_role');
     }
   }, []);
@@ -216,7 +206,6 @@ export const RoleProvider = ({ children }) => {
 
   // Development logging
   if (import.meta.env.DEV) {
-    console.log('👑 RoleContext state:', {
       currentRole,
       permissions: getRolePermissions(),
       isLoading

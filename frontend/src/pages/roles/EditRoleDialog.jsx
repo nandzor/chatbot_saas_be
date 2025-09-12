@@ -101,7 +101,6 @@ const EditRoleDialog = ({ isOpen, onClose, role, onSubmit, loading = false }) =>
       });
 
     } catch (error) {
-      console.error('Error loading role data:', error);
       toast.error('Failed to load role data');
     } finally {
       setLoadingRole(false);
@@ -242,7 +241,7 @@ const EditRoleDialog = ({ isOpen, onClose, role, onSubmit, loading = false }) =>
           try {
             updatedRoleData = JSON.parse(response.message);
           } catch (e) {
-            console.warn('Failed to parse response message as JSON:', e);
+            // Silently handle JSON parsing error
           }
         }
 
@@ -259,7 +258,6 @@ const EditRoleDialog = ({ isOpen, onClose, role, onSubmit, loading = false }) =>
         toast.error(response.message || 'Failed to update role');
       }
     } catch (error) {
-      console.error('Failed to update role:', error);
 
       // Handle specific API errors
       if (error.message) {

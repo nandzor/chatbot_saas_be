@@ -1,6 +1,5 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSuperAdminAuth } from '../../contexts/SuperAdminAuthContext';
+import { useSuperAdminAuth } from '@/contexts/SuperAdminAuthContext';
 
 const Unauthorized = () => {
     const navigate = useNavigate();

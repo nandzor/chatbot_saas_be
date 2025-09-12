@@ -109,7 +109,6 @@ const useStatistics = () => {
         setStatistics(stats);
       }
     } catch (error) {
-      console.error('Failed to load permission statistics:', error);
     } finally {
       setLoading(false);
     }
@@ -161,7 +160,6 @@ const usePermissionActions = (permissions, { createPermission, updatePermission,
         setSelectedPermission(null);
       }
     } catch (error) {
-      console.error('Failed to clone permission:', error);
     } finally {
       setActionLoading(false);
     }
@@ -183,7 +181,6 @@ const usePermissionActions = (permissions, { createPermission, updatePermission,
         setSelectedPermission(null);
       }
     } catch (error) {
-      console.error('Failed to delete permission:', error);
     } finally {
       setActionLoading(false);
     }
@@ -197,7 +194,6 @@ const usePermissionActions = (permissions, { createPermission, updatePermission,
         setShowCreateModal(false);
       }
     } catch (error) {
-      console.error('Failed to create permission:', error);
     } finally {
       setActionLoading(false);
     }
@@ -214,7 +210,6 @@ const usePermissionActions = (permissions, { createPermission, updatePermission,
         setSelectedPermission(null);
       }
     } catch (error) {
-      console.error('Failed to update permission:', error);
     } finally {
       setActionLoading(false);
     }

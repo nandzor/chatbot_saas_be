@@ -169,7 +169,6 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
       await onSave(finalData);
       onClose();
     } catch (error) {
-      console.error('Error saving plan:', error);
     } finally {
       setIsSubmitting(false);
     }

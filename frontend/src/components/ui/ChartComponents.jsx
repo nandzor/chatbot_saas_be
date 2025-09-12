@@ -1,4 +1,3 @@
-import React from 'react';
 import { cn } from '@/lib/utils';
 
 const ChartContainer = React.forwardRef(({ className, children, ...props }, ref) => (

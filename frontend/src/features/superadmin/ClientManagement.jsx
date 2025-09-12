@@ -228,7 +228,6 @@ const ClientManagement = () => {
   };
 
   const handleOrgAction = (action, orgId) => {
-    console.log(`${action} for organization ${orgId}`);
     // Implement action logic here
   };
 

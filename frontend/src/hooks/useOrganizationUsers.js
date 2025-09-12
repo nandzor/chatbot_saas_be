@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import organizationManagementService from '../services/OrganizationManagementService';
+import organizationManagementService from '@/services/OrganizationManagementService';
 import toast from 'react-hot-toast';
 
 export const useOrganizationUsers = (organizationId) => {
@@ -31,7 +31,6 @@ export const useOrganizationUsers = (organizationId) => {
   // Load users
   const loadUsers = useCallback(async (forceRefresh = false) => {
     if (!organizationId) {
-      console.log('🔍 useOrganizationUsers: No organization ID provided');
       return;
     }
 
@@ -48,7 +47,6 @@ export const useOrganizationUsers = (organizationId) => {
     // Check if we need to load (avoid duplicate calls)
     if (!forceRefresh && !isInitialLoad.current &&
         JSON.stringify(currentParams) === JSON.stringify(lastLoadParams.current)) {
-      console.log('🔍 useOrganizationUsers: Skipping load - same parameters');
       return;
     }
 
@@ -57,12 +55,10 @@ export const useOrganizationUsers = (organizationId) => {
     lastLoadParams.current = currentParams;
 
     try {
-      console.log('🔍 useOrganizationUsers: Loading users for organization:', organizationId, currentParams);
 
       const response = await organizationManagementService.getOrganizationUsers(organizationId, currentParams);
 
       if (response.success) {
-        console.log('✅ useOrganizationUsers: Users loaded successfully:', response.data);
         setUsers(response.data);
 
         if (response.pagination) {
@@ -72,12 +68,10 @@ export const useOrganizationUsers = (organizationId) => {
           }));
         }
       } else {
-        console.error('❌ useOrganizationUsers: Failed to load users:', response.error);
         setError(response.error);
         toast.error(response.error || 'Failed to load users');
       }
     } catch (error) {
-      console.error('❌ useOrganizationUsers: Error loading users:', error);
       const errorMessage = error.response?.data?.message || 'Failed to load users';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -101,12 +95,10 @@ export const useOrganizationUsers = (organizationId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 useOrganizationUsers: Adding user to organization:', organizationId, userData);
 
       const response = await organizationManagementService.addUserToOrganization(organizationId, userData);
 
       if (response.success) {
-        console.log('✅ useOrganizationUsers: User added successfully:', response.data);
         toast.success(response.message || 'User added successfully');
 
         // Reload users
@@ -114,12 +106,10 @@ export const useOrganizationUsers = (organizationId) => {
 
         return { success: true, data: response.data };
       } else {
-        console.error('❌ useOrganizationUsers: Failed to add user:', response.error);
         toast.error(response.error || 'Failed to add user');
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('❌ useOrganizationUsers: Error adding user:', error);
       const errorMessage = error.response?.data?.message || 'Failed to add user';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -137,12 +127,10 @@ export const useOrganizationUsers = (organizationId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 useOrganizationUsers: Removing user from organization:', organizationId, userId);
 
       const response = await organizationManagementService.removeUserFromOrganization(organizationId, userId);
 
       if (response.success) {
-        console.log('✅ useOrganizationUsers: User removed successfully');
         toast.success(response.message || 'User removed successfully');
 
         // Reload users
@@ -150,12 +138,10 @@ export const useOrganizationUsers = (organizationId) => {
 
         return { success: true };
       } else {
-        console.error('❌ useOrganizationUsers: Failed to remove user:', response.error);
         toast.error(response.error || 'Failed to remove user');
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('❌ useOrganizationUsers: Error removing user:', error);
       const errorMessage = error.response?.data?.message || 'Failed to remove user';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -173,13 +159,11 @@ export const useOrganizationUsers = (organizationId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 useOrganizationUsers: Updating user:', organizationId, userId, userData);
 
       // Update user via API
       const response = await organizationManagementService.updateUser(organizationId, userId, userData);
 
       if (response.success) {
-        console.log('✅ useOrganizationUsers: User updated successfully:', response.data);
         toast.success('User updated successfully');
 
         // Reload users
@@ -187,12 +171,10 @@ export const useOrganizationUsers = (organizationId) => {
 
         return { success: true, data: response.data };
       } else {
-        console.error('❌ useOrganizationUsers: Failed to update user:', response.error);
         toast.error(response.error || 'Failed to update user');
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('❌ useOrganizationUsers: Error updating user:', error);
       const errorMessage = error.response?.data?.message || 'Failed to update user';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -210,13 +192,11 @@ export const useOrganizationUsers = (organizationId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 useOrganizationUsers: Toggling user status:', organizationId, userId, newStatus);
 
       // Toggle user status via API
       const response = await organizationManagementService.toggleUserStatus(organizationId, userId, newStatus);
 
       if (response.success) {
-        console.log('✅ useOrganizationUsers: User status toggled successfully');
         toast.success(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
 
         // Reload users
@@ -224,12 +204,10 @@ export const useOrganizationUsers = (organizationId) => {
 
         return { success: true };
       } else {
-        console.error('❌ useOrganizationUsers: Failed to toggle user status:', response.error);
         toast.error(response.error || 'Failed to toggle user status');
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('❌ useOrganizationUsers: Error toggling user status:', error);
       const errorMessage = error.response?.data?.message || 'Failed to toggle user status';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };

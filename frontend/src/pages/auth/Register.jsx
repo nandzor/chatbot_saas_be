@@ -44,7 +44,6 @@ const Register = () => {
 
     try {
       // Here you would typically make an API call to register
-      console.log('Registering user:', formData);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));

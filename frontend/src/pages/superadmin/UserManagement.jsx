@@ -92,18 +92,14 @@ const useStatistics = () => {
 
   const loadStatistics = useCallback(async () => {
     if (loadingRef.current || loaded.current) {
-      console.log('🔍 Statistics: Skipping load - already loaded or loading');
       return;
     }
 
     loadingRef.current = true;
     setLoading(true);
-    console.log('🔍 Statistics: Loading statistics...');
 
     try {
       const result = await userManagementService.getUserStatistics();
-      console.log('🔍 Statistics: Raw API result:', result);
-      console.log('🔍 Statistics: Result data structure:', result.data);
 
       if (result.success) {
         const statisticsData = {
@@ -113,15 +109,11 @@ const useStatistics = () => {
           verifiedUsers: result.data.verified_users || 0
         };
 
-        console.log('🔍 Statistics: Mapped statistics:', statisticsData);
         setStatistics(statisticsData);
         loaded.current = true;
-        console.log('✅ Statistics: Loaded successfully', result.data);
       } else {
-        console.error('❌ Statistics: API call failed:', result);
       }
     } catch (error) {
-      console.error('❌ Statistics: Failed to load:', error);
     } finally {
       loadingRef.current = false;
       setLoading(false);
@@ -170,7 +162,6 @@ const useUserActions = (users, { createUser, updateUser, deleteUser, cloneUser }
         setSelectedUser(null);
       }
     } catch (error) {
-      console.error('Failed to clone user:', error);
     } finally {
       setActionLoading(false);
     }
@@ -192,7 +183,6 @@ const useUserActions = (users, { createUser, updateUser, deleteUser, cloneUser }
         setSelectedUser(null);
       }
     } catch (error) {
-      console.error('Failed to delete user:', error);
     } finally {
       setActionLoading(false);
     }
@@ -206,7 +196,6 @@ const useUserActions = (users, { createUser, updateUser, deleteUser, cloneUser }
         setShowCreateModal(false);
       }
     } catch (error) {
-      console.error('Failed to create user:', error);
     } finally {
       setActionLoading(false);
     }
@@ -223,7 +212,6 @@ const useUserActions = (users, { createUser, updateUser, deleteUser, cloneUser }
         setSelectedUser(null);
       }
     } catch (error) {
-      console.error('Failed to update user:', error);
     } finally {
       setActionLoading(false);
     }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import organizationManagementService from '../services/OrganizationManagementService';
+import organizationManagementService from '@/services/OrganizationManagementService';
 import toast from 'react-hot-toast';
 
 export const useOrganizationPermissions = (organizationId) => {
@@ -17,7 +17,6 @@ export const useOrganizationPermissions = (organizationId) => {
   // Load roles
   const loadRoles = useCallback(async (forceRefresh = false) => {
     if (!organizationId) {
-      console.log('🔍 useOrganizationPermissions: No organization ID provided');
       return;
     }
 
@@ -26,7 +25,6 @@ export const useOrganizationPermissions = (organizationId) => {
     // Check if we need to load (avoid duplicate calls)
     if (!forceRefresh && !isInitialLoad.current &&
         JSON.stringify(currentParams) === JSON.stringify(lastLoadParams.current)) {
-      console.log('🔍 useOrganizationPermissions: Skipping load - same parameters');
       return;
     }
 
@@ -35,13 +33,11 @@ export const useOrganizationPermissions = (organizationId) => {
     lastLoadParams.current = currentParams;
 
     try {
-      console.log('🔍 useOrganizationPermissions: Loading roles for organization:', organizationId);
 
       // Get organization roles from API
       const rolesResponse = await organizationManagementService.getOrganizationRoles(organizationId);
 
       if (rolesResponse.success) {
-        console.log('✅ useOrganizationPermissions: Roles loaded successfully:', rolesResponse.data);
         setRoles(rolesResponse.data);
 
         // Initialize role permissions
@@ -84,7 +80,6 @@ export const useOrganizationPermissions = (organizationId) => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      console.log('✅ useOrganizationPermissions: Roles loaded successfully:', mockRoles);
       setRoles(mockRoles);
 
       // Initialize role permissions
@@ -95,7 +90,6 @@ export const useOrganizationPermissions = (organizationId) => {
       setRolePermissions(initialRolePermissions);
 
     } catch (error) {
-      console.error('❌ useOrganizationPermissions: Error loading roles:', error);
       const errorMessage = error.response?.data?.message || 'Failed to load roles';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -108,13 +102,11 @@ export const useOrganizationPermissions = (organizationId) => {
   // Load permissions
   const loadPermissions = useCallback(async () => {
     try {
-      console.log('🔍 useOrganizationPermissions: Loading permissions');
 
       // Get permissions from API
       const permissionsResponse = await organizationManagementService.getPermissions();
 
       if (permissionsResponse.success) {
-        console.log('✅ useOrganizationPermissions: Permissions loaded successfully:', permissionsResponse.data);
         setPermissions(permissionsResponse.data);
         return;
       }
@@ -166,11 +158,9 @@ export const useOrganizationPermissions = (organizationId) => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      console.log('✅ useOrganizationPermissions: Permissions loaded successfully:', mockPermissions);
       setPermissions(mockPermissions);
 
     } catch (error) {
-      console.error('❌ useOrganizationPermissions: Error loading permissions:', error);
       const errorMessage = error.response?.data?.message || 'Failed to load permissions';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -208,13 +198,11 @@ export const useOrganizationPermissions = (organizationId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 useOrganizationPermissions: Saving role permissions:', organizationId, roleId, permissions);
 
       // Save role permissions via API
       const response = await organizationManagementService.saveRolePermissions(organizationId, roleId, permissions);
 
       if (response.success) {
-        console.log('✅ useOrganizationPermissions: Role permissions saved successfully');
         toast.success('Role permissions saved successfully');
 
         // Update local state
@@ -227,12 +215,10 @@ export const useOrganizationPermissions = (organizationId) => {
 
         return { success: true };
       } else {
-        console.error('❌ useOrganizationPermissions: Failed to save role permissions:', response.error);
         toast.error(response.error || 'Failed to save role permissions');
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('❌ useOrganizationPermissions: Error saving role permissions:', error);
       const errorMessage = error.response?.data?.message || 'Failed to save role permissions';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -250,25 +236,21 @@ export const useOrganizationPermissions = (organizationId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 useOrganizationPermissions: Saving all permissions:', organizationId, rolePermissions);
 
       // Save all permissions via API
       const response = await organizationManagementService.saveAllPermissions(organizationId, rolePermissions);
 
       if (response.success) {
-        console.log('✅ useOrganizationPermissions: All permissions saved successfully');
         toast.success('All permissions saved successfully');
 
         setHasChanges(false);
 
         return { success: true };
       } else {
-        console.error('❌ useOrganizationPermissions: Failed to save all permissions:', response.error);
         toast.error(response.error || 'Failed to save all permissions');
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('❌ useOrganizationPermissions: Error saving all permissions:', error);
       const errorMessage = error.response?.data?.message || 'Failed to save all permissions';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };

@@ -16,7 +16,6 @@ class ClientManagementService {
    */
   async getOrganizations(params = {}) {
     try {
-      console.log('🔍 ClientManagementService: Getting organizations with params:', params);
 
       // Set default parameters
       const defaultParams = {
@@ -29,15 +28,9 @@ class ClientManagementService {
       };
 
       const response = await api.get('/v1/organizations', { params: defaultParams });
-      console.log('✅ ClientManagementService: Organizations retrieved successfully:', response.data);
-      console.log('🔍 ClientManagementService: Full response object:', response);
-      console.log('🔍 ClientManagementService: Response status:', response.status);
-      console.log('🔍 ClientManagementService: Response headers:', response.headers);
 
       // Handle different response structures from backend
       const responseData = response.data;
-      console.log('🔍 ClientManagementService: Response data type:', typeof responseData);
-      console.log('🔍 ClientManagementService: Response data keys:', Object.keys(responseData || {}));
 
       let organizationsData, paginationData;
 
@@ -84,11 +77,6 @@ class ClientManagementService {
         ? organizationsData.map(org => this.transformOrganizationDataForFrontend(org))
         : [];
 
-      console.log('🔍 ClientManagementService: Processed organizations data:', organizationsData);
-      console.log('🔍 ClientManagementService: Processed organizations data length:', organizationsData?.length);
-      console.log('🔍 ClientManagementService: Transformed organizations data:', transformedOrganizations);
-      console.log('🔍 ClientManagementService: Transformed organizations data length:', transformedOrganizations?.length);
-      console.log('🔍 ClientManagementService: Processed pagination data:', paginationData);
 
       // Check if we have valid data
       if (!Array.isArray(organizationsData) || organizationsData.length === 0) {
@@ -106,10 +94,6 @@ class ClientManagementService {
         message: responseData.message || 'Organizations retrieved successfully'
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to get organizations:', error);
-      console.error('❌ ClientManagementService: Error response:', error.response);
-      console.error('❌ ClientManagementService: Error status:', error.response?.status);
-      console.error('❌ ClientManagementService: Error data:', error.response?.data);
 
       return this.handleError(error, 'Failed to fetch organizations');
     }
@@ -120,9 +104,7 @@ class ClientManagementService {
    */
   async getOrganizationById(id) {
     try {
-      console.log('🔍 ClientManagementService: Fetching organization by ID:', id);
       const response = await api.get(`/v1/organizations/${id}`);
-      console.log('✅ ClientManagementService: Organization retrieved successfully:', response.data);
 
       return {
         success: true,
@@ -130,7 +112,6 @@ class ClientManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to get organization:', error);
       return this.handleError(error, 'Failed to fetch organization');
     }
   }
@@ -140,9 +121,7 @@ class ClientManagementService {
    */
   async updateOrganizationStatus(id, status) {
     try {
-      console.log('🔍 ClientManagementService: Updating organization status:', { id, status });
       const response = await api.patch(`/v1/organizations/${id}/status`, { status });
-      console.log('✅ ClientManagementService: Organization status updated successfully:', response.data);
 
       return {
         success: true,
@@ -150,7 +129,6 @@ class ClientManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to update organization status:', error);
       return this.handleError(error, 'Failed to update organization status');
     }
   }
@@ -160,14 +138,10 @@ class ClientManagementService {
    */
   async getOrganizationStatistics() {
     try {
-      console.log('🔍 ClientManagementService: Fetching statistics from /v1/organizations/statistics');
       const response = await api.get('/v1/organizations/statistics');
 
-      console.log('🔍 ClientManagementService: Raw API response:', response);
-      console.log('🔍 ClientManagementService: Response data:', response.data);
 
       const statisticsData = response.data.data || response.data;
-      console.log('🔍 ClientManagementService: Final statistics data:', statisticsData);
 
       return {
         success: true,
@@ -175,8 +149,6 @@ class ClientManagementService {
         message: response.data.message || 'Statistics retrieved successfully'
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to get statistics:', error);
-      console.error('❌ ClientManagementService: Error response:', error.response);
       return this.handleError(error, 'Failed to fetch organization statistics');
     }
   }
@@ -186,9 +158,7 @@ class ClientManagementService {
    */
   async getOrganizationsByStatus(status) {
     try {
-      console.log('🔍 ClientManagementService: Fetching organizations by status:', status);
       const response = await api.get(`/v1/organizations/status/${status}`);
-      console.log('✅ ClientManagementService: Organizations retrieved successfully:', response.data);
 
       const organizationsData = response.data.data || response.data;
       const transformedOrganizations = Array.isArray(organizationsData)
@@ -201,7 +171,6 @@ class ClientManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to get organizations by status:', error);
       return this.handleError(error, 'Failed to fetch organizations by status');
     }
   }
@@ -211,7 +180,6 @@ class ClientManagementService {
    */
   async searchOrganizations(searchTerm, filters = {}) {
     try {
-      console.log('🔍 ClientManagementService: Searching organizations:', { searchTerm, filters });
 
       const params = {
         search: searchTerm,
@@ -219,7 +187,6 @@ class ClientManagementService {
       };
 
       const response = await api.get('/v1/organizations', { params });
-      console.log('✅ ClientManagementService: Search completed successfully:', response.data);
 
       const responseData = response.data;
       const organizationsData = responseData.data || responseData.organizations || responseData || [];
@@ -233,7 +200,6 @@ class ClientManagementService {
         message: response.data.message || 'Search completed successfully'
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to search organizations:', error);
       return this.handleError(error, 'Failed to search organizations');
     }
   }
@@ -243,13 +209,10 @@ class ClientManagementService {
    */
   async createOrganization(organizationData) {
     try {
-      console.log('🔍 ClientManagementService: Creating organization with data:', organizationData);
 
       const transformedData = this.transformOrganizationDataForBackend(organizationData);
-      console.log('🔍 ClientManagementService: Transformed data for backend:', transformedData);
 
       const response = await api.post('/v1/organizations', transformedData);
-      console.log('✅ ClientManagementService: Organization created successfully:', response.data);
 
       return {
         success: true,
@@ -257,7 +220,6 @@ class ClientManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to create organization:', error);
       return this.handleError(error, 'Failed to create organization');
     }
   }
@@ -267,13 +229,10 @@ class ClientManagementService {
    */
   async updateOrganization(id, organizationData) {
     try {
-      console.log('🔍 ClientManagementService: Updating organization:', id, 'with data:', organizationData);
 
       const transformedData = this.transformOrganizationDataForBackend(organizationData);
-      console.log('🔍 ClientManagementService: Transformed data for backend:', transformedData);
 
       const response = await api.put(`/v1/organizations/${id}`, transformedData);
-      console.log('✅ ClientManagementService: Organization updated successfully:', response.data);
 
       return {
         success: true,
@@ -281,7 +240,6 @@ class ClientManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to update organization:', error);
       return this.handleError(error, 'Failed to update organization');
     }
   }
@@ -291,16 +249,13 @@ class ClientManagementService {
    */
   async deleteOrganization(id) {
     try {
-      console.log('🔍 ClientManagementService: Deleting organization:', id);
       const response = await api.delete(`/v1/organizations/${id}`);
-      console.log('✅ ClientManagementService: Organization deleted successfully:', response.data);
 
       return {
         success: true,
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ ClientManagementService: Failed to delete organization:', error);
       return this.handleError(error, 'Failed to delete organization');
     }
   }
@@ -309,7 +264,6 @@ class ClientManagementService {
    * Handle API errors
    */
   handleError(error, defaultMessage) {
-    console.error('ClientManagementService Error:', error);
 
     if (error.response) {
       // Server responded with error status
@@ -388,9 +342,6 @@ class ClientManagementService {
    * Transform backend organization data to frontend format
    */
   transformOrganizationDataForFrontend(organizationData) {
-    console.log('🔍 ClientManagementService: Transforming organization data:', organizationData);
-    console.log('🔍 ClientManagementService: Organization data type:', typeof organizationData);
-    console.log('🔍 ClientManagementService: Organization data keys:', Object.keys(organizationData || {}));
 
     return {
       id: organizationData.id,
@@ -447,10 +398,8 @@ class ClientManagementService {
    */
   async getAnalytics(params = {}) {
     try {
-      console.log('🔍 ClientManagementService: Getting analytics with params:', params);
 
       const response = await api.get('/v1/organizations/analytics', { params });
-      console.log('✅ ClientManagementService: Analytics retrieved successfully:', response.data);
 
       if (response.data.success) {
         return {
@@ -464,7 +413,6 @@ class ClientManagementService {
         };
       }
     } catch (error) {
-      console.error('❌ ClientManagementService: Error getting analytics:', error);
       return {
         success: false,
         error: error.response?.data?.message || error.message || 'Failed to get analytics'

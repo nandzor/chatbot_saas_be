@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSuperAdminAuth } from '../../contexts/SuperAdminAuthContext';
+import { useSuperAdminAuth } from '@/contexts/SuperAdminAuthContext';
 
 const SuperAdminForgotPassword = () => {
     const navigate = useNavigate();
@@ -22,7 +22,6 @@ const SuperAdminForgotPassword = () => {
             await forgotPassword(email);
             setIsSuccess(true);
         } catch (error) {
-            console.error('Forgot password error:', error);
             // Error is already set in the context
         } finally {
             setIsSubmitting(false);

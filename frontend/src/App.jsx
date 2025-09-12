@@ -1,12 +1,14 @@
-import React from 'react';
 import { RouterProvider } from 'react-router-dom';
-import router from './routes';
-import './styles/globals.css';
-import { AuthDebugPanel } from './components/debug';
+import router from '@/routes';
+import '@/styles/globals.css';
+import { AuthDebugPanel } from '@/components/debug';
 
 const App = () => {
-  // Check if Auth Debug Panel is enabled - langsung dari .env
+  // Check if Auth Debug Panel is enabled - only in development
   const isAuthDebugPanelEnabled = () => {
+    // Only enable in development mode
+    if (import.meta.env.MODE !== 'development') return false;
+
     const value = import.meta.env.VITE_ENABLE_AUTH_DEBUG_PANEL;
     if (value === undefined || value === null) return false;
 

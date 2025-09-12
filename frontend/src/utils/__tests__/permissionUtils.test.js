@@ -4,7 +4,7 @@ import {
   canAccessSettings, 
   canManageOrganization,
   canManageUsers 
-} from '../permissionUtils';
+} from '@/permissionUtils';
 
 // Mock user objects for testing
 const mockUsers = {

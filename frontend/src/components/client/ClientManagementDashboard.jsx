@@ -49,7 +49,6 @@ const ClientManagementDashboard = () => {
         setStatisticsData(response.data);
       }
     } catch (error) {
-      console.error('Error loading statistics:', error);
     } finally {
       setStatisticsLoading(false);
     }

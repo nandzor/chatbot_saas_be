@@ -190,7 +190,6 @@ const CreateRoleDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
         toast.error(response.message || 'Failed to create role');
       }
     } catch (error) {
-      console.error('Failed to create role:', error);
 
       // Handle specific API errors
       if (error.message) {

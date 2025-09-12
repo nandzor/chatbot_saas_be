@@ -131,14 +131,12 @@ const Pagination = forwardRef(({
   // Event handlers
   const handlePageChange = (page) => {
     if (onPageChange && typeof onPageChange === 'function' && page >= 1 && page <= totalPages) {
-      console.log('🔍 Pagination: Changing page to:', page);
       onPageChange(page);
     }
   };
 
   const handlePerPageChange = (newPerPage) => {
     if (onPerPageChange && typeof onPerPageChange === 'function') {
-      console.log('🔍 Pagination: Changing per page to:', newPerPage);
       onPerPageChange(newPerPage);
     }
   };

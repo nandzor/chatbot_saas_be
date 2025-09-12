@@ -99,7 +99,6 @@ const OrganizationPermissionsDialog = ({
     try {
       await saveAllPermissions();
     } catch (error) {
-      console.error('Error saving permissions:', error);
     }
   };
 

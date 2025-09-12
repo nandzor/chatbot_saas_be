@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button, Badge } from './index';
 

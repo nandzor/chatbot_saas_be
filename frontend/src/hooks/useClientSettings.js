@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { authService } from '../services/AuthService';
+import { useAuth } from '@/contexts/AuthContext';
+import { authService } from '@/services/AuthService';
 
 const useClientSettings = () => {
   const [settings, setSettings] = useState(null);
@@ -16,7 +16,6 @@ const useClientSettings = () => {
     const sanctumToken = localStorage.getItem('sanctum_token');
     const accessToken = localStorage.getItem('access_token');
 
-    console.log('🔑 Token check:', {
       jwtToken: jwtToken ? jwtToken.substring(0, 20) + '...' : 'none',
       sanctumToken: sanctumToken ? sanctumToken.substring(0, 20) + '...' : 'none',
       accessToken: accessToken ? accessToken.substring(0, 20) + '...' : 'none',
@@ -31,14 +30,12 @@ const useClientSettings = () => {
   // Load settings from API
   const loadSettings = useCallback(async () => {
     const token = getToken();
-    console.log('🔧 ClientSettings: loadSettings called', {
       hasToken: !!token,
       isAuthenticated,
       tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
     });
 
     if (!token || !isAuthenticated) {
-      console.log('❌ ClientSettings: No token or not authenticated, skipping load');
       return;
     }
 
@@ -46,12 +43,10 @@ const useClientSettings = () => {
     setError(null);
 
     try {
-      console.log('🌐 Making API call using AuthService');
 
       // Use AuthService API instance which handles authentication automatically
       const response = await authService.api.get('/settings/client-management');
 
-      console.log('📡 API Response:', {
         status: response.status,
         statusText: response.statusText,
         data: response.data
@@ -60,14 +55,12 @@ const useClientSettings = () => {
       const data = response.data;
 
       if (data.success) {
-        console.log('✅ ClientSettings: Settings loaded successfully', data.data);
         setSettings(data.data);
         setHasChanges(false);
       } else {
         throw new Error(data.message || 'Failed to load settings');
       }
     } catch (err) {
-      console.error('Error loading settings:', err);
       setError(err.message);
       // Set default settings if API fails
       setSettings(getDefaultSettings());
@@ -96,7 +89,6 @@ const useClientSettings = () => {
         throw new Error(data.message || 'Failed to save settings');
       }
     } catch (err) {
-      console.error('Error saving settings:', err);
       setError(err.message);
       return { success: false, error: err.message };
     } finally {
@@ -124,7 +116,6 @@ const useClientSettings = () => {
         throw new Error(data.message || 'Failed to reset settings');
       }
     } catch (err) {
-      console.error('Error resetting settings:', err);
       setError(err.message);
       return { success: false, error: err.message };
     } finally {
@@ -158,7 +149,6 @@ const useClientSettings = () => {
         throw new Error(data.message || 'Failed to export settings');
       }
     } catch (err) {
-      console.error('Error exporting settings:', err);
       setError(err.message);
       return { success: false, error: err.message };
     }
@@ -191,7 +181,6 @@ const useClientSettings = () => {
         throw new Error(data.message || 'Failed to import settings');
       }
     } catch (err) {
-      console.error('Error importing settings:', err);
       setError(err.message);
       return { success: false, error: err.message };
     } finally {

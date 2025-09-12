@@ -44,7 +44,6 @@ const RoleForm = ({ role = null, onClose, onSubmit }) => {
       const response = await roleManagementService.getPermissionsForRole();
       setPermissions(response.data);
     } catch (error) {
-      console.error('Failed to load permissions:', error);
     }
   };
 

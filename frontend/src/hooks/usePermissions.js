@@ -37,7 +37,6 @@ export const usePermissions = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred while fetching permissions');
-      console.error('Error fetching permissions:', err);
     } finally {
       setLoading(false);
     }

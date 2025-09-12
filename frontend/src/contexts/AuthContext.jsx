@@ -67,7 +67,6 @@ export const AuthProvider = ({ children }) => {
 
     return {
       addToast: (message, type = 'info') => {
-        console.log(`[${type.toUpperCase()}] ${message}`);
         // In production, you might want to use a different notification system
       }
     };
@@ -85,14 +84,12 @@ export const AuthProvider = ({ children }) => {
           if (userData && userData.id && userData.username && userData.role) {
             setUser(userData);
             setIsAuthenticated(true);
-            console.log('✅ User restored from localStorage:', userData.username);
           } else {
             console.warn('⚠️ Invalid user data structure, clearing storage');
             localStorage.removeItem(STORAGE_KEYS.USER);
           }
         }
       } catch (error) {
-        console.error('❌ Error parsing saved user data:', error);
         localStorage.removeItem(STORAGE_KEYS.USER);
         setError('Failed to restore user session');
       } finally {
@@ -154,14 +151,12 @@ export const AuthProvider = ({ children }) => {
         }
 
         toaster.addToast(`Welcome back, ${userWithSession.full_name || userWithSession.name}!`, 'success');
-        console.log('✅ Login successful:', userWithSession.username || userWithSession.email);
 
         return { success: true, user: userWithSession };
       } else {
         throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
-      console.error('❌ Login error:', error);
 
       // Handle unified auth errors
       if (error.response?.data) {
@@ -195,9 +190,7 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.clear();
 
       toaster.addToast('Logged out successfully', 'info');
-      console.log('✅ User logged out');
     } catch (error) {
-      console.error('❌ Logout error:', error);
       // Even if API call fails, clear local state
       setUser(null);
       setIsAuthenticated(false);
@@ -226,9 +219,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       toaster.addToast('Profile updated successfully', 'success');
-      console.log('✅ User updated:', updates);
     } catch (error) {
-      console.error('❌ Update user error:', error);
       toaster.addToast('Failed to update profile', 'error');
     }
   }, [user, toaster]);
@@ -238,7 +229,6 @@ export const AuthProvider = ({ children }) => {
     try {
       // Check if user has valid tokens
       if (!authService.isAuthenticated()) {
-        console.log('❌ No valid tokens found');
         return false;
       }
 
@@ -265,7 +255,6 @@ export const AuthProvider = ({ children }) => {
             console.warn('⚠️ Failed to update localStorage:', storageError);
           }
 
-          console.log('✅ Authentication validated:', updatedUser.username || updatedUser.email);
           return true;
         }
       } catch (apiError) {
@@ -283,7 +272,6 @@ export const AuthProvider = ({ children }) => {
 
       return false;
     } catch (error) {
-      console.error('❌ Check auth error:', error);
       logout();
       return false;
     }
@@ -293,7 +281,6 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = useCallback((permissionCode) => {
     if (!user) return false;
 
-    console.log('🔍 Checking permission:', { 
       required: permissionCode, 
       userRole: user.role, 
       userPermissions: user.permissions 
@@ -301,7 +288,6 @@ export const AuthProvider = ({ children }) => {
 
     // Use utility function for permission checking
     const hasPermission = checkPermission(user, permissionCode);
-    console.log('🔍 Permission check result:', { permissionCode, hasPermission });
     
     return hasPermission;
   }, [user]);
@@ -344,11 +330,9 @@ export const AuthProvider = ({ children }) => {
   const isRole = useCallback((role) => {
     if (!user) return false;
 
-    console.log('🔍 Checking role:', { required: role, userRole: user.role, userRoles: user.roles });
 
     // Use utility function for role checking
     const hasRole = checkRole(user, role);
-    console.log('🔍 Role check result:', { required: role, hasRole });
     
     return hasRole;
   }, [user]);
@@ -412,7 +396,6 @@ export const AuthProvider = ({ children }) => {
 
   // Development logging
   if (import.meta.env.DEV) {
-    console.log('🔐 AuthContext state:', {
       user: user?.username,
       userRole: user?.role,
       userRoles: user?.roles,

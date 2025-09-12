@@ -17,7 +17,6 @@ const ForgotPassword = () => {
 
     try {
       // Here you would typically make an API call
-      console.log('Sending reset email to:', email);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));

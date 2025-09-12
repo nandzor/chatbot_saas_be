@@ -1,65 +1,39 @@
-// Export semua komponen UI dari satu tempat
-export { default as Button } from './Button';
-export { Card, CardContent, CardDescription, CardHeader, CardTitle } from './Card';
-export { default as Badge } from './Badge';
-export { default as Input } from './Input';
-export { default as Label } from './Label';
-export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './Select';
-export { Tabs, TabsContent, TabsList, TabsTrigger } from './Tabs';
-export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter, TableCaption } from './Table';
-export { Avatar, AvatarFallback, AvatarImage } from './Avatar';
-export { default as Separator } from './Separator';
-export { default as Switch } from './Switch';
-export { default as Checkbox } from './Checkbox';
-export { default as Slider } from './Slider';
-export { default as Textarea } from './Textarea';
-export { Alert, AlertTitle, AlertDescription } from './Alert';
-export { ChartContainer, ChartTooltip, ChartTooltipContent } from './ChartComponents';
-export { default as Copy } from './Copy';
-export {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from './DropdownMenu';
-export { Progress } from './Progress';
-export {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-  DialogBody,
-  DialogFooter,
-  DialogTrigger
-} from './Dialog';
-export { default as Breadcrumb } from './Breadcrumb';
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './Tooltip';
-export { default as Skeleton } from './Skeleton';
+/**
+ * UI Components Index
+ * Centralized export untuk semua komponen UI
+ */
 
-// Custom components
-export { default as Pagination } from './Pagination';
-export { default as FilterBar } from './FilterBar';
-export { default as DataTable } from './DataTable';
-export { default as ConfirmDialog, DeleteConfirmDialog } from './ConfirmDialog';
-export { default as PageHeader, PageHeaderWithActions } from './PageHeader';
-export { default as LoadingSpinner } from './LoadingSpinner';
-export { default as DataDisplay } from './DataDisplay';
-export { default as EmptyState, EmptyStateWithAction } from './EmptyState';
-export { default as ErrorBoundary } from './ErrorBoundary';
-export { default as LoadingState } from './LoadingState';
-export { default as ErrorMessage } from './ErrorMessage';
-export { default as StatisticsGrid, StatisticsCard } from './StatisticsGrid';
-export { default as DataCard, DataCardWithActions } from './DataCard';
-export { default as DataSection, DataSectionWithActions } from './DataSection';
-export { default as DataWrapper, DataWrapperWithHeader } from './DataWrapper';
-export { default as DataContainer, DataContainerWithHeader } from './DataContainer';
-export { default as DataPanel, DataPanelWithActions } from './DataPanel';
-export { default as DataBox, DataBoxWithActions } from './DataBox';
+// Basic UI Components
+export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './card';
+export { Button } from './button';
+export { Input } from './input';
+export { Label } from './label';
+export { Badge } from './badge';
+export { Skeleton } from './skeleton';
+export { Alert, AlertDescription, AlertTitle } from './alert';
+export { Progress } from './progress';
+export { Checkbox } from './checkbox';
+export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
+export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
+export { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './dialog';
 
-// Toast components
-export { default as Toaster } from './Toaster';
-export { useToast, toast } from './use-toast';
+// Advanced UI Components
+export * from './Charts';
+export * from './LoadingStates';
+export * from './ErrorStates';
+export * from './AdvancedPagination';
+export * from './DataTable';
+export * from './DataTables';
+export * from './Notifications';
+export * from './UserProfile';
+export * from './DashboardWidgets';
+export * from './Modals';
+export * from './Forms';
+export * from './Layout';
+export * from './StatusIndicators';
+export * from './RealTimeUpdates';
+export * from './AdvancedSearch';
+export * from './DataVisualization';
+export * from './DataExport';
+export * from './SystemMonitoring';
+export * from './AuditLogs';

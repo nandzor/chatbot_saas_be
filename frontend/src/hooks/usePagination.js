@@ -184,7 +184,6 @@ export const usePagination = (options = {}) => {
         console.warn('updatePagination: No pagination data found in API response');
       }
     } catch (error) {
-      console.error('Error updating pagination:', error);
       setError('Failed to update pagination data');
     }
   }, [initialPerPage, onPageChange]);

@@ -91,7 +91,6 @@ const OrganizationManagement = () => {
   // Load statistics
   const loadStatistics = useCallback(async () => {
     if (statisticsLoadingRef.current || statisticsLoaded.current) {
-      console.log('🔍 Statistics: Skipping load - already loaded or loading');
       return;
     }
 
@@ -99,18 +98,14 @@ const OrganizationManagement = () => {
     setStatisticsLoading(true);
 
     try {
-      console.log('🔍 Statistics: Loading organization statistics...');
       const response = await getOrganizationStatistics();
 
       if (response.success) {
-        console.log('🔍 Statistics: Statistics loaded successfully:', response.data);
         setStatistics(response.data);
         statisticsLoaded.current = true;
       } else {
-        console.error('❌ Statistics: Failed to load statistics:', response.error);
       }
     } catch (error) {
-      console.error('❌ Statistics: Error loading statistics:', error);
     } finally {
       statisticsLoadingRef.current = false;
       setStatisticsLoading(false);
@@ -134,7 +129,6 @@ const OrganizationManagement = () => {
       }
       return result;
     } catch (error) {
-      console.error('Error creating organization:', error);
       return { success: false, error: error.message };
     }
   }, [createOrganization, loadStatistics]);
@@ -152,7 +146,6 @@ const OrganizationManagement = () => {
       }
       return result;
     } catch (error) {
-      console.error('Error updating organization:', error);
       return { success: false, error: error.message };
     }
   }, [updateOrganization, loadStatistics]);
@@ -169,7 +162,6 @@ const OrganizationManagement = () => {
         }
         return result;
       } catch (error) {
-        console.error('Error deleting organization:', error);
         return { success: false, error: error.message };
       }
     }
@@ -186,7 +178,6 @@ const OrganizationManagement = () => {
         setShowDetailsModal(true);
       }
     } catch (error) {
-      console.error('Error fetching organization details:', error);
     }
   }, [getOrganizationById]);
 
@@ -213,7 +204,6 @@ const OrganizationManagement = () => {
         toast.error(response.error || 'Failed to remove user');
       }
     } catch (error) {
-      console.error('Error removing user:', error);
       toast.error('Failed to remove user');
     }
   }, [removeUserFromOrganization, loadOrganizations]);
@@ -253,7 +243,6 @@ const OrganizationManagement = () => {
         toast.error(response.error || 'Failed to save permissions');
       }
     } catch (error) {
-      console.error('Error saving permissions:', error);
       toast.error('Failed to save permissions');
     }
   }, [saveAllPermissions, loadOrganizations]);
@@ -271,7 +260,6 @@ const OrganizationManagement = () => {
       }
       return result;
     } catch (error) {
-      console.error('Error saving settings:', error);
       return { success: false, error: error.message };
     }
   }, [updateOrganization, loadStatistics]);
@@ -293,7 +281,6 @@ const OrganizationManagement = () => {
         toast.error(response.error || 'Failed to export organizations');
       }
     } catch (error) {
-      console.error('Error exporting organizations:', error);
       toast.error('Failed to export organizations');
     }
   }, [exportOrganizations]);
@@ -319,7 +306,6 @@ const OrganizationManagement = () => {
             toast.error(response.error || 'Failed to import organizations');
           }
         } catch (error) {
-          console.error('Error importing organizations:', error);
           toast.error('Failed to import organizations');
         }
       }
@@ -590,9 +576,7 @@ const OrganizationManagement = () => {
         }}
         organization={selectedOrganization}
         onAddUser={handleAddUser}
-        onEditUser={(user) => console.log('Edit user:', user)}
         onRemoveUser={handleRemoveUser}
-        onToggleUserStatus={(user) => console.log('Toggle user status:', user)}
         loading={loading}
       />
 

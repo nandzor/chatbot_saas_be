@@ -224,7 +224,6 @@ const ProfileSettings = () => {
       // Show success message
       alert('Profil berhasil diperbarui!');
     } catch (error) {
-      console.error('Error saving profile:', error);
       alert('Gagal menyimpan profil. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
@@ -265,7 +264,6 @@ const ProfileSettings = () => {
       // Logout all other sessions
       setActiveSessions(prev => prev.filter(session => session.isCurrent));
     } catch (error) {
-      console.error('Error changing password:', error);
       alert('Gagal mengubah kata sandi. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
@@ -285,7 +283,6 @@ const ProfileSettings = () => {
       // Show success message
       alert('Preferensi berhasil disimpan!');
     } catch (error) {
-      console.error('Error saving preferences:', error);
       alert('Gagal menyimpan preferensi. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
@@ -305,7 +302,6 @@ const ProfileSettings = () => {
         
         alert('Berhasil keluar dari semua perangkat lain!');
       } catch (error) {
-        console.error('Error logging out from all devices:', error);
         alert('Gagal keluar dari semua perangkat. Silakan coba lagi.');
       } finally {
         setIsLoading(false);

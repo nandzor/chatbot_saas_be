@@ -35,7 +35,6 @@ class PerformanceMonitor {
     
     // Log every 20th render to avoid spam
     if ((count + 1) % 20 === 0) {
-      console.log(`🔄 ${componentName} rendered ${count + 1} times`);
     }
     
     // Warn about excessive renders
@@ -61,7 +60,6 @@ class PerformanceMonitor {
     this.metrics.clear();
     this.startTimes.clear();
     this.renderCounts.clear();
-    console.log('🧹 Performance monitor reset');
   }
 }
 

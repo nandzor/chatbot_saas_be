@@ -28,9 +28,9 @@ import {
   Button,
   Skeleton
 } from '@/components/ui';
-import { useClientAnalytics } from '../../hooks/useClientAnalytics';
-import AdvancedGrowthChart from '../charts/AdvancedGrowthChart';
-import GrowthSummary from '../charts/GrowthSummary';
+import { useClientAnalytics } from '@/hooks/useClientAnalytics';
+import AdvancedGrowthChart from '@/charts/AdvancedGrowthChart';
+import GrowthSummary from '@/charts/GrowthSummary';
 
 const ClientAnalytics = () => {
   const [timeRange, setTimeRange] = useState('30d');

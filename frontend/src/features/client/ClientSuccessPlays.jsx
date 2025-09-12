@@ -49,7 +49,6 @@ const ClientSuccessPlays = ({ clientData }) => {
 
   // Debug logging
   useEffect(() => {
-    console.log('ClientSuccessPlays component mounted with clientData:', clientData);
   }, [clientData]);
 
   // Error boundary
@@ -384,7 +383,6 @@ const ClientSuccessPlays = ({ clientData }) => {
       </div>
     );
   } catch (err) {
-    console.error('Error in ClientSuccessPlays:', err);
     setError(err);
     return (
       <div className="p-6 text-center">

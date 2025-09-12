@@ -7,15 +7,9 @@ class UserManagementService {
    */
   async getUsers(params = {}) {
     try {
-      console.log('🔍 UserManagementService: Getting users with params:', params);
-      console.log('🔍 UserManagementService: API base URL:', api.defaults.baseURL);
-      console.log('🔍 UserManagementService: Auth headers:', api.defaults.headers);
 
       const response = await api.get('/v1/users', { params });
-      console.log('✅ UserManagementService: Users retrieved successfully:', response.data);
 
-      console.log('🔍 UserManagementService: Raw API response:', response.data);
-      console.log('🔍 UserManagementService: Response structure check:', {
         hasData: !!response.data.data,
         hasPagination: !!response.data.pagination,
         hasTotal: !!response.data.total,
@@ -56,9 +50,6 @@ class UserManagementService {
         ? usersData.map(user => this.transformUserDataForFrontend(user))
         : [];
 
-      console.log('🔍 UserManagementService: Processed users data:', usersData);
-      console.log('🔍 UserManagementService: Transformed users data:', transformedUsers);
-      console.log('🔍 UserManagementService: Processed pagination data:', paginationData);
 
       return {
         success: true,
@@ -69,10 +60,6 @@ class UserManagementService {
         message: responseData.message || 'Users retrieved successfully'
       };
     } catch (error) {
-      console.error('❌ UserManagementService: Failed to get users:', error);
-      console.error('❌ UserManagementService: Error response:', error.response);
-      console.error('❌ UserManagementService: Error status:', error.response?.status);
-      console.error('❌ UserManagementService: Error data:', error.response?.data);
 
       return this.handleError(error, 'Failed to fetch users');
     }
@@ -215,15 +202,10 @@ class UserManagementService {
    */
   async getUserStatistics() {
     try {
-      console.log('🔍 UserManagementService: Fetching statistics from /v1/users/statistics');
       const response = await api.get('/v1/users/statistics');
 
-      console.log('🔍 UserManagementService: Raw API response:', response);
-      console.log('🔍 UserManagementService: Response data:', response.data);
-      console.log('🔍 UserManagementService: Response data.data:', response.data.data);
 
       const statisticsData = response.data.data || response.data;
-      console.log('🔍 UserManagementService: Final statistics data:', statisticsData);
 
       return {
         success: true,
@@ -231,8 +213,6 @@ class UserManagementService {
         message: response.data.message || 'Statistics retrieved successfully'
       };
     } catch (error) {
-      console.error('❌ UserManagementService: Failed to get statistics:', error);
-      console.error('❌ UserManagementService: Error response:', error.response);
       return this.handleError(error, 'Failed to fetch user statistics');
     }
   }
@@ -242,9 +222,7 @@ class UserManagementService {
    */
   async getUserActivity(id) {
     try {
-      console.log('🔍 UserManagementService: Fetching activity for user:', id);
       const response = await api.get(`/v1/users/${id}/activity`);
-      console.log('🔍 UserManagementService: Activity response:', response.data);
 
       return {
         success: true,
@@ -252,7 +230,6 @@ class UserManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ UserManagementService: Failed to get user activity:', error);
       return this.handleError(error, 'Failed to fetch user activity');
     }
   }
@@ -262,9 +239,7 @@ class UserManagementService {
    */
   async getUserSessions(id) {
     try {
-      console.log('🔍 UserManagementService: Fetching sessions for user:', id);
       const response = await api.get(`/v1/users/${id}/sessions`);
-      console.log('🔍 UserManagementService: Sessions response:', response.data);
 
       return {
         success: true,
@@ -272,7 +247,6 @@ class UserManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ UserManagementService: Failed to get user sessions:', error);
       return this.handleError(error, 'Failed to fetch user sessions');
     }
   }
@@ -282,9 +256,7 @@ class UserManagementService {
    */
   async getUserPermissions(id, filters = {}) {
     try {
-      console.log('🔍 UserManagementService: Fetching permissions for user:', id, 'with filters:', filters);
       const response = await api.get(`/v1/users/${id}/permissions`, { params: filters });
-      console.log('🔍 UserManagementService: Permissions response:', response.data);
 
       return {
         success: true,
@@ -292,7 +264,6 @@ class UserManagementService {
         message: response.data.message
       };
     } catch (error) {
-      console.error('❌ UserManagementService: Failed to get user permissions:', error);
       return this.handleError(error, 'Failed to fetch user permissions');
     }
   }
@@ -358,7 +329,6 @@ class UserManagementService {
    * Handle API errors
    */
   handleError(error, defaultMessage) {
-    console.error('UserManagementService Error:', error);
 
     if (error.response) {
       // Server responded with error status

@@ -31,7 +31,6 @@ export const useAuth = () => {
           }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
         await authService.logout();
       } finally {
         setIsLoading(false);
@@ -60,7 +59,6 @@ export const useAuth = () => {
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('Login error:', error);
       return { success: false, error: 'Login failed' };
     } finally {
       setIsLoading(false);
@@ -76,7 +74,6 @@ export const useAuth = () => {
       setIsAuthenticated(false);
       navigate(ROUTES.LOGIN);
     } catch (error) {
-      console.error('Logout error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +86,6 @@ export const useAuth = () => {
       const result = await authService.register(userData);
       return result;
     } catch (error) {
-      console.error('Register error:', error);
       return { success: false, error: 'Registration failed' };
     } finally {
       setIsLoading(false);
@@ -105,7 +101,6 @@ export const useAuth = () => {
       }
       return result;
     } catch (error) {
-      console.error('Update profile error:', error);
       return { success: false, error: 'Profile update failed' };
     }
   }, []);

@@ -94,7 +94,6 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
       }
 
     } catch (error) {
-      console.error('Error loading role details:', error);
       setError(error.message || 'Failed to load role details');
       toast.error('Failed to load role details');
     } finally {
@@ -113,7 +112,7 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
         setPermissions(permissionsResponse.data || []);
       }
     } catch (error) {
-      console.warn('Could not load permissions:', error);
+      // Silently handle permission loading error
       setPermissions([]);
     } finally {
       setPermissionsLoading(false);
@@ -131,7 +130,7 @@ const ViewRoleDetailsDialog = ({ isOpen, onClose, role, onEdit, onClone, onDelet
         setAssignedUsers(usersResponse.data || []);
       }
     } catch (error) {
-      console.warn('Could not load assigned users:', error);
+      // Silently handle assigned users loading error
       setAssignedUsers([]);
     } finally {
       setUsersLoading(false);

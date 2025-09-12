@@ -188,7 +188,6 @@ const RoleBulkActions = ({ selectedRoles, onSuccess, onClearSelection }) => {
         toast.error(response.message || `Failed to ${selectedAction.label.toLowerCase()}`);
       }
     } catch (error) {
-      console.error('Error executing bulk action:', error);
       toast.error(error.message || `Failed to ${selectedAction.label.toLowerCase()}`);
     } finally {
       setLoading(false);

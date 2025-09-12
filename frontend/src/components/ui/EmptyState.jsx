@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from './index';
 import { cn } from '@/lib/utils';
 

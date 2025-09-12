@@ -94,7 +94,6 @@ const OrganizationSettingsDialog = ({
         onSaveSettings(organization.id, formData);
       }
     } catch (error) {
-      console.error('Error saving settings:', error);
     }
   }, [saveSettings, onSaveSettings, organization?.id, formData]);
 

@@ -154,7 +154,6 @@ const EditPermissionDialog = ({
       await onSubmit(formData);
       onClose();
     } catch (error) {
-      console.error('Error updating permission:', error);
     }
   };
 

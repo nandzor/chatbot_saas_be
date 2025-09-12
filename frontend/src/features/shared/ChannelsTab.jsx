@@ -116,7 +116,6 @@ const ChannelsTab = ({ channels, showApiKey, setShowApiKey }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Channel data:', formData);
     // Here you would typically send the data to your API
     setShowAddDialog(false);
     resetForm();
@@ -187,7 +186,6 @@ const ChannelsTab = ({ channels, showApiKey, setShowApiKey }) => {
 
   const handleUpdateChannel = (e) => {
     e.preventDefault();
-    console.log('Updating channel:', editingChannel.id, formData);
     // Here you would typically send the updated data to your API
     setShowEditDialog(false);
     setEditingChannel(null);
@@ -200,7 +198,6 @@ const ChannelsTab = ({ channels, showApiKey, setShowApiKey }) => {
   };
 
   const confirmDeleteChannel = () => {
-    console.log('Deleting channel:', deletingChannel.id);
     // Here you would typically send the delete request to your API
     setShowDeleteDialog(false);
     setDeletingChannel(null);

@@ -57,7 +57,6 @@ export const useTransactionHistory = () => {
    */
   const loadTransactions = useCallback(async (showLoading = true) => {
     if (loadingRef.current || !isAuthenticated) {
-      console.log('🔍 useTransactionHistory: Skipping load - already loading or not authenticated');
       return;
     }
 
@@ -66,7 +65,6 @@ export const useTransactionHistory = () => {
     setError(null);
 
     try {
-      console.log('🔍 useTransactionHistory: Loading transactions...');
 
       const params = {
         page: pagination.currentPage,
@@ -83,7 +81,6 @@ export const useTransactionHistory = () => {
         }
       });
 
-      console.log('🔍 useTransactionHistory: API params:', params);
 
       const response = await transactionService.getTransactions(params);
 
@@ -92,10 +89,6 @@ export const useTransactionHistory = () => {
         let data, paginationData;
         data = response.data;
         paginationData = response.pagination;
-        console.log('🔍 useTransactionHistory: Response data:', data);
-        console.log('🔍 useTransactionHistory: Response pagination:', paginationData);
-        console.log('🔍 useTransactionHistory: Transactions loaded:', data?.length || 0);
-        console.log('🔍 useTransactionHistory: Pagination - current_page:', paginationData?.current_page, 'last_page:', paginationData?.last_page, 'total:', paginationData?.total);
 
         setTransactions(Array.isArray(data) ? data : []);
 
@@ -110,18 +103,14 @@ export const useTransactionHistory = () => {
             hasPrevPage: paginationData?.current_page > 1
           };
 
-          console.log('🔍 useTransactionHistory: Setting pagination:', newPagination);
 
           return newPagination;
         });
 
-        console.log('✅ useTransactionHistory: Transactions loaded successfully');
       } else {
-        console.error('❌ useTransactionHistory: API call failed:', response);
         setError(response.message || 'Failed to load transactions');
       }
     } catch (err) {
-      console.error('❌ useTransactionHistory: Error loading transactions:', err);
       setError(err.message || 'Failed to load transactions');
     } finally {
       loadingRef.current = false;
@@ -137,20 +126,14 @@ export const useTransactionHistory = () => {
 
     setStatisticsLoading(true);
     try {
-      console.log('🔍 useTransactionHistory: Loading statistics...');
 
       const response = await transactionService.getTransactionStatistics();
 
       if (response.success) {
-        console.log('🔍 useTransactionHistory: Statistics response:', response);
-        console.log('🔍 useTransactionHistory: Statistics data:', response.data);
         setStatistics(response.data);
-        console.log('✅ useTransactionHistory: Statistics loaded successfully');
       } else {
-        console.error('❌ useTransactionHistory: Statistics API call failed:', response);
       }
     } catch (err) {
-      console.error('❌ useTransactionHistory: Error loading statistics:', err);
     } finally {
       setStatisticsLoading(false);
     }
@@ -249,7 +232,6 @@ export const useTransactionHistory = () => {
    */
   const exportTransactions = useCallback(async (exportParams = {}) => {
     try {
-      console.log('🔍 useTransactionHistory: Exporting transactions...');
 
       const params = {
         ...filters,
@@ -275,10 +257,8 @@ export const useTransactionHistory = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log('✅ useTransactionHistory: Export completed successfully');
       return true;
     } catch (err) {
-      console.error('❌ useTransactionHistory: Error exporting transactions:', err);
       setError(err.message || 'Failed to export transactions');
       return false;
     }
@@ -289,7 +269,6 @@ export const useTransactionHistory = () => {
    */
   const getTransactionById = useCallback(async (id) => {
     try {
-      console.log('🔍 useTransactionHistory: Fetching transaction by ID:', id);
 
       const response = await transactionService.getTransactionById(id);
 
@@ -299,7 +278,6 @@ export const useTransactionHistory = () => {
         throw new Error(response.message || 'Failed to fetch transaction');
       }
     } catch (err) {
-      console.error('❌ useTransactionHistory: Error fetching transaction:', err);
       throw err;
     }
   }, []);

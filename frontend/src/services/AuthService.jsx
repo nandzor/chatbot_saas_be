@@ -122,7 +122,6 @@ class AuthService {
 
       return response.data;
     } catch (error) {
-      console.error('Login failed:', error);
       throw error;
     }
   }
@@ -163,7 +162,6 @@ class AuthService {
 
       return response.data.data;
     } catch (error) {
-      console.error('Token refresh failed:', error);
       throw error;
     }
   }
@@ -176,7 +174,6 @@ class AuthService {
       // Call logout endpoint
       await this.api.post('/auth/logout');
     } catch (error) {
-      console.error('Logout API call failed:', error);
     } finally {
       // Clear tokens regardless of API call success
       this.clearTokens();

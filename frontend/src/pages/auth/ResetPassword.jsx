@@ -41,7 +41,6 @@ const ResetPassword = () => {
 
     try {
       // Here you would typically make an API call with the token
-      console.log('Resetting password with token:', token);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));

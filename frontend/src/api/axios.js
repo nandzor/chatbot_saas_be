@@ -25,7 +25,6 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -37,7 +36,6 @@ apiClient.interceptors.response.use(
     const endTime = new Date();
     const duration = endTime - response.config.metadata.startTime;
     
-    console.log(`API Request: ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status} (${duration}ms)`);
     
     return response;
   },
@@ -47,7 +45,6 @@ apiClient.interceptors.response.use(
       // Server responded with error status
       const { status, data } = error.response;
       
-      console.error(`API Error: ${status} - ${data?.message || 'Unknown error'}`);
       
       // Handle specific error cases
       switch (status) {
@@ -71,10 +68,8 @@ apiClient.interceptors.response.use(
       }
     } else if (error.request) {
       // Network error
-      console.error('Network error:', error.request);
     } else {
       // Other error
-      console.error('Request error:', error.message);
     }
     
     return Promise.reject(error);

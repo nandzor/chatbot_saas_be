@@ -210,7 +210,6 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
     try {
       await onSubmit(organization.id, formData);
     } catch (error) {
-      console.error('Error updating organization:', error);
     }
   }, [formData, validateForm, onSubmit, organization]);
 

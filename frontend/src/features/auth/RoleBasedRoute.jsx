@@ -1,4 +1,3 @@
-import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { canAccessSettings } from '@/utils/permissionUtils';
@@ -28,7 +27,6 @@ const RoleBasedRoute = ({
 
   // Check role-based access
   if (requiredRole && !isRole(requiredRole)) {
-    console.log('🚫 Role access denied:', {
       requiredRole,
       userRole: user?.role,
       userRoles: user?.roles,
@@ -39,7 +37,6 @@ const RoleBasedRoute = ({
 
     // Fallback: Super admin can access org_admin routes
     if (requiredRole === 'org_admin' && user?.role === 'super_admin') {
-      console.log('✅ Super admin access granted to org_admin routes');
       return children;
     }
 
@@ -51,7 +48,6 @@ const RoleBasedRoute = ({
       });
 
       if (hasRequiredRole) {
-        console.log('✅ User has required role in roles array');
         return children;
       }
     }
@@ -61,7 +57,6 @@ const RoleBasedRoute = ({
 
   // Check permission-based access
   if (requiredPermission && !hasPermission(requiredPermission)) {
-    console.log('🚫 Permission access denied:', {
       requiredPermission,
       userRole: user?.role,
       userPermissions: user?.permissions,
@@ -72,25 +67,21 @@ const RoleBasedRoute = ({
 
     // Fallback: Super admin can access all routes
     if (user?.role === 'super_admin') {
-      console.log('✅ Super admin access granted to all routes');
       return children;
     }
 
     // Fallback: Org admin can access org_admin specific routes
     if (user?.role === 'org_admin' && requiredPermission === 'manage_settings') {
-      console.log('✅ Org admin access granted to settings route');
       return children;
     }
 
     // Use utility function for settings access
     if (requiredPermission === 'manage_settings' && canAccessSettings(user)) {
-      console.log('✅ User has settings access via utility function');
       return children;
     }
 
     // Additional fallback: Check if user has wildcard permission
     if (user?.permissions && user.permissions.includes('*')) {
-      console.log('✅ User has wildcard permission');
       return children;
     }
 
@@ -112,7 +103,6 @@ const RoleBasedRoute = ({
       ];
 
       if (orgAdminPermissions.includes(requiredPermission)) {
-        console.log('✅ Org admin has required permission via role');
         return children;
       }
     }

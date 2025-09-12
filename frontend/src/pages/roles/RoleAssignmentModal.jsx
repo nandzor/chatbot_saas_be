@@ -64,7 +64,6 @@ const RoleAssignmentModal = ({ isOpen, onClose, role, onSuccess }) => {
         toast.error('Failed to load available users');
       }
     } catch (error) {
-      console.error('Error loading available users:', error);
       toast.error('Failed to load available users');
     } finally {
       setLoading(false);
@@ -117,7 +116,6 @@ const RoleAssignmentModal = ({ isOpen, onClose, role, onSuccess }) => {
         toast.error(response.message || 'Failed to assign role');
       }
     } catch (error) {
-      console.error('Error assigning role:', error);
       toast.error(error.message || 'Failed to assign role');
     } finally {
       setSubmitting(false);

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Calendar,
@@ -54,7 +53,6 @@ import {
 const Dashboard = () => {
   const { user, logout } = useAuth();
 
-  console.log('📊 Dashboard component rendering...');
 
   const handleLogout = () => {
     logout();

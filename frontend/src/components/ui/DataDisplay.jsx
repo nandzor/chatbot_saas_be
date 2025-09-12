@@ -1,4 +1,3 @@
-import React from 'react';
 import { LoadingState, ErrorMessage, EmptyState } from './index';
 
 export const DataDisplay = ({

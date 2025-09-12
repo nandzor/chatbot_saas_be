@@ -75,7 +75,6 @@ const TransactionDetailsModal = ({ transaction, isOpen, onClose, onRefresh }) =>
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
     }
   }, []);
 

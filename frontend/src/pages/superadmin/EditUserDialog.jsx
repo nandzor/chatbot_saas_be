@@ -228,7 +228,6 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
       await onSubmit(submitData);
       // Don't reset form on success for edit mode
     } catch (error) {
-      console.error('Failed to update user:', error);
     }
   }, [formData, passwordChanged, onSubmit, validateForm]);
 

@@ -110,7 +110,6 @@ const PlatformConfiguration = ({ platformId, onBack, onSave }) => {
       setHasChanges(false);
       // Show success message
     } catch (error) {
-      console.error('Failed to save configuration:', error);
     } finally {
       setIsSaving(false);
     }

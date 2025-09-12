@@ -137,7 +137,6 @@ const Inbox = () => {
   const handleSendMessage = () => {
     if (messageInput.trim()) {
       // Handle sending message
-      console.log('Sending message:', messageInput);
       setMessageInput('');
     }
   };
