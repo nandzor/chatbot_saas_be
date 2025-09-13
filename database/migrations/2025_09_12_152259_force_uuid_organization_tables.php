@@ -12,6 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Enable UUID extension if not already enabled
+        DB::statement('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+
         // Drop foreign key constraints first
         DB::statement('ALTER TABLE organization_role_permissions DROP CONSTRAINT IF EXISTS organization_role_permissions_role_id_foreign');
         DB::statement('ALTER TABLE organization_role_permissions DROP CONSTRAINT IF EXISTS organization_role_permissions_permission_id_foreign');
@@ -24,10 +27,19 @@ return new class extends Migration
         DB::statement('ALTER TABLE organization_audit_logs DROP CONSTRAINT IF EXISTS organization_audit_logs_pkey CASCADE');
 
         // Change id columns to UUID
+        DB::statement('ALTER TABLE organization_permissions ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_permissions ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
+        
+        DB::statement('ALTER TABLE organization_roles ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_roles ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
+        
+        DB::statement('ALTER TABLE organization_role_permissions ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_role_permissions ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
+        
+        DB::statement('ALTER TABLE organization_analytics ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_analytics ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
+        
+        DB::statement('ALTER TABLE organization_audit_logs ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_audit_logs ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
 
         // Add primary keys back
@@ -40,7 +52,8 @@ return new class extends Migration
         // Update foreign key columns to UUID by recreating the table
         // Since we're converting from integer to UUID, we need to handle this differently
 
-        // First, let's backup any existing data
+        // First, let's backup any existing data (drop if exists first)
+        DB::statement('DROP TABLE IF EXISTS organization_role_permissions_backup');
         DB::statement('CREATE TEMP TABLE organization_role_permissions_backup AS SELECT * FROM organization_role_permissions');
 
         // Drop the table

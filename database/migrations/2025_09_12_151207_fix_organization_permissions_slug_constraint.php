@@ -15,6 +15,7 @@ return new class extends Migration
         // only has a composite unique constraint on ['organization_id', 'slug']
         // not a single unique constraint on 'slug' alone
         // The constraint on ['slug'] does not exist
+        // No action needed
     }
 
     /**
@@ -22,9 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('organization_permissions', function (Blueprint $table) {
-            // Re-add the global unique constraint on slug
-            $table->unique('slug');
-        });
+        // No action needed as this migration doesn't do anything
+        // The constraint never existed in the first place
     }
 };

@@ -52,7 +52,8 @@ return new class extends Migration
         // Update foreign key columns to UUID by recreating the table
         // Since we're converting from integer to UUID, we need to handle this differently
 
-        // First, let's backup any existing data
+        // First, let's backup any existing data (drop if exists first)
+        DB::statement('DROP TABLE IF EXISTS organization_role_permissions_backup');
         DB::statement('CREATE TEMP TABLE organization_role_permissions_backup AS SELECT * FROM organization_role_permissions');
 
         // Drop the table

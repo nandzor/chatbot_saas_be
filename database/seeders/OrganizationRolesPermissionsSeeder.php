@@ -98,6 +98,7 @@ class OrganizationRolesPermissionsSeeder extends Seeder
                 ->value('id');
 
             if (!$permissionId) {
+                $permissionData['id'] = \Illuminate\Support\Str::uuid();
                 $permissionId = DB::table('organization_permissions')->insertGetId($permissionData);
             }
 
@@ -184,6 +185,7 @@ class OrganizationRolesPermissionsSeeder extends Seeder
                 ->value('id');
 
             if (!$roleId) {
+                $roleData['id'] = \Illuminate\Support\Str::uuid();
                 $roleId = DB::table('organization_roles')->insertGetId($roleData);
             }
 

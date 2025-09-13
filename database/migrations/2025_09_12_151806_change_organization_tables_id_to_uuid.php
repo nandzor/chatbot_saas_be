@@ -19,14 +19,14 @@ return new class extends Migration
         DB::statement('ALTER TABLE organization_role_permissions DROP CONSTRAINT IF EXISTS organization_role_permissions_role_id_foreign');
         DB::statement('ALTER TABLE organization_role_permissions DROP CONSTRAINT IF EXISTS organization_role_permissions_permission_id_foreign');
 
-        // Change organization_analytics id to uuid
-        DB::statement('ALTER TABLE organization_analytics DROP CONSTRAINT IF EXISTS organization_analytics_pkey');
+        // Change organization_analytics id to uuid using CASCADE
+        DB::statement('ALTER TABLE organization_analytics DROP CONSTRAINT IF EXISTS organization_analytics_pkey CASCADE');
         DB::statement('ALTER TABLE organization_analytics ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_analytics ALTER COLUMN id SET DATA TYPE UUID USING uuid_generate_v4()');
         DB::statement('ALTER TABLE organization_analytics ADD PRIMARY KEY (id)');
 
-        // Change organization_audit_logs id to uuid
-        DB::statement('ALTER TABLE organization_audit_logs DROP CONSTRAINT IF EXISTS organization_audit_logs_pkey');
+        // Change organization_audit_logs id to uuid using CASCADE
+        DB::statement('ALTER TABLE organization_audit_logs DROP CONSTRAINT IF EXISTS organization_audit_logs_pkey CASCADE');
         DB::statement('ALTER TABLE organization_audit_logs ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_audit_logs ALTER COLUMN id SET DATA TYPE UUID USING uuid_generate_v4()');
         DB::statement('ALTER TABLE organization_audit_logs ADD PRIMARY KEY (id)');
@@ -57,7 +57,8 @@ return new class extends Migration
         // The foreign key columns need to be updated to match the new UUID primary keys
         // We'll use a temporary approach: drop the table and recreate it with UUID columns
 
-        // First, let's backup any existing data
+        // First, let's backup any existing data (drop if exists first)
+        DB::statement('DROP TABLE IF EXISTS organization_role_permissions_backup');
         DB::statement('CREATE TEMP TABLE organization_role_permissions_backup AS SELECT * FROM organization_role_permissions');
 
         // Drop the table
