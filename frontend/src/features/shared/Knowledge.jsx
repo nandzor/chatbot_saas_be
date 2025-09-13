@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   useLoadingStates,
   LoadingWrapper,
-  SkeletonCard
+  SkeletonCard,
+  LOADING_TYPES
 } from '@/utils/loadingStates';
 import {
   handleError,
@@ -120,18 +121,22 @@ const Knowledge = () => {
 
   // Enhanced loading states
   const {
-    loading: isLoading,
-    error: loadingError,
     setLoading: setLoadingState,
-    setError: setErrorState,
-    clearError: clearErrorState
+    getLoadingState,
+    clearAllLoading
   } = useLoadingStates();
+
+  const [loadingError, setLoadingError] = useState(null);
 
   // Enhanced error handling
   const handleApiError = (error, context = 'operation') => {
     const errorMessage = handleError(error, `Failed to ${context}`);
-    setErrorState(errorMessage);
+    setLoadingError(errorMessage);
     return errorMessage;
+  };
+
+  const clearErrorState = () => {
+    setLoadingError(null);
   };
 
   // Enhanced accessibility
@@ -284,7 +289,7 @@ const Knowledge = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setLoadingState(true);
+        setLoadingState(LOADING_TYPES.INITIAL, true);
         clearErrorState();
         setLoadError('');
 
@@ -329,7 +334,7 @@ const Knowledge = () => {
         announce(`Error: ${errorMessage}`);
       } finally {
         setLoading(false);
-        setLoadingState(false);
+        setLoadingState(LOADING_TYPES.INITIAL, false);
       }
     };
     fetchData();
@@ -660,7 +665,7 @@ const Knowledge = () => {
       announce(`Error: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
-      setLoadingState(false);
+      setLoadingState(LOADING_TYPES.SUBMIT, false);
     }
   };
 
@@ -876,7 +881,7 @@ const Knowledge = () => {
 
   return (
     <LoadingWrapper
-      isLoading={loading || isLoading}
+      isLoading={loading || getLoadingState(LOADING_TYPES.INITIAL)}
       error={loadError || loadingError}
       onRetry={() => window.location.reload()}
       loadingText="Loading knowledge base..."
@@ -973,7 +978,7 @@ const Knowledge = () => {
                 ))
               ) : (
                 filteredArticles.map((article) => (
-                <TableRow key={article.id}>
+                  <TableRow key={article.id}>
                   <TableCell>
                     <div>
                       <div className="font-medium">{article.title}</div>
@@ -1034,7 +1039,8 @@ const Knowledge = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
