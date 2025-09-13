@@ -219,3 +219,5 @@ export const RoleProvider = ({ children }) => {
     </RoleContext.Provider>
   );
 };
+
+export default RoleProvider;
