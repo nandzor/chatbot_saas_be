@@ -270,16 +270,24 @@ const Knowledge = () => {
       ]);
       if (catsRes.success) {
         setCategoryOptions(catsRes.data || []);
-        if (!defaultCategoryId && (catsRes.data?.length || 0) > 0) {
-          setDefaultCategoryId(catsRes.data[0].id);
-        }
+        // Set default category only if not already set
+        setDefaultCategoryId(prev => {
+          if (!prev && (catsRes.data?.length || 0) > 0) {
+            return catsRes.data[0].id;
+          }
+          return prev;
+        });
       }
       if (itemsRes.success) {
         const items = (itemsRes.data?.data || []).map(it => transformBackendToFrontend(it));
         setArticles(items);
-        if (!defaultCategoryId && items.length > 0 && items[0].category_id) {
-          setDefaultCategoryId(items[0].category_id);
-        }
+        // Set default category from first article only if not already set
+        setDefaultCategoryId(prev => {
+          if (!prev && items.length > 0 && items[0].category_id) {
+            return items[0].category_id;
+          }
+          return prev;
+        });
       } else {
         setLoadError(itemsRes.message || 'Gagal memuat data');
       }
