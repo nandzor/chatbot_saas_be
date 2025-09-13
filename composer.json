@@ -15,13 +15,16 @@
         "league/flysystem-aws-s3-v3": "^3.0",
         "predis/predis": "^2.2",
         "tymon/jwt-auth": "^2.2",
-        "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.0"
+        "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.0",
+        "nunomaduro/collision": "*",
+        "laravel/sail": "^1.29"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.29",
         "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "*",
         "phpunit/phpunit": "^11.4"
     },
     "autoload": {

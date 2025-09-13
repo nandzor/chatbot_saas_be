@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('organization_permissions', function (Blueprint $table) {
-            // Drop the global unique constraint on slug
-            $table->dropUnique(['slug']);
-        });
+        // This migration is not needed as the original table creation
+        // only has a composite unique constraint on ['organization_id', 'slug']
+        // not a single unique constraint on 'slug' alone
+        // The constraint on ['slug'] does not exist
     }
 
     /**
