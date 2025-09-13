@@ -118,6 +118,26 @@ const Knowledge = () => {
   const [editingArticle, setEditingArticle] = useState(null);
   const [activeTab, setActiveTab] = useState('qa');
 
+  // Enhanced loading states
+  const {
+    loading: isLoading,
+    error: loadingError,
+    setLoading: setLoadingState,
+    setError: setErrorState,
+    clearError: clearErrorState
+  } = useLoadingStates();
+
+  // Enhanced error handling
+  const handleApiError = (error, context = 'operation') => {
+    const errorMessage = handleError(error, `Failed to ${context}`);
+    setErrorState(errorMessage);
+    return errorMessage;
+  };
+
+  // Enhanced accessibility
+  const { announce } = useAnnouncement();
+  const { focusElement, trapFocus } = useFocusManagement();
+
   // Enhanced form data with professional fields
   const [formData, setFormData] = useState({
     title: '',
@@ -259,39 +279,58 @@ const Knowledge = () => {
   const activeArticleCount = articles.filter(article => article.status === 'active').length;
   const activeArticle = articles.find(article => article.status === 'active');
 
-  // Load list from backend
+  // Enhanced data loading with better error handling
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
-      setLoadError('');
-      const [itemsRes, catsRes] = await Promise.all([
-        KnowledgeBaseService.list({ per_page: 50 }),
-        KnowledgeBaseService.getCategories({ only_public: false })
-      ]);
-      if (catsRes.success) {
-        setCategoryOptions(catsRes.data || []);
-        // Set default category only if not already set
-        setDefaultCategoryId(prev => {
-          if (!prev && (catsRes.data?.length || 0) > 0) {
-            return catsRes.data[0].id;
-          }
-          return prev;
-        });
+      try {
+        setLoading(true);
+        setLoadingState(true);
+        clearErrorState();
+        setLoadError('');
+
+        announce('Loading knowledge base data...');
+
+        const [itemsRes, catsRes] = await Promise.all([
+          KnowledgeBaseService.list({ per_page: 50 }),
+          KnowledgeBaseService.getCategories({ only_public: false })
+        ]);
+
+        if (catsRes.success) {
+          setCategoryOptions(catsRes.data || []);
+          // Set default category only if not already set
+          setDefaultCategoryId(prev => {
+            if (!prev && (catsRes.data?.length || 0) > 0) {
+              return catsRes.data[0].id;
+            }
+            return prev;
+          });
+          announce(`Loaded ${catsRes.data?.length || 0} categories`);
+        } else {
+          handleApiError(catsRes, 'load categories');
+        }
+
+        if (itemsRes.success) {
+          const items = (itemsRes.data?.data || []).map(it => transformBackendToFrontend(it));
+          setArticles(items);
+          // Set default category from first article only if not already set
+          setDefaultCategoryId(prev => {
+            if (!prev && items.length > 0 && items[0].category_id) {
+              return items[0].category_id;
+            }
+            return prev;
+          });
+          announce(`Loaded ${items.length} knowledge articles`);
+        } else {
+          handleApiError(itemsRes, 'load articles');
+        }
+      } catch (error) {
+        const errorMessage = handleApiError(error, 'load knowledge base data');
+        setLoadError(errorMessage);
+        announce(`Error: ${errorMessage}`);
+      } finally {
+        setLoading(false);
+        setLoadingState(false);
       }
-      if (itemsRes.success) {
-        const items = (itemsRes.data?.data || []).map(it => transformBackendToFrontend(it));
-        setArticles(items);
-        // Set default category from first article only if not already set
-        setDefaultCategoryId(prev => {
-          if (!prev && items.length > 0 && items[0].category_id) {
-            return items[0].category_id;
-          }
-          return prev;
-        });
-      } else {
-        setLoadError(itemsRes.message || 'Gagal memuat data');
-      }
-      setLoading(false);
     };
     fetchData();
   }, []);
@@ -348,47 +387,77 @@ const Knowledge = () => {
   );
 
   // Fungsi untuk toggle status active/inactive (hanya 1 yang bisa aktif)
+  // Enhanced toggle status with error handling
   const toggleStatus = (id) => {
-    const targetArticle = articles.find(article => article.id === id);
-    const currentActiveArticle = articles.find(article => article.status === 'active');
+    try {
+      const targetArticle = articles.find(article => article.id === id);
+      const currentActiveArticle = articles.find(article => article.status === 'active');
 
-    if (targetArticle.status === 'active') {
-      // Jika knowledge sedang aktif, nonaktifkan
-      setArticles(prevArticles =>
-        prevArticles.map(article =>
-          article.id === id
-            ? { ...article, status: 'inactive' }
-            : article
-        )
-      );
-    } else {
-      // Jika knowledge inactive, konfirmasi jika ada knowledge aktif lain
-      if (currentActiveArticle && currentActiveArticle.id !== id) {
-        const confirmed = window.confirm(
-          `Mengaktifkan "${targetArticle.title}" akan menonaktifkan "${currentActiveArticle.title}". Lanjutkan?`
-        );
-        if (!confirmed) return;
+      if (!targetArticle) {
+        const errorMessage = 'Article not found';
+        announce(`Error: ${errorMessage}`);
+        return;
       }
 
-      // Aktifkan knowledge target dan nonaktifkan yang lain
-      setArticles(prevArticles =>
-        prevArticles.map(article =>
-          article.id === id
-            ? { ...article, status: 'active' }
-            : { ...article, status: 'inactive' }
-        )
-      );
+      if (targetArticle.status === 'active') {
+        // Jika knowledge sedang aktif, nonaktifkan
+        setArticles(prevArticles =>
+          prevArticles.map(article =>
+            article.id === id
+              ? { ...article, status: 'inactive' }
+              : article
+          )
+        );
+        announce(`Deactivated knowledge: ${targetArticle.title}`);
+      } else {
+        // Jika knowledge inactive, konfirmasi jika ada knowledge aktif lain
+        if (currentActiveArticle && currentActiveArticle.id !== id) {
+          const confirmed = window.confirm(
+            `Mengaktifkan "${targetArticle.title}" akan menonaktifkan "${currentActiveArticle.title}". Lanjutkan?`
+          );
+          if (!confirmed) {
+            announce('Status change cancelled');
+            return;
+          }
+        }
+
+        // Aktifkan knowledge target dan nonaktifkan yang lain
+        setArticles(prevArticles =>
+          prevArticles.map(article =>
+            article.id === id
+              ? { ...article, status: 'active' }
+              : { ...article, status: 'inactive' }
+          )
+        );
+        announce(`Activated knowledge: ${targetArticle.title}`);
+      }
+    } catch (error) {
+      const errorMessage = handleApiError(error, 'toggle article status');
+      announce(`Error: ${errorMessage}`);
     }
   };
 
-  // Fungsi untuk soft delete
+  // Enhanced delete function with error handling
   const handleDelete = async (id) => {
     if (!window.confirm('Apakah Anda yakin ingin menghapus knowledge ini?')) return;
-    const res = await KnowledgeBaseService.remove(id);
-    if (res.success) {
-      setArticles(prev => prev.filter(a => a.id !== id));
-    } else {
-      setFormErrors({ submit: res.message || 'Gagal menghapus' });
+
+    try {
+      announce('Deleting knowledge article...');
+      const res = await KnowledgeBaseService.remove(id);
+
+      if (res.success) {
+        setArticles(prev => prev.filter(a => a.id !== id));
+        announce('Knowledge article deleted successfully');
+        clearErrorState();
+      } else {
+        const errorMessage = handleApiError(res, 'delete knowledge article');
+        setFormErrors({ submit: errorMessage });
+        announce(`Error: ${errorMessage}`);
+      }
+    } catch (error) {
+      const errorMessage = handleApiError(error, 'delete knowledge article');
+      setFormErrors({ submit: errorMessage });
+      announce(`Error: ${errorMessage}`);
     }
   };
 
@@ -423,14 +492,60 @@ const Knowledge = () => {
     }));
   };
 
-  // Fungsi untuk handle form input
+  // Enhanced form input handling with security validation
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Sanitize input based on field type
+    let sanitizedValue = value;
+
+    if (field === 'title' || field === 'description') {
+      sanitizedValue = sanitizeInput(value, 'text');
+    } else if (field === 'content') {
+      sanitizedValue = sanitizeInput(value, 'html');
+    } else if (field === 'tags') {
+      // For tags array, sanitize each tag
+      sanitizedValue = Array.isArray(value)
+        ? value.map(tag => sanitizeInput(tag, 'text'))
+        : value;
+    }
+
+    // Validate input based on field type
+    let isValid = true;
+    if (field === 'title' && !validateInput.title(sanitizedValue)) {
+      isValid = false;
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: 'Title must be between 3-100 characters and contain only valid characters'
+      }));
+    } else if (field === 'description' && !validateInput.description(sanitizedValue)) {
+      isValid = false;
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: 'Description must be between 10-200 characters'
+      }));
+    } else if (field === 'content' && !validateInput.content(sanitizedValue)) {
+      isValid = false;
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: 'Content must be between 50-10000 characters'
+      }));
+    }
+
+    if (isValid) {
+      setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
+
+      // Clear error for this field
+      if (formErrors[field]) {
+        setFormErrors(prev => ({ ...prev, [field]: '' }));
+      }
+    }
 
     // Update character count untuk content
     if (field === 'content') {
-      setCharCount(value.length);
+      setCharCount(sanitizedValue.length);
     }
+
+    // Announce changes for accessibility
+    announce(`Updated ${field} field`);
   };
 
   // Enhanced form validation
@@ -540,9 +655,12 @@ const Knowledge = () => {
         setFormErrors({ submit: res.message || 'Gagal menyimpan data' });
       }
     } catch (error) {
-      setFormErrors({ submit: 'Terjadi kesalahan saat menyimpan. Silakan coba lagi.' });
+      const errorMessage = handleApiError(error, 'save knowledge article');
+      setFormErrors({ submit: errorMessage });
+      announce(`Error: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
+      setLoadingState(false);
     }
   };
 
@@ -757,18 +875,24 @@ const Knowledge = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Knowledge Base</h1>
-          <p className="text-gray-600">Kelola pengetahuan dan FAQ untuk bot</p>
+    <LoadingWrapper
+      isLoading={loading || isLoading}
+      error={loadError || loadingError}
+      onRetry={() => window.location.reload()}
+      loadingText="Loading knowledge base..."
+    >
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Knowledge Base</h1>
+            <p className="text-gray-600">Kelola pengetahuan dan FAQ untuk bot</p>
+          </div>
+          <Button onClick={() => setIsCreating(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Tambah Pengetahuan Baru
+          </Button>
         </div>
-        <Button onClick={() => setIsCreating(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah Pengetahuan Baru
-        </Button>
-      </div>
 
       {/* Active Knowledge Status */}
       {activeArticle && (
@@ -823,7 +947,32 @@ const Knowledge = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredArticles.map((article) => (
+              {loading ? (
+                // Skeleton loading state
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={`skeleton-${index}`}>
+                    <TableCell>
+                      <SkeletonCard className="h-16 w-full" />
+                    </TableCell>
+                    <TableCell>
+                      <SkeletonCard className="h-4 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <SkeletonCard className="h-4 w-20" />
+                    </TableCell>
+                    <TableCell>
+                      <SkeletonCard className="h-6 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <SkeletonCard className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <SkeletonCard className="h-8 w-20" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                filteredArticles.map((article) => (
                 <TableRow key={article.id}>
                   <TableCell>
                     <div>
@@ -1590,8 +1739,33 @@ const Knowledge = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </LoadingWrapper>
   );
 };
 
-export default Knowledge;
+// Enhanced Knowledge component with error handling HOC
+const EnhancedKnowledge = withErrorHandling(Knowledge, {
+  fallback: (
+    <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Oops! Something went wrong</h2>
+        <p className="text-gray-600 mb-4">
+          We encountered an error while loading the Knowledge Base. Please try again.
+        </p>
+        <Button
+          onClick={() => window.location.reload()}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          Reload Page
+        </Button>
+      </div>
+    </div>
+  ),
+  onError: (error, errorInfo) => {
+    console.error('Knowledge component error:', error, errorInfo);
+    // You can add additional error reporting here
+  }
+});
+
+export default EnhancedKnowledge;
