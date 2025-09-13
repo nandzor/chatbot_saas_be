@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Progress } from '@/components/ui';
 import {
   Download,
   Upload,
   FileText,
   FileSpreadsheet,
   FileJson,
-  FileCsv,
   CheckCircle,
   AlertCircle,
   RefreshCw,
@@ -31,7 +30,7 @@ export const ExportFormatSelector = ({
   className = ''
 }) => {
   const formatOptions = [
-    { value: 'csv', label: 'CSV', icon: FileCsv, description: 'Comma-separated values' },
+    { value: 'csv', label: 'CSV', icon: FileText, description: 'Comma-separated values' },
     { value: 'xlsx', label: 'Excel', icon: FileSpreadsheet, description: 'Excel spreadsheet' },
     { value: 'json', label: 'JSON', icon: FileJson, description: 'JavaScript Object Notation' },
     { value: 'pdf', label: 'PDF', icon: FileText, description: 'Portable Document Format' }
@@ -280,7 +279,7 @@ export const ExportHistory = ({
   const getFormatIcon = (format) => {
     switch (format) {
       case 'csv':
-        return <FileCsv className="w-4 h-4" />;
+        return <FileText className="w-4 h-4" />;
       case 'xlsx':
         return <FileSpreadsheet className="w-4 h-4" />;
       case 'json':

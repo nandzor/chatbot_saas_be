@@ -10,6 +10,7 @@ class UserManagementService {
 
       const response = await api.get('/v1/users', { params });
 
+      console.log('Users API response:', {
         hasData: !!response.data.data,
         hasPagination: !!response.data.pagination,
         hasTotal: !!response.data.total,

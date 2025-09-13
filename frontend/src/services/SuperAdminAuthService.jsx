@@ -231,7 +231,7 @@ class SuperAdminAuthService {
         try {
             await this.api.post(`${this.authURL}/logout`);
         } catch (error) {
-            console.warn('Logout request failed:', error);
+            // Silently handle logout request failure
         } finally {
             this.clearAuth();
         }
@@ -244,7 +244,7 @@ class SuperAdminAuthService {
         try {
             await this.api.post(`${this.authURL}/logout-all`);
         } catch (error) {
-            console.warn('Logout all request failed:', error);
+            // Silently handle logout all request failure
         } finally {
             this.clearAuth();
         }

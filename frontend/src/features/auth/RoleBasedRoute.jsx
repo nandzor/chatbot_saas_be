@@ -27,6 +27,7 @@ const RoleBasedRoute = ({
 
   // Check role-based access
   if (requiredRole && !isRole(requiredRole)) {
+    console.log('Role access denied:', {
       requiredRole,
       userRole: user?.role,
       userRoles: user?.roles,
@@ -57,6 +58,7 @@ const RoleBasedRoute = ({
 
   // Check permission-based access
   if (requiredPermission && !hasPermission(requiredPermission)) {
+    console.log('Permission access denied:', {
       requiredPermission,
       userRole: user?.role,
       userPermissions: user?.permissions,

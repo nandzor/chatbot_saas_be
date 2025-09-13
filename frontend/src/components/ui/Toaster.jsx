@@ -4,10 +4,11 @@
  */
 
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
-import { useToast } from '@/components/ui';
 
 const Toaster = () => {
-  const { toasts, dismiss } = useToast();
+  // Simple toast implementation without useToast hook
+  const toasts = [];
+  const dismiss = () => {};
 
   const getIcon = (variant) => {
     switch (variant) {

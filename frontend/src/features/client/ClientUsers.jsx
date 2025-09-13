@@ -1,9 +1,9 @@
-import React from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import React, { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Badge,
   Button,
@@ -14,10 +14,10 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui';
-import { 
-  Plus, 
-  Users, 
-  UserPlus, 
+import {
+  Plus,
+  Users,
+  UserPlus,
   Shield,
   Activity,
   Mail,
@@ -27,7 +27,7 @@ import {
 const ClientUsers = ({ clientData }) => {
 
   // Sample users data
-  const [users] = React.useState([
+  const [users] = useState([
     {
       id: 1,
       name: 'John Doe',
@@ -167,7 +167,7 @@ const ClientUsers = ({ clientData }) => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Button size="sm" variant="outline">
                     <Mail className="w-4 h-4" />

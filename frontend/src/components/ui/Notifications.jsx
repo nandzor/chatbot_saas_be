@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import {
   Bell,
   X,
@@ -16,8 +16,8 @@ import {
   Settings,
   RefreshCw,
   Trash2,
-  MarkAsRead,
-  MarkAsUnread,
+  CheckCircle2,
+  Circle,
   Filter,
   RotateCcw
 } from 'lucide-react';
@@ -27,8 +27,8 @@ import {
  */
 export const NotificationItem = ({
   notification,
-  onMarkAsRead,
-  onMarkAsUnread,
+  onCheckCircle2,
+  onCircle,
   onDelete,
   onAction,
   className = ''
@@ -76,12 +76,12 @@ export const NotificationItem = ({
     }
   };
 
-  const handleMarkAsRead = () => {
-    onMarkAsRead?.(notification.id);
+  const handleCheckCircle2 = () => {
+    onCheckCircle2?.(notification.id);
   };
 
-  const handleMarkAsUnread = () => {
-    onMarkAsUnread?.(notification.id);
+  const handleCircle = () => {
+    onCircle?.(notification.id);
   };
 
   const handleDelete = () => {
@@ -124,19 +124,19 @@ export const NotificationItem = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={handleMarkAsRead}
+                        onClick={handleCheckCircle2}
                         className="h-6 w-6 p-0"
                       >
-                        <MarkAsRead className="h-4 w-4" />
+                        <CheckCircle2 className="h-4 w-4" />
                       </Button>
                     ) : (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={handleMarkAsUnread}
+                        onClick={handleCircle}
                         className="h-6 w-6 p-0"
                       >
-                        <MarkAsUnread className="h-4 w-4" />
+                        <Circle className="h-4 w-4" />
                       </Button>
                     )}
                     <Button
@@ -185,8 +185,8 @@ export const NotificationItem = ({
  */
 export const NotificationsList = ({
   notifications = [],
-  onMarkAsRead,
-  onMarkAsUnread,
+  onCheckCircle2,
+  onCircle,
   onDelete,
   onAction,
   onLoadMore,
@@ -205,8 +205,8 @@ export const NotificationsList = ({
           <NotificationItem
             key={notification.id}
             notification={notification}
-            onMarkAsRead={onMarkAsRead}
-            onMarkAsUnread={onMarkAsUnread}
+            onCheckCircle2={onCheckCircle2}
+            onCircle={onCircle}
             onDelete={onDelete}
             onAction={onAction}
           />
@@ -269,7 +269,7 @@ export const NotificationsHeader = ({
             size="sm"
             onClick={onMarkAllAsRead}
           >
-            <MarkAsRead className="w-4 h-4 mr-2" />
+            <CheckCircle2 className="w-4 h-4 mr-2" />
             Mark All Read
           </Button>
         )}

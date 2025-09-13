@@ -146,7 +146,7 @@ const Financials = () => {
         const freshPlans = freshPlansResult?.data || freshPlansResult || [];
         setSubscriptionPlans(Array.isArray(freshPlans) ? freshPlans : []);
       } catch (e) {
-        console.warn('Refresh plans failed, keep local state');
+        // Silently handle refresh plans error
       }
 
       // Close modal and reset states

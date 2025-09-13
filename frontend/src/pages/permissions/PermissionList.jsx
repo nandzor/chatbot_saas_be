@@ -35,8 +35,7 @@ import {
   // Table & pagination
   DataTable,
   Pagination,
-  // Confirm dialog
-  DeleteConfirmDialog,
+  // Confirm dialog - DeleteConfirmDialog removed (not available)
   // States
   Skeleton,
   EmptyState,

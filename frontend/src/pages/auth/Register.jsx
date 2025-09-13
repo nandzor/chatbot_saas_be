@@ -1,187 +1,336 @@
-import React, { useState } from 'react';
+/**
+ * Enhanced Register Page
+ * Register dengan Form component dan enhanced validation
+ */
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
-import { Button, Input, Label } from '@/components/ui';
-import { Eye, EyeOff, Mail, Lock, User, Building } from 'lucide-react';
+import {
+  useLoadingStates,
+  LoadingButton
+} from '@/utils/loadingStates';
+import {
+  handleError,
+  withErrorHandling
+} from '@/utils/errorHandler';
+import {
+  useAnnouncement,
+  useFocusManagement
+} from '@/utils/accessibilityUtils';
+import {
+  sanitizeInput,
+  validateInput
+} from '@/utils/securityUtils';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Button,
+  Alert,
+  AlertDescription,
+  Form
+} from '@/components/ui';
+import { Eye, EyeOff, Mail, Lock, User, Building, CheckCircle } from 'lucide-react';
 
 const Register = () => {
   const navigate = useNavigate();
+  const { announce } = useAnnouncement();
+  const { focusRef, setFocus } = useFocusManagement();
+  const { setLoading, getLoadingState } = useLoadingStates();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     organization: '',
-    role: 'manager'
+    role: 'manager',
+    termsAccepted: false
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrors({});
-
-    // Basic validation
-    const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+  // Form fields configuration
+  const formFields = [
+    {
+      name: 'name',
+      type: 'text',
+      label: 'Full Name',
+      placeholder: 'Enter your full name',
+      autoComplete: 'name',
+      required: true,
+      icon: User
+    },
+    {
+      name: 'email',
+      type: 'email',
+      label: 'Email Address',
+      placeholder: 'Enter your email',
+      autoComplete: 'email',
+      required: true,
+      icon: Mail
+    },
+    {
+      name: 'password',
+      type: 'password',
+      label: 'Password',
+      placeholder: 'Create a password',
+      autoComplete: 'new-password',
+      required: true,
+      icon: Lock,
+      showPasswordToggle: true
+    },
+    {
+      name: 'confirmPassword',
+      type: 'password',
+      label: 'Confirm Password',
+      placeholder: 'Confirm your password',
+      autoComplete: 'new-password',
+      required: true,
+      icon: Lock,
+      showPasswordToggle: true
+    },
+    {
+      name: 'organization',
+      type: 'text',
+      label: 'Organization',
+      placeholder: 'Enter your organization name',
+      autoComplete: 'organization',
+      required: true,
+      icon: Building
+    },
+    {
+      name: 'role',
+      type: 'select',
+      label: 'Role',
+      required: true,
+      options: [
+        { value: 'manager', label: 'Manager' },
+        { value: 'admin', label: 'Admin' },
+        { value: 'user', label: 'User' }
+      ]
     }
-    if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
+  ];
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Here you would typically make an API call to register
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirect to login
-      navigate('/auth/login', { 
-        state: { message: 'Registration successful! Please log in.' }
-      });
-    } catch (error) {
-      setErrors({ general: 'Registration failed. Please try again.' });
-    } finally {
-      setIsLoading(false);
+  // Validation rules
+  const validationRules = {
+    name: {
+      required: true,
+      minLength: 2,
+      maxLength: 50,
+      custom: (value) => {
+        if (!validateInput.noScriptTags(value)) {
+          return 'Invalid characters detected';
+        }
+        return null;
+      }
+    },
+    email: {
+      required: true,
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      patternMessage: 'Please enter a valid email address',
+      custom: (value) => {
+        if (!validateInput.email(value)) {
+          return 'Please enter a valid email address';
+        }
+        return null;
+      }
+    },
+    password: {
+      required: true,
+      minLength: 8,
+      custom: (value) => {
+        if (!validateInput.password(value)) {
+          return 'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
+        }
+        return null;
+      }
+    },
+    confirmPassword: {
+      required: true,
+      custom: (value, allValues) => {
+        if (value !== allValues.password) {
+          return 'Passwords do not match';
+        }
+        return null;
+      }
+    },
+    organization: {
+      required: true,
+      minLength: 2,
+      maxLength: 100,
+      custom: (value) => {
+        if (!validateInput.noScriptTags(value)) {
+          return 'Invalid characters detected';
+        }
+        return null;
+      }
+    },
+    role: {
+      required: true
     }
   };
 
+  // Handle form submission
+  const handleSubmit = useCallback(async (values, options = {}) => {
+    try {
+      setLoading('submit', true);
+      setError(null);
+      setSuccess(false);
+
+      // Sanitize input
+      const sanitizedData = {
+        name: sanitizeInput(values.name),
+        email: sanitizeInput(values.email),
+        password: sanitizeInput(values.password),
+        confirmPassword: sanitizeInput(values.confirmPassword),
+        organization: sanitizeInput(values.organization),
+        role: values.role
+      };
+
+      // Validate passwords match
+      if (sanitizedData.password !== sanitizedData.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      setSuccess(true);
+      announce('Registration successful! Redirecting to login...');
+
+      // Redirect to login after success
+      setTimeout(() => {
+        navigate('/auth/login');
+      }, 2000);
+    } catch (err) {
+      const errorResult = handleError(err, {
+        context: 'Registration',
+        showToast: true
+      });
+      setError(errorResult.message);
+      announce('Registration failed. Please try again.');
+    } finally {
+      setLoading('submit', false);
+    }
+  }, [navigate, setLoading, announce]);
+
+  // Handle login navigation
+  const handleLogin = useCallback(() => {
+    navigate('/auth/login');
+    announce('Navigating to login page');
+  }, [navigate, announce]);
+
+  // Focus management on mount
+  useEffect(() => {
+    setFocus();
+  }, [setFocus]);
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
+              <h2 className="mt-4 text-2xl font-bold text-gray-900">
+                Registration Successful!
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Your account has been created. Redirecting to login...
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-        <CardDescription>
-          Join our chatbot platform and start managing your customer support
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {errors.general && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
-              {errors.general}
-            </div>
-          )}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            Create your account
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Or{' '}
+            <button
+              onClick={handleLogin}
+              className="font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline"
+            >
+              sign in to your existing account
+            </button>
+          </p>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                id="name"
-                type="text"
-                placeholder="Enter your full name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className={`pl-10 ${errors.name ? 'border-red-500' : ''}`}
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Registration Form */}
+        <Form
+          title=""
+          description=""
+          fields={formFields}
+          initialValues={formData}
+          validationRules={validationRules}
+          onSubmit={handleSubmit}
+          submitText="Create Account"
+          showProgress={true}
+          autoSave={false}
+          className="bg-white shadow-xl rounded-lg"
+        >
+          {/* Terms and Conditions */}
+          <div className="flex items-start">
+            <div className="flex items-center h-5">
+              <input
+                id="terms"
+                name="terms"
+                type="checkbox"
+                required
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
             </div>
-            {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
-              />
-            </div>
-            {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="organization">Organization</Label>
-            <div className="relative">
-              <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                id="organization"
-                type="text"
-                placeholder="Enter your organization name"
-                value={formData.organization}
-                onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
-                className="pl-10"
-              />
+            <div className="ml-3 text-sm">
+              <label htmlFor="terms" className="text-gray-700">
+                I agree to the{' '}
+                <a href="#" className="text-indigo-600 hover:text-indigo-500">
+                  Terms and Conditions
+                </a>{' '}
+                and{' '}
+                <a href="#" className="text-indigo-600 hover:text-indigo-500">
+                  Privacy Policy
+                </a>
+              </label>
             </div>
           </div>
+        </Form>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Create a password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {errors.password && <p className="text-sm text-red-600">{errors.password}</p>}
+        {/* Loading Overlay */}
+        {getLoadingState('submit') && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <Card className="p-6">
+              <CardContent className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <p className="text-sm text-gray-600">Creating your account...</p>
+              </CardContent>
+            </Card>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-              >
-                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {errors.confirmPassword && <p className="text-sm text-red-600">{errors.confirmPassword}</p>}
-          </div>
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Creating Account...' : 'Create Account'}
-          </Button>
-
-          <div className="text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link to="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
-              Sign in
-            </Link>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </div>
   );
 };
 
-export default Register;
+export default withErrorHandling(Register, {
+  context: 'Register Page'
+});

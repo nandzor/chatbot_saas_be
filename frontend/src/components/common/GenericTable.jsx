@@ -4,12 +4,12 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import {
   ChevronUp,
   ChevronDown,
@@ -25,9 +25,9 @@ import {
   Plus,
   ArrowUpDown
 } from 'lucide-react';
-import { AdvancedPagination } from '@/components/ui/AdvancedPagination';
-import { LoadingStates } from '@/components/ui/LoadingStates';
-import { ErrorStates } from '@/components/ui/ErrorStates';
+import { AdvancedPagination } from '@/components/ui';
+import { LoadingStates } from '@/components/ui';
+import { ErrorStates } from '@/components/ui';
 import { formatDate, formatNumber, getStatusColor, getStatusIcon } from '@/utils/helpers';
 
 /**

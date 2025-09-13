@@ -1,11 +1,12 @@
+import React from 'react';
 import { cn } from '@/lib/utils';
 
-const Switch = React.forwardRef(({ 
-  className, 
-  checked, 
-  onCheckedChange, 
-  disabled, 
-  ...props 
+const Switch = React.forwardRef(({
+  className,
+  checked,
+  onCheckedChange,
+  disabled,
+  ...props
 }, ref) => {
   return (
     <button

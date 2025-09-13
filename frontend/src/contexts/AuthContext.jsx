@@ -281,14 +281,15 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = useCallback((permissionCode) => {
     if (!user) return false;
 
-      required: permissionCode, 
-      userRole: user.role, 
-      userPermissions: user.permissions 
+    console.log('Checking permission:', {
+      required: permissionCode,
+      userRole: user.role,
+      userPermissions: user.permissions
     });
 
     // Use utility function for permission checking
     const hasPermission = checkPermission(user, permissionCode);
-    
+
     return hasPermission;
   }, [user]);
 
@@ -333,7 +334,7 @@ export const AuthProvider = ({ children }) => {
 
     // Use utility function for role checking
     const hasRole = checkRole(user, role);
-    
+
     return hasRole;
   }, [user]);
 
@@ -396,6 +397,7 @@ export const AuthProvider = ({ children }) => {
 
   // Development logging
   if (import.meta.env.DEV) {
+    console.log('Auth context state:', {
       user: user?.username,
       userRole: user?.role,
       userRoles: user?.roles,

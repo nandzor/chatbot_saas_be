@@ -1,32 +1,59 @@
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+/**
+ * Enhanced Analytics Component
+ * Analytics dengan DataTable dan enhanced components
+ */
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  useLoadingStates,
+  LoadingWrapper,
+  SkeletonCard
+} from '@/utils/loadingStates';
+import {
+  handleError,
+  withErrorHandling
+} from '@/utils/errorHandler';
+import {
+  useAnnouncement,
+  useFocusManagement
+} from '@/utils/accessibilityUtils';
+import {
+  sanitizeInput,
+  validateInput
+} from '@/utils/securityUtils';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Badge
+  Badge,
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Alert,
+  AlertDescription,
+  DataTable
 } from '@/components/ui';
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
+import {
+  LineChart,
+  Line,
+  BarChart,
   Bar,
   PieChart,
   Pie,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
+  XAxis,
+  YAxis,
+  CartesianGrid,
   ResponsiveContainer,
   Legend,
   Tooltip,
@@ -36,317 +63,611 @@ import {
   PolarRadiusAxis,
   Radar
 } from 'recharts';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui';
-import { 
-  channelPerformanceData, 
-  sessionsData, 
+// div and div removed - using simple divs instead
+import {
+  channelPerformanceData,
+  sessionsData,
   intentsData,
-  agentsData 
+  agentsData
 } from '@/data/sampleData';
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  MessageSquare,
+  Clock,
+  Star,
+  Download,
+  RefreshCw,
+  Filter,
+  Search,
+  AlertCircle,
+  BarChart3,
+  PieChart as PieChartIcon,
+  Activity
+} from 'lucide-react';
 
 const Analytics = () => {
-  const pieData = [
-    { name: 'Bot Handled', value: 68, fill: 'hsl(var(--chart-1))' },
-    { name: 'Agent Handled', value: 32, fill: 'hsl(var(--chart-4))' }
+  const { announce } = useAnnouncement();
+  const { focusRef, setFocus } = useFocusManagement();
+  const { setLoading, getLoadingState } = useLoadingStates();
+
+  // State management
+  const [analyticsData, setAnalyticsData] = useState({
+    sessions: [],
+    intents: [],
+    agents: [],
+    channels: [],
+    kpis: {}
+  });
+  const [filteredIntents, setFilteredIntents] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState('7d');
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Sample data - in production, this would come from API
+  const sampleData = useMemo(() => ({
+    sessions: sessionsData,
+    intents: intentsData,
+    agents: agentsData,
+    channels: channelPerformanceData,
+    kpis: {
+      totalSessions: 1247,
+      satisfactionRate: 94.2,
+      avgResponseTime: 2.3,
+      activeAgents: 12,
+      resolutionRate: 87.5,
+      firstContactResolution: 78.3
+    }
+  }), []);
+
+  // Load analytics data
+  const loadAnalyticsData = useCallback(async () => {
+    try {
+      setLoading('initial', true);
+      setError(null);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setAnalyticsData(sampleData);
+      setFilteredIntents(sampleData.intents);
+      announce('Analytics data loaded successfully');
+    } catch (err) {
+      const errorResult = handleError(err, {
+        context: 'Analytics Data Loading',
+        showToast: true
+      });
+      setError(errorResult.message);
+    } finally {
+      setLoading('initial', false);
+    }
+  }, [sampleData, setLoading, announce]);
+
+  // Filter intents based on search
+  const filterIntents = useCallback(() => {
+    if (!searchQuery) {
+      setFilteredIntents(analyticsData.intents);
+      return;
+    }
+
+    const sanitizedQuery = sanitizeInput(searchQuery.toLowerCase());
+    const filtered = analyticsData.intents.filter(intent =>
+      intent.name.toLowerCase().includes(sanitizedQuery) ||
+      intent.description?.toLowerCase().includes(sanitizedQuery)
+    );
+
+    setFilteredIntents(filtered);
+  }, [analyticsData.intents, searchQuery]);
+
+  // Load data on mount
+  useEffect(() => {
+    loadAnalyticsData();
+  }, [loadAnalyticsData]);
+
+  // Filter intents when search changes
+  useEffect(() => {
+    filterIntents();
+  }, [filterIntents]);
+
+  // Handle search
+  const handleSearch = useCallback((e) => {
+    const value = sanitizeInput(e.target.value);
+    setSearchQuery(value);
+  }, []);
+
+  // Handle date range change
+  const handleDateRangeChange = useCallback((value) => {
+    setDateRange(value);
+    announce(`Date range changed to ${value}`);
+  }, [announce]);
+
+  // Handle refresh
+  const handleRefresh = useCallback(async () => {
+    try {
+      setLoading('refresh', true);
+      await loadAnalyticsData();
+      announce('Analytics data refreshed successfully');
+    } catch (err) {
+      handleError(err, { context: 'Analytics Refresh' });
+    } finally {
+      setLoading('refresh', false);
+    }
+  }, [loadAnalyticsData, setLoading, announce]);
+
+  // Handle export
+  const handleExport = useCallback(async () => {
+    try {
+      setLoading('export', true);
+
+      // Simulate export
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      announce('Analytics data exported successfully');
+    } catch (err) {
+      handleError(err, { context: 'Analytics Export' });
+    } finally {
+      setLoading('export', false);
+    }
+  }, [setLoading, announce]);
+
+  // Handle tab change
+  const handleTabChange = useCallback((value) => {
+    setActiveTab(value);
+    announce(`Switched to ${value} analytics`);
+  }, [announce]);
+
+  // DataTable columns for intents
+  const intentColumns = [
+    {
+      key: 'name',
+      title: 'Intent',
+      sortable: true,
+      render: (value, intent) => (
+        <div className="flex items-center space-x-3">
+          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+            <MessageSquare className="h-4 w-4 text-blue-600" />
+          </div>
+          <div>
+            <div className="font-medium text-gray-900">{value}</div>
+            <div className="text-sm text-gray-500">{intent.description}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'count',
+      title: 'Count',
+      sortable: true,
+      render: (value) => (
+        <div className="text-sm font-medium text-gray-900">
+          {value.toLocaleString()}
+        </div>
+      )
+    },
+    {
+      key: 'percentage',
+      title: 'Percentage',
+      sortable: true,
+      render: (value) => (
+        <div className="flex items-center space-x-2">
+          <div className="w-20 bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-blue-500 h-2 rounded-full"
+              style={{ width: `${value}%` }}
+            />
+          </div>
+          <span className="text-sm text-gray-600">{value}%</span>
+        </div>
+      )
+    },
+    {
+      key: 'trend',
+      title: 'Trend',
+      sortable: true,
+      render: (value) => (
+        <div className="flex items-center space-x-1">
+          {value === 'up' ? (
+            <TrendingUp className="w-4 h-4 text-green-500" />
+          ) : value === 'down' ? (
+            <TrendingDown className="w-4 h-4 text-red-500" />
+          ) : (
+            <div className="w-4 h-4 text-gray-400">—</div>
+          )}
+          <span className="text-sm text-gray-600 capitalize">{value}</span>
+        </div>
+      )
+    }
   ];
 
-  const agentPerformanceData = [
-    { name: 'Sarah Wilson', satisfaction: 4.8, handlingTime: 4.5, chats: 152 },
-    { name: 'John Davis', satisfaction: 4.6, handlingTime: 5.2, chats: 98 },
-    { name: 'Mike Chen', satisfaction: 4.9, handlingTime: 3.8, chats: 203 },
-    { name: 'Emily Rodriguez', satisfaction: 4.7, handlingTime: 4.2, chats: 176 }
+  // DataTable columns for agents
+  const agentColumns = [
+    {
+      key: 'name',
+      title: 'Agent',
+      sortable: true,
+      render: (value, agent) => (
+        <div className="flex items-center space-x-3">
+          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+            <Users className="h-4 w-4 text-green-600" />
+          </div>
+          <div>
+            <div className="font-medium text-gray-900">{value}</div>
+            <div className="text-sm text-gray-500">{agent.email}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'sessionsHandled',
+      title: 'Sessions',
+      sortable: true,
+      render: (value) => (
+        <div className="text-sm font-medium text-gray-900">
+          {value.toLocaleString()}
+        </div>
+      )
+    },
+    {
+      key: 'satisfactionRate',
+      title: 'Satisfaction',
+      sortable: true,
+      render: (value) => (
+        <div className="flex items-center space-x-2">
+          <Star className="w-4 h-4 text-yellow-500" />
+          <span className="text-sm text-gray-900">{value}%</span>
+        </div>
+      )
+    },
+    {
+      key: 'avgResponseTime',
+      title: 'Avg Response',
+      sortable: true,
+      render: (value) => (
+        <div className="flex items-center space-x-2">
+          <Clock className="w-4 h-4 text-gray-400" />
+          <span className="text-sm text-gray-900">{value}s</span>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      title: 'Status',
+      sortable: true,
+      render: (value) => (
+        <Badge variant={value === 'online' ? 'default' : 'secondary'}>
+          {value.charAt(0).toUpperCase() + value.slice(1)}
+        </Badge>
+      )
+    }
   ];
+
+  // Focus management on mount
+  useEffect(() => {
+    setFocus();
+  }, [setFocus]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Analytics Dashboard</h2>
-        <p className="text-muted-foreground">Deep insights into your chatbot performance</p>
+    <div className="space-y-6" ref={focusRef}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+          <p className="text-muted-foreground">
+            Monitor performance, insights, and key metrics
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={getLoadingState('refresh')}
+            aria-label="Refresh analytics"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${getLoadingState('refresh') ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={getLoadingState('export')}
+            aria-label="Export analytics"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date Range</label>
+              <Select value={dateRange} onValueChange={handleDateRangeChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select date range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1d">Last 24 hours</SelectItem>
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="90d">Last 90 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Search Intents</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search intents..."
+                  value={searchQuery}
+                  onChange={handleSearch}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <LoadingWrapper
+          isLoading={getLoadingState('initial')}
+          loadingComponent={<SkeletonCard />}
+        >
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {analyticsData.kpis.totalSessions?.toLocaleString() || '0'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                +12% from last month
+              </p>
+            </CardContent>
+          </Card>
+        </LoadingWrapper>
+
+        <LoadingWrapper
+          isLoading={getLoadingState('initial')}
+          loadingComponent={<SkeletonCard />}
+        >
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Satisfaction Rate</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {analyticsData.kpis.satisfactionRate || 0}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                +2.1% from last month
+              </p>
+            </CardContent>
+          </Card>
+        </LoadingWrapper>
+
+        <LoadingWrapper
+          isLoading={getLoadingState('initial')}
+          loadingComponent={<SkeletonCard />}
+        >
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {analyticsData.kpis.avgResponseTime || 0}s
+              </div>
+              <p className="text-xs text-muted-foreground">
+                -5.2% from last month
+              </p>
+            </CardContent>
+          </Card>
+        </LoadingWrapper>
+
+        <LoadingWrapper
+          isLoading={getLoadingState('initial')}
+          loadingComponent={<SkeletonCard />}
+        >
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {analyticsData.kpis.activeAgents || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                +2 from last week
+              </p>
+            </CardContent>
+          </Card>
+        </LoadingWrapper>
+      </div>
+
+      {/* Analytics Tabs */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
-          <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="intents">Intents</TabsTrigger>
+          <TabsTrigger value="agents">Agents</TabsTrigger>
+          <TabsTrigger value="channels">Channels</TabsTrigger>
         </TabsList>
 
+        {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Session Trends</CardTitle>
-                <CardDescription>Bot vs Agent sessions over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer className="h-[300px]" config={{}}>
+          {/* Sessions Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Sessions Over Time</CardTitle>
+              <CardDescription>Bot vs Agent handled sessions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LoadingWrapper
+                isLoading={getLoadingState('initial')}
+                loadingComponent={<SkeletonCard />}
+              >
+                <div className="h-[300px] border rounded-lg p-4">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={sessionsData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="hour" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="bot" stroke="hsl(var(--chart-1))" strokeWidth={2} />
-                      <Line type="monotone" dataKey="agent" stroke="hsl(var(--chart-4))" strokeWidth={2} />
+                    <LineChart data={analyticsData.sessions}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="hour" />
+                      <YAxis />
+                      <Tooltip content={<div className="bg-background border rounded p-2">Chart Tooltip</div>} />
                       <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="bot"
+                        stroke="hsl(var(--chart-1))"
+                        strokeWidth={2}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="agent"
+                        stroke="hsl(var(--chart-4))"
+                        strokeWidth={2}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
+                </div>
+              </LoadingWrapper>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Session Distribution</CardTitle>
-                <CardDescription>Bot vs Agent handling ratio</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer className="h-[300px]" config={{}}>
+          {/* Distribution Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Session Distribution</CardTitle>
+              <CardDescription>Bot vs Agent handling</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LoadingWrapper
+                isLoading={getLoadingState('initial')}
+                loadingComponent={<SkeletonCard />}
+              >
+                <div className="h-[300px] border rounded-lg p-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={pieData}
+                        data={[
+                          { name: 'Bot Handled', value: 68, fill: 'hsl(var(--chart-1))' },
+                          { name: 'Agent Handled', value: 32, fill: 'hsl(var(--chart-4))' }
+                        ]}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
+                        <Cell fill="hsl(var(--chart-1))" />
+                        <Cell fill="hsl(var(--chart-4))" />
                       </Pie>
-                      <Tooltip content={<ChartTooltipContent />} />
+                      <Tooltip content={<div className="bg-background border rounded p-2">Chart Tooltip</div>} />
                     </PieChart>
                   </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Intents Analysis</CardTitle>
-              <CardDescription>Most frequently asked questions and their trends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Intent</TableHead>
-                    <TableHead>Count</TableHead>
-                    <TableHead>Percentage</TableHead>
-                    <TableHead>Trend</TableHead>
-                    <TableHead>Success Rate</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {intentsData.map(intent => (
-                    <TableRow key={intent.name}>
-                      <TableCell className="font-medium">{intent.name}</TableCell>
-                      <TableCell>{intent.count}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 bg-muted rounded-full h-2">
-                            <div 
-                              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                              style={{ width: `${intent.percentage}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground">{intent.percentage}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={intent.trending === 'up' ? 'default' : intent.trending === 'down' ? 'destructive' : 'secondary'}>
-                          {intent.trending === 'up' ? '↗️ Up' : intent.trending === 'down' ? '↘️ Down' : '→ Stable'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm font-medium">
-                          {Math.floor(Math.random() * 20 + 80)}%
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                </div>
+              </LoadingWrapper>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="channels" className="space-y-6">
+        {/* Intents Tab */}
+        <TabsContent value="intents">
+          <DataTable
+            data={filteredIntents}
+            columns={intentColumns}
+            loading={getLoadingState('initial')}
+            error={error}
+            searchable={false} // We handle search in filters
+            ariaLabel="Intents analytics table"
+            pagination={{
+              currentPage: 1,
+              totalPages: 1,
+              hasNext: false,
+              hasPrevious: false,
+              onNext: () => {},
+              onPrevious: () => {}
+            }}
+          />
+        </TabsContent>
+
+        {/* Agents Tab */}
+        <TabsContent value="agents">
+          <DataTable
+            data={analyticsData.agents}
+            columns={agentColumns}
+            loading={getLoadingState('initial')}
+            error={error}
+            searchable={true}
+            ariaLabel="Agents analytics table"
+            pagination={{
+              currentPage: 1,
+              totalPages: 1,
+              hasNext: false,
+              hasPrevious: false,
+              onNext: () => {},
+              onPrevious: () => {}
+            }}
+          />
+        </TabsContent>
+
+        {/* Channels Tab */}
+        <TabsContent value="channels">
           <Card>
             <CardHeader>
               <CardTitle>Channel Performance</CardTitle>
-              <CardDescription>Performance metrics across different channels</CardDescription>
+              <CardDescription>Performance metrics by channel</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer className="h-[400px]" config={{}}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={channelPerformanceData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="channel" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="sessions" fill="hsl(var(--chart-1))" />
-                    <Bar dataKey="satisfaction" fill="hsl(var(--chart-2))" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {channelPerformanceData.map(channel => (
-              <Card key={channel.channel}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{channel.channel}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Sessions</span>
-                      <span className="font-medium">{channel.sessions}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Satisfaction</span>
-                      <span className="font-medium">{channel.satisfaction}/5</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Avg Duration</span>
-                      <span className="font-medium">{channel.avgDuration}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="agents" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Agent Performance</CardTitle>
-              <CardDescription>Individual agent performance metrics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Agent</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Active Chats</TableHead>
-                    <TableHead>Satisfaction</TableHead>
-                    <TableHead>Avg Handling Time</TableHead>
-                    <TableHead>Total Handled</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {agentsData.map(agent => (
-                    <TableRow key={agent.id}>
-                      <TableCell className="font-medium">{agent.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={agent.status === 'online' ? 'default' : agent.status === 'busy' ? 'secondary' : 'outline'}>
-                          {agent.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{agent.activeChats}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">{agent.satisfaction}</span>
-                          <span className="text-sm text-muted-foreground">/5</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{agent.avgHandlingTime}</TableCell>
-                      <TableCell>{agent.totalHandled}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Agent Satisfaction</CardTitle>
-                <CardDescription>Satisfaction scores by agent</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer className="h-[300px]" config={{}}>
+              <LoadingWrapper
+                isLoading={getLoadingState('initial')}
+                loadingComponent={<SkeletonCard />}
+              >
+                <div className="h-[300px] border rounded-lg p-4">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={agentPerformanceData} layout="horizontal">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" domain={[0, 5]} className="text-xs" />
-                      <YAxis dataKey="name" type="category" className="text-xs" />
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="satisfaction" fill="hsl(var(--chart-3))" />
+                    <BarChart data={analyticsData.channels}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="channel" />
+                      <YAxis />
+                      <Tooltip content={<div className="bg-background border rounded p-2">Chart Tooltip</div>} />
+                      <Legend />
+                      <Bar dataKey="sessions" fill="hsl(var(--chart-1))" />
+                      <Bar dataKey="satisfaction" fill="hsl(var(--chart-2))" />
                     </BarChart>
                   </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Handling Time vs Satisfaction</CardTitle>
-                <CardDescription>Correlation between handling time and satisfaction</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer className="h-[300px]" config={{}}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={agentPerformanceData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="name" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="handlingTime" fill="hsl(var(--chart-4))" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="intents" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Intent Analysis</CardTitle>
-              <CardDescription>Detailed analysis of user intents and patterns</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {intentsData.map(intent => (
-                  <Card key={intent.name} className="p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-medium">{intent.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {intent.count} requests ({intent.percentage}%)
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Success Rate</span>
-                          <span className="font-medium">{Math.floor(Math.random() * 20 + 80)}%</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Avg Response Time</span>
-                          <span className="font-medium">{Math.floor(Math.random() * 5 + 1)}s</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Escalation Rate</span>
-                          <span className="font-medium">{Math.floor(Math.random() * 30 + 10)}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                </div>
+              </LoadingWrapper>
             </CardContent>
           </Card>
         </TabsContent>
@@ -355,4 +676,6 @@ const Analytics = () => {
   );
 };
 
-export default Analytics;
+export default withErrorHandling(Analytics, {
+  context: 'Analytics Component'
+});

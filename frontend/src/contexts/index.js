@@ -3,7 +3,10 @@
  * Centralized export untuk semua contexts
  */
 
-// Re-export default contexts
+// Authentication Contexts
 export { default as AuthContext } from './AuthContext';
-export { default as ThemeContext } from './ThemeContext';
-export { default as NotificationContext } from './NotificationContext';
+export { default as SuperAdminAuthContext } from './SuperAdminAuthContext';
+
+// Management Contexts
+export { default as RoleContext } from './RoleContext';
+export { default as PaginationContext } from './PaginationContext';

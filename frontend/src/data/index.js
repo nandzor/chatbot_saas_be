@@ -3,6 +3,8 @@
  * Centralized export untuk semua data
  */
 
-// Re-export default data
-export { default as mockData } from './mockData';
-export { default as sampleData } from './sampleData';
+// Sample Data
+export * from './sampleData';
+
+// JSON Data
+export { default as subscriptionPlans } from './subscriptionPlans.json';

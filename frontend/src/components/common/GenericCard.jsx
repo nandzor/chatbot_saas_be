@@ -3,9 +3,9 @@
  * Reusable card component dengan berbagai konfigurasi
  */
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import {
   MoreHorizontal,
   ExternalLink,
@@ -318,7 +318,7 @@ export const GenericCard = ({
     if (allActions.length === 0 && !showStats) return null;
 
     return (
-      <CardFooter className={footerClassName}>
+      <div className={`flex items-center justify-between w-full p-6 pt-0 ${footerClassName}`}>
         <div className="flex items-center justify-between w-full">
           {showStats && stats.length > 0 && (
             <div className="flex items-center space-x-4">
@@ -356,7 +356,7 @@ export const GenericCard = ({
             </div>
           )}
         </div>
-      </CardFooter>
+      </div>
     );
   };
 

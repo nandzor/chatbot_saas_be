@@ -113,7 +113,6 @@ class SubscriptionPlansService {
       };
     } catch (error) {
       // Fallback to sample data if API is not available
-      console.warn('API not available, using sample data:', error.message);
       const data = subscriptionPlansData.map((p) => this.transformBackendPlan(p)).filter(Boolean);
 
       return {

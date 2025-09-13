@@ -80,9 +80,7 @@ class ClientManagementService {
 
       // Check if we have valid data
       if (!Array.isArray(organizationsData) || organizationsData.length === 0) {
-        console.warn('⚠️ ClientManagementService: No organizations data found or invalid format');
-        console.warn('⚠️ ClientManagementService: organizationsData:', organizationsData);
-        console.warn('⚠️ ClientManagementService: responseData:', responseData);
+        // Silently handle invalid data format
       }
 
       return {

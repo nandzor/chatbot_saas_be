@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
+} from '@/components/ui';
+import {
   Search,
   Filter,
   Download,
@@ -23,7 +25,7 @@ import {
   AlertCircle,
   SortAsc,
   SortDesc,
-  Sort,
+  ArrowUpDown,
   Archive
 } from 'lucide-react';
 
@@ -43,15 +45,15 @@ export const DataTable = ({
   pagination = true,
   pageSize = 10,
   onPageChange,
-  onSort,
+  onArrowUpDown,
   onSearch,
   onFilter,
   loading = false,
   error = null,
   className = ''
 }) => {
-  const [sortField, setSortField] = useState('');
-  const [sortDirection, setSortDirection] = useState('asc');
+  const [sortField, setArrowUpDownField] = useState('');
+  const [sortDirection, setArrowUpDownDirection] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({});
@@ -75,7 +77,7 @@ export const DataTable = ({
     });
   });
 
-  // Sort data
+  // ArrowUpDown data
   const sortedData = [...filteredData].sort((a, b) => {
     if (!sortField) return 0;
 
@@ -93,16 +95,16 @@ export const DataTable = ({
   const paginatedData = pagination ? sortedData.slice(startIndex, endIndex) : sortedData;
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
-  const handleSort = (field) => {
+  const handleArrowUpDown = (field) => {
     if (!sortable) return;
 
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setArrowUpDownDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortField(field);
-      setSortDirection('asc');
+      setArrowUpDownField(field);
+      setArrowUpDownDirection('asc');
     }
-    onSort?.(field, sortDirection);
+    onArrowUpDown?.(field, sortDirection);
   };
 
   const handleSearch = (term) => {
@@ -139,8 +141,8 @@ export const DataTable = ({
     }
   };
 
-  const getSortIcon = (field) => {
-    if (sortField !== field) return <Sort className="w-4 h-4" />;
+  const getArrowUpDownIcon = (field) => {
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4" />;
     return sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />;
   };
 
@@ -232,11 +234,11 @@ export const DataTable = ({
                     <TableHead
                       key={column.key}
                       className={sortable ? 'cursor-pointer hover:bg-muted/50' : ''}
-                      onClick={() => sortable && handleSort(column.key)}
+                      onClick={() => sortable && handleArrowUpDown(column.key)}
                     >
                       <div className="flex items-center space-x-2">
                         <span>{column.header}</span>
-                        {sortable && getSortIcon(column.key)}
+                        {sortable && getArrowUpDownIcon(column.key)}
                       </div>
                     </TableHead>
                   ))}

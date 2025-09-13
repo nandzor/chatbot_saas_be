@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import clientManagementService from '@/services/ClientManagementService';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 export const useClientManagement = () => {
   const [organizations, setOrganizations] = useState([]);

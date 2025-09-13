@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui';
+import { Skeleton } from '@/components/ui';
+import { Button } from '@/components/ui';
 import {
   Loader2
 } from 'lucide-react';

@@ -16,6 +16,7 @@ const useClientSettings = () => {
     const sanctumToken = localStorage.getItem('sanctum_token');
     const accessToken = localStorage.getItem('access_token');
 
+    console.log('Token check:', {
       jwtToken: jwtToken ? jwtToken.substring(0, 20) + '...' : 'none',
       sanctumToken: sanctumToken ? sanctumToken.substring(0, 20) + '...' : 'none',
       accessToken: accessToken ? accessToken.substring(0, 20) + '...' : 'none',
@@ -30,6 +31,7 @@ const useClientSettings = () => {
   // Load settings from API
   const loadSettings = useCallback(async () => {
     const token = getToken();
+    console.log('Loading settings:', {
       hasToken: !!token,
       isAuthenticated,
       tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
@@ -47,6 +49,7 @@ const useClientSettings = () => {
       // Use AuthService API instance which handles authentication automatically
       const response = await authService.api.get('/settings/client-management');
 
+      console.log('Settings API response:', {
         status: response.status,
         statusText: response.statusText,
         data: response.data

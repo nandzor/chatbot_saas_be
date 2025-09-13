@@ -206,6 +206,7 @@ export const RoleProvider = ({ children }) => {
 
   // Development logging
   if (import.meta.env.DEV) {
+    console.log('Role context state:', {
       currentRole,
       permissions: getRolePermissions(),
       isLoading

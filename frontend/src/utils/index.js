@@ -16,7 +16,7 @@ export * from './apiHelpers';
 export * from './validation';
 
 // Error Handler
-export * from './errorHandler';
+export * from '@/utils/errorHandler';
 
 // Notification Handler
 export * from './notificationHandler';
@@ -33,13 +33,39 @@ export * from './propTypes';
 // Type Checkers
 export * from './typeCheckers';
 
+// Enhanced Utilities
+export * from './performanceOptimization';
+export * from './accessibilityUtils';
+export * from './securityUtils';
+
+// Permission Utils
+export * from './permissionUtils';
+
+// Avatar Utils
+export * from './avatarUtils';
+
+// Date Utils
+export * from './dateUtils';
+
+// Number Utils
+export * from './number';
+
+// Notify Utils
+export * from './notify';
+
+// Formatters
+export * from './formatters';
+
 // Re-export default helpers
 export { default as helpers } from './helpers';
 export { default as constants } from './constants';
 export { default as validation } from './validation';
-export { default as errorHandler } from './errorHandler';
+export { default as errorHandler } from '@/utils/errorHandler';
 export { default as notificationHandler } from './notificationHandler';
 export { default as errorBoundary } from './errorBoundary';
 export { default as loadingStates } from './loadingStates';
 export { default as propTypes } from './propTypes';
 export { default as typeCheckers } from './typeCheckers';
+export { default as performanceOptimization } from './performanceOptimization';
+export { default as accessibilityUtils } from './accessibilityUtils';
+export { default as securityUtils } from './securityUtils';

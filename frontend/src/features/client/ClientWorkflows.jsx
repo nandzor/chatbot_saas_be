@@ -1,9 +1,9 @@
-import React from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import React, { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Badge,
   Button,
@@ -14,10 +14,10 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui';
-import { 
-  Settings, 
-  Play, 
-  Pause, 
+import {
+  Settings,
+  Play,
+  Pause,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -28,7 +28,7 @@ import {
 const ClientWorkflows = ({ clientData }) => {
 
   // Sample workflows data
-  const [workflows] = React.useState([
+  const [workflows] = useState([
     {
       id: 1,
       name: 'Customer Support Ticket',
@@ -189,7 +189,7 @@ const ClientWorkflows = ({ clientData }) => {
                     <div className="flex items-center space-x-2">
                       <div className="text-sm font-medium">{workflow.successRate}%</div>
                       <div className="w-16 bg-gray-200 rounded-full h-2">
-                        <div 
+                        <div
                           className={`h-2 rounded-full ${
                             workflow.successRate >= 95 ? 'bg-green-500' :
                             workflow.successRate >= 80 ? 'bg-yellow-500' : 'bg-red-500'

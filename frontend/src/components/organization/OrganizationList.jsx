@@ -45,7 +45,7 @@ import {
   TooltipTrigger,
   Skeleton
 } from '@/components/ui';
-import { Pagination } from '@/pagination';
+import { Pagination } from '@/components/ui';
 
 // Constants
 const STATUS_MAP = {

@@ -1,9 +1,9 @@
-import React from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import React, { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Badge,
   Button,
@@ -14,9 +14,9 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui';
-import { 
-  DollarSign, 
-  CreditCard, 
+import {
+  DollarSign,
+  CreditCard,
   Receipt,
   Download,
   Eye,
@@ -27,7 +27,7 @@ import {
 const ClientBilling = ({ clientData }) => {
 
   // Sample billing data
-  const [billingData] = React.useState({
+  const [billingData] = useState({
     currentSubscription: {
       plan: 'Enterprise',
       amount: 2500000,

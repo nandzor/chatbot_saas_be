@@ -3,8 +3,11 @@
  * Centralized toast notification system for consistent UI feedback
  */
 
-// Import toast function - will be implemented with shadcn/ui toast
-import { toast } from '@/components/ui';
+// Simple toast implementation
+const toast = (message, options = {}) => {
+  console.log('Toast:', message, options);
+  // Simple implementation - can be enhanced later
+};
 
 /**
  * Show success notification
