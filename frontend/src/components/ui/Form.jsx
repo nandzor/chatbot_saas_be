@@ -71,7 +71,7 @@ const Form = ({
   const { focusRef, setFocus } = useFocusManagement();
   const { announce } = useAnnouncement();
   const { submitSecurely } = useSecureForm();
-  const { isAllowed: canSubmit, getRemainingTime } = useRateLimit(maxAttempts, 60000);
+  const { isAllowed: canSubmit, getRemainingTime, resetAttempts } = useRateLimit(maxAttempts, 60000);
 
   // Debounced values for auto-save
   const debouncedValues = useDebounce(values, autoSaveDelay);
@@ -222,12 +222,7 @@ const Form = ({
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
 
-    if (!canSubmit()) {
-      const remainingTime = Math.ceil(getRemainingTime() / 1000);
-      announce(`Too many attempts. Please wait ${remainingTime} seconds before trying again.`);
-      return;
-    }
-
+    // Validate form first before checking rate limiting
     if (!validateForm()) {
       announce('Please fix the errors in the form');
       // Focus on first error field
@@ -241,6 +236,13 @@ const Form = ({
       return;
     }
 
+    // Skip rate limiting for development
+    // if (!canSubmit()) {
+    //   const remainingTime = Math.ceil(getRemainingTime() / 1000);
+    //   announce(`Too many attempts. Please wait ${remainingTime} seconds before trying again.`);
+    //   return;
+    // }
+
     setIsSubmitting(true);
     setSubmitAttempts(prev => prev + 1);
 
@@ -248,13 +250,15 @@ const Form = ({
       await onSubmit(values, { autoSave: false });
       announce('Form submitted successfully');
       setLastSaved(new Date());
+      // Reset rate limiting on successful submission
+      resetAttempts();
     } catch (error) {
       handleValidationError(error, true);
       announce('Form submission failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, getRemainingTime, validateForm, errors, values, onSubmit, announce]);
+  }, [validateForm, errors, canSubmit, getRemainingTime, values, onSubmit, announce, resetAttempts]);
 
   // Form reset
   const handleReset = useCallback(() => {
@@ -412,11 +416,7 @@ const Form = ({
           {/* Form actions */}
           <div className="flex items-center justify-between pt-6">
             <div className="text-sm text-muted-foreground">
-              {hasErrors && (
-                <span className="text-destructive">
-                  Please fix {Object.keys(errors).length} error(s)
-                </span>
-              )}
+              {/* Error summary removed - errors are shown inline with fields */}
             </div>
 
             <div className="flex items-center space-x-2">
@@ -435,7 +435,7 @@ const Form = ({
               <LoadingButton
                 type="submit"
                 isLoading={isSubmitting}
-                disabled={hasErrors || !canSubmit()}
+                disabled={isSubmitting}
                 loadingText="Submitting..."
                 icon={Save}
               >

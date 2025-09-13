@@ -164,8 +164,14 @@ export const validateInput = {
 
   password: (password) => {
     // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/;
-    return passwordRegex.test(password);
+    if (!password || password.length < 8) return false;
+
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+    return hasUppercase && hasLowercase && hasNumber && hasSpecial;
   },
 
   phoneNumber: (phone) => {
@@ -254,7 +260,7 @@ export const secureStorage = {
 /**
  * Rate limiting hook
  */
-export const useRateLimit = (maxAttempts = 5, windowMs = 60000) => {
+export const useRateLimit = (maxAttempts = 20, windowMs = 60000) => {
   const attempts = useRef([]);
 
   const isAllowed = useCallback(() => {
@@ -281,7 +287,12 @@ export const useRateLimit = (maxAttempts = 5, windowMs = 60000) => {
     return Math.max(0, remainingTime);
   }, [maxAttempts, windowMs]);
 
-  return { isAllowed, getRemainingTime };
+  // Reset attempts function for manual clearing
+  const resetAttempts = useCallback(() => {
+    attempts.current = [];
+  }, []);
+
+  return { isAllowed, getRemainingTime, resetAttempts };
 };
 
 /**

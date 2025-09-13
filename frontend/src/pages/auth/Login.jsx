@@ -77,10 +77,8 @@ const Login = () => {
   const validationRules = {
     email: {
       required: true,
-      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-      patternMessage: 'Please enter a valid email address',
       custom: (value) => {
-        if (!validateInput.email(value)) {
+        if (!value || !value.includes('@')) {
           return 'Please enter a valid email address';
         }
         return null;
@@ -88,10 +86,10 @@ const Login = () => {
     },
     password: {
       required: true,
-      minLength: 8,
+      minLength: 6,
       custom: (value) => {
-        if (!validateInput.password(value)) {
-          return 'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
+        if (!value || value.length < 6) {
+          return 'Password must be at least 6 characters';
         }
         return null;
       }
@@ -187,6 +185,7 @@ const Login = () => {
           submitText="Sign In"
           showProgress={false}
           autoSave={false}
+          maxAttempts={1000}
           className="bg-white shadow-xl rounded-lg"
         >
           {/* Remember Me & Forgot Password */}

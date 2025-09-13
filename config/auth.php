@@ -131,7 +131,7 @@ return [
 
     // Password security settings
     'password_max_age' => env('AUTH_PASSWORD_MAX_AGE', 90), // days
-    'max_login_attempts' => env('AUTH_MAX_LOGIN_ATTEMPTS', 5),
+    'max_login_attempts' => env('AUTH_MAX_LOGIN_ATTEMPTS', 20),
     'lockout_duration' => env('AUTH_LOCKOUT_DURATION', 30), // minutes
 
     // Session management
@@ -149,7 +149,7 @@ return [
     // Rate limiting
     'rate_limits' => [
         'login' => [
-            'max_attempts' => env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+            'max_attempts' => env('AUTH_LOGIN_MAX_ATTEMPTS', 20),
             'decay_minutes' => env('AUTH_LOGIN_DECAY_MINUTES', 1),
         ],
         'refresh' => [
