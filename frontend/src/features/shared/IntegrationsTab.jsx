@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { 
+import {
   Input,
   Select,
   SelectContent,
@@ -12,17 +12,17 @@ import { Search, Filter, X } from 'lucide-react';
 import IntegrationCard from './IntegrationCard';
 import { integrationsData } from '@/data/sampleData';
 
-const IntegrationsTab = ({ 
-  integrationsState, 
-  selectedCategory, 
+const IntegrationsTab = ({
+  integrationsState,
+  selectedCategory,
   setSelectedCategory,
-  searchQuery, 
+  searchQuery,
   setSearchQuery,
   handleConfigureIntegration,
-  handleToggleIntegrationStatus 
+  handleToggleIntegrationStatus
 }) => {
   // Filter integrations based on category and search
-  const filteredIntegrations = integrationsState.filter(integration => {
+  const filteredIntegrations = (integrationsState || []).filter(integration => {
     const categoryMatch = selectedCategory === 'all' || integration.category === selectedCategory;
     const searchMatch = searchQuery === '' ||
       integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -32,7 +32,7 @@ const IntegrationsTab = ({
   });
 
   // Group integrations by category
-  const integrationsByCategory = integrationsState.reduce((acc, integration) => {
+  const integrationsByCategory = (integrationsState || []).reduce((acc, integration) => {
     if (!acc[integration.category]) {
       acc[integration.category] = [];
     }
@@ -43,7 +43,7 @@ const IntegrationsTab = ({
   // Category names mapping
   const categoryNames = {
     productivity: 'Productivity',
-    communication: 'Communication', 
+    communication: 'Communication',
     shipping: 'Shipping',
     notification: 'Notification',
     security: 'Security',
@@ -60,10 +60,10 @@ const IntegrationsTab = ({
   };
 
   // Statistics
-  const activeCount = integrationsState.filter(i => i.status === 'active').length;
-  const inactiveCount = integrationsState.filter(i => i.status === 'inactive').length;
+  const activeCount = (integrationsState || []).filter(i => i.status === 'active').length;
+  const inactiveCount = (integrationsState || []).filter(i => i.status === 'inactive').length;
   const categoriesCount = Object.keys(integrationsByCategory).length;
-  const configuredCount = integrationsState.filter(i => i.config && Object.keys(i.config).length > 0).length;
+  const configuredCount = (integrationsState || []).filter(i => i.config && Object.keys(i.config).length > 0).length;
 
   const clearFilters = () => {
     setSelectedCategory('all');
@@ -79,7 +79,7 @@ const IntegrationsTab = ({
             Connect your chatbot with third-party applications to extend its functionality.
           </p>
         </div>
-        
+
         {/* Filters */}
         <div className="flex gap-3">
           <div className="relative w-64">
@@ -97,7 +97,7 @@ const IntegrationsTab = ({
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories ({integrationsState.length})</SelectItem>
+                <SelectItem value="all">All Categories ({(integrationsState || []).length})</SelectItem>
                 {Object.entries(integrationsByCategory).map(([category, integrations]) => (
                   <SelectItem key={category} value={category}>
                     {categoryNames[category]} ({integrations.length})
@@ -143,36 +143,36 @@ const IntegrationsTab = ({
 
       {/* Quick Filters */}
       <div className="flex flex-wrap gap-2">
-        <Button 
-          variant={selectedCategory === 'all' ? 'default' : 'outline'} 
+        <Button
+          variant={selectedCategory === 'all' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setSelectedCategory('all')}
         >
-          All ({integrationsState.length})
+          All ({(integrationsState || []).length})
         </Button>
-        <Button 
-          variant={selectedCategory === 'communication' ? 'default' : 'outline'} 
+        <Button
+          variant={selectedCategory === 'communication' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setSelectedCategory('communication')}
         >
           Communication ({integrationsByCategory.communication?.length || 0})
         </Button>
-        <Button 
-          variant={selectedCategory === 'payment' ? 'default' : 'outline'} 
+        <Button
+          variant={selectedCategory === 'payment' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setSelectedCategory('payment')}
         >
           Payment ({integrationsByCategory.payment?.length || 0})
         </Button>
-        <Button 
-          variant={selectedCategory === 'automation' ? 'default' : 'outline'} 
+        <Button
+          variant={selectedCategory === 'automation' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setSelectedCategory('automation')}
         >
           Automation ({integrationsByCategory.automation?.length || 0})
         </Button>
-        <Button 
-          variant={selectedCategory === 'productivity' ? 'default' : 'outline'} 
+        <Button
+          variant={selectedCategory === 'productivity' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setSelectedCategory('productivity')}
         >
@@ -184,10 +184,10 @@ const IntegrationsTab = ({
       <div className="flex items-center justify-between py-2 border-t border-b bg-muted/30 px-4 rounded">
         <div className="text-sm text-muted-foreground">
           {selectedCategory === 'all' && searchQuery === '' ? (
-            `Showing all ${integrationsState.length} integrations`
+            `Showing all ${(integrationsState || []).length} integrations`
           ) : (
             <>
-              Showing {filteredIntegrations.length} of {integrationsState.length} integrations
+              Showing {filteredIntegrations.length} of {(integrationsState || []).length} integrations
               {selectedCategory !== 'all' && (
                 <span className="ml-1">in {categoryNames[selectedCategory]}</span>
               )}

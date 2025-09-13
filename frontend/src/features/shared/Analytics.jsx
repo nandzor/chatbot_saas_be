@@ -87,6 +87,23 @@ import {
   Activity
 } from 'lucide-react';
 
+// Custom Tooltip component to avoid accessibilityLayer prop warning
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-background border rounded p-2 shadow-lg">
+        <p className="font-medium">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm" style={{ color: entry.color }}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 const Analytics = () => {
   const { announce } = useAnnouncement();
   const { focusRef, setFocus } = useFocusManagement();
@@ -242,7 +259,7 @@ const Analytics = () => {
       sortable: true,
       render: (value) => (
         <div className="text-sm font-medium text-gray-900">
-          {value.toLocaleString()}
+          {value ? value.toLocaleString() : '0'}
         </div>
       )
     },
@@ -305,7 +322,7 @@ const Analytics = () => {
       sortable: true,
       render: (value) => (
         <div className="text-sm font-medium text-gray-900">
-          {value.toLocaleString()}
+          {value ? value.toLocaleString() : '0'}
         </div>
       )
     },
@@ -337,7 +354,7 @@ const Analytics = () => {
       sortable: true,
       render: (value) => (
         <Badge variant={value === 'online' ? 'default' : 'secondary'}>
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Unknown'}
         </Badge>
       )
     }
@@ -542,7 +559,7 @@ const Analytics = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="hour" />
                       <YAxis />
-                      <Tooltip content={<div className="bg-background border rounded p-2">Chart Tooltip</div>} />
+                      <Tooltip content={<CustomTooltip />} />
                       <Legend />
                       <Line
                         type="monotone"
@@ -593,7 +610,7 @@ const Analytics = () => {
                         <Cell fill="hsl(var(--chart-1))" />
                         <Cell fill="hsl(var(--chart-4))" />
                       </Pie>
-                      <Tooltip content={<div className="bg-background border rounded p-2">Chart Tooltip</div>} />
+                      <Tooltip content={<CustomTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -660,7 +677,7 @@ const Analytics = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="channel" />
                       <YAxis />
-                      <Tooltip content={<div className="bg-background border rounded p-2">Chart Tooltip</div>} />
+                      <Tooltip content={<CustomTooltip />} />
                       <Legend />
                       <Bar dataKey="sessions" fill="hsl(var(--chart-1))" />
                       <Bar dataKey="satisfaction" fill="hsl(var(--chart-2))" />

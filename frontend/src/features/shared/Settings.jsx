@@ -41,7 +41,19 @@ import {
   Save,
   RefreshCw,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Mail,
+  Bell,
+  MessageSquare,
+  Shield,
+  Lock,
+  Clock,
+  Key,
+  Eye,
+  EyeOff,
+  Smartphone,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 import { agentsData, integrationsData } from '@/data/sampleData';
 import IntegrationCard from './IntegrationCard';
@@ -312,36 +324,40 @@ const Settings = () => {
     }
   ];
 
-  // Notification settings form fields
+  // Enhanced notification settings form fields
   const notificationFields = [
     {
       name: 'emailNotifications',
       type: 'checkbox',
       label: 'Email Notifications',
-      description: 'Receive notifications via email'
+      description: 'Receive notifications via email',
+      icon: 'Mail'
     },
     {
       name: 'pushNotifications',
       type: 'checkbox',
       label: 'Push Notifications',
-      description: 'Receive push notifications in browser'
+      description: 'Receive push notifications in browser',
+      icon: 'Bell'
     },
     {
       name: 'smsNotifications',
       type: 'checkbox',
       label: 'SMS Notifications',
-      description: 'Receive notifications via SMS'
+      description: 'Receive notifications via SMS',
+      icon: 'MessageSquare'
     },
     {
       name: 'notificationFrequency',
       type: 'select',
       label: 'Notification Frequency',
       required: true,
+      description: 'How often you want to receive notifications',
       options: [
-        { value: 'immediate', label: 'Immediate' },
-        { value: 'hourly', label: 'Hourly' },
-        { value: 'daily', label: 'Daily' },
-        { value: 'weekly', label: 'Weekly' }
+        { value: 'immediate', label: 'Immediate - Get notified right away' },
+        { value: 'hourly', label: 'Hourly - Digest every hour' },
+        { value: 'daily', label: 'Daily - Daily summary at 9 AM' },
+        { value: 'weekly', label: 'Weekly - Weekly summary on Monday' }
       ]
     }
   ];
@@ -424,47 +440,428 @@ const Settings = () => {
         </TabsContent>
 
         {/* Security Settings */}
-        <TabsContent value="security">
+        <TabsContent value="security" className="space-y-6">
           <LoadingWrapper
             isLoading={getLoadingState('initial')}
             loadingComponent={<SkeletonCard />}
           >
-            <Form
-              title="Security Settings"
-              description="Configure security and authentication settings"
-              fields={securityFields}
-              initialValues={settingsData.security}
-              validationRules={{
-                sessionTimeout: { required: true, min: 5, max: 1440 },
-                passwordPolicy: { required: true }
-              }}
-              onSubmit={handleSaveSettings}
-              submitText="Save Security Settings"
-              showProgress={true}
-              autoSave={false}
-            />
+            {/* Security Header */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl font-bold flex items-center">
+                      <Shield className="h-6 w-6 mr-3 text-blue-600" />
+                      Security Settings
+                    </CardTitle>
+                    <CardDescription className="text-base mt-2">
+                      Configure security and authentication settings to protect your account
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground mb-1">Security Level</div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-32 bg-gray-200 rounded-full h-2">
+                        <div className="bg-green-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                      </div>
+                      <span className="text-sm font-medium text-green-600">Strong</span>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+
+            {/* Security Features */}
+            <div className="grid gap-6">
+              {/* Two-Factor Authentication */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Smartphone className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Add an extra layer of security to your account
+                        </p>
+                        <div className="mt-2">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            settingsData.security.twoFactorAuth
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {settingsData.security.twoFactorAuth ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Enabled
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                Disabled
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.security.twoFactorAuth}
+                        onChange={(e) => setSettingsData(prev => ({
+                          ...prev,
+                          security: {
+                            ...prev.security,
+                            twoFactorAuth: e.target.checked
+                          }
+                        }))}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Session Timeout */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-orange-100 rounded-lg">
+                        <Clock className="h-6 w-6 text-orange-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Session Timeout</h3>
+                        <p className="text-sm text-muted-foreground">
+                          How long before users are automatically logged out
+                        </p>
+                      </div>
+                    </div>
+                    <div className="ml-12">
+                      <div className="flex items-center space-x-4">
+                        <input
+                          type="number"
+                          value={settingsData.security.sessionTimeout}
+                          onChange={(e) => setSettingsData(prev => ({
+                            ...prev,
+                            security: {
+                              ...prev.security,
+                              sessionTimeout: parseInt(e.target.value) || 30
+                            }
+                          }))}
+                          min="5"
+                          max="1440"
+                          className="w-24 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        />
+                        <span className="text-sm text-muted-foreground">minutes</span>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Recommended: 30-60 minutes for better security
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Password Policy */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <Key className="h-6 w-6 text-red-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Password Policy</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Set requirements for user passwords
+                        </p>
+                      </div>
+                    </div>
+                    <div className="ml-12">
+                      <select
+                        value={settingsData.security.passwordPolicy}
+                        onChange={(e) => setSettingsData(prev => ({
+                          ...prev,
+                          security: {
+                            ...prev.security,
+                            passwordPolicy: e.target.value
+                          }
+                        }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="basic">Basic (8+ characters)</option>
+                        <option value="strong">Strong (8+ chars, mixed case, numbers)</option>
+                        <option value="very-strong">Very Strong (12+ chars, special chars)</option>
+                      </select>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        {settingsData.security.passwordPolicy === 'basic' && 'Minimum 8 characters required'}
+                        {settingsData.security.passwordPolicy === 'strong' && '8+ characters, uppercase, lowercase, and numbers required'}
+                        {settingsData.security.passwordPolicy === 'very-strong' && '12+ characters with special characters, uppercase, lowercase, and numbers required'}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* IP Whitelist */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Lock className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">IP Whitelist</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Restrict access to specific IP addresses (optional)
+                        </p>
+                      </div>
+                    </div>
+                    <div className="ml-12">
+                      <div className="space-y-2">
+                        <div className="text-sm text-muted-foreground">
+                          Current IP addresses: {settingsData.security.ipWhitelist.length}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Leave empty to allow access from any IP address
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Security Recommendations */}
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="p-6">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-amber-800">Security Recommendations</h4>
+                    <ul className="mt-2 text-sm text-amber-700 space-y-1">
+                      <li>• Enable Two-Factor Authentication for maximum security</li>
+                      <li>• Use a strong password policy to protect user accounts</li>
+                      <li>• Set appropriate session timeout to balance security and usability</li>
+                      <li>• Consider IP whitelisting for admin accounts</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={() => handleSaveSettings(settingsData)}
+                disabled={getLoadingState('save')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+              >
+                {getLoadingState('save') ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Security Settings
+                  </>
+                )}
+              </Button>
+            </div>
           </LoadingWrapper>
         </TabsContent>
 
         {/* Notification Settings */}
-        <TabsContent value="notifications">
+        <TabsContent value="notifications" className="space-y-6">
           <LoadingWrapper
             isLoading={getLoadingState('initial')}
             loadingComponent={<SkeletonCard />}
           >
-            <Form
-              title="Notification Settings"
-              description="Configure how you receive notifications"
-              fields={notificationFields}
-              initialValues={settingsData.notifications}
-              validationRules={{
-                notificationFrequency: { required: true }
-              }}
-              onSubmit={handleSaveSettings}
-              submitText="Save Notification Settings"
-              showProgress={true}
-              autoSave={false}
-            />
+            {/* Progress Indicator */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl font-bold">Notification Settings</CardTitle>
+                    <CardDescription className="text-base mt-2">
+                      Configure how you receive notifications
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground mb-1">Setup Progress</div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-32 bg-gray-200 rounded-full h-2">
+                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: '100%' }}></div>
+                      </div>
+                      <span className="text-sm font-medium text-blue-600">100% Complete</span>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+
+            {/* Notification Types */}
+            <div className="grid gap-6">
+              {/* Email Notifications */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Mail className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Email Notifications</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Receive notifications via email
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.notifications.emailNotifications}
+                        onChange={(e) => setSettingsData(prev => ({
+                          ...prev,
+                          notifications: {
+                            ...prev.notifications,
+                            emailNotifications: e.target.checked
+                          }
+                        }))}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Push Notifications */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Bell className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Push Notifications</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Receive push notifications in browser
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.notifications.pushNotifications}
+                        onChange={(e) => setSettingsData(prev => ({
+                          ...prev,
+                          notifications: {
+                            ...prev.notifications,
+                            pushNotifications: e.target.checked
+                          }
+                        }))}
+                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* SMS Notifications */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <MessageSquare className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">SMS Notifications</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Receive notifications via SMS
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.notifications.smsNotifications}
+                        onChange={(e) => setSettingsData(prev => ({
+                          ...prev,
+                          notifications: {
+                            ...prev.notifications,
+                            smsNotifications: e.target.checked
+                          }
+                        }))}
+                        className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Notification Frequency */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-lg font-semibold flex items-center">
+                        Notification Frequency
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        How often you want to receive notifications
+                      </p>
+                    </div>
+                    <select
+                      value={settingsData.notifications.notificationFrequency}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        notifications: {
+                          ...prev.notifications,
+                          notificationFrequency: e.target.value
+                        }
+                      }))}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="immediate">Immediate - Get notified right away</option>
+                      <option value="hourly">Hourly - Digest every hour</option>
+                      <option value="daily">Daily - Daily summary at 9 AM</option>
+                      <option value="weekly">Weekly - Weekly summary on Monday</option>
+                    </select>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={() => handleSaveSettings(settingsData)}
+                disabled={getLoadingState('save')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+              >
+                {getLoadingState('save') ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Notification Settings
+                  </>
+                )}
+              </Button>
+            </div>
           </LoadingWrapper>
         </TabsContent>
 
