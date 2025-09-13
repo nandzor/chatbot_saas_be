@@ -53,6 +53,14 @@ const RoleBasedRoute = ({
       }
     }
 
+    // Additional fallback: Check role aliases
+    if (requiredRole === 'org_admin') {
+      const orgAdminRoles = ['org_admin', 'organization_admin', 'admin'];
+      if (orgAdminRoles.includes(user?.role)) {
+        return children;
+      }
+    }
+
     return <Navigate to={fallbackPath} replace />;
   }
 
@@ -88,7 +96,8 @@ const RoleBasedRoute = ({
     }
 
     // Additional fallback: Check role-based permissions
-    if (user?.role === 'org_admin') {
+    const orgAdminRoles = ['org_admin', 'organization_admin', 'admin'];
+    if (orgAdminRoles.includes(user?.role)) {
       const orgAdminPermissions = [
         'manage_organization',
         'manage_users',
@@ -101,7 +110,13 @@ const RoleBasedRoute = ({
         'manage_settings',
         'roles.view',
         'permissions.view',
-        'users.view_all'
+        'users.view_all',
+        'knowledge.view',
+        'knowledge_articles.view',
+        'knowledge_articles.create',
+        'knowledge_articles.update',
+        'knowledge_articles.delete',
+        'knowledge_articles.publish'
       ];
 
       if (orgAdminPermissions.includes(requiredPermission)) {

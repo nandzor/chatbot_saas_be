@@ -61,6 +61,11 @@ const Form = ({
   className = ''
 }) => {
   const [values, setValues] = useState(initialValues);
+
+  // Update values when initialValues change
+  useEffect(() => {
+    setValues(initialValues);
+  }, [initialValues]);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);

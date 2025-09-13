@@ -42,6 +42,9 @@ import AgentDashboard from '@/features/agent/AgentDashboard';
 import AgentInbox from '@/features/agent/AgentInbox';
 import AgentProfile from '@/features/agent/AgentProfile';
 
+// Customer Pages
+import CustomerDashboard from '@/pages/customer/Dashboard';
+
 // UI Components Demo
 import BadgeDemo from '@/components/ui/BadgeDemo';
 
@@ -248,6 +251,16 @@ export const router = createBrowserRouter([
           { path: 'inbox', element: <AgentInbox /> },
           { path: 'profile', element: <AgentProfile /> },
         ],
+      },
+
+      // Customer Routes
+      {
+        path: '/customer',
+        element: (
+          <RoleBasedRoute requiredRole="customer">
+            <CustomerDashboard />
+          </RoleBasedRoute>
+        ),
       },
 
       // UI Demo Routes

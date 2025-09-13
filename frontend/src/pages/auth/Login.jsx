@@ -96,6 +96,28 @@ const Login = () => {
     }
   };
 
+  // Get redirect path based on user role
+  const getRedirectPath = useCallback((user) => {
+    if (!user) return '/dashboard';
+
+    const role = user.role || user.userRole;
+
+    switch (role) {
+      case 'super_admin':
+      case 'superadmin':
+        return '/superadmin';
+      case 'admin':
+      case 'organization_admin':
+        return '/admin';
+      case 'agent':
+        return '/agent';
+      case 'customer':
+        return '/customer';
+      default:
+        return '/dashboard';
+    }
+  }, []);
+
   // Handle form submission
   const handleSubmit = useCallback(async (values, options = {}) => {
     try {
@@ -109,10 +131,13 @@ const Login = () => {
       };
 
       // Perform login
-      await login(sanitizedData.email, sanitizedData.password, rememberMe);
+      const loginResult = await login(sanitizedData.email, sanitizedData.password, rememberMe);
 
-      announce('Login successful! Redirecting to dashboard...');
-      navigate('/dashboard');
+      // Get redirect path based on user role
+      const redirectPath = getRedirectPath(loginResult?.user);
+
+      announce(`Login successful! Redirecting to ${redirectPath}...`);
+      navigate(redirectPath);
     } catch (err) {
       const errorResult = handleError(err, {
         context: 'Login',
@@ -123,7 +148,7 @@ const Login = () => {
     } finally {
       setLoading('submit', false);
     }
-  }, [login, navigate, rememberMe, setLoading, announce]);
+  }, [login, navigate, rememberMe, setLoading, announce, getRedirectPath]);
 
   // Handle remember me change
   const handleRememberMeChange = useCallback((e) => {
@@ -216,20 +241,93 @@ const Login = () => {
           </div>
         </Form>
 
-        {/* Demo Credentials */}
+        {/* Demo Accounts */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Demo Credentials</CardTitle>
-            <CardDescription className="text-xs">
-              Use these credentials to test the application
+            <CardTitle className="text-center text-lg font-semibold text-gray-800">
+              <span className="border-t border-gray-300 w-8 inline-block mr-3"></span>
+              Demo Accounts
+              <span className="border-t border-gray-300 w-8 inline-block ml-3"></span>
+            </CardTitle>
+            <CardDescription className="text-center text-sm text-gray-600">
+              Click on any account to auto-fill the login form
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-xs space-y-1">
-            <div>
-              <strong>Email:</strong> demo@example.com
+          <CardContent className="space-y-3">
+            {/* Organization Admin */}
+            <div
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all duration-200 active:scale-95"
+              onClick={() => {
+                setFormData({
+                  email: 'admin@test.com',
+                  password: 'Password123!'
+                });
+                announce('Organization Admin credentials filled - will redirect to /admin');
+              }}
+            >
+              <div className="font-bold text-gray-800 uppercase text-sm">ORGANIZATION ADMIN</div>
+              <div className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">admin@test.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">Password123!</span>
+              </div>
             </div>
-            <div>
-              <strong>Password:</strong> Demo123!
+
+            {/* Customer */}
+            <div
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all duration-200 active:scale-95"
+              onClick={() => {
+                setFormData({
+                  email: 'customer@test.com',
+                  password: 'Password123!'
+                });
+                announce('Customer credentials filled - will redirect to /customer');
+              }}
+            >
+              <div className="font-bold text-gray-800 uppercase text-sm">CUSTOMER</div>
+              <div className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">customer@test.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">Password123!</span>
+              </div>
+            </div>
+
+            {/* Agent */}
+            <div
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all duration-200 active:scale-95"
+              onClick={() => {
+                setFormData({
+                  email: 'agent@test.com',
+                  password: 'Password123!'
+                });
+                announce('Agent credentials filled - will redirect to /agent');
+              }}
+            >
+              <div className="font-bold text-gray-800 uppercase text-sm">AGENT</div>
+              <div className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">agent@test.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">Password123!</span>
+              </div>
+            </div>
+
+            {/* Super Admin */}
+            <div
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all duration-200 active:scale-95"
+              onClick={() => {
+                setFormData({
+                  email: 'superadmin@test.com',
+                  password: 'Password123!'
+                });
+                announce('Super Admin credentials filled - will redirect to /superadmin');
+              }}
+            >
+              <div className="font-bold text-gray-800 uppercase text-sm">SUPER ADMIN</div>
+              <div className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">superadmin@test.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">Password123!</span>
+              </div>
             </div>
           </CardContent>
         </Card>
