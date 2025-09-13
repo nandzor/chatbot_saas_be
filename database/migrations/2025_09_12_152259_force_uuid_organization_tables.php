@@ -29,16 +29,16 @@ return new class extends Migration
         // Change id columns to UUID
         DB::statement('ALTER TABLE organization_permissions ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_permissions ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
-        
+
         DB::statement('ALTER TABLE organization_roles ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_roles ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
-        
+
         DB::statement('ALTER TABLE organization_role_permissions ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_role_permissions ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
-        
+
         DB::statement('ALTER TABLE organization_analytics ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_analytics ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
-        
+
         DB::statement('ALTER TABLE organization_audit_logs ALTER COLUMN id DROP DEFAULT');
         DB::statement('ALTER TABLE organization_audit_logs ALTER COLUMN id SET DATA TYPE UUID USING gen_random_uuid()');
 
