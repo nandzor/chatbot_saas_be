@@ -51,6 +51,7 @@ class OrganizationAnalyticsSeeder extends Seeder
             $dayMultiplier = in_array($date->dayOfWeek, [0, 6]) ? 0.7 : 1.0;
 
             $analyticsData[] = [
+                'id' => \Illuminate\Support\Str::uuid(),
                 'organization_id' => $organization->id,
                 'date' => $date->format('Y-m-d'),
                 'total_users' => (int)($baseUsers * $dayMultiplier),
@@ -123,6 +124,7 @@ class OrganizationAnalyticsSeeder extends Seeder
             $revenue = $isWeekend ? rand(50, 200) : rand(200, 800);
 
             $analyticsData[] = [
+                'id' => \Illuminate\Support\Str::uuid(),
                 'organization_id' => $organization->id,
                 'date' => $date->format('Y-m-d'),
                 'total_users' => $totalUsers,
@@ -200,6 +202,7 @@ class OrganizationAnalyticsSeeder extends Seeder
             }
 
             $analyticsData[] = [
+                'id' => \Illuminate\Support\Str::uuid(),
                 'organization_id' => $organization->id,
                 'date' => $date->format('Y-m-d'),
                 'total_users' => (int)($baseValue + rand(-20, 20)),

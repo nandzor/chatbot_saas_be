@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('organization_permissions', function (Blueprint $table) {
-            // Drop the specific unique constraint by name
-            $table->dropUnique('organization_permissions_slug_unique');
-        });
+        // This migration is not needed as the original table creation
+        // only has a composite unique constraint on ['organization_id', 'slug']
+        // not a single unique constraint on 'slug' alone
+        // The constraint 'organization_permissions_slug_unique' does not exist
+        // No action needed
     }
 
     /**
@@ -22,9 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('organization_permissions', function (Blueprint $table) {
-            // Re-add the unique constraint
-            $table->unique('slug', 'organization_permissions_slug_unique');
-        });
+        // No action needed as this migration doesn't do anything
+        // The constraint never existed in the first place
     }
 };

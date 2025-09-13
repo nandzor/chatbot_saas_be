@@ -214,12 +214,14 @@ class OrganizationPermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $index => $permissionData) {
-            OrganizationPermission::updateOrCreate(
-                [
-                    'organization_id' => $organization->id,
-                    'slug' => $permissionData['slug']
-                ],
-                [
+            // Check if permission already exists
+            $existingPermission = OrganizationPermission::where('organization_id', $organization->id)
+                ->where('slug', $permissionData['slug'])
+                ->first();
+
+            if ($existingPermission) {
+                // Update existing permission without changing ID
+                $existingPermission->update([
                     'name' => $permissionData['name'],
                     'description' => $permissionData['description'],
                     'category' => $permissionData['category'],
@@ -227,8 +229,21 @@ class OrganizationPermissionSeeder extends Seeder
                     'is_active' => true,
                     'sort_order' => $index + 1,
                     'updated_at' => now()
-                ]
-            );
+                ]);
+            } else {
+                // Create new permission with UUID
+                OrganizationPermission::create([
+                    'id' => \Illuminate\Support\Str::uuid(),
+                    'organization_id' => $organization->id,
+                    'name' => $permissionData['name'],
+                    'slug' => $permissionData['slug'],
+                    'description' => $permissionData['description'],
+                    'category' => $permissionData['category'],
+                    'metadata' => $permissionData['metadata'],
+                    'is_active' => true,
+                    'sort_order' => $index + 1
+                ]);
+            }
         }
 
         $this->command->info("Created " . count($permissions) . " permissions for organization: {$organization->name}");

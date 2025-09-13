@@ -171,12 +171,14 @@ class OrganizationRoleSeeder extends Seeder
         ];
 
         foreach ($roles as $roleData) {
-            OrganizationRole::updateOrCreate(
-                [
-                    'organization_id' => $organization->id,
-                    'slug' => $roleData['slug']
-                ],
-                [
+            // Check if role already exists
+            $existingRole = OrganizationRole::where('organization_id', $organization->id)
+                ->where('slug', $roleData['slug'])
+                ->first();
+
+            if ($existingRole) {
+                // Update existing role without changing ID
+                $existingRole->update([
                     'name' => $roleData['name'],
                     'description' => $roleData['description'],
                     'permissions' => $roleData['permissions'],
@@ -184,8 +186,21 @@ class OrganizationRoleSeeder extends Seeder
                     'is_active' => $roleData['is_active'],
                     'sort_order' => $roleData['sort_order'],
                     'updated_at' => now()
-                ]
-            );
+                ]);
+            } else {
+                // Create new role with UUID
+                OrganizationRole::create([
+                    'id' => \Illuminate\Support\Str::uuid(),
+                    'organization_id' => $organization->id,
+                    'name' => $roleData['name'],
+                    'slug' => $roleData['slug'],
+                    'description' => $roleData['description'],
+                    'permissions' => $roleData['permissions'],
+                    'is_system' => $roleData['is_system'],
+                    'is_active' => $roleData['is_active'],
+                    'sort_order' => $roleData['sort_order']
+                ]);
+            }
         }
 
         $this->command->info("Created " . count($roles) . " roles for organization: {$organization->name}");

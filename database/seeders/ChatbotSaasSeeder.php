@@ -30,6 +30,7 @@ class ChatbotSaasSeeder extends Seeder
 
     public function __construct()
     {
+        // Use Faker with Indonesian locale
         $this->faker = \Faker\Factory::create('id_ID');
     }
 

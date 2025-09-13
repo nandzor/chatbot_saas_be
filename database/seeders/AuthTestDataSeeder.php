@@ -45,6 +45,7 @@ class AuthTestDataSeeder extends Seeder
                 'code' => 'customer'
             ],
             [
+                'id' => \Illuminate\Support\Str::uuid(),
                 'name' => 'Customer',
                 'display_name' => 'Customer Role',
                 'description' => 'Default role for new users',
