@@ -69,7 +69,7 @@ const UserOverviewTab = ({ user }) => {
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-500">Full Name</label>
-                <p className="text-lg font-semibold text-gray-900">{user.name}</p>
+                <p className="text-lg font-semibold text-gray-900">{user.full_name || user.name}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Email Address</label>
@@ -81,7 +81,7 @@ const UserOverviewTab = ({ user }) => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Position</label>
-                <p className="text-base text-gray-700">{user.position}</p>
+                <p className="text-base text-gray-700">{user.job_title || user.position}</p>
               </div>
             </div>
 
@@ -106,7 +106,7 @@ const UserOverviewTab = ({ user }) => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Organization</label>
-                <p className="text-base text-gray-700">{user.organization}</p>
+                <p className="text-base text-gray-700">{user.organization_name || user.organization}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Department</label>
@@ -165,11 +165,11 @@ const UserOverviewTab = ({ user }) => {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-600">Email Verified: {user.is_verified ? 'Yes' : 'No'}</span>
+                <span className="text-sm text-gray-600">Email Verified: {user.is_email_verified || user.is_verified ? 'Yes' : 'No'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-600">2FA Enabled: {user.is_2fa_enabled ? 'Yes' : 'No'}</span>
+                <span className="text-sm text-gray-600">2FA Enabled: {user.two_factor_enabled || user.is_2fa_enabled ? 'Yes' : 'No'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-gray-400" />

@@ -43,19 +43,19 @@ import {
 
 const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    full_name: '',
     email: '',
     phone: '',
-    password: '',
+    password_hash: '',
     confirmPassword: '',
     role: 'agent',
-    organization: 'TechCorp Inc.',
+    organization_id: '1',
     department: 'IT',
-    position: '',
+    job_title: '',
     location: '',
     timezone: 'America/New_York',
-    is_verified: false,
-    is_2fa_enabled: false,
+    is_email_verified: false,
+    two_factor_enabled: false,
     status: 'pending',
     permissions: [],
     metadata: {
@@ -113,8 +113,8 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
   const validateForm = useCallback(() => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'User name is required';
+    if (!formData.full_name.trim()) {
+      newErrors.full_name = 'User name is required';
     }
 
     if (!formData.email.trim()) {
@@ -123,13 +123,13 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
+    if (!formData.password_hash) {
+      newErrors.password_hash = 'Password is required';
+    } else if (formData.password_hash.length < 8) {
+      newErrors.password_hash = 'Password must be at least 8 characters long';
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (formData.password_hash !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
@@ -137,16 +137,16 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
       newErrors.role = 'Role is required';
     }
 
-    if (!formData.organization) {
-      newErrors.organization = 'Organization is required';
+    if (!formData.organization_id) {
+      newErrors.organization_id = 'Organization is required';
     }
 
     if (!formData.department) {
       newErrors.department = 'Department is required';
     }
 
-    if (!formData.position) {
-      newErrors.position = 'Position is required';
+    if (!formData.job_title) {
+      newErrors.job_title = 'Position is required';
     }
 
     setErrors(newErrors);
@@ -156,6 +156,7 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
   // Handle form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (!validateForm()) {
       return;
@@ -165,19 +166,19 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
       await onSubmit(formData);
       // Reset form on success
       setFormData({
-        name: '',
+        full_name: '',
         email: '',
         phone: '',
-        password: '',
+        password_hash: '',
         confirmPassword: '',
         role: 'agent',
-        organization: 'TechCorp Inc.',
+        organization_id: '1',
         department: 'IT',
-        position: '',
+        job_title: '',
         location: '',
         timezone: 'America/New_York',
-        is_verified: false,
-        is_2fa_enabled: false,
+        is_email_verified: false,
+        two_factor_enabled: false,
         status: 'pending',
         permissions: [],
         metadata: {
@@ -196,19 +197,19 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
   const handleClose = useCallback(() => {
     if (!loading) {
       setFormData({
-        name: '',
+        full_name: '',
         email: '',
         phone: '',
-        password: '',
+        password_hash: '',
         confirmPassword: '',
         role: 'agent',
-        organization: 'TechCorp Inc.',
+        organization_id: '1',
         department: 'IT',
-        position: '',
+        job_title: '',
         location: '',
         timezone: 'America/New_York',
-        is_verified: false,
-        is_2fa_enabled: false,
+        is_email_verified: false,
+        two_factor_enabled: false,
         status: 'pending',
         permissions: [],
         metadata: {
@@ -261,8 +262,8 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
   const StatusIcon = getStatusInfo(formData.status).icon;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden pointer-events-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -286,8 +287,8 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)] pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 space-y-6 pointer-events-auto">
             {/* Basic Information */}
             <Card>
               <CardHeader>
@@ -302,18 +303,18 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    <Label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name *
                     </Label>
                     <Input
-                      id="name"
+                      id="full_name"
                       placeholder="e.g., John Doe"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className={errors.name ? 'border-red-300' : ''}
+                      value={formData.full_name}
+                      onChange={(e) => handleInputChange('full_name', e.target.value)}
+                      className={errors.full_name ? 'border-red-300' : ''}
                     />
-                    {errors.name && (
-                      <p className="text-sm text-red-600 mt-1">{errors.name}</p>
+                    {errors.full_name && (
+                      <p className="text-sm text-red-600 mt-1">{errors.full_name}</p>
                     )}
                   </div>
 
@@ -350,18 +351,18 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                   </div>
 
                   <div>
-                    <Label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
+                    <Label htmlFor="job_title" className="block text-sm font-medium text-gray-700 mb-2">
                       Position *
                     </Label>
                     <Input
-                      id="position"
+                      id="job_title"
                       placeholder="e.g., Software Engineer"
-                      value={formData.position}
-                      onChange={(e) => handleInputChange('position', e.target.value)}
-                      className={errors.position ? 'border-red-300' : ''}
+                      value={formData.job_title}
+                      onChange={(e) => handleInputChange('job_title', e.target.value)}
+                      className={errors.job_title ? 'border-red-300' : ''}
                     />
-                    {errors.position && (
-                      <p className="text-sm text-red-600 mt-1">{errors.position}</p>
+                    {errors.job_title && (
+                      <p className="text-sm text-red-600 mt-1">{errors.job_title}</p>
                     )}
                   </div>
                 </div>
@@ -417,17 +418,17 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                    <Label htmlFor="password_hash" className="block text-sm font-medium text-gray-700 mb-2">
                       Password *
                     </Label>
                     <div className="relative">
                       <Input
-                        id="password"
+                        id="password_hash"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Enter password"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        className={errors.password ? 'border-red-300 pr-10' : 'pr-10'}
+                        value={formData.password_hash}
+                        onChange={(e) => handleInputChange('password_hash', e.target.value)}
+                        className={errors.password_hash ? 'border-red-300 pr-10' : 'pr-10'}
                       />
                       <Button
                         type="button"
@@ -439,8 +440,8 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </Button>
                     </div>
-                    {errors.password && (
-                      <p className="text-sm text-red-600 mt-1">{errors.password}</p>
+                    {errors.password_hash && (
+                      <p className="text-sm text-red-600 mt-1">{errors.password_hash}</p>
                     )}
                   </div>
 
@@ -481,8 +482,8 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                         <p className="text-xs text-gray-500">User has verified their email address</p>
                       </div>
                       <Switch
-                        checked={formData.is_verified}
-                        onCheckedChange={(checked) => handleInputChange('is_verified', checked)}
+                        checked={formData.is_email_verified}
+                        onCheckedChange={(checked) => handleInputChange('is_email_verified', checked)}
                       />
                     </div>
 
@@ -492,8 +493,8 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                         <p className="text-xs text-gray-500">Enable two-factor authentication</p>
                       </div>
                       <Switch
-                        checked={formData.is_2fa_enabled}
-                        onCheckedChange={(checked) => handleInputChange('is_2fa_enabled', checked)}
+                        checked={formData.two_factor_enabled}
+                        onCheckedChange={(checked) => handleInputChange('two_factor_enabled', checked)}
                       />
                     </div>
                   </div>
@@ -535,18 +536,18 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                     <Label className="block text-sm font-medium text-gray-700 mb-2">
                       Organization *
                     </Label>
-                    <Select value={formData.organization} onValueChange={(value) => handleInputChange('organization', value)}>
+                    <Select value={formData.organization_id} onValueChange={(value) => handleInputChange('organization_id', value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="TechCorp Inc.">TechCorp Inc.</SelectItem>
-                        <SelectItem value="ClientCorp Ltd.">ClientCorp Ltd.</SelectItem>
-                        <SelectItem value="PartnerOrg LLC">PartnerOrg LLC</SelectItem>
+                        <SelectItem value="1">TechCorp Inc.</SelectItem>
+                        <SelectItem value="2">ClientCorp Ltd.</SelectItem>
+                        <SelectItem value="3">PartnerOrg LLC</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors.organization && (
-                      <p className="text-sm text-red-600 mt-1">{errors.organization}</p>
+                    {errors.organization_id && (
+                      <p className="text-sm text-red-600 mt-1">{errors.organization_id}</p>
                     )}
                   </div>
 
@@ -687,15 +688,15 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {formData.name || 'User Name'}
+                        {formData.full_name || 'User Name'}
                       </h3>
-                      {formData.is_verified && (
+                      {formData.is_email_verified && (
                         <Badge className="bg-green-100 text-green-800">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Verified
                         </Badge>
                       )}
-                      {formData.is_2fa_enabled && (
+                      {formData.two_factor_enabled && (
                         <Badge className="bg-blue-100 text-blue-800">
                           <Shield className="w-3 h-3 mr-1" />
                           2FA
@@ -706,7 +707,7 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       {formData.email || 'user@example.com'}
                     </p>
                     <p className="text-sm text-gray-600 mt-1">
-                      {formData.position || 'Position'} • {formData.organization || 'Organization'}
+                      {formData.job_title || 'Position'} • {formData.organization_id === '1' ? 'TechCorp Inc.' : formData.organization_id === '2' ? 'ClientCorp Ltd.' : 'PartnerOrg LLC'}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <Badge className={getRoleInfo(formData.role).color}>

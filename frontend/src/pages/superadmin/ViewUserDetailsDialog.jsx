@@ -65,6 +65,7 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={(e) => {
+        e.stopPropagation();
         if (e.target === e.currentTarget) {
           handleClose();
         }
@@ -72,7 +73,7 @@ const ViewUserDetailsDialog = ({ isOpen, onClose, user, onEdit, onClone, onDelet
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center gap-3">

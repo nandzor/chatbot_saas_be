@@ -459,21 +459,6 @@ class UserManagementService {
     }
   }
 
-  /**
-   * Get user permissions
-   */
-  async getUserPermissions(userId) {
-    try {
-      const response = await api.get(`/v1/users/${userId}/permissions`);
-      return {
-        success: true,
-        data: response.data.data,
-        message: response.data.message
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to get user permissions');
-    }
-  }
 
 
   /**

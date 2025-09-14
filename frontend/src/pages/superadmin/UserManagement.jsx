@@ -191,16 +191,18 @@ const UserManagement = () => {
 
 
   // Handle user actions
-  const handleViewUser = useCallback((user) => {
+  const handleViewUser = useCallback((user, e) => {
+    e?.stopPropagation();
     setSelectedUser(user);
     setIsViewDialogOpen(true);
-    announce(`Viewing user: ${user.name}`);
+    announce(`Viewing user: ${user.full_name || user.name}`);
   }, [announce]);
 
-  const handleEditUser = useCallback((user) => {
+  const handleEditUser = useCallback((user, e) => {
+    e?.stopPropagation();
     setSelectedUser(user);
     setIsEditDialogOpen(true);
-    announce(`Editing user: ${user.name}`);
+    announce(`Editing user: ${user.full_name || user.name}`);
   }, [announce]);
 
   const handleDeleteUser = useCallback(async (user) => {
@@ -365,11 +367,11 @@ const UserManagement = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => handleViewUser(user)}>
+            <DropdownMenuItem onClick={(e) => handleViewUser(user, e)}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEditUser(user)}>
+            <DropdownMenuItem onClick={(e) => handleEditUser(user, e)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit User
             </DropdownMenuItem>
@@ -465,7 +467,10 @@ const UserManagement = () => {
           </Button>
 
           <Button
-            onClick={() => setIsCreateDialogOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCreateDialogOpen(true);
+            }}
             aria-label="Create new user"
           >
             <UserPlus className="h-4 w-4 mr-2" />
@@ -623,7 +628,10 @@ const UserManagement = () => {
             title="No users found"
             description="Try adjusting filters or create a new user."
             actionText="Create User"
-            onAction={() => setIsCreateDialogOpen(true)}
+            onAction={(e) => {
+              e?.stopPropagation();
+              setIsCreateDialogOpen(true);
+            }}
             className=""
           />
         ) : (
@@ -682,28 +690,47 @@ const UserManagement = () => {
 
       {/* Dialogs */}
       <CreateUserDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onUserCreated={(newUser) => {
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        onSubmit={(newUser) => {
           setUsers(prev => [...prev, newUser]);
           announce('New user created successfully');
+          setIsCreateDialogOpen(false);
         }}
+        loading={loading.create}
       />
 
       <EditUserDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
         user={selectedUser}
-        onUserUpdated={(updatedUser) => {
+        onSubmit={(updatedUser) => {
           setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
           announce('User updated successfully');
+          setIsEditDialogOpen(false);
         }}
+        loading={loading.update}
       />
 
       <ViewUserDetailsDialog
-        open={isViewDialogOpen}
-        onOpenChange={setIsViewDialogOpen}
+        isOpen={isViewDialogOpen}
+        onClose={() => setIsViewDialogOpen(false)}
         user={selectedUser}
+        onEdit={(user) => {
+          setSelectedUser(user);
+          setIsViewDialogOpen(false);
+          setIsEditDialogOpen(true);
+        }}
+        onClone={(user) => {
+          setSelectedUser(user);
+          setIsViewDialogOpen(false);
+          // Handle clone logic here
+        }}
+        onDelete={(user) => {
+          setSelectedUser(user);
+          setIsViewDialogOpen(false);
+          // Handle delete logic here
+        }}
       />
 
       <ViewUserPermissionsDialog

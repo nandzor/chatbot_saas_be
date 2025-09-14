@@ -44,19 +44,19 @@ import {
 
 const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    full_name: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
     role: 'agent',
-    organization: 'TechCorp Inc.',
+    organization_id: '1',
     department: 'IT',
-    position: '',
+    job_title: '',
     location: '',
     timezone: 'America/New_York',
-    is_verified: false,
-    is_2fa_enabled: false,
+    is_email_verified: false,
+    two_factor_enabled: false,
     status: 'pending',
     permissions: [],
     metadata: {
@@ -76,19 +76,19 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name || '',
+        full_name: user.full_name || user.name || '',
         email: user.email || '',
         phone: user.phone || '',
         password: '',
         confirmPassword: '',
         role: user.role || 'agent',
-        organization: user.organization || 'TechCorp Inc.',
+        organization_id: user.organization_id || user.organization || '1',
         department: user.department || 'IT',
-        position: user.position || '',
+        job_title: user.job_title || user.position || '',
         location: user.location || '',
         timezone: user.timezone || 'America/New_York',
-        is_verified: user.is_verified || false,
-        is_2fa_enabled: user.is_2fa_enabled || false,
+        is_email_verified: user.is_email_verified || user.is_verified || false,
+        two_factor_enabled: user.two_factor_enabled || user.is_2fa_enabled || false,
         status: user.status || 'pending',
         permissions: user.permissions || [],
         metadata: {
@@ -166,8 +166,8 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
   const validateForm = useCallback(() => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'User name is required';
+    if (!formData.full_name.trim()) {
+      newErrors.full_name = 'User name is required';
     }
 
     if (!formData.email.trim()) {
@@ -193,16 +193,16 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
       newErrors.role = 'Role is required';
     }
 
-    if (!formData.organization) {
-      newErrors.organization = 'Organization is required';
+    if (!formData.organization_id) {
+      newErrors.organization_id = 'Organization is required';
     }
 
     if (!formData.department) {
       newErrors.department = 'Department is required';
     }
 
-    if (!formData.position) {
-      newErrors.position = 'Position is required';
+    if (!formData.job_title) {
+      newErrors.job_title = 'Position is required';
     }
 
     setErrors(newErrors);
@@ -212,6 +212,7 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
   // Handle form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (!validateForm()) {
       return;
@@ -235,19 +236,19 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
   const handleClose = useCallback(() => {
     if (!loading) {
       setFormData({
-        name: '',
+        full_name: '',
         email: '',
         phone: '',
         password: '',
         confirmPassword: '',
         role: 'agent',
-        organization: 'TechCorp Inc.',
+        organization_id: '1',
         department: 'IT',
-        position: '',
+        job_title: '',
         location: '',
         timezone: 'America/New_York',
-        is_verified: false,
-        is_2fa_enabled: false,
+        is_email_verified: false,
+        two_factor_enabled: false,
         status: 'pending',
         permissions: [],
         metadata: {
@@ -301,8 +302,8 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
   const StatusIcon = getStatusInfo(formData.status).icon;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden pointer-events-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -326,8 +327,8 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)] pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 space-y-6 pointer-events-auto">
             {/* Basic Information */}
             <Card>
               <CardHeader>
@@ -342,18 +343,18 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    <Label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name *
                     </Label>
                     <Input
-                      id="name"
+                      id="full_name"
                       placeholder="e.g., John Doe"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className={errors.name ? 'border-red-300' : ''}
+                      value={formData.full_name}
+                      onChange={(e) => handleInputChange('full_name', e.target.value)}
+                      className={`${errors.full_name ? 'border-red-300' : ''} pointer-events-auto`}
                     />
-                    {errors.name && (
-                      <p className="text-sm text-red-600 mt-1">{errors.name}</p>
+                    {errors.full_name && (
+                      <p className="text-sm text-red-600 mt-1">{errors.full_name}</p>
                     )}
                   </div>
 
@@ -390,18 +391,18 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
                   </div>
 
                   <div>
-                    <Label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
+                    <Label htmlFor="job_title" className="block text-sm font-medium text-gray-700 mb-2">
                       Position *
                     </Label>
                     <Input
-                      id="position"
+                      id="job_title"
                       placeholder="e.g., Software Engineer"
-                      value={formData.position}
-                      onChange={(e) => handleInputChange('position', e.target.value)}
-                      className={errors.position ? 'border-red-300' : ''}
+                      value={formData.job_title}
+                      onChange={(e) => handleInputChange('job_title', e.target.value)}
+                      className={errors.job_title ? 'border-red-300' : ''}
                     />
-                    {errors.position && (
-                      <p className="text-sm text-red-600 mt-1">{errors.position}</p>
+                    {errors.job_title && (
+                      <p className="text-sm text-red-600 mt-1">{errors.job_title}</p>
                     )}
                   </div>
                 </div>
@@ -558,8 +559,9 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
                         <p className="text-xs text-gray-500">User has verified their email address</p>
                       </div>
                       <Switch
-                        checked={formData.is_verified}
-                        onCheckedChange={(checked) => handleInputChange('is_verified', checked)}
+                        checked={formData.is_email_verified}
+                        onCheckedChange={(checked) => handleInputChange('is_email_verified', checked)}
+                        className="pointer-events-auto"
                       />
                     </div>
 
@@ -569,8 +571,9 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
                         <p className="text-xs text-gray-500">Enable two-factor authentication</p>
                       </div>
                       <Switch
-                        checked={formData.is_2fa_enabled}
-                        onCheckedChange={(checked) => handleInputChange('is_2fa_enabled', checked)}
+                        checked={formData.two_factor_enabled}
+                        onCheckedChange={(checked) => handleInputChange('two_factor_enabled', checked)}
+                        className="pointer-events-auto"
                       />
                     </div>
                   </div>
@@ -612,18 +615,18 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
                     <Label className="block text-sm font-medium text-gray-700 mb-2">
                       Organization *
                     </Label>
-                    <Select value={formData.organization} onValueChange={(value) => handleInputChange('organization', value)}>
-                      <SelectTrigger>
+                    <Select value={formData.organization_id} onValueChange={(value) => handleInputChange('organization_id', value)}>
+                      <SelectTrigger className="pointer-events-auto">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="TechCorp Inc.">TechCorp Inc.</SelectItem>
-                        <SelectItem value="ClientCorp Ltd.">ClientCorp Ltd.</SelectItem>
-                        <SelectItem value="PartnerOrg LLC">PartnerOrg LLC</SelectItem>
+                      <SelectContent className="pointer-events-auto">
+                        <SelectItem value="1">TechCorp Inc.</SelectItem>
+                        <SelectItem value="2">ClientCorp Ltd.</SelectItem>
+                        <SelectItem value="3">PartnerOrg LLC</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors.organization && (
-                      <p className="text-sm text-red-600 mt-1">{errors.organization}</p>
+                    {errors.organization_id && (
+                      <p className="text-sm text-red-600 mt-1">{errors.organization_id}</p>
                     )}
                   </div>
 
@@ -764,15 +767,15 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {formData.name || 'User Name'}
+                        {formData.full_name || 'User Name'}
                       </h3>
-                      {formData.is_verified && (
+                      {formData.is_email_verified && (
                         <Badge className="bg-green-100 text-green-800">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Verified
                         </Badge>
                       )}
-                      {formData.is_2fa_enabled && (
+                      {formData.two_factor_enabled && (
                         <Badge className="bg-blue-100 text-blue-800">
                           <Shield className="w-3 h-3 mr-1" />
                           2FA
@@ -783,7 +786,7 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
                       {formData.email || 'user@example.com'}
                     </p>
                     <p className="text-sm text-gray-600 mt-1">
-                      {formData.position || 'Position'} • {formData.organization || 'Organization'}
+                      {formData.job_title || 'Position'} • {formData.organization_id === '1' ? 'TechCorp Inc.' : formData.organization_id === '2' ? 'ClientCorp Ltd.' : 'PartnerOrg LLC'}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <Badge className={getRoleInfo(formData.role).color}>
@@ -819,7 +822,7 @@ const EditUserDialog = ({ isOpen, onClose, user, onSubmit, loading = false }) =>
             <Button
               type="submit"
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 pointer-events-auto"
             >
               {loading ? (
                 <>
