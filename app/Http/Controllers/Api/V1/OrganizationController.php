@@ -43,14 +43,6 @@ class OrganizationController extends BaseApiController
         $this->clientManagementService = $clientManagementService;
     }
 
-    /**
-     * Check if current user is super admin
-     */
-    protected function isSuperAdmin(): bool
-    {
-        $user = $this->getCurrentUser();
-        return $user && $user instanceof \App\Models\User && $user->hasRole('super_admin');
-    }
 
     /**
      * Get all organizations with advanced filtering

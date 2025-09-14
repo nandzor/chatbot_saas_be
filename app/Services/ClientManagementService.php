@@ -70,7 +70,7 @@ class ClientManagementService
                 'per_page' => 'sometimes|integer|min:1|max:100',
                 'sort_by' => 'sometimes|string|in:name,email,created_at,updated_at,status',
                 'sort_order' => 'sometimes|string|in:asc,desc',
-                'search' => 'sometimes|string|max:255',
+                'search' => 'sometimes|nullable|string|max:255',
                 'status' => 'sometimes|string|in:active,trial,suspended,inactive',
                 'business_type' => 'sometimes|string|max:100',
                 'industry' => 'sometimes|string|max:100',
@@ -88,8 +88,8 @@ class ClientManagementService
             $query = Organization::with(['users', 'subscriptionPlan']);
 
             // Apply filters
-            if (!empty($params['search'])) {
-                $search = $params['search'];
+            if (array_key_exists('search', $params) && $params['search'] !== null && !empty(trim($params['search']))) {
+                $search = trim($params['search']);
                 $query->where(function (Builder $q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('org_code', 'like', "%{$search}%")

@@ -72,6 +72,17 @@ class OrganizationService extends BaseService
             }
         }
 
+        // Apply search filter
+        if (array_key_exists('search', $filters) && $filters['search'] !== null && !empty(trim($filters['search']))) {
+            $search = trim($filters['search']);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('org_code', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('display_name', 'like', "%{$search}%");
+            });
+        }
+
         // Apply relations
         $query->with(['subscriptionPlan', 'users']);
 

@@ -938,12 +938,40 @@ trait OrganizationControllerTrait
     }
 
     /**
+     * Get current authenticated user.
+     */
+    protected function getCurrentUser()
+    {
+        try {
+            // Try JWT guard first, then default guard
+            $user = \Illuminate\Support\Facades\Auth::guard('api')->user();
+            if (!$user) {
+                $user = \Illuminate\Support\Facades\Auth::user();
+            }
+            return $user;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error getting current user: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Check if user is super admin
      */
     protected function isSuperAdmin(): bool
     {
-        $user = $this->getCurrentUser();
-        return $user && $user instanceof \App\Models\User && $user->hasRole('super_admin');
+        try {
+            $user = $this->getCurrentUser();
+            if (!$user || !($user instanceof \App\Models\User)) {
+                return false;
+            }
+
+            // Check if user has super_admin role
+            return $user->hasRole('super_admin');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error checking super admin status: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
