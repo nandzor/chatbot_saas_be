@@ -3,11 +3,10 @@
  * User management dengan DataTable dan enhanced components
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import {
-  useLoadingStates,
-  LoadingWrapper,
-  SkeletonCard
+  useLoadingStates
 } from '@/utils/loadingStates';
 import {
   handleError,
@@ -18,11 +17,11 @@ import {
   useFocusManagement
 } from '@/utils/accessibilityUtils';
 import {
-  sanitizeInput,
-  validateInput
+  sanitizeInput
 } from '@/utils/securityUtils';
 import {
   Users,
+  User,
   UserPlus,
   Search,
   MoreHorizontal,
@@ -35,12 +34,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Clock,
   UserCheck,
-  Settings,
   Download,
-  Upload,
-  X,
   Filter,
   RefreshCw
 } from 'lucide-react';
@@ -48,10 +43,7 @@ import {
   Button,
   Input,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   Badge,
   Card,
   CardContent,
@@ -64,32 +56,47 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
   Skeleton,
-  Switch,
   Alert,
   AlertDescription,
-  DataTable
+  DataTable,
+  DataContainer,
+  EmptyState,
+  Pagination
 } from '@/components/ui';
 import CreateUserDialog from './CreateUserDialog';
 import EditUserDialog from './EditUserDialog';
 import ViewUserDetailsDialog from './ViewUserDetailsDialog';
+import UserBulkActions from './UserBulkActions';
+import { useUserManagement } from '@/hooks/useUserManagement';
 
 const UserManagement = () => {
   const { announce } = useAnnouncement();
   const { focusRef, setFocus } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
 
-  // State management
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  // Use user management hook
+  const {
+    users,
+    loading,
+    error,
+    pagination,
+    filters,
+    loadUsers,
+    createUser,
+    updateUser,
+    deleteUser,
+    handlePageChange,
+    handlePerPageChange,
+    updateFilters
+  } = useUserManagement();
+
+  // Local UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [error, setError] = useState(null);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -97,148 +104,87 @@ const UserManagement = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Sample data - in production, this would come from API
-  const sampleUsers = useMemo(() => [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      role: 'admin',
-      status: 'active',
-      organization: 'Acme Corp',
-      lastLogin: '2024-01-15T10:30:00Z',
-      createdAt: '2024-01-01T00:00:00Z',
-      permissions: ['read', 'write', 'delete']
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      role: 'manager',
-      status: 'active',
-      organization: 'Tech Solutions',
-      lastLogin: '2024-01-14T15:45:00Z',
-      createdAt: '2024-01-02T00:00:00Z',
-      permissions: ['read', 'write']
-    },
-    {
-      id: 3,
-      name: 'Bob Johnson',
-      email: 'bob.johnson@example.com',
-      role: 'user',
-      status: 'inactive',
-      organization: 'Global Inc',
-      lastLogin: '2024-01-10T09:15:00Z',
-      createdAt: '2024-01-03T00:00:00Z',
-      permissions: ['read']
+
+  // Bulk selection handlers
+  const handleSelectionChange = useCallback((selectedItems) => {
+    setSelectedUsers(selectedItems);
+  }, []);
+
+  const handleSelectAll = useCallback((checked) => {
+    setSelectAll(checked);
+    if (checked) {
+      setSelectedUsers(users);
+    } else {
+      setSelectedUsers([]);
     }
-  ], []);
+  }, [users]);
 
-  // Load users data
-  const loadUsers = useCallback(async () => {
+  const handleBulkActionSuccess = useCallback(() => {
+    // Hook will handle reloading
+    setSelectedUsers([]);
+    setSelectAll(false);
+  }, []);
+
+  // Header action handlers
+  const handleRefresh = useCallback(async () => {
     try {
-      setLoading('initial', true);
-      setError(null);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setUsers(sampleUsers);
-      announce('Users loaded successfully');
+      setLoading('refresh', true);
+      // Hook will handle the actual refresh
+      announce('Users refreshed successfully');
     } catch (err) {
       const errorResult = handleError(err, {
-        context: 'User Management Data Loading',
+        context: 'User Refresh',
         showToast: true
       });
       setError(errorResult.message);
     } finally {
-      setLoading('initial', false);
+      setLoading('refresh', false);
     }
-  }, [sampleUsers, setLoading, announce]);
+  }, [setLoading, announce]);
 
-  // Filter users based on search and filters
-  const filterUsers = useCallback(() => {
-    let filtered = users;
-
-    // Search filter
-    if (searchQuery) {
-      const sanitizedQuery = sanitizeInput(searchQuery.toLowerCase());
-      filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(sanitizedQuery) ||
-        user.email.toLowerCase().includes(sanitizedQuery) ||
-        user.organization.toLowerCase().includes(sanitizedQuery)
-      );
+  const handleExport = useCallback(async () => {
+    try {
+      setLoading('export', true);
+      // Simulate export
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      announce('Users exported successfully');
+    } catch (err) {
+      const errorResult = handleError(err, {
+        context: 'User Export',
+        showToast: true
+      });
+      setError(errorResult.message);
+    } finally {
+      setLoading('export', false);
     }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(user => user.status === statusFilter);
-    }
-
-    // Role filter
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.role === roleFilter);
-    }
-
-    setFilteredUsers(filtered);
-  }, [users, searchQuery, statusFilter, roleFilter]);
+  }, [setLoading, announce]);
 
   // Load data on mount
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
 
-  // Filter users when filters change
-  useEffect(() => {
-    filterUsers();
-  }, [filterUsers]);
-
   // Handle search
   const handleSearch = useCallback((e) => {
     const value = sanitizeInput(e.target.value);
     setSearchQuery(value);
-  }, []);
+    updateFilters({ search: value });
+  }, [updateFilters]);
 
   // Handle status filter change
   const handleStatusFilterChange = useCallback((value) => {
     setStatusFilter(value);
+    updateFilters({ status: value === 'all' ? '' : value });
     announce(`Filtering by status: ${value}`);
-  }, [announce]);
+  }, [updateFilters, announce]);
 
   // Handle role filter change
   const handleRoleFilterChange = useCallback((value) => {
     setRoleFilter(value);
+    updateFilters({ role: value === 'all' ? '' : value });
     announce(`Filtering by role: ${value}`);
-  }, [announce]);
+  }, [updateFilters, announce]);
 
-  // Handle refresh
-  const handleRefresh = useCallback(async () => {
-    try {
-      setLoading('refresh', true);
-      await loadUsers();
-      announce('Users refreshed successfully');
-    } catch (err) {
-      handleError(err, { context: 'User Refresh' });
-    } finally {
-      setLoading('refresh', false);
-    }
-  }, [loadUsers, setLoading, announce]);
-
-  // Handle export
-  const handleExport = useCallback(async () => {
-    try {
-      setLoading('export', true);
-
-      // Simulate export
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      announce('Users exported successfully');
-    } catch (err) {
-      handleError(err, { context: 'User Export' });
-    } finally {
-      setLoading('export', false);
-    }
-  }, [setLoading, announce]);
 
   // Handle user actions
   const handleViewUser = useCallback((user) => {
@@ -269,6 +215,23 @@ const UserManagement = () => {
     }
   }, [setLoading, announce]);
 
+  const handleCloneUser = useCallback((user) => {
+    navigator.clipboard.writeText(user.email);
+    announce(`User email copied: ${user.email}`);
+  }, [announce]);
+
+  const handleViewPermissions = useCallback((user) => {
+    // TODO: Implement view permissions modal
+    toast.info(`Viewing permissions for user: ${user.name}`);
+    announce(`Viewing permissions for user: ${user.name}`);
+  }, [announce]);
+
+  const handleViewRoles = useCallback((user) => {
+    // TODO: Implement view roles modal
+    toast.info(`Viewing roles for user: ${user.name}`);
+    announce(`Viewing roles for user: ${user.name}`);
+  }, [announce]);
+
   // DataTable columns configuration
   const columns = [
     {
@@ -295,7 +258,7 @@ const UserManagement = () => {
       sortable: true,
       render: (value) => (
         <Badge variant={value === 'admin' ? 'default' : value === 'manager' ? 'secondary' : 'outline'}>
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'N/A'}
         </Badge>
       )
     },
@@ -310,7 +273,7 @@ const UserManagement = () => {
           ) : (
             <XCircle className="w-3 h-3 mr-1" />
           )}
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'N/A'}
         </Badge>
       )
     },
@@ -321,7 +284,7 @@ const UserManagement = () => {
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-900">{value}</span>
+          <span className="text-sm text-gray-900">{value || 'N/A'}</span>
         </div>
       )
     },
@@ -331,7 +294,7 @@ const UserManagement = () => {
       sortable: true,
       render: (value) => (
         <div className="text-sm text-gray-500">
-          {new Date(value).toLocaleDateString()}
+          {value ? new Date(value).toLocaleDateString() : 'N/A'}
         </div>
       )
     },
@@ -356,6 +319,18 @@ const UserManagement = () => {
               <Edit className="mr-2 h-4 w-4" />
               Edit User
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleCloneUser(user)}>
+              <Copy className="mr-2 h-4 w-4" />
+              Clone User
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleViewPermissions(user)}>
+              <Shield className="mr-2 h-4 w-4" />
+              View Permissions
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleViewRoles(user)}>
+              <Users className="mr-2 h-4 w-4" />
+              View Roles
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => handleDeleteUser(user)}
@@ -375,8 +350,28 @@ const UserManagement = () => {
     setFocus();
   }, [setFocus]);
 
+  // Loading state (skeleton) - AFTER all hooks
+  if (loading && users.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const showEmpty = !loading && users.length === 0;
+
   return (
-    <div className="space-y-6" ref={focusRef}>
+    <div className="min-h-screen bg-gray-50 p-6" ref={focusRef}>
+      <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -450,53 +445,163 @@ const UserManagement = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
+              <Select
+                value={statusFilter}
+                onValueChange={handleStatusFilterChange}
+                placeholder="All statuses"
+              >
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
               </Select>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Role</label>
-              <Select value={roleFilter} onValueChange={handleRoleFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
+              <Select
+                value={roleFilter}
+                onValueChange={handleRoleFilterChange}
+                placeholder="All roles"
+              >
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="user">User</SelectItem>
               </Select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Users Table */}
-      <DataTable
-        data={filteredUsers}
-        columns={columns}
-        loading={getLoadingState('initial')}
-        error={error}
-        searchable={false} // We handle search in filters
-        ariaLabel="Users management table"
-        pagination={{
-          currentPage: 1,
-          totalPages: 1,
-          hasNext: false,
-          hasPrevious: false,
-          onNext: () => {},
-          onPrevious: () => {}
-        }}
-      />
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <DataContainer>
+          <div className="p-0">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Users</p>
+                <p className="text-2xl font-bold text-gray-900">{pagination.total || users.length}</p>
+              </div>
+            </div>
+          </div>
+        </DataContainer>
+
+        <DataContainer>
+          <div className="p-0">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Users</p>
+                <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'active').length}</p>
+              </div>
+            </div>
+          </div>
+        </DataContainer>
+
+        <DataContainer>
+          <div className="p-0">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Shield className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Admin Users</p>
+                <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.role === 'admin').length}</p>
+              </div>
+            </div>
+          </div>
+        </DataContainer>
+
+        <DataContainer>
+          <div className="p-0">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <User className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Regular Users</p>
+                <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.role === 'user').length}</p>
+              </div>
+            </div>
+          </div>
+        </DataContainer>
+      </div>
+
+      {/* Table or Empty */}
+      <DataContainer>
+        <div className="mb-2">
+          <h3 className="text-lg font-semibold text-gray-900">Users Overview</h3>
+          <p className="text-sm text-gray-600">
+            {pagination.total} users found • Showing {pagination.current_page} of {pagination.last_page} pages
+          </p>
+        </div>
+
+        {showEmpty ? (
+          <EmptyState
+            title="No users found"
+            description="Try adjusting filters or create a new user."
+            actionText="Create User"
+            onAction={() => setIsCreateDialogOpen(true)}
+            className=""
+          />
+        ) : (
+          <>
+            <DataTable
+              data={users}
+              columns={columns}
+              loading={loading}
+              error={error}
+              searchable={false} // We handle search in filters
+              ariaLabel="Users management table"
+              pagination={null}
+              selectable={true}
+              selectedItems={selectedUsers}
+              onSelectionChange={handleSelectionChange}
+              selectAll={selectAll}
+              onSelectAll={handleSelectAll}
+            />
+
+            {/* Pagination */}
+            {pagination.total > 0 && (
+              <Pagination
+                currentPage={pagination.current_page}
+                totalPages={pagination.last_page}
+                totalItems={pagination.total}
+                perPage={pagination.per_page}
+                onPageChange={handlePageChange}
+                onPerPageChange={handlePerPageChange}
+                variant="table"
+                showPageNumbers={true}
+                showFirstLast={true}
+                showPrevNext={true}
+                showPerPageSelector={true}
+                perPageOptions={[5, 10, 15, 25, 50]}
+                maxVisiblePages={5}
+                ariaLabel="Users table pagination"
+              />
+            )}
+          </>
+        )}
+      </DataContainer>
+
+      {/* Bulk Actions */}
+      {selectedUsers.length > 0 && (
+        <div className="mt-4">
+          <UserBulkActions
+            selectedUsers={selectedUsers}
+            onSuccess={handleBulkActionSuccess}
+            onClearSelection={() => {
+              setSelectedUsers([]);
+              setSelectAll(false);
+            }}
+          />
+        </div>
+      )}
 
       {/* Dialogs */}
       <CreateUserDialog
@@ -523,6 +628,7 @@ const UserManagement = () => {
         onOpenChange={setIsViewDialogOpen}
         user={selectedUser}
       />
+      </div>
     </div>
   );
 };

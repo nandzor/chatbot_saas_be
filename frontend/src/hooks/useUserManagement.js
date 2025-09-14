@@ -7,10 +7,13 @@ export const useUserManagement = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10
+    current_page: 1,
+    last_page: 1,
+    per_page: 15,
+    total: 0,
+    from: 1,
+    to: 0,
+    has_more_pages: false
   });
   const [filters, setFilters] = useState({
     search: '',
@@ -31,8 +34,8 @@ export const useUserManagement = () => {
       setError(null);
 
       const params = {
-        page: pagination.currentPage,
-        per_page: pagination.itemsPerPage,
+        page: pagination.current_page,
+        per_page: pagination.per_page,
         ...filters
       };
 
@@ -62,13 +65,20 @@ export const useUserManagement = () => {
 
 
         setUsers(Array.isArray(usersData) ? usersData : []);
-        setPagination(prev => ({
-          ...prev,
-          currentPage: paginationData.current_page || paginationData.currentPage || 1,
-          itemsPerPage: paginationData.per_page || paginationData.itemsPerPage || 10,
-          totalItems: paginationData.total || paginationData.totalItems || 0,
-          totalPages: paginationData.last_page || paginationData.totalPages || 1
-        }));
+
+        // Update pagination from API response
+        if (paginationData) {
+          const newPagination = {
+            current_page: paginationData.current_page || 1,
+            last_page: paginationData.last_page || 1,
+            per_page: paginationData.per_page || 15,
+            total: paginationData.total || 0,
+            from: paginationData.from || 1,
+            to: paginationData.to || 0,
+            has_more_pages: paginationData.has_more_pages || false
+          };
+          setPagination(prev => ({ ...prev, ...newPagination }));
+        }
       } else {
         setError(response.message);
         toast.error(response.message);
@@ -80,7 +90,7 @@ export const useUserManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.currentPage, pagination.itemsPerPage, filters]);
+  }, [pagination.current_page, pagination.per_page, filters]);
 
   // Load users when filters or pagination changes
   useEffect(() => {
@@ -90,7 +100,7 @@ export const useUserManagement = () => {
     } else {
       loadUsers(false); // Check for duplicates
     }
-  }, [pagination.currentPage, pagination.itemsPerPage, filters]);
+  }, [pagination.current_page, pagination.per_page, filters]);
 
   // Create user
   const createUser = useCallback(async (userData) => {
@@ -354,8 +364,26 @@ export const useUserManagement = () => {
       organization: 'all',
       department: 'all'
     });
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setPagination(prev => ({ ...prev, current_page: 1 }));
   }, []);
+
+  // Handle pagination
+  const handlePageChange = useCallback((page) => {
+    console.log('🔄 User page change requested:', page);
+    setPagination(prev => ({ ...prev, current_page: page }));
+    loadUsers();
+  }, [loadUsers]);
+
+  // Handle per page change
+  const handlePerPageChange = useCallback((perPage) => {
+    console.log('📄 User per page change requested:', perPage);
+    const newPagination = {
+      per_page: perPage,
+      current_page: 1 // Reset to first page when changing per page
+    };
+    setPagination(prev => ({ ...prev, ...newPagination }));
+    loadUsers();
+  }, [loadUsers]);
 
   return {
     // State
@@ -377,6 +405,8 @@ export const useUserManagement = () => {
     getUserActivity,
     getUserSessions,
     getUserPermissions,
+    handlePageChange,
+    handlePerPageChange,
     checkEmailExists,
     checkUsernameExists,
 
