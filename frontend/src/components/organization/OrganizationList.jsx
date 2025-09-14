@@ -489,9 +489,9 @@ const OrganizationList = ({
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}
             onPageChange={(page) => onPaginationChange({ currentPage: page })}
-            showInfo={true}
+            showPageInfo={true}
             totalItems={pagination.totalItems}
-            itemsPerPage={pagination.itemsPerPage}
+            perPage={pagination.itemsPerPage}
           />
         </div>
       )}

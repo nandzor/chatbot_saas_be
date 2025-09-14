@@ -227,9 +227,9 @@ const CreateOrganizationDialog = ({ isOpen, onClose, onSubmit, loading = false }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Building2 className="h-5 w-5 text-white" />
@@ -245,7 +245,7 @@ const CreateOrganizationDialog = ({ isOpen, onClose, onSubmit, loading = false }
         </div>
 
         {/* Tabs */}
-        <div className="border-b">
+        <div className="border-b flex-shrink-0">
           <div className="flex space-x-8 px-6">
             {tabs.map((tab) => {
               const Icon = tab.icon;
