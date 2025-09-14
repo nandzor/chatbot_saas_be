@@ -22,10 +22,7 @@ import {
   Button,
   Input,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   Badge,
   Card,
   CardContent,
@@ -446,18 +443,15 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
                         <Select
                           value={formData.businessType}
                           onValueChange={(value) => handleInputChange('businessType', value)}
+                          placeholder="Select business type"
+                          className={errors.businessType ? 'border-red-500' : ''}
                         >
-                          <SelectTrigger className={errors.businessType ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select business type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="startup">Startup</SelectItem>
-                            <SelectItem value="small_business">Small Business</SelectItem>
-                            <SelectItem value="medium_business">Medium Business</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
-                            <SelectItem value="non_profit">Non-Profit</SelectItem>
-                            <SelectItem value="government">Government</SelectItem>
-                          </SelectContent>
+                          <SelectItem value="startup">Startup</SelectItem>
+                          <SelectItem value="small_business">Small Business</SelectItem>
+                          <SelectItem value="medium_business">Medium Business</SelectItem>
+                          <SelectItem value="enterprise">Enterprise</SelectItem>
+                          <SelectItem value="non_profit">Non-Profit</SelectItem>
+                          <SelectItem value="government">Government</SelectItem>
                         </Select>
                         {errors.businessType && (
                           <p className="text-sm text-red-500 mt-1">{errors.businessType}</p>
@@ -469,20 +463,17 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
                         <Select
                           value={formData.industry}
                           onValueChange={(value) => handleInputChange('industry', value)}
+                          placeholder="Select industry"
+                          className={errors.industry ? 'border-red-500' : ''}
                         >
-                          <SelectTrigger className={errors.industry ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select industry" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="technology">Technology</SelectItem>
-                            <SelectItem value="healthcare">Healthcare</SelectItem>
-                            <SelectItem value="finance">Finance</SelectItem>
-                            <SelectItem value="education">Education</SelectItem>
-                            <SelectItem value="retail">Retail</SelectItem>
-                            <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="consulting">Consulting</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
+                          <SelectItem value="technology">Technology</SelectItem>
+                          <SelectItem value="healthcare">Healthcare</SelectItem>
+                          <SelectItem value="finance">Finance</SelectItem>
+                          <SelectItem value="education">Education</SelectItem>
+                          <SelectItem value="retail">Retail</SelectItem>
+                          <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                          <SelectItem value="consulting">Consulting</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
                         </Select>
                         {errors.industry && (
                           <p className="text-sm text-red-500 mt-1">{errors.industry}</p>
@@ -494,17 +485,14 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
                         <Select
                           value={formData.companySize}
                           onValueChange={(value) => handleInputChange('companySize', value)}
+                          placeholder="Select company size"
+                          className={errors.companySize ? 'border-red-500' : ''}
                         >
-                          <SelectTrigger className={errors.companySize ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select company size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1-10">1-10 employees</SelectItem>
-                            <SelectItem value="11-50">11-50 employees</SelectItem>
-                            <SelectItem value="51-200">51-200 employees</SelectItem>
-                            <SelectItem value="201-500">201-500 employees</SelectItem>
-                            <SelectItem value="500+">500+ employees</SelectItem>
-                          </SelectContent>
+                          <SelectItem value="1-10">1-10 employees</SelectItem>
+                          <SelectItem value="11-50">11-50 employees</SelectItem>
+                          <SelectItem value="51-200">51-200 employees</SelectItem>
+                          <SelectItem value="201-500">201-500 employees</SelectItem>
+                          <SelectItem value="500+">500+ employees</SelectItem>
                         </Select>
                         {errors.companySize && (
                           <p className="text-sm text-red-500 mt-1">{errors.companySize}</p>
@@ -531,16 +519,12 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
                         <Select
                           value={formData.subscriptionStatus}
                           onValueChange={(value) => handleInputChange('subscriptionStatus', value)}
+                          placeholder="Select status"
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="trial">Trial</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="suspended">Suspended</SelectItem>
-                          </SelectContent>
+                          <SelectItem value="trial">Trial</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
                         </Select>
                       </div>
 
@@ -549,15 +533,11 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
                         <Select
                           value={formData.billingCycle}
                           onValueChange={(value) => handleInputChange('billingCycle', value)}
+                          placeholder="Select billing cycle"
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select billing cycle" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                            <SelectItem value="quarterly">Quarterly</SelectItem>
-                            <SelectItem value="yearly">Yearly</SelectItem>
-                          </SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
                         </Select>
                       </div>
 
@@ -606,18 +586,14 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
                         <Select
                           value={formData.timezone}
                           onValueChange={(value) => handleInputChange('timezone', value)}
+                          placeholder="Select timezone"
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select timezone" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Asia/Jakarta">Asia/Jakarta</SelectItem>
-                            <SelectItem value="Asia/Singapore">Asia/Singapore</SelectItem>
-                            <SelectItem value="Asia/Bangkok">Asia/Bangkok</SelectItem>
-                            <SelectItem value="UTC">UTC</SelectItem>
-                            <SelectItem value="America/New_York">America/New_York</SelectItem>
-                            <SelectItem value="Europe/London">Europe/London</SelectItem>
-                          </SelectContent>
+                          <SelectItem value="Asia/Jakarta">Asia/Jakarta</SelectItem>
+                          <SelectItem value="Asia/Singapore">Asia/Singapore</SelectItem>
+                          <SelectItem value="Asia/Bangkok">Asia/Bangkok</SelectItem>
+                          <SelectItem value="UTC">UTC</SelectItem>
+                          <SelectItem value="America/New_York">America/New_York</SelectItem>
+                          <SelectItem value="Europe/London">Europe/London</SelectItem>
                         </Select>
                       </div>
 
@@ -626,16 +602,12 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
                         <Select
                           value={formData.locale}
                           onValueChange={(value) => handleInputChange('locale', value)}
+                          placeholder="Select locale"
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select locale" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="id">Indonesian</SelectItem>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="th">Thai</SelectItem>
-                            <SelectItem value="vi">Vietnamese</SelectItem>
-                          </SelectContent>
+                          <SelectItem value="id">Indonesian</SelectItem>
+                          <SelectItem value="en">English</SelectItem>
+                          <SelectItem value="th">Thai</SelectItem>
+                          <SelectItem value="vi">Vietnamese</SelectItem>
                         </Select>
                       </div>
 
@@ -644,17 +616,13 @@ const EditOrganizationDialog = ({ isOpen, onClose, onSubmit, organization, loadi
                         <Select
                           value={formData.currency}
                           onValueChange={(value) => handleInputChange('currency', value)}
+                          placeholder="Select currency"
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="IDR">IDR (Indonesian Rupiah)</SelectItem>
-                            <SelectItem value="USD">USD (US Dollar)</SelectItem>
-                            <SelectItem value="SGD">SGD (Singapore Dollar)</SelectItem>
-                            <SelectItem value="THB">THB (Thai Baht)</SelectItem>
-                            <SelectItem value="VND">VND (Vietnamese Dong)</SelectItem>
-                          </SelectContent>
+                          <SelectItem value="IDR">IDR (Indonesian Rupiah)</SelectItem>
+                          <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                          <SelectItem value="SGD">SGD (Singapore Dollar)</SelectItem>
+                          <SelectItem value="THB">THB (Thai Baht)</SelectItem>
+                          <SelectItem value="VND">VND (Vietnamese Dong)</SelectItem>
                         </Select>
                       </div>
                     </div>

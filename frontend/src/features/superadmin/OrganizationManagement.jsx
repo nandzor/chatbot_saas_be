@@ -20,10 +20,7 @@ import {
   DialogTrigger,
   Label,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   Table,
   TableBody,
   TableCell,
@@ -541,29 +538,19 @@ const OrganizationManagement = () => {
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={(value) => handleFilterChange('status', value)}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-                <SelectItem value="trial">Trial</SelectItem>
-              </SelectContent>
+            <Select value={statusFilter} onValueChange={(value) => handleFilterChange('status', value)} placeholder="Filter by status" className="w-full md:w-48">
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+              <SelectItem value="trial">Trial</SelectItem>
             </Select>
-            <Select value={businessTypeFilter} onValueChange={(value) => handleFilterChange('businessType', value)}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by business type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Business Types</SelectItem>
-                <SelectItem value="startup">Startup</SelectItem>
-                <SelectItem value="sme">SME</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
-                <SelectItem value="nonprofit">Non-profit</SelectItem>
-              </SelectContent>
+            <Select value={businessTypeFilter} onValueChange={(value) => handleFilterChange('businessType', value)} placeholder="Filter by business type" className="w-full md:w-48">
+              <SelectItem value="all">All Business Types</SelectItem>
+              <SelectItem value="startup">Startup</SelectItem>
+              <SelectItem value="sme">SME</SelectItem>
+              <SelectItem value="enterprise">Enterprise</SelectItem>
+              <SelectItem value="nonprofit">Non-profit</SelectItem>
             </Select>
             <Button variant="outline" onClick={() => loadOrganizations()}>
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -905,29 +892,19 @@ const OrganizationManagement = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="business_type">Business Type</Label>
-              <Select value={organizationForm.business_type} onValueChange={(value) => setOrganizationForm({ ...organizationForm, business_type: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select business type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="startup">Startup</SelectItem>
-                  <SelectItem value="sme">SME</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                  <SelectItem value="nonprofit">Non-profit</SelectItem>
-                </SelectContent>
+              <Select value={organizationForm.business_type} onValueChange={(value) => setOrganizationForm({ ...organizationForm, business_type: value })} placeholder="Select business type">
+                <SelectItem value="startup">Startup</SelectItem>
+                <SelectItem value="sme">SME</SelectItem>
+                <SelectItem value="enterprise">Enterprise</SelectItem>
+                <SelectItem value="nonprofit">Non-profit</SelectItem>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={organizationForm.status} onValueChange={(value) => setOrganizationForm({ ...organizationForm, status: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="trial">Trial</SelectItem>
-                </SelectContent>
+              <Select value={organizationForm.status} onValueChange={(value) => setOrganizationForm({ ...organizationForm, status: value })} placeholder="Select status">
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="trial">Trial</SelectItem>
               </Select>
             </div>
             <div className="col-span-2 space-y-2">
@@ -1000,29 +977,19 @@ const OrganizationManagement = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-business_type">Business Type</Label>
-              <Select value={organizationForm.business_type} onValueChange={(value) => setOrganizationForm({ ...organizationForm, business_type: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select business type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="startup">Startup</SelectItem>
-                  <SelectItem value="sme">SME</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                  <SelectItem value="nonprofit">Non-profit</SelectItem>
-                </SelectContent>
+              <Select value={organizationForm.business_type} onValueChange={(value) => setOrganizationForm({ ...organizationForm, business_type: value })} placeholder="Select business type">
+                <SelectItem value="startup">Startup</SelectItem>
+                <SelectItem value="sme">SME</SelectItem>
+                <SelectItem value="enterprise">Enterprise</SelectItem>
+                <SelectItem value="nonprofit">Non-profit</SelectItem>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-status">Status</Label>
-              <Select value={organizationForm.status} onValueChange={(value) => setOrganizationForm({ ...organizationForm, status: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="trial">Trial</SelectItem>
-                </SelectContent>
+              <Select value={organizationForm.status} onValueChange={(value) => setOrganizationForm({ ...organizationForm, status: value })} placeholder="Select status">
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="trial">Trial</SelectItem>
               </Select>
             </div>
             <div className="col-span-2 space-y-2">

@@ -23,10 +23,7 @@ import {
   Button,
   Input,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   Badge,
   Card,
   CardContent,
@@ -264,16 +261,12 @@ const OrganizationList = ({
                 <Select
                   value={filters.status || 'all'}
                   onValueChange={(value) => handleFilterChange('status', value)}
+                  placeholder="Select status"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                  </SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
                 </Select>
               </div>
 
@@ -282,18 +275,14 @@ const OrganizationList = ({
                 <Select
                   value={filters.subscriptionStatus || 'all'}
                   onValueChange={(value) => handleFilterChange('subscriptionStatus', value)}
+                  placeholder="Select subscription"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select subscription" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Subscriptions</SelectItem>
-                    <SelectItem value="trial">Trial</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
+                  <SelectItem value="all">All Subscriptions</SelectItem>
+                  <SelectItem value="trial">Trial</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </Select>
               </div>
 
@@ -302,17 +291,13 @@ const OrganizationList = ({
                 <Select
                   value={filters.businessType || 'all'}
                   onValueChange={(value) => handleFilterChange('businessType', value)}
+                  placeholder="Select business type"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select business type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BUSINESS_TYPE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {BUSINESS_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </Select>
               </div>
 
@@ -321,17 +306,13 @@ const OrganizationList = ({
                 <Select
                   value={filters.industry || 'all'}
                   onValueChange={(value) => handleFilterChange('industry', value)}
+                  placeholder="Select industry"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INDUSTRY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {INDUSTRY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </Select>
               </div>
 
@@ -340,17 +321,13 @@ const OrganizationList = ({
                 <Select
                   value={filters.companySize || 'all'}
                   onValueChange={(value) => handleFilterChange('companySize', value)}
+                  placeholder="Select company size"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select company size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COMPANY_SIZE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {COMPANY_SIZE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </Select>
               </div>
             </div>
