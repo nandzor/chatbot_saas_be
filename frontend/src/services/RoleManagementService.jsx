@@ -70,7 +70,7 @@ class RoleManagementService {
    */
   async getUsersByRole(roleId) {
     try {
-      const response = await api.get(`${this.baseUrl}/${roleId}/users`);
+      const response = await api.get(`${this.baseUrl}/${roleId}/assigned-users`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -113,7 +113,7 @@ class RoleManagementService {
    */
   async getAvailableUsersForRole(roleId) {
     try {
-      const response = await api.get(`${this.baseUrl}/${roleId}/available-users`);
+      const response = await api.get(`${this.baseUrl}/${roleId}/users`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);

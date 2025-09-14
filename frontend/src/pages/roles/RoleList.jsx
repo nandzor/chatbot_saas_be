@@ -17,6 +17,7 @@ import {
   useAnnouncement,
   useFocusManagement
 } from '@/utils/accessibilityUtils';
+import { toast } from 'react-hot-toast';
 import {
   sanitizeInput,
   validateInput
@@ -244,6 +245,13 @@ const RoleList = React.memo(() => {
   }, [announce]);
 
   const handleDeleteRole = useCallback(async (role) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the role "${role.name}"?\n\nThis action cannot be undone and will remove the role from all users.`
+    );
+
+    if (!confirmed) return;
+
     try {
       setLoading('delete', true);
 
@@ -252,6 +260,7 @@ const RoleList = React.memo(() => {
       if (response.success) {
         setRoles(prev => prev.filter(r => r.id !== role.id));
         announce(`Role ${role.name} deleted successfully`);
+        toast.success(`Role ${role.name} deleted successfully`);
       } else {
         throw new Error(response.message || 'Failed to delete role');
       }
@@ -264,7 +273,7 @@ const RoleList = React.memo(() => {
     } finally {
       setLoading('delete', false);
     }
-  }, [setLoading, announce]);
+  }, [setLoading, announce, handleError]);
 
   const handleManagePermissions = useCallback((role) => {
     setSelectedRole(role);
