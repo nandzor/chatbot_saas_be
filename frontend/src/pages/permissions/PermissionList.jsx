@@ -22,6 +22,7 @@ import { usePermissionCheck } from '@/hooks/usePermissionCheck';
 import CreatePermissionDialog from './CreatePermissionDialog';
 import ViewPermissionDetailsDialog from './ViewPermissionDetailsDialog';
 import EditPermissionDialog from './EditPermissionDialog';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 import {
   // Header & container
@@ -95,6 +96,7 @@ const PermissionList = () => {
 
   // Initial load ref to prevent duplicate API calls
   const initialLoadRef = useRef(false);
+
 
   // Handle filter changes with immediate UI update
   const handleFilterChange = useCallback((key, value) => {
@@ -173,7 +175,7 @@ const PermissionList = () => {
     }
 
     if (filters.category) result = result.filter(p => p.category === filters.category);
-    if (filters.is_system !== '') result = result.filter(p => p.is_system === (filters.is_system === 'true'));
+    if (filters.is_system !== '') result = result.filter(p => p.is_system_permission === (filters.is_system === 'true'));
     if (filters.is_visible !== '') result = result.filter(p => p.is_visible === (filters.is_visible === 'true'));
     if (filters.status) result = result.filter(p => p.status === filters.status);
 
@@ -231,7 +233,7 @@ const PermissionList = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-gray-900">{item.name}</h3>
-                {item.is_system && (
+                {item.is_system_permission && (
                   <Badge variant="destructive" className="text-xs">SYS</Badge>
                 )}
               </div>
@@ -276,8 +278,8 @@ const PermissionList = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Type:</span>
-              <Badge variant={item.is_system ? 'destructive' : 'outline'}>
-                {item.is_system ? 'System' : 'Custom'}
+              <Badge variant={item.is_system_permission ? 'destructive' : 'outline'}>
+                {item.is_system_permission ? 'System' : 'Custom'}
               </Badge>
             </div>
             <div className="flex items-center justify-between">
@@ -495,7 +497,7 @@ const PermissionList = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">System Permissions</p>
-                  <p className="text-2xl font-bold text-gray-900">{permissions.filter(p => p.is_system).length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{permissions.filter(p => p.is_system_permission).length}</p>
                 </div>
               </div>
             </div>
@@ -509,7 +511,7 @@ const PermissionList = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Custom Permissions</p>
-                  <p className="text-2xl font-bold text-gray-900">{permissions.filter(p => !p.is_system).length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{permissions.filter(p => !p.is_system_permission).length}</p>
                 </div>
               </div>
             </div>
@@ -558,25 +560,25 @@ const PermissionList = () => {
       </div>
 
       {/* Create */}
-      <CreatePermissionDialog isOpen={showCreate} onClose={() => setShowCreate(false)} onSubmit={handleCreateSubmit} loading={actionLoading} />
+      <CreatePermissionDialog open={showCreate} onOpenChange={setShowCreate} onSubmit={handleCreateSubmit} />
 
       {/* Edit */}
-      <EditPermissionDialog isOpen={showEdit} onClose={() => setShowEdit(false)} permission={selected} onSubmit={handleEditSubmit} loading={actionLoading} />
+      <EditPermissionDialog open={showEdit} onOpenChange={setShowEdit} permission={selected} onSubmit={handleEditSubmit} />
 
       {/* Details */}
-      <ViewPermissionDetailsDialog isOpen={showDetails} onClose={() => setShowDetails(false)} permission={selected} onEdit={onEdit} onClone={onClone} onDelete={onAskDelete} />
+      <ViewPermissionDetailsDialog open={showDetails} onOpenChange={setShowDetails} permission={selected} onEdit={onEdit} onClone={onClone} onDelete={onAskDelete} />
 
       {/* Delete confirm */}
       <DeleteConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
+        open={showDeleteConfirm}
+        onOpenChange={() => setShowDeleteConfirm(false)}
         onConfirm={confirmDelete}
-        itemName={selected?.name}
-        itemType="permission"
+        permission={selected}
         loading={actionLoading}
       />
+
     </div>
   );
 };
 
-export default PermissionList;
+export default React.memo(PermissionList);

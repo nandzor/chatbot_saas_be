@@ -10,12 +10,12 @@ class PermissionManagementService {
    */
   async getPermissions(params = {}) {
     try {
-
       const response = await api.get(this.baseUrl, { params });
 
       // Return the full response data structure
       return response.data;
     } catch (error) {
+      console.error('❌ PermissionManagementService: API Error:', error);
       throw this.handleError(error);
     }
   }
@@ -192,15 +192,17 @@ class PermissionManagementService {
   formatPermissionData(data) {
     return {
       name: data.name,
-      code: data.code,
+      display_name: data.display_name,
       description: data.description,
       category: data.category,
       resource: data.resource,
       action: data.action,
-      is_system: Boolean(data.is_system),
+      is_active: Boolean(data.is_active),
+      is_system_permission: Boolean(data.is_system_permission),
+      is_dangerous: Boolean(data.is_dangerous),
       is_visible: Boolean(data.is_visible),
-      status: data.status || 'active',
-      metadata: data.metadata || {}
+      sort_order: parseInt(data.sort_order) || 0,
+      guard_name: data.guard_name || 'web'
     };
   }
 

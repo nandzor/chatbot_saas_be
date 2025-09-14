@@ -17,11 +17,11 @@ class PerformanceMonitor {
     if (startTime) {
       const duration = performance.now() - startTime;
       this.metrics.set(operationName, duration);
-      
+
       if (duration > 16) { // More than 16ms (60fps threshold)
         console.warn(`🐌 Slow operation: ${operationName} took ${duration.toFixed(2)}ms`);
       }
-      
+
       this.startTimes.delete(operationName);
       return duration;
     }
@@ -32,11 +32,11 @@ class PerformanceMonitor {
   trackRender(componentName) {
     const count = this.renderCounts.get(componentName) || 0;
     this.renderCounts.set(componentName, count + 1);
-    
+
     // Log every 20th render to avoid spam
     if ((count + 1) % 20 === 0) {
     }
-    
+
     // Warn about excessive renders
     if (count + 1 > 50) {
       console.warn(`⚠️ ${componentName} has rendered ${count + 1} times - check for infinite loops`);
@@ -50,7 +50,7 @@ class PerformanceMonitor {
       renderCounts: Object.fromEntries(this.renderCounts),
       timestamp: new Date().toISOString()
     };
-    
+
     console.table(summary);
     return summary;
   }

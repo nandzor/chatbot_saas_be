@@ -33,7 +33,6 @@ import Financials from '@/pages/superadmin/Financials';
 import ClientManagement from '@/pages/superadmin/ClientManagement';
 import SystemSettings from '@/pages/superadmin/SystemSettings';
 import UserManagement from '@/pages/superadmin/UserManagement';
-import PermissionManagement from '@/pages/superadmin/PermissionManagement';
 import OrganizationManagement from '@/pages/superadmin/OrganizationManagement';
 import TransactionHistory from '@/pages/superadmin/TransactionHistory';
 
@@ -211,7 +210,7 @@ export const router = createBrowserRouter([
             path: 'system/permissions',
             element: (
               <RoleBasedRoute requiredRole="super_admin">
-                <PermissionManagement />
+                <PermissionList />
               </RoleBasedRoute>
             )
           },

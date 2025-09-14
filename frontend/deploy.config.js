@@ -47,24 +47,24 @@ const getEnvironment = () => {
 const getConfig = (env = null) => {
   const currentEnv = env || getEnvironment();
   const config = configs[currentEnv];
-  
+
   if (!config) {
     throw new Error(`Unknown environment: ${currentEnv}`);
   }
-  
+
   return config;
 };
 
 // Validate configuration
 const validateConfig = (config) => {
   const required = ['baseUrl', 'apiBaseUrl', 'publicPath', 'buildDir'];
-  
+
   for (const field of required) {
     if (!config[field]) {
       throw new Error(`Missing required configuration field: ${field}`);
     }
   }
-  
+
   return true;
 };
 
@@ -85,34 +85,34 @@ const printConfig = (config) => {
 const config = {
   // Get current environment
   getEnvironment,
-  
+
   // Get configuration for environment
   getConfig,
-  
+
   // Validate configuration
   validateConfig,
-  
+
   // Print configuration
   printConfig,
-  
+
   // Get all available environments
   getEnvironments: () => Object.keys(configs),
-  
+
   // Get all configurations
   getAllConfigs: () => configs,
-  
+
   // Check if environment is production
   isProduction: (env = null) => {
     const currentEnv = env || getEnvironment();
     return currentEnv === 'production';
   },
-  
+
   // Check if environment is staging
   isStaging: (env = null) => {
     const currentEnv = env || getEnvironment();
     return currentEnv === 'staging';
   },
-  
+
   // Check if environment is development
   isDevelopment: (env = null) => {
     const currentEnv = env || getEnvironment();

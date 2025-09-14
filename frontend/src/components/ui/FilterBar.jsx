@@ -1,5 +1,5 @@
 import { Search, Filter, X } from 'lucide-react';
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button, Badge } from './index';
+import { Input, Select, SelectItem, Button, Badge } from './index';
 
 export const FilterBar = ({
   filters,
@@ -98,18 +98,15 @@ export const FilterBar = ({
             <Select
               value={filters[option.key] || ''}
               onValueChange={(value) => onFilterChange(option.key, value)}
+              placeholder={option.placeholder || `All ${option.label}`}
+              className={inputSizes[size]}
             >
-              <SelectTrigger className={inputSizes[size]}>
-                <SelectValue placeholder={option.placeholder || `All ${option.label}`} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">{option.placeholder || `All ${option.label}`}</SelectItem>
-                {option.options.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <SelectItem value="">{option.placeholder || `All ${option.label}`}</SelectItem>
+              {option.options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
             </Select>
           </div>
         ))}

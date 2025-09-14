@@ -18,6 +18,7 @@ api.interceptors.request.use(
                   localStorage.getItem('auth_token') ||
                   localStorage.getItem('access_token');
 
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

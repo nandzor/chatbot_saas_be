@@ -55,155 +55,41 @@ export const usePermissionManagement = () => {
       const response = await permissionManagementService.getPermissions(params);
 
       if (response.success) {
+
         setPermissions(response.data || []);
 
         // Update pagination from API response
-        if (response.meta && response.meta.pagination) {
+        if (response.pagination) {
           const newPagination = {
-            current_page: response.meta.pagination.current_page || page,
-            last_page: response.meta.pagination.last_page || 1,
-            per_page: response.meta.pagination.per_page || currentPagination.per_page,
-            total: response.meta.pagination.total || 0
+            current_page: response.pagination.current_page || page,
+            last_page: response.pagination.last_page || 1,
+            per_page: response.pagination.per_page || currentPagination.per_page,
+            total: response.pagination.total || 0,
+            from: response.pagination.from || 1,
+            to: response.pagination.to || 0,
+            has_more_pages: response.pagination.has_more_pages || false
           };
 
           setPagination(prev => ({ ...prev, ...newPagination }));
         }
       } else {
-        // Fallback to mock data for development if API returns error
-        if (response.error_code === 'UNAUTHORIZED' || response.message?.includes('authentication')) {
-          console.warn('usePermissionManagement: Using fallback data due to auth error');
-          const fallbackData = [
-            {
-              id: 1,
-              name: 'View Dashboard',
-              code: 'dashboard.view',
-              description: 'Allow user to view dashboard',
-              category: 'system_administration',
-              resource: 'dashboard',
-              action: 'view',
-              is_system: true,
-              is_visible: true,
-              status: 'active',
-              metadata: { scope: 'global' },
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            },
-            {
-              id: 2,
-              name: 'Manage Users',
-              code: 'users.manage',
-              description: 'Allow user to manage other users',
-              category: 'user_management',
-              resource: 'users',
-              action: 'manage',
-              is_system: false,
-              is_visible: true,
-              status: 'active',
-              metadata: { scope: 'organization' },
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            },
-            {
-              id: 3,
-              name: 'View Permissions',
-              code: 'permissions.view',
-              description: 'Allow user to view permissions list',
-              category: 'permission_management',
-              resource: 'permissions',
-              action: 'view',
-              is_system: true,
-              is_visible: true,
-              status: 'active',
-              metadata: { scope: 'global' },
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            },
-            {
-              id: 4,
-              name: 'Create Permissions',
-              code: 'permissions.create',
-              description: 'Allow user to create new permissions',
-              category: 'permission_management',
-              resource: 'permissions',
-              action: 'create',
-              is_system: false,
-              is_visible: true,
-              status: 'active',
-              metadata: { scope: 'organization' },
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ];
-
-          setPermissions(fallbackData);
-          setPagination(prev => ({
-            ...prev,
-            current_page: 1,
-            last_page: 1,
-            per_page: 15,
-            total: fallbackData.length
-          }));
-          return;
-        }
-
+        // Don't use fallback data for API errors - show the actual error
         const errorMsg = response.message || 'Failed to load permissions';
         setError(errorMsg);
       }
     } catch (err) {
-
-      // Fallback to mock data for development
-      if (err.message?.includes('Network Error') || err.message?.includes('Failed to fetch')) {
-        console.warn('usePermissionManagement: Using fallback data due to network error');
-        const fallbackData = [
-          {
-            id: 1,
-            name: 'View Dashboard',
-            code: 'dashboard.view',
-            description: 'Allow user to view dashboard',
-            category: 'system_administration',
-            resource: 'dashboard',
-            action: 'view',
-            is_system: true,
-            is_visible: true,
-            status: 'active',
-            metadata: { scope: 'global' }
-          },
-          {
-            id: 2,
-            name: 'Manage Users',
-            code: 'users.manage',
-            description: 'Allow user to manage other users',
-            category: 'user_management',
-            resource: 'users',
-            action: 'manage',
-            is_system: false,
-            is_visible: true,
-            status: 'active',
-            metadata: { scope: 'organization' }
-          }
-        ];
-
-        setPermissions(fallbackData);
-        setPagination(prev => ({
-          ...prev,
-          current_page: 1,
-          last_page: 1,
-          per_page: 15,
-          total: fallbackData.length
-        }));
-        return;
-      }
-
-      setError(err.message || 'Failed to load permissions');
+      // For all errors, don't use fallback data - show the actual error
+      const errorMsg = err.message || 'Failed to load permissions';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   }, []); // Empty dependency array since we use refs
 
-  // Remove the initial load useEffect - let the component handle it
-  // useEffect(() => {
-  //   loadPermissions();
-  // }, []); // Empty dependency array to run only once on mount
+  // Initial load on mount
+  useEffect(() => {
+    loadPermissions();
+  }, []); // Empty dependency array to run only once on mount
 
   // Create permission
   const createPermission = useCallback(async (permissionData) => {
@@ -302,7 +188,7 @@ export const usePermissionManagement = () => {
         name: `${permission.name} (Copy)`,
         code: `${permission.code}_copy`,
         description: `${permission.description} (Cloned from ${permission.name})`,
-        is_system: false // Cloned permissions are always custom
+        is_system_permission: false // Cloned permissions are always custom
       };
 
       const formattedData = permissionManagementService.formatPermissionData(cloneData);
