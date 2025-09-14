@@ -59,9 +59,16 @@ export const useOrganizationUsers = (organizationId) => {
       const response = await organizationManagementService.getOrganizationUsers(organizationId, currentParams);
 
       if (response.success) {
-        setUsers(response.data);
+        // Handle new response structure
+        const usersData = response.data?.data || response.data || [];
+        setUsers(Array.isArray(usersData) ? usersData : []);
 
-        if (response.pagination) {
+        if (response.data?.pagination) {
+          setPagination(prev => ({
+            ...prev,
+            ...response.data.pagination
+          }));
+        } else if (response.pagination) {
           setPagination(prev => ({
             ...prev,
             ...response.pagination

@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\UserRole;
+use App\Models\OrganizationRole;
 use Illuminate\Support\Str;
 use App\Models\Organization;
 use Illuminate\Http\Request;
@@ -344,88 +346,99 @@ class OrganizationService extends BaseService
      */
     public function getOrganizationUsers(string $id, array $params = []): array
     {
-        $organization = $this->getOrganizationById($id);
+        try {
+            $organization = $this->getOrganizationById($id);
 
-        if (!$organization) {
-            return [];
-        }
+            if (!$organization) {
+                return [
+                    'data' => [],
+                    'pagination' => [
+                        'current_page' => 1,
+                        'per_page' => 10,
+                        'total' => 0,
+                        'last_page' => 1,
+                        'from' => 0,
+                        'to' => 0,
+                    ]
+                ];
+            }
 
-        $query = DB::table('users')
-            ->leftJoin('user_roles', 'users.id', '=', 'user_roles.user_id')
-            ->leftJoin('organization_roles', 'user_roles.role_id', '=', 'organization_roles.id')
-            ->where('users.organization_id', $id)
-            ->select(
-                'users.id',
-                'users.name',
-                'users.email',
-                'users.status',
-                'users.last_login_at',
-                'users.created_at',
-                'organization_roles.name as role_name',
-                'organization_roles.slug as role_slug'
-            );
+            $query = User::where('organization_id', $id)
+                ->select(['id', 'full_name', 'email', 'status', 'last_login_at', 'created_at']);
 
-        // Apply filters
-        if (array_key_exists('search', $params) && $params['search'] !== null && !empty(trim($params['search']))) {
-            $search = trim($params['search']);
-            $query->where(function($q) use ($search) {
-                $q->where('users.name', 'ilike', "%{$search}%")
-                  ->orWhere('users.email', 'ilike', "%{$search}%");
-            });
-        }
+            // Apply search filter
+            if (array_key_exists('search', $params) && $params['search'] !== null && !empty(trim($params['search']))) {
+                $search = trim($params['search']);
+                $query->where(function($q) use ($search) {
+                    $q->where('full_name', 'ilike', "%{$search}%")
+                      ->orWhere('email', 'ilike', "%{$search}%");
+                });
+            }
 
-        if (isset($params['role']) && !empty($params['role'])) {
-            $query->where('organization_roles.slug', $params['role']);
-        }
+            // Apply role filter
+            if (isset($params['role']) && $params['role'] !== 'all') {
+                $query->where('role', $params['role']);
+            }
 
-        if (isset($params['status']) && !empty($params['status'])) {
-            $query->where('users.status', $params['status']);
-        }
+            // Apply status filter
+            if (isset($params['status']) && $params['status'] !== 'all') {
+                $query->where('status', $params['status']);
+            }
 
-        // Apply pagination
-        $page = $params['page'] ?? 1;
-        $limit = $params['limit'] ?? 10;
-        $offset = ($page - 1) * $limit;
+            // Apply sorting
+            $sortBy = $params['sort_by'] ?? 'created_at';
+            $sortOrder = $params['sort_order'] ?? 'desc';
+            $query->orderBy($sortBy, $sortOrder);
 
-        $users = $query->orderBy('users.created_at', 'desc')
-            ->limit($limit)
-            ->offset($offset)
-            ->get();
+            // Apply pagination
+            $page = (int) ($params['page'] ?? 1);
+            $perPage = (int) ($params['per_page'] ?? 10);
+            $perPage = min($perPage, 100);
 
-        // Get total count for pagination
-        $totalCount = DB::table('users')
-            ->where('organization_id', $id)
-            ->count();
+            $users = $query->paginate($perPage, ['*'], 'page', $page);
 
-        $result = [];
-        foreach ($users as $user) {
-            $result[] = [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role_name ?? 'No Role',
-                'roleSlug' => $user->role_slug ?? null,
-                'status' => $user->status,
-                'lastLogin' => $user->last_login_at,
-                'createdAt' => $user->created_at
+            $data = $users->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->full_name,
+                    'email' => $user->email,
+                    'role' => $user->role ?? 'No Role',
+                    'status' => $user->status,
+                    'last_login' => $user->last_login_at,
+                    'created_at' => $user->created_at
+                ];
+            })->toArray();
+
+            return [
+                'data' => $data,
+                'pagination' => [
+                    'current_page' => $users->currentPage(),
+                    'per_page' => $users->perPage(),
+                    'total' => $users->total(),
+                    'last_page' => $users->lastPage(),
+                    'from' => $users->firstItem(),
+                    'to' => $users->lastItem(),
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get organization users', [
+                'organization_id' => $id,
+                'params' => $params,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'data' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'per_page' => 10,
+                    'total' => 0,
+                    'last_page' => 1,
+                    'from' => 0,
+                    'to' => 0,
+                ]
             ];
         }
-
-        return [
-            'organization' => [
-                'id' => $organization->id,
-                'name' => $organization->name,
-                'org_code' => $organization->org_code,
-            ],
-            'users' => $result,
-            'total_users' => $totalCount,
-            'pagination' => [
-                'current_page' => $page,
-                'per_page' => $limit,
-                'total' => $totalCount,
-                'last_page' => ceil($totalCount / $limit)
-            ]
-        ];
     }
 
     /**
@@ -505,6 +518,72 @@ class OrganizationService extends BaseService
                 'user_id' => $userId
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Add user to organization with data array
+     */
+    public function addUserToOrganizationWithData(string $organizationId, array $userData): array
+    {
+        try {
+            DB::beginTransaction();
+
+            $organization = $this->getById($organizationId);
+            if (!$organization) {
+                return [
+                    'success' => false,
+                    'message' => 'Organization not found'
+                ];
+            }
+
+            // Create user
+            $user = User::create([
+                'name' => $userData['name'],
+                'email' => $userData['email'],
+                'password' => bcrypt($userData['password'] ?? 'password'),
+                'organization_id' => $organizationId,
+                'status' => $userData['status'] ?? 'active',
+                'role' => $userData['role'] ?? 'member'
+            ]);
+
+            // Add user role
+            if (isset($userData['role'])) {
+                $orgRole = OrganizationRole::where('slug', $userData['role'])
+                    ->where('organization_id', $organizationId)
+                    ->first();
+
+                if ($orgRole) {
+                    UserRole::create([
+                        'user_id' => $user->id,
+                        'role_id' => $orgRole->id
+                    ]);
+                }
+            }
+
+            Log::info('User added to organization', [
+                'organization_id' => $organizationId,
+                'user_id' => $user->id
+            ]);
+
+            DB::commit();
+            return [
+                'success' => true,
+                'message' => 'User added successfully',
+                'data' => $user->fresh(['roles', 'permissions'])
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to add user to organization', [
+                'organization_id' => $organizationId,
+                'user_data' => $userData,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to add user to organization'
+            ];
         }
     }
 
@@ -2929,5 +3008,120 @@ class OrganizationService extends BaseService
         $dataSize = $userCount * 1024 * 10; // 10KB per user
 
         return $baseSize + $dataSize;
+    }
+
+    /**
+     * Update organization user
+     */
+    public function updateOrganizationUser(string $organizationId, string $userId, array $data): array
+    {
+        try {
+            $organization = $this->getById($organizationId);
+            if (!$organization) {
+                return [
+                    'success' => false,
+                    'message' => 'Organization not found'
+                ];
+            }
+
+            $user = User::where('id', $userId)
+                ->where('organization_id', $organizationId)
+                ->first();
+
+            if (!$user) {
+                return [
+                    'success' => false,
+                    'message' => 'User not found in this organization'
+                ];
+            }
+
+            // Update user data
+            if (isset($data['role'])) {
+                // Update user role
+                $userRole = UserRole::where('user_id', $userId)->first();
+                if ($userRole) {
+                    $role = OrganizationRole::where('slug', $data['role'])
+                        ->where('organization_id', $organizationId)
+                        ->first();
+
+                    if ($role) {
+                        $userRole->update(['role_id' => $role->id]);
+                    }
+                }
+            }
+
+            if (isset($data['status'])) {
+                $user->update(['status' => $data['status']]);
+            }
+
+            if (isset($data['permissions'])) {
+                // Update user permissions
+                $user->permissions()->sync($data['permissions']);
+            }
+
+            return [
+                'success' => true,
+                'message' => 'User updated successfully',
+                'data' => $user->fresh(['roles', 'permissions'])
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to update organization user', [
+                'organization_id' => $organizationId,
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to update user'
+            ];
+        }
+    }
+
+    /**
+     * Toggle organization user status
+     */
+    public function toggleOrganizationUserStatus(string $organizationId, string $userId, string $status): array
+    {
+        try {
+            $organization = $this->getById($organizationId);
+            if (!$organization) {
+                return [
+                    'success' => false,
+                    'message' => 'Organization not found'
+                ];
+            }
+
+            $user = User::where('id', $userId)
+                ->where('organization_id', $organizationId)
+                ->first();
+
+            if (!$user) {
+                return [
+                    'success' => false,
+                    'message' => 'User not found in this organization'
+                ];
+            }
+
+            $user->update(['status' => $status]);
+
+            return [
+                'success' => true,
+                'message' => 'User status updated successfully',
+                'data' => $user->fresh()
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to toggle organization user status', [
+                'organization_id' => $organizationId,
+                'user_id' => $userId,
+                'status' => $status,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to update user status'
+            ];
+        }
     }
 }

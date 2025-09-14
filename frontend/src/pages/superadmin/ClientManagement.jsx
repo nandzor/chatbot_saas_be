@@ -39,11 +39,11 @@ const ClientManagement = () => {
     handleViewDetails,
     handleEdit,
     handleDeleteOrganization,
-    handleAddUser,
-    handleRemoveUser,
     handleCreateOrganization,
     handleUpdateOrganization,
-    handleUpdateSubscription
+    handleUpdateSubscription,
+    addUserToOrganization,
+    removeUserFromOrganization
   } = useOrganizationManagement();
 
   // Dialog handlers
@@ -82,6 +82,28 @@ const ClientManagement = () => {
       setSelectedOrganization(null);
     } catch (error) {
       console.error('Error updating organization:', error);
+    }
+  };
+
+  const handleAddUser = async (userData) => {
+    try {
+      if (selectedOrganization) {
+        await addUserToOrganization(selectedOrganization.id, userData);
+        setShowUsersDialog(false);
+        setSelectedOrganization(null);
+      }
+    } catch (error) {
+      console.error('Error adding user:', error);
+    }
+  };
+
+  const handleRemoveUser = async (userId) => {
+    try {
+      if (selectedOrganization) {
+        await removeUserFromOrganization(selectedOrganization.id, userId);
+      }
+    } catch (error) {
+      console.error('Error removing user:', error);
     }
   };
 

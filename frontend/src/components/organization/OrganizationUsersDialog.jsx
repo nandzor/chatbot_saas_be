@@ -54,7 +54,8 @@ import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
+  TooltipTrigger,
+  Pagination
 } from '@/components/ui';
 import { usePagination } from '@/hooks/usePagination';
 import { useOrganizationUsers } from '@/hooks/useOrganizationUsers';
@@ -191,10 +192,10 @@ const OrganizationUsersDialog = ({
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Users className="h-6 w-6 text-white" />
@@ -216,7 +217,7 @@ const OrganizationUsersDialog = ({
         </div>
 
         {/* Tabs */}
-        <div className="border-b">
+        <div className="border-b flex-shrink-0">
           <div className="flex space-x-8 px-6">
             {tabs.map((tab) => (
               <button
@@ -463,6 +464,20 @@ const OrganizationUsersDialog = ({
               </Table>
             </CardContent>
           </Card>
+
+          {/* Pagination */}
+          {pagination && pagination.total > 0 && (
+            <div className="mt-6">
+              <Pagination
+                currentPage={pagination.current_page}
+                totalPages={pagination.last_page}
+                totalItems={pagination.total}
+                perPage={pagination.per_page}
+                onPageChange={(page) => updatePagination({ current_page: page })}
+                showPageInfo={true}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -224,7 +224,7 @@ const OrganizationManagement = () => {
         currentPage={pagination?.currentPage || 1}
         totalPages={pagination?.totalPages || 1}
         totalItems={pagination?.totalItems || 0}
-        itemsPerPage={pagination?.itemsPerPage || 10}
+        perPage={pagination?.itemsPerPage || 10}
         onPageChange={handlePageChange}
         onItemsPerPageChange={handleItemsPerPageChange}
         onSort={handleSortChange}

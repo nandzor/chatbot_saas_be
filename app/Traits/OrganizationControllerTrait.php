@@ -373,15 +373,22 @@ trait OrganizationControllerTrait
     /**
      * Handle organization users with role-based access
      */
-    protected function handleOrganizationUsers(string $id): JsonResponse
+    protected function handleOrganizationUsers(string $id, Request $request = null): JsonResponse
     {
         try {
+            $request = $request ?? request();
             $isSuperAdmin = $this->isSuperAdmin();
-            $isOrganizationAdmin = request()->get('is_organization_admin', false);
+            $isOrganizationAdmin = $request->get('is_organization_admin', false);
+
+            // Get query parameters for filtering and pagination
+            $params = $request->only([
+                'page', 'per_page', 'limit', 'search', 'role', 'status',
+                'sort_by', 'sort_order', 'date_from', 'date_to'
+            ]);
 
             // Ensure organization admin can only access their own organization users
             if (!$isSuperAdmin && $isOrganizationAdmin) {
-                $userOrganizationId = request()->get('user_organization_id');
+                $userOrganizationId = $request->get('user_organization_id');
                 if ($userOrganizationId != $id) {
                     return $this->errorResponse(
                         'Akses ditolak. Anda hanya dapat mengakses user organisasi Anda sendiri',
@@ -391,14 +398,14 @@ trait OrganizationControllerTrait
             }
 
             if ($isSuperAdmin) {
-                $users = $this->clientManagementService->getOrganizationUsers($id);
+                $result = $this->clientManagementService->getOrganizationUsers($id, $params);
                 $message = 'Daftar user organisasi berhasil diambil (Admin View)';
             } else {
-                $users = $this->organizationService->getOrganizationUsers($id);
+                $result = $this->organizationService->getOrganizationUsers($id, $params);
                 $message = 'Daftar user organisasi berhasil diambil';
             }
 
-            return $this->successResponse($message, $users);
+            return $this->successResponse($message, $result);
         } catch (\Exception $e) {
             return $this->handleException($e, 'fetching organization users', ['id' => $id]);
         }

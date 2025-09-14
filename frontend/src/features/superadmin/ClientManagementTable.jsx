@@ -435,7 +435,7 @@ const ClientManagementTable = () => {
               currentPage={pagination.currentPage}
               totalPages={pagination.totalPages}
               totalItems={pagination.totalItems}
-              itemsPerPage={pagination.itemsPerPage}
+              perPage={pagination.itemsPerPage}
               onPageChange={(page) => updatePagination({ currentPage: page })}
               onItemsPerPageChange={(itemsPerPage) => updatePagination({ itemsPerPage, currentPage: 1 })}
             />

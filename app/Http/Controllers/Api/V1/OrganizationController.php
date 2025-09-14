@@ -224,9 +224,9 @@ class OrganizationController extends BaseApiController
      * Super Admin: Gets users of any organization
      * Organization Users: Gets users of their own organization
      */
-    public function users(string $id): JsonResponse
+    public function users(Request $request, string $id): JsonResponse
     {
-        return $this->handleOrganizationUsers($id);
+        return $this->handleOrganizationUsers($id, $request);
     }
 
     /**
@@ -282,6 +282,77 @@ class OrganizationController extends BaseApiController
             return $this->handleException($e, 'removing user from organization', [
                 'id' => $id,
                 'user_id' => $userId
+            ]);
+        }
+    }
+
+    /**
+     * Update user in organization
+     *
+     * Super Admin: Can update user in any organization
+     * Organization Users: Can update user in their own organization
+     */
+    public function updateUser(Request $request, string $id, string $userId): JsonResponse
+    {
+        try {
+            $request->validate([
+                'role' => 'sometimes|string|in:org_admin,agent,viewer',
+                'status' => 'sometimes|string|in:active,inactive,suspended',
+                'permissions' => 'sometimes|array'
+            ]);
+
+            $isSuperAdmin = $this->isSuperAdmin();
+
+            if ($isSuperAdmin) {
+                $result = $this->clientManagementService->updateOrganizationUser($id, $userId, $request->all());
+            } else {
+                $result = $this->organizationService->updateOrganizationUser($id, $userId, $request->all());
+            }
+
+            if (!$result) {
+                return $this->errorResponse('Gagal mengupdate user', 400);
+            }
+
+            return $this->successResponse('User berhasil diupdate', $result);
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'updating organization user', [
+                'id' => $id,
+                'user_id' => $userId
+            ]);
+        }
+    }
+
+    /**
+     * Toggle user status in organization
+     *
+     * Super Admin: Can toggle user status in any organization
+     * Organization Users: Can toggle user status in their own organization
+     */
+    public function toggleUserStatus(Request $request, string $id, string $userId): JsonResponse
+    {
+        try {
+            $request->validate([
+                'status' => 'required|string|in:active,inactive,suspended'
+            ]);
+
+            $isSuperAdmin = $this->isSuperAdmin();
+
+            if ($isSuperAdmin) {
+                $result = $this->clientManagementService->toggleOrganizationUserStatus($id, $userId, $request->status);
+            } else {
+                $result = $this->organizationService->toggleOrganizationUserStatus($id, $userId, $request->status);
+            }
+
+            if (!$result) {
+                return $this->errorResponse('Gagal mengubah status user', 400);
+            }
+
+            return $this->successResponse('Status user berhasil diubah', $result);
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'toggling user status', [
+                'id' => $id,
+                'user_id' => $userId,
+                'status' => $request->status
             ]);
         }
     }
