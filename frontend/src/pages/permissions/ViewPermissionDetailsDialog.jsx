@@ -7,9 +7,8 @@ import {
   DialogTitle,
 } from '@/components/ui';
 import { Button, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
-import { X, Loader2, Shield, Calendar, Settings, AlertCircle, Key, Lock } from 'lucide-react';
+import { X, Loader2, Shield, Calendar, Settings, AlertCircle, Key, Lock, Users, Edit, Copy, Trash2 } from 'lucide-react';
 import { permissionManagementService } from '@/services/PermissionManagementService';
-import { toast } from 'react-hot-toast';
 
 const ViewPermissionDetailsDialog = ({ open, onOpenChange, permission, onEdit, onClone, onDelete }) => {
   const [permissionDetails, setPermissionDetails] = useState(null);
@@ -195,25 +194,53 @@ const ViewPermissionDetailsDialog = ({ open, onOpenChange, permission, onEdit, o
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
-          <Button onClick={handleClose} variant="outline">
-            Close
-          </Button>
-          {onEdit && (
-            <Button onClick={() => { onEdit(permission); handleClose(); }}>
-              Edit
+        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+          <div className="text-sm text-gray-500">
+            Last updated: {permission?.updated_at ? new Date(permission.updated_at).toLocaleDateString() : 'N/A'}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleClose}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
             </Button>
-          )}
-          {onClone && (
-            <Button onClick={() => { onClone(permission); handleClose(); }} variant="outline">
-              Clone
-            </Button>
-          )}
-          {onDelete && (
-            <Button onClick={() => { onDelete(permission); handleClose(); }} variant="destructive">
-              Delete
-            </Button>
-          )}
+            {onEdit && (
+              <Button
+                onClick={() => { onEdit(permission); handleClose(); }}
+                size="sm"
+                className="h-8 w-8 p-0 text-white bg-blue-600 hover:bg-blue-700"
+                title="Edit Permission"
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            )}
+            {onClone && (
+              <Button
+                onClick={() => { onClone(permission); handleClose(); }}
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                title="Clone Permission"
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                onClick={() => { onDelete(permission); handleClose(); }}
+                variant="destructive"
+                size="sm"
+                className="h-8 w-8 p-0 text-white bg-red-600 hover:bg-red-700"
+                title="Delete Permission"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -55,7 +55,6 @@ export const usePermissionManagement = () => {
       const response = await permissionManagementService.getPermissions(params);
 
       if (response.success) {
-
         setPermissions(response.data || []);
 
         // Update pagination from API response
@@ -86,10 +85,7 @@ export const usePermissionManagement = () => {
     }
   }, []); // Empty dependency array since we use refs
 
-  // Initial load on mount
-  useEffect(() => {
-    loadPermissions();
-  }, []); // Empty dependency array to run only once on mount
+  // Note: Initial load is handled by the component, not the hook
 
   // Create permission
   const createPermission = useCallback(async (permissionData) => {

@@ -12,9 +12,34 @@ import {
   Key,
   Lock,
   Users,
-  FileText
+  FileText,
+  MoreHorizontal,
+  RefreshCw,
+  Download,
+  Upload,
+  BarChart3,
+  Filter,
+  Search,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import {
+  useLoadingStates,
+  LoadingWrapper,
+  SkeletonCard
+} from '@/utils/loadingStates';
+import {
+  handleError,
+  withErrorHandling
+} from '@/utils/errorHandler';
+import {
+  useAnnouncement,
+  useFocusManagement
+} from '@/utils/accessibilityUtils';
+import {
+  sanitizeInput,
+  validateInput
+} from '@/utils/securityUtils';
 
 import { usePermissionManagement } from '@/hooks/usePermissionManagement';
 import { usePermissionCheck } from '@/hooks/usePermissionCheck';
@@ -30,12 +55,36 @@ import {
   DataContainer,
   // Filters
   FilterBar,
+  // Cards
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   // Badges & Buttons
   Badge,
   Button,
+  // Input & Select
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   // Table & pagination
   DataTable,
   Pagination,
+  // Dropdown
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  // Alert
+  Alert,
+  AlertDescription,
   // Confirm dialog - DeleteConfirmDialog removed (not available)
   // States
   Skeleton,
@@ -61,6 +110,11 @@ const useDebounce = (value, delay) => {
 };
 
 const PermissionList = () => {
+  // Accessibility and loading hooks
+  const { announce } = useAnnouncement();
+  const { focusRef, setFocus } = useFocusManagement();
+  const { setLoading, getLoadingState } = useLoadingStates();
+
   // Hooks
   const {
     permissions,
@@ -82,40 +136,22 @@ const PermissionList = () => {
 
   // Local UI state
   const [selected, setSelected] = useState(null);
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Local filter state for immediate UI updates
-  const [localFilters, setLocalFilters] = useState(filters);
-
-  // Debounced filters for API calls
-  const debouncedFilters = useDebounce(localFilters, 500);
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   // Initial load ref to prevent duplicate API calls
   const initialLoadRef = useRef(false);
-
-
-  // Handle filter changes with immediate UI update
-  const handleFilterChange = useCallback((key, value) => {
-    setLocalFilters(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  }, []);
-
-  const handleClearFilters = useCallback((cleared) => {
-    setLocalFilters(cleared);
-  }, []);
-
-  // Sync local filters with hook filters when debounced
-  useEffect(() => {
-    if (JSON.stringify(debouncedFilters) !== JSON.stringify(filters)) {
-      setFilters(debouncedFilters);
-    }
-  }, [debouncedFilters, filters, setFilters]);
 
   // Get permission category icon and color
   const getCategoryInfo = useCallback((category) => {
@@ -137,14 +173,19 @@ const PermissionList = () => {
     }
   }, []);
 
-  // Load permissions when filters change
+  // Load permissions on mount and when filters change
   useEffect(() => {
-    // Only load if we have filters or if it's the initial load and no permissions
-    if (Object.keys(filters).length > 0 || (!initialLoadRef.current && permissions.length === 0)) {
-      initialLoadRef.current = true;
-      loadPermissions();
-    }
-  }, [filters, loadPermissions, permissions.length]);
+    setLoading('initial', true);
+    loadPermissions().finally(() => {
+      setLoading('initial', false);
+      setIsInitialLoad(false);
+    });
+  }, [filters, loadPermissions]); // Remove setLoading from deps to prevent re-renders
+
+  // Focus management on mount
+  useEffect(() => {
+    setFocus();
+  }, [setFocus]);
 
   // Error surface
   useEffect(() => {
@@ -153,6 +194,56 @@ const PermissionList = () => {
       clearError();
     }
   }, [error, clearError]);
+
+  // Permission action handlers
+  const handleViewPermission = useCallback((permission) => {
+    setSelected(permission);
+    setShowDetails(true);
+    announce(`Viewing permission: ${permission.name}`);
+  }, [announce]);
+
+  const handleEditPermission = useCallback((permission) => {
+    setSelected(permission);
+    setShowEdit(true);
+    announce(`Editing permission: ${permission.name}`);
+  }, [announce]);
+
+  const handleClonePermission = useCallback((permission) => {
+    navigator.clipboard.writeText(permission.name);
+    announce(`Permission name copied: ${permission.name}`);
+  }, [announce]);
+
+  const handleDeletePermission = useCallback((permission) => {
+    setSelected(permission);
+    setShowDeleteConfirm(true);
+    announce(`Deleting permission: ${permission.name}`);
+  }, [announce]);
+
+  // Search and filter handlers
+  const handleSearch = useCallback((e) => {
+    const value = sanitizeInput(e.target.value);
+    setSearchQuery(value);
+    setFilters(prev => ({ ...prev, search: value }));
+    announce(`Searching for: ${value}`);
+  }, [setFilters, announce]);
+
+  const handleStatusFilterChange = useCallback((value) => {
+    setStatusFilter(value);
+    setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }));
+    announce(`Filtering by status: ${value}`);
+  }, [setFilters, announce]);
+
+  const handleTypeFilterChange = useCallback((value) => {
+    setTypeFilter(value);
+    setFilters(prev => ({ ...prev, is_system: value === 'all' ? '' : value }));
+    announce(`Filtering by type: ${value}`);
+  }, [setFilters, announce]);
+
+  const handleCategoryFilterChange = useCallback((value) => {
+    setCategoryFilter(value);
+    setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }));
+    announce(`Filtering by category: ${value}`);
+  }, [setFilters, announce]);
 
   // Derived data
   const categoryOptions = useMemo(() => {
@@ -163,57 +254,37 @@ const PermissionList = () => {
   const filteredPermissions = useMemo(() => {
     let result = permissions;
 
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       result = result.filter(p =>
         (p.name || '').toLowerCase().includes(q) ||
         (p.description || '').toLowerCase().includes(q) ||
+        (p.code || '').toLowerCase().includes(q) ||
         (p.category || '').toLowerCase().includes(q) ||
         (p.resource || '').toLowerCase().includes(q) ||
         (p.action || '').toLowerCase().includes(q)
       );
     }
 
-    if (filters.category) result = result.filter(p => p.category === filters.category);
-    if (filters.is_system !== '') result = result.filter(p => p.is_system_permission === (filters.is_system === 'true'));
-    if (filters.is_visible !== '') result = result.filter(p => p.is_visible === (filters.is_visible === 'true'));
-    if (filters.status) result = result.filter(p => p.status === filters.status);
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(p => p.status === statusFilter);
+    }
+
+    // Type filter
+    if (typeFilter !== 'all') {
+      result = result.filter(p => p.is_system_permission === (typeFilter === 'true'));
+    }
+
+    // Category filter
+    if (categoryFilter !== 'all') {
+      result = result.filter(p => p.category === categoryFilter);
+    }
 
     return result;
-  }, [permissions, filters]);
+  }, [permissions, searchQuery, statusFilter, typeFilter, categoryFilter]);
 
-  // Filter options config for FilterBar
-  const filterOptions = useMemo(() => ([
-    {
-      key: 'category',
-      label: 'Category',
-      placeholder: 'All Categories',
-      options: [
-        { value: '', label: 'All Categories' },
-        ...categoryOptions.map(c => ({ value: c, label: c.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) }))
-      ]
-    },
-    {
-      key: 'is_system',
-      label: 'Type',
-      placeholder: 'All Types',
-      options: [
-        { value: '', label: 'All Types' },
-        { value: 'true', label: 'System Permissions' },
-        { value: 'false', label: 'Custom Permissions' }
-      ]
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      placeholder: 'All Status',
-      options: [
-        { value: '', label: 'All Status' },
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' }
-      ]
-    }
-  ]), [categoryOptions]);
 
   // Columns config for DataTable
   const columns = useMemo(() => {
@@ -309,41 +380,82 @@ const PermissionList = () => {
             </Badge>
           )
         )
+      },
+      {
+        header: 'Actions',
+        key: 'actions',
+        className: 'w-[10%] min-w-[100px]',
+        sortable: false,
+        render: (value, permission) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleViewPermission(permission)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleEditPermission(permission)}
+                disabled={!can('permissions.update')}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Permission
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleClonePermission(permission)}>
+                <CopyIcon className="mr-2 h-4 w-4" />
+                Copy Name
+              </DropdownMenuItem>
+              {!permission.is_system_permission && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => handleDeletePermission(permission)}
+                    className="text-red-600"
+                    disabled={!can('permissions.delete')}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Permission
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
       }
     ];
-  }, [getCategoryInfo]);
-
-  // Actions for DataTable
-  const rowActions = useMemo(() => {
-    return [
-      {
-        label: 'View Details',
-        icon: Eye,
-        onClick: (item) => onView(item)
-      },
-      {
-        label: 'Edit Permission',
-        icon: Edit,
-        onClick: (item) => onEdit(item),
-        className: !can('permissions.update') ? 'pointer-events-none opacity-50' : '',
-        separator: true
-      },
-      {
-        label: 'Clone Permission',
-        icon: CopyIcon,
-        onClick: (item) => onClone(item)
-      },
-      {
-        label: 'Delete Permission',
-        icon: Trash2,
-        onClick: (item) => onAskDelete(item),
-        className: `text-red-600 focus:text-red-600 ${!can('permissions.delete') ? 'pointer-events-none opacity-50' : ''}`,
-        separator: true
-      }
-    ];
-  }, [can]);
+  }, [getCategoryInfo, handleViewPermission, handleEditPermission, handleClonePermission, handleDeletePermission, can]);
 
   // Handlers
+  const handleRefresh = useCallback(async () => {
+    try {
+      setLoading('refresh', true);
+      await refreshPermissions();
+      announce('Permissions refreshed successfully');
+    } catch (err) {
+      handleError(err, { context: 'Permission Refresh' });
+    } finally {
+      setLoading('refresh', false);
+    }
+  }, [refreshPermissions, setLoading, announce]);
+
+  const handleExport = useCallback(async () => {
+    try {
+      setLoading('export', true);
+      // Simulate export
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      announce('Permissions exported successfully');
+    } catch (err) {
+      handleError(err, { context: 'Permission Export' });
+    } finally {
+      setLoading('export', false);
+    }
+  }, [setLoading, announce]);
+
   const handleCreateSubmit = async (data) => {
     try {
       setActionLoading(true);
@@ -351,6 +463,7 @@ const PermissionList = () => {
       if (res.success) {
         toast.success('Permission created');
         setShowCreate(false);
+        announce('Permission created successfully');
       } else {
         toast.error(res.error || 'Failed to create');
       }
@@ -430,34 +543,127 @@ const PermissionList = () => {
     );
   }
 
-  const showEmpty = !loading && filteredPermissions.length === 0;
+  const showEmpty = !loading && permissions.length === 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6" ref={focusRef}>
       <div className="max-w-7xl mx-auto space-y-6">
-        <PageHeaderWithActions
-          title="Permission Management"
-          description="Manage system permissions, access controls, and security policies across the system"
-          primaryAction={{
-            text: 'Create Permission',
-            icon: Plus,
-            onClick: () => { setSelected(null); setShowCreate(true); },
-            disabled: !can('permissions.create')
-          }}
-        />
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Permission Management</h1>
+            <p className="text-muted-foreground">
+              Manage system permissions, access controls, and security policies across the system
+            </p>
+          </div>
 
-        {/* Error message (non-blocking) */}
-        <ErrorMessage error={error} className="" />
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={getLoadingState('refresh')}
+              aria-label="Refresh permissions"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${getLoadingState('refresh') ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={getLoadingState('export')}
+              aria-label="Export permissions"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+
+            <Button
+              onClick={() => { setSelected(null); setShowCreate(true); }}
+              disabled={!can('permissions.create')}
+              aria-label="Create new permission"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Permission
+            </Button>
+          </div>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         {/* Filters */}
-        <FilterBar
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onClearFilters={handleClearFilters}
-          searchPlaceholder="Search permissions by name, code, description, or resource..."
-          filterOptions={filterOptions}
-          className=""
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Search Permissions</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, description, or code..."
+                    value={searchQuery}
+                    onChange={handleSearch}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Status</Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={handleStatusFilterChange}
+                  placeholder="All statuses"
+                >
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Type</Label>
+                <Select
+                  value={typeFilter}
+                  onValueChange={handleTypeFilterChange}
+                  placeholder="All types"
+                >
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="true">System Permissions</SelectItem>
+                  <SelectItem value="false">Custom Permissions</SelectItem>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Category</Label>
+                <Select
+                  value={categoryFilter}
+                  onValueChange={handleCategoryFilterChange}
+                  placeholder="All categories"
+                >
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categoryOptions.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -538,22 +744,34 @@ const PermissionList = () => {
           ) : (
             <>
               <DataTable
-                data={filteredPermissions}
+                data={permissions}
                 columns={columns}
-                actions={rowActions}
-                loading={loading}
-                emptyMessage="No permissions found."
+                loading={getLoadingState('initial')}
+                error={error}
+                searchable={false}
+                ariaLabel="Permissions management table"
+                pagination={null}
               />
 
-              <Pagination
-                className="mt-6"
-                currentPage={pagination.current_page}
-                totalPages={pagination.last_page}
-                totalItems={pagination.total}
-                perPage={pagination.per_page}
-                onPageChange={handlePageChange}
-                onPerPageChange={handlePerPageChange}
-              />
+              {/* Pagination */}
+              {pagination.total > 0 && (
+                <Pagination
+                  currentPage={pagination.current_page}
+                  totalPages={pagination.last_page}
+                  totalItems={pagination.total}
+                  perPage={pagination.per_page}
+                  onPageChange={handlePageChange}
+                  onPerPageChange={handlePerPageChange}
+                  variant="table"
+                  showPageNumbers={true}
+                  showFirstLast={true}
+                  showPrevNext={true}
+                  showPerPageSelector={true}
+                  perPageOptions={[5, 10, 15, 25, 50]}
+                  maxVisiblePages={5}
+                  ariaLabel="Permissions table pagination"
+                />
+              )}
             </>
           )}
         </DataContainer>

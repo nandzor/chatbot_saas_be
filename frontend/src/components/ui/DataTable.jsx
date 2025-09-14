@@ -44,6 +44,7 @@ import {
 const DataTable = ({
   data = [],
   columns = [],
+  actions = [],
   loading = false,
   error = null,
   onSort = null,
@@ -179,6 +180,25 @@ const DataTable = ({
   const renderTableContent = () => {
     const dataToRender = virtualScroll ? virtualScrollConfig.visibleItems : sortedData;
 
+    if (dataToRender.length === 0) {
+      return (
+        <TableBody>
+          <TableRow>
+            <TableCell colSpan={columns.length + (actions.length > 0 ? 1 : 0)} className="text-center py-8">
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="text-gray-400">
+                  <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-500">No data available</p>
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      );
+    }
+
     return (
       <TableBody>
         {dataToRender.map((row, index) => {
@@ -209,6 +229,28 @@ const DataTable = ({
                   }
                 </TableCell>
               ))}
+              {actions.length > 0 && (
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end space-x-2">
+                    {actions.map((action, actionIndex) => {
+                      const Icon = action.icon;
+                      return (
+                        <button
+                          key={actionIndex}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            action.onClick?.(row);
+                          }}
+                          className={`p-2 rounded-md hover:bg-gray-100 transition-colors ${action.className || ''}`}
+                          title={action.label}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </TableCell>
+              )}
             </TableRow>
           );
         })}
@@ -267,11 +309,16 @@ const DataTable = ({
                       })}
                     >
                       <div className="flex items-center space-x-2">
-                        <span>{column.title}</span>
+                        <span>{column.header || column.title}</span>
                         {column.sortable && getSortIcon(column.key)}
                       </div>
                     </TableHead>
                   ))}
+                  {actions.length > 0 && (
+                    <TableHead className="text-right">
+                      <span>Actions</span>
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
 
