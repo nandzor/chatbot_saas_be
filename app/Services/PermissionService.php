@@ -108,8 +108,8 @@ class PermissionService extends BaseService
         }
 
         // Apply search
-        if (isset($filters['search']) && !empty($filters['search'])) {
-            $search = $filters['search'];
+        if (array_key_exists('search', $filters) && $filters['search'] !== null && !empty(trim($filters['search']))) {
+            $search = trim($filters['search']);
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%")

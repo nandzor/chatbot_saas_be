@@ -1430,8 +1430,8 @@ class ClientManagementService
             $query = Organization::onlyTrashed()->with(['users', 'subscriptionPlan']);
 
             // Apply filters
-            if (!empty($params['search'])) {
-                $search = $params['search'];
+            if (array_key_exists('search', $params) && $params['search'] !== null && !empty(trim($params['search']))) {
+                $search = trim($params['search']);
                 $query->where(function (Builder $q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('org_code', 'like', "%{$search}%")

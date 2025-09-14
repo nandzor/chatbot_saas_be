@@ -425,8 +425,8 @@ class UserService extends BaseService
             $query->where('role', $filters['role']);
         }
 
-        if (isset($filters['search'])) {
-            $search = $filters['search'];
+        if (array_key_exists('search', $filters) && $filters['search'] !== null && !empty(trim($filters['search']))) {
+            $search = trim($filters['search']);
             $query->where(function ($q) use ($search) {
                 $q->where('full_name', 'ILIKE', "%{$search}%")
                   ->orWhere('email', 'ILIKE', "%{$search}%")

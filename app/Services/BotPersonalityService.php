@@ -29,7 +29,8 @@ class BotPersonalityService extends BaseService
             'organization_id' => $organizationId,
         ];
 
-        if ($search = $request->get('search')) {
+        if ($request->filled('search')) {
+            $search = $request->get('search');
             return $this->model
                 ->newQuery()
                 ->where('organization_id', $organizationId)

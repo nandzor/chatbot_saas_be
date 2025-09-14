@@ -39,8 +39,8 @@ class SubscriptionService
             $query->where('billing_cycle', $filters['billing_cycle']);
         }
 
-        if (!empty($filters['search'])) {
-            $searchTerm = $filters['search'];
+        if (array_key_exists('search', $filters) && $filters['search'] !== null && !empty(trim($filters['search']))) {
+            $searchTerm = trim($filters['search']);
             $query->where(function ($q) use ($searchTerm) {
                 $q->whereHas('organization', function ($orgQuery) use ($searchTerm) {
                     $orgQuery->where('name', 'ilike', "%{$searchTerm}%")
@@ -440,8 +440,8 @@ class SubscriptionService
             $query->where('billing_cycle', $filters['billing_cycle']);
         }
 
-        if (!empty($filters['search'])) {
-            $searchTerm = $filters['search'];
+        if (array_key_exists('search', $filters) && $filters['search'] !== null && !empty(trim($filters['search']))) {
+            $searchTerm = trim($filters['search']);
             $query->where(function ($q) use ($searchTerm) {
                 $q->whereHas('organization', function ($orgQuery) use ($searchTerm) {
                     $orgQuery->where('name', 'ilike', "%{$searchTerm}%")

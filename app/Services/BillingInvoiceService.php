@@ -306,8 +306,8 @@ class BillingInvoiceService extends BaseService
             $query->where('total_amount', '<=', $filters['amount_max']);
         }
 
-        if (isset($filters['search'])) {
-            $search = $filters['search'];
+        if (array_key_exists('search', $filters) && $filters['search'] !== null && !empty(trim($filters['search']))) {
+            $search = trim($filters['search']);
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_number', 'like', "%{$search}%")
                   ->orWhere('customer_name', 'like', "%{$search}%")
