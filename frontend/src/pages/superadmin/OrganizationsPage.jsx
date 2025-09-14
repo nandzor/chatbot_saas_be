@@ -21,10 +21,7 @@ import {
   Badge,
   Skeleton,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
+  SelectItem
 } from '@/components/ui';
 import { useClientManagement } from '@/hooks/useClientManagement';
 import ClientManagementTable from '@/features/superadmin/ClientManagementTable';
@@ -207,15 +204,10 @@ const OrganizationsPage = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <Select value={viewMode} onValueChange={setViewMode}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="table">Table View</SelectItem>
-              <SelectItem value="analytics">Analytics</SelectItem>
-              <SelectItem value="quick-actions">Quick Actions</SelectItem>
-            </SelectContent>
+          <Select value={viewMode} onValueChange={setViewMode} placeholder="Select view" className="w-40">
+            <SelectItem value="table">Table View</SelectItem>
+            <SelectItem value="analytics">Analytics</SelectItem>
+            <SelectItem value="quick-actions">Quick Actions</SelectItem>
           </Select>
           <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />

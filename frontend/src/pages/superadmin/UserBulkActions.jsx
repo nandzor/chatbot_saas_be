@@ -35,10 +35,7 @@ import {
   Input,
   Label,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea
 } from '@/components/ui';
 
@@ -317,16 +314,12 @@ const UserBulkActions = ({ selectedUsers, onSuccess, onClearSelection }) => {
                     <Select
                       value={bulkOptions.newRole || ''}
                       onValueChange={(value) => setBulkOptions(prev => ({ ...prev, newRole: value }))}
+                      placeholder="Select new role"
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select new role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
                     </Select>
                   </div>
                 </div>

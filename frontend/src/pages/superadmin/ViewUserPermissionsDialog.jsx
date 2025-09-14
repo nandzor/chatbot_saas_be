@@ -30,10 +30,7 @@ import {
   CardHeader,
   CardTitle,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   DataTable,
   EmptyState,
   Skeleton
@@ -186,29 +183,19 @@ const ViewUserPermissionsDialog = ({
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Type</label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
+              <Select value={filterType} onValueChange={setFilterType} placeholder="All types">
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
               </Select>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="granted">Granted</SelectItem>
-                  <SelectItem value="denied">Denied</SelectItem>
-                </SelectContent>
+              <Select value={filterStatus} onValueChange={setFilterStatus} placeholder="All statuses">
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="granted">Granted</SelectItem>
+                <SelectItem value="denied">Denied</SelectItem>
               </Select>
             </div>
           </div>

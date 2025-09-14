@@ -8,10 +8,7 @@ import {
   Button,
   Input,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   Badge,
   Table,
   TableBody,
@@ -534,68 +531,48 @@ const TransactionHistory = () => {
               {/* Status */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)} placeholder="All Status">
+                  {STATUS_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </Select>
               </div>
 
               {/* Payment Method */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-                <Select value={filters.payment_method} onValueChange={(value) => handleFilterChange('payment_method', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHOD_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select value={filters.payment_method} onValueChange={(value) => handleFilterChange('payment_method', value)} placeholder="All Methods">
+                  {PAYMENT_METHOD_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </Select>
               </div>
 
               {/* Payment Gateway */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Payment Gateway</label>
-                <Select value={filters.payment_gateway} onValueChange={(value) => handleFilterChange('payment_gateway', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_GATEWAY_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select value={filters.payment_gateway} onValueChange={(value) => handleFilterChange('payment_gateway', value)} placeholder="All Gateways">
+                  {PAYMENT_GATEWAY_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </Select>
               </div>
 
               {/* Currency */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                <Select value={filters.currency} onValueChange={(value) => handleFilterChange('currency', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCY_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select value={filters.currency} onValueChange={(value) => handleFilterChange('currency', value)} placeholder="All Currencies">
+                  {CURRENCY_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </Select>
               </div>
 
@@ -697,17 +674,14 @@ const TransactionHistory = () => {
                   <Select
                     value={(pagination.itemsPerPage || 15).toString()}
                     onValueChange={(value) => handlePerPageChange(parseInt(value))}
+                    placeholder="10"
+                    className="w-20 h-8"
                   >
-                    <SelectTrigger className="w-20 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="15">15</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="15">15</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
                   </Select>
                 </div>
               </div>

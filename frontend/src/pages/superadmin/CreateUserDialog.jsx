@@ -26,10 +26,7 @@ import {
   Button,
   Input,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   Badge,
   Card,
   CardContent,
@@ -384,20 +381,15 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                     <Label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-2">
                       Timezone
                     </Label>
-                    <Select value={formData.timezone} onValueChange={(value) => handleInputChange('timezone', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                        <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                        <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                        <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
-                        <SelectItem value="Europe/London">London (GMT)</SelectItem>
-                        <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
-                        <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
-                        <SelectItem value="Asia/Shanghai">Shanghai (CST)</SelectItem>
-                      </SelectContent>
+                    <Select value={formData.timezone} onValueChange={(value) => handleInputChange('timezone', value)} placeholder="Select timezone">
+                      <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                      <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                      <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                      <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                      <SelectItem value="Europe/London">London (GMT)</SelectItem>
+                      <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
+                      <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
+                      <SelectItem value="Asia/Shanghai">Shanghai (CST)</SelectItem>
                     </Select>
                   </div>
                 </div>
@@ -502,16 +494,11 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                   <div className="space-y-4">
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 mb-2">Account Status</Label>
-                      <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                          <SelectItem value="suspended">Suspended</SelectItem>
-                        </SelectContent>
+                      <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)} placeholder="Select status">
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
                       </Select>
                     </div>
                   </div>
@@ -536,15 +523,10 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                     <Label className="block text-sm font-medium text-gray-700 mb-2">
                       Organization *
                     </Label>
-                    <Select value={formData.organization_id} onValueChange={(value) => handleInputChange('organization_id', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">TechCorp Inc.</SelectItem>
-                        <SelectItem value="2">ClientCorp Ltd.</SelectItem>
-                        <SelectItem value="3">PartnerOrg LLC</SelectItem>
-                      </SelectContent>
+                    <Select value={formData.organization_id} onValueChange={(value) => handleInputChange('organization_id', value)} placeholder="Select organization">
+                      <SelectItem value="1">TechCorp Inc.</SelectItem>
+                      <SelectItem value="2">ClientCorp Ltd.</SelectItem>
+                      <SelectItem value="3">PartnerOrg LLC</SelectItem>
                     </Select>
                     {errors.organization_id && (
                       <p className="text-sm text-red-600 mt-1">{errors.organization_id}</p>
@@ -555,19 +537,14 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                     <Label className="block text-sm font-medium text-gray-700 mb-2">
                       Department *
                     </Label>
-                    <Select value={formData.department} onValueChange={(value) => handleInputChange('department', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="IT">IT</SelectItem>
-                        <SelectItem value="HR">HR</SelectItem>
-                        <SelectItem value="Support">Support</SelectItem>
-                        <SelectItem value="Sales">Sales</SelectItem>
-                        <SelectItem value="Marketing">Marketing</SelectItem>
-                        <SelectItem value="Finance">Finance</SelectItem>
-                        <SelectItem value="Operations">Operations</SelectItem>
-                      </SelectContent>
+                    <Select value={formData.department} onValueChange={(value) => handleInputChange('department', value)} placeholder="Select department">
+                      <SelectItem value="IT">IT</SelectItem>
+                      <SelectItem value="HR">HR</SelectItem>
+                      <SelectItem value="Support">Support</SelectItem>
+                      <SelectItem value="Sales">Sales</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Finance">Finance</SelectItem>
+                      <SelectItem value="Operations">Operations</SelectItem>
                     </Select>
                     {errors.department && (
                       <p className="text-sm text-red-600 mt-1">{errors.department}</p>
@@ -578,16 +555,11 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit, loading = false }) => {
                     <Label className="block text-sm font-medium text-gray-700 mb-2">
                       Role *
                     </Label>
-                    <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="super_admin">Super Administrator</SelectItem>
-                        <SelectItem value="org_admin">Organization Administrator</SelectItem>
-                        <SelectItem value="agent">Agent</SelectItem>
-                        <SelectItem value="client">Client</SelectItem>
-                      </SelectContent>
+                    <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)} placeholder="Select role">
+                      <SelectItem value="super_admin">Super Administrator</SelectItem>
+                      <SelectItem value="org_admin">Organization Administrator</SelectItem>
+                      <SelectItem value="agent">Agent</SelectItem>
+                      <SelectItem value="client">Client</SelectItem>
                     </Select>
                     {errors.role && (
                       <p className="text-sm text-red-600 mt-1">{errors.role}</p>

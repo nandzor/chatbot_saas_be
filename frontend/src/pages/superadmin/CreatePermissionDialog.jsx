@@ -13,10 +13,7 @@ import {
   Label,
   Textarea,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   Switch,
   Card,
   CardContent,
@@ -306,17 +303,17 @@ const CreatePermissionDialog = ({ isOpen, onClose, onSubmit, loading = false }) 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                    <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => handleInputChange('category', value)}
+                    placeholder="Select category"
+                    className={errors.category ? 'border-red-500' : ''}
+                  >
+                    {CATEGORY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </Select>
                   {errors.category && (
                     <p className="text-sm text-red-600 mt-1">{errors.category}</p>
@@ -325,17 +322,17 @@ const CreatePermissionDialog = ({ isOpen, onClose, onSubmit, loading = false }) 
 
                 <div>
                   <Label htmlFor="resource">Resource *</Label>
-                  <Select value={formData.resource} onValueChange={(value) => handleInputChange('resource', value)}>
-                    <SelectTrigger className={errors.resource ? 'border-red-500' : ''}>
-                      <SelectValue placeholder="Select resource" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RESOURCE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                  <Select
+                    value={formData.resource}
+                    onValueChange={(value) => handleInputChange('resource', value)}
+                    placeholder="Select resource"
+                    className={errors.resource ? 'border-red-500' : ''}
+                  >
+                    {RESOURCE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </Select>
                   {errors.resource && (
                     <p className="text-sm text-red-600 mt-1">{errors.resource}</p>
@@ -344,17 +341,17 @@ const CreatePermissionDialog = ({ isOpen, onClose, onSubmit, loading = false }) 
 
                 <div>
                   <Label htmlFor="action">Action *</Label>
-                  <Select value={formData.action} onValueChange={(value) => handleInputChange('action', value)}>
-                    <SelectTrigger className={errors.action ? 'border-red-500' : ''}>
-                      <SelectValue placeholder="Select action" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACTION_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                  <Select
+                    value={formData.action}
+                    onValueChange={(value) => handleInputChange('action', value)}
+                    placeholder="Select action"
+                    className={errors.action ? 'border-red-500' : ''}
+                  >
+                    {ACTION_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </Select>
                   {errors.action && (
                     <p className="text-sm text-red-600 mt-1">{errors.action}</p>
@@ -403,17 +400,12 @@ const CreatePermissionDialog = ({ isOpen, onClose, onSubmit, loading = false }) 
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="status">Status</Label>
-                    <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)} placeholder="Select status">
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </Select>
                   </div>
 
@@ -422,15 +414,11 @@ const CreatePermissionDialog = ({ isOpen, onClose, onSubmit, loading = false }) 
                     <Select
                       value={formData.metadata.scope}
                       onValueChange={(value) => handleMetadataChange('scope', value)}
+                      placeholder="Select scope"
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="global">Global</SelectItem>
-                        <SelectItem value="organization">Organization</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
-                      </SelectContent>
+                      <SelectItem value="global">Global</SelectItem>
+                      <SelectItem value="organization">Organization</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
                     </Select>
                   </div>
                 </div>
