@@ -28,7 +28,8 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
+  Checkbox
 } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -54,7 +55,13 @@ const DataTable = ({
   searchable = true,
   virtualScroll = false,
   className = '',
-  ariaLabel = 'Data table'
+  ariaLabel = 'Data table',
+  // Checkbox selection props
+  selectable = false,
+  selectedItems = [],
+  onSelectionChange = null,
+  selectAll = false,
+  onSelectAll = null
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
@@ -62,6 +69,28 @@ const DataTable = ({
 
   const { announce } = useAnnouncement();
   const { setLoading, isLoading } = useLoadingStates();
+
+  // Handle individual item selection
+  const handleItemSelect = useCallback((item, checked) => {
+    if (!onSelectionChange) return;
+
+    if (checked) {
+      onSelectionChange([...selectedItems, item]);
+    } else {
+      onSelectionChange(selectedItems.filter(selected => selected.id !== item.id));
+    }
+  }, [selectedItems, onSelectionChange]);
+
+  // Handle select all
+  const handleSelectAll = useCallback((checked) => {
+    if (!onSelectAll) return;
+    onSelectAll(checked);
+  }, [onSelectAll]);
+
+  // Check if item is selected
+  const isItemSelected = useCallback((item) => {
+    return selectedItems.some(selected => selected.id === item.id);
+  }, [selectedItems]);
 
   // Debounce search input
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -184,7 +213,7 @@ const DataTable = ({
       return (
         <TableBody>
           <TableRow>
-            <TableCell colSpan={columns.length + (actions.length > 0 ? 1 : 0)} className="text-center py-8">
+            <TableCell colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0)} className="text-center py-8">
               <div className="flex flex-col items-center justify-center space-y-2">
                 <div className="text-gray-400">
                   <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -221,6 +250,16 @@ const DataTable = ({
                 setsize: sortedData.length
               })}
             >
+              {selectable && (
+                <TableCell className="w-12">
+                  <Checkbox
+                    checked={isItemSelected(row)}
+                    onCheckedChange={(checked) => handleItemSelect(row, checked)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Select ${row.name || row.id || 'item'}`}
+                  />
+                </TableCell>
+              )}
               {columns.map((column) => (
                 <TableCell key={column.key}>
                   {column.render
@@ -297,6 +336,15 @@ const DataTable = ({
             >
               <TableHeader>
                 <TableRow>
+                  {selectable && (
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectAll}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all items"
+                      />
+                    </TableHead>
+                  )}
                   {columns.map((column) => (
                     <TableHead
                       key={column.key}

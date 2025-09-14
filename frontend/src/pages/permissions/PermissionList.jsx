@@ -3,7 +3,7 @@ import {
   Plus,
   Eye,
   Edit,
-  Copy as CopyIcon,
+  Copy,
   Trash2,
   CheckCircle,
   XCircle,
@@ -48,6 +48,7 @@ import CreatePermissionDialog from './CreatePermissionDialog';
 import ViewPermissionDetailsDialog from './ViewPermissionDetailsDialog';
 import EditPermissionDialog from './EditPermissionDialog';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+import PermissionBulkActions from './PermissionBulkActions';
 
 import {
   // Header & container
@@ -137,6 +138,7 @@ const PermissionList = () => {
   // Local UI state
   const [selected, setSelected] = useState(null);
   const [selectedPermissions, setSelectedPermissions] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -219,6 +221,18 @@ const PermissionList = () => {
     announce(`Deleting permission: ${permission.name}`);
   }, [announce]);
 
+  const handleViewRoles = useCallback((permission) => {
+    // TODO: Implement view roles modal
+    toast.info(`Viewing roles for permission: ${permission.name}`);
+    announce(`Viewing roles for permission: ${permission.name}`);
+  }, [announce]);
+
+  const handleViewUsers = useCallback((permission) => {
+    // TODO: Implement view users modal
+    toast.info(`Viewing users for permission: ${permission.name}`);
+    announce(`Viewing users for permission: ${permission.name}`);
+  }, [announce]);
+
   // Search and filter handlers
   const handleSearch = useCallback((e) => {
     const value = sanitizeInput(e.target.value);
@@ -244,6 +258,26 @@ const PermissionList = () => {
     setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }));
     announce(`Filtering by category: ${value}`);
   }, [setFilters, announce]);
+
+  // Bulk selection handlers
+  const handleSelectionChange = useCallback((selectedItems) => {
+    setSelectedPermissions(selectedItems);
+  }, []);
+
+  const handleSelectAll = useCallback((checked) => {
+    setSelectAll(checked);
+    if (checked) {
+      setSelectedPermissions(permissions);
+    } else {
+      setSelectedPermissions([]);
+    }
+  }, [permissions]);
+
+  const handleBulkActionSuccess = useCallback(() => {
+    loadPermissions();
+    setSelectedPermissions([]);
+    setSelectAll(false);
+  }, [loadPermissions]);
 
   // Derived data
   const categoryOptions = useMemo(() => {
@@ -407,8 +441,16 @@ const PermissionList = () => {
                 Edit Permission
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleClonePermission(permission)}>
-                <CopyIcon className="mr-2 h-4 w-4" />
+                <Copy className="mr-2 h-4 w-4" />
                 Copy Name
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleViewRoles(permission)}>
+                <Shield className="mr-2 h-4 w-4" />
+                View Roles
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleViewUsers(permission)}>
+                <Users className="mr-2 h-4 w-4" />
+                View Users
               </DropdownMenuItem>
               {!permission.is_system_permission && (
                 <>
@@ -428,7 +470,7 @@ const PermissionList = () => {
         )
       }
     ];
-  }, [getCategoryInfo, handleViewPermission, handleEditPermission, handleClonePermission, handleDeletePermission, can]);
+  }, [getCategoryInfo, handleViewPermission, handleEditPermission, handleClonePermission, handleDeletePermission, handleViewRoles, handleViewUsers, can]);
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -713,7 +755,7 @@ const PermissionList = () => {
             <div className="p-0">
               <div className="flex items-center">
                 <div className="p-2 bg-orange-100 rounded-lg">
-                  <CopyIcon className="w-6 h-6 text-orange-600" />
+                  <Copy className="w-6 h-6 text-orange-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Custom Permissions</p>
@@ -751,6 +793,11 @@ const PermissionList = () => {
                 searchable={false}
                 ariaLabel="Permissions management table"
                 pagination={null}
+                selectable={true}
+                selectedItems={selectedPermissions}
+                onSelectionChange={handleSelectionChange}
+                selectAll={selectAll}
+                onSelectAll={handleSelectAll}
               />
 
               {/* Pagination */}
@@ -771,6 +818,20 @@ const PermissionList = () => {
                   maxVisiblePages={5}
                   ariaLabel="Permissions table pagination"
                 />
+              )}
+
+              {/* Bulk Actions */}
+              {selectedPermissions.length > 0 && (
+                <div className="mt-4">
+                  <PermissionBulkActions
+                    selectedPermissions={selectedPermissions}
+                    onSuccess={handleBulkActionSuccess}
+                    onClearSelection={() => {
+                      setSelectedPermissions([]);
+                      setSelectAll(false);
+                    }}
+                  />
+                </div>
               )}
             </>
           )}

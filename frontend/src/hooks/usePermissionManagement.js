@@ -52,6 +52,7 @@ export const usePermissionManagement = () => {
         }
       });
 
+      console.log('🚀 Loading permissions with params:', params);
       const response = await permissionManagementService.getPermissions(params);
 
       if (response.success) {
@@ -209,17 +210,21 @@ export const usePermissionManagement = () => {
 
   // Handle pagination
   const handlePageChange = useCallback((page) => {
+    console.log('🔄 Page change requested:', page);
     setPagination(prev => ({ ...prev, current_page: page }));
     loadPermissions(page);
   }, [loadPermissions]);
 
   // Handle per page change
   const handlePerPageChange = useCallback((perPage) => {
-    setPagination(prev => ({
-      ...prev,
+    console.log('📄 Per page change requested:', perPage);
+    const newPagination = {
       per_page: perPage,
       current_page: 1 // Reset to first page when changing per page
-    }));
+    };
+    setPagination(prev => ({ ...prev, ...newPagination }));
+    // Update ref immediately
+    paginationRef.current = { ...paginationRef.current, ...newPagination };
     loadPermissions(1);
   }, [loadPermissions]);
 
