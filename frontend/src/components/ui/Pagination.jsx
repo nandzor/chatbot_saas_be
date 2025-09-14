@@ -6,7 +6,7 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-react';
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './index';
+import { Button, Select, SelectItem } from './index';
 import { cn } from '@/lib/utils';
 
 /**
@@ -205,17 +205,14 @@ const Pagination = forwardRef(({
           value={perPage.toString()}
           onValueChange={(value) => handlePerPageChange(parseInt(value))}
           disabled={disabled || loading}
+          placeholder="Select"
+          className={cn('w-20', currentSize.button)}
         >
-          <SelectTrigger className={cn('w-20', currentSize.button)}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {perPageOptions.map(option => (
-              <SelectItem key={option} value={option.toString()}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
+          {perPageOptions.map(option => (
+            <SelectItem key={option} value={option.toString()}>
+              {option}
+            </SelectItem>
+          ))}
         </Select>
       </div>
     );

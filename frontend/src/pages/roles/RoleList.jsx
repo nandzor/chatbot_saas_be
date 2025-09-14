@@ -34,10 +34,7 @@ import {
   AlertDescription,
   Badge,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -192,12 +189,14 @@ const RoleList = React.memo(() => {
 
   // Handle status filter change
   const handleStatusFilterChange = useCallback((value) => {
+    console.log('Status filter changed to:', value);
     setStatusFilter(value);
     announce(`Filtering by status: ${value}`);
   }, [announce]);
 
   // Handle type filter change
   const handleTypeFilterChange = useCallback((value) => {
+    console.log('Type filter changed to:', value);
     setTypeFilter(value);
     announce(`Filtering by type: ${value}`);
   }, [announce]);
@@ -437,7 +436,8 @@ const RoleList = React.memo(() => {
       console.log('New pagination:', newPagination);
       return newPagination;
     });
-  }, []);
+    announce(`Changed to ${newPerPage} items per page`);
+  }, [announce]);
 
   // Focus management on mount
   useEffect(() => {
@@ -519,32 +519,30 @@ const RoleList = React.memo(() => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
+              <Select
+                value={statusFilter}
+                onValueChange={handleStatusFilterChange}
+                placeholder="All statuses"
+              >
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
               </Select>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Scope</label>
-              <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All scopes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Scopes</SelectItem>
-                  <SelectItem value="global">Global</SelectItem>
-                  <SelectItem value="organization">Organization</SelectItem>
-                  <SelectItem value="department">Department</SelectItem>
-                  <SelectItem value="team">Team</SelectItem>
-                  <SelectItem value="personal">Personal</SelectItem>
-                </SelectContent>
+              <Select
+                value={typeFilter}
+                onValueChange={handleTypeFilterChange}
+                placeholder="All scopes"
+              >
+                <SelectItem value="all">All Scopes</SelectItem>
+                <SelectItem value="global">Global</SelectItem>
+                <SelectItem value="organization">Organization</SelectItem>
+                <SelectItem value="department">Department</SelectItem>
+                <SelectItem value="team">Team</SelectItem>
+                <SelectItem value="personal">Personal</SelectItem>
               </Select>
             </div>
           </div>
