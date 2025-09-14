@@ -235,6 +235,22 @@ export const useClientManagement = () => {
     }
   }, []);
 
+  // Get organization analytics
+  const getOrganizationAnalytics = useCallback(async (params = {}) => {
+    try {
+      const response = await clientManagementService.getOrganizationAnalytics(params);
+
+      if (response.success) {
+        return { success: true, data: response.data };
+      } else {
+        // Analytics API failed
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      return { success: false, error: 'Failed to fetch organization analytics' };
+    }
+  }, []);
+
   // Get organizations by status
   const getOrganizationsByStatus = useCallback(async (status) => {
     try {
@@ -354,6 +370,7 @@ export const useClientManagement = () => {
     getOrganizationById,
     updateOrganizationStatus,
     getOrganizationStatistics,
+    getOrganizationAnalytics,
     getOrganizationsByStatus,
     searchOrganizations,
 

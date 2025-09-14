@@ -136,10 +136,12 @@ class ClientManagementService {
    */
   async getOrganizationStatistics() {
     try {
+      console.log('Fetching organization statistics...');
       const response = await api.get('/v1/organizations/statistics');
-
+      console.log('Statistics API response:', response);
 
       const statisticsData = response.data.data || response.data;
+      console.log('Processed statistics data:', statisticsData);
 
       return {
         success: true,
@@ -147,7 +149,31 @@ class ClientManagementService {
         message: response.data.message || 'Statistics retrieved successfully'
       };
     } catch (error) {
+      console.error('Statistics API error:', error);
       return this.handleError(error, 'Failed to fetch organization statistics');
+    }
+  }
+
+  /**
+   * Get organization analytics
+   */
+  async getOrganizationAnalytics(params = {}) {
+    try {
+      console.log('Fetching organization analytics...', params);
+      const response = await api.get('/v1/organizations/analytics', { params });
+      console.log('Analytics API response:', response);
+
+      const analyticsData = response.data.data || response.data;
+      console.log('Processed analytics data:', analyticsData);
+
+      return {
+        success: true,
+        data: analyticsData,
+        message: response.data.message || 'Analytics retrieved successfully'
+      };
+    } catch (error) {
+      console.error('Analytics API error:', error);
+      return this.handleError(error, 'Failed to fetch organization analytics');
     }
   }
 

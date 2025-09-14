@@ -265,6 +265,110 @@ class ClientManagementService
     }
 
     /**
+     * Get comprehensive analytics including Monthly Revenue and Churn Rate
+     *
+     * @param array $params Analytics parameters
+     * @return array Analytics data
+     */
+    public function getAnalytics(array $params = []): array
+    {
+        // Validate input parameters
+        $validator = Validator::make($params, [
+            'time_range' => 'sometimes|string|in:7d,30d,90d,1y',
+            'date_from' => 'sometimes|date',
+            'date_to' => 'sometimes|date|after_or_equal:date_from'
+        ]);
+
+        if ($validator->fails()) {
+            throw new \InvalidArgumentException('Invalid analytics parameters: ' . implode(', ', $validator->errors()->all()));
+        }
+
+        $timeRange = $params['time_range'] ?? '30d';
+
+        // Use custom date range if provided
+        if (isset($params['date_from']) && isset($params['date_to'])) {
+            $startDate = Carbon::parse($params['date_from']);
+            $endDate = Carbon::parse($params['date_to']);
+        } else {
+            $days = $this->getDaysFromTimeRange($timeRange);
+            $startDate = now()->subDays($days);
+            $endDate = now();
+        }
+
+        // Create cache key
+        $cacheKey = "analytics_{$timeRange}_" . $startDate->format('Y-m-d') . "_" . $endDate->format('Y-m-d');
+
+        // Check cache first
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        try {
+            // Get basic statistics
+            $statistics = $this->getStatistics(false);
+
+            // Calculate Monthly Revenue
+            $monthlyRevenue = $this->calculateMonthlyRevenue($startDate, $endDate);
+
+            // Calculate Churn Rate
+            $churnRate = $this->calculateChurnRate($startDate, $endDate);
+
+            // Get growth metrics
+            $growthMetrics = $this->getGrowthMetrics($startDate, $endDate);
+
+            // Get revenue trends
+            $revenueTrends = $this->getRevenueTrends($startDate, $endDate);
+
+            $analytics = [
+                // Basic statistics
+                'total_organizations' => $statistics['total_organizations'],
+                'active_organizations' => $statistics['active_organizations'],
+                'trial_organizations' => $statistics['trial_organizations'],
+                'suspended_organizations' => $statistics['suspended_organizations'],
+                'inactive_organizations' => $statistics['inactive_organizations'],
+                'total_users' => $statistics['total_users'],
+                'active_users' => $statistics['active_users'],
+
+                // Revenue metrics
+                'monthly_revenue' => $monthlyRevenue,
+                'revenue_trends' => $revenueTrends,
+
+                // Churn metrics
+                'churn_rate' => $churnRate,
+                'churn_trends' => $this->getChurnTrends($startDate, $endDate),
+
+                // Growth metrics
+                'growth_metrics' => $growthMetrics,
+
+                // Additional analytics
+                'plan_distribution' => $statistics['plan_distribution'],
+                'industry_distribution' => $statistics['industry_distribution'],
+                'status_distribution' => $statistics['status_distribution'],
+
+                // Metadata
+                'time_range' => $timeRange,
+                'period_start' => $startDate->toISOString(),
+                'period_end' => $endDate->toISOString(),
+                'cached_at' => now()->toISOString()
+            ];
+
+            // Cache the result for 5 minutes
+            Cache::put($cacheKey, $analytics, 300);
+
+            return $analytics;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get organization analytics', [
+                'error' => $e->getMessage(),
+                'params' => $params,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Get organization by ID with caching
      *
      * @param string $id Organization ID
@@ -2619,6 +2723,367 @@ class ClientManagementService
             return [
                 'success' => false,
                 'message' => 'Failed to add user to organization'
+            ];
+        }
+    }
+
+    /**
+     * Calculate Monthly Revenue
+     */
+    private function calculateMonthlyRevenue(Carbon $startDate, Carbon $endDate): array
+    {
+        try {
+            // Get revenue from active subscriptions that were active during the period
+            $revenue = DB::table('subscriptions')
+                ->join('subscription_plans', 'subscriptions.subscription_plan_id', '=', 'subscription_plans.id')
+                ->where('subscriptions.status', 'active')
+                ->where(function($query) use ($startDate, $endDate) {
+                    $query->whereBetween('subscriptions.created_at', [$startDate, $endDate])
+                          ->orWhere(function($q) use ($startDate, $endDate) {
+                              $q->where('subscriptions.created_at', '<=', $startDate)
+                                ->where('subscriptions.updated_at', '>=', $startDate);
+                          });
+                })
+                ->selectRaw('SUM(subscription_plans.price) as total_revenue')
+                ->first();
+
+            // Get revenue from payment transactions
+            $transactionRevenue = DB::table('payment_transactions')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->where('status', 'completed')
+                ->sum('amount');
+
+            $currentRevenue = ($revenue->total_revenue ?? 0) + $transactionRevenue;
+
+            // Get previous period revenue for comparison
+            $prevStartDate = $startDate->copy()->subDays($startDate->diffInDays($endDate));
+            $prevEndDate = $startDate;
+
+            $prevRevenue = DB::table('subscriptions')
+                ->join('subscription_plans', 'subscriptions.subscription_plan_id', '=', 'subscription_plans.id')
+                ->where('subscriptions.status', 'active')
+                ->where(function($query) use ($prevStartDate, $prevEndDate) {
+                    $query->whereBetween('subscriptions.created_at', [$prevStartDate, $prevEndDate])
+                          ->orWhere(function($q) use ($prevStartDate, $prevEndDate) {
+                              $q->where('subscriptions.created_at', '<=', $prevStartDate)
+                                ->where('subscriptions.updated_at', '>=', $prevStartDate);
+                          });
+                })
+                ->selectRaw('SUM(subscription_plans.price) as total_revenue')
+                ->first();
+
+            $prevTransactionRevenue = DB::table('payment_transactions')
+                ->whereBetween('created_at', [$prevStartDate, $prevEndDate])
+                ->where('status', 'completed')
+                ->sum('amount');
+
+            $previousRevenue = ($prevRevenue->total_revenue ?? 0) + $prevTransactionRevenue;
+
+            $growthRate = $previousRevenue > 0
+                ? (($currentRevenue - $previousRevenue) / $previousRevenue) * 100
+                : 0;
+
+            return [
+                'current' => round($currentRevenue, 2),
+                'previous' => round($previousRevenue, 2),
+                'growth_rate' => round($growthRate, 2),
+                'subscription_revenue' => round($revenue->total_revenue ?? 0, 2),
+                'transaction_revenue' => round($transactionRevenue, 2),
+                'currency' => 'USD'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to calculate monthly revenue', [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'current' => 0,
+                'previous' => 0,
+                'growth_rate' => 0,
+                'subscription_revenue' => 0,
+                'transaction_revenue' => 0,
+                'currency' => 'USD'
+            ];
+        }
+    }
+
+    /**
+     * Calculate Churn Rate
+     */
+    private function calculateChurnRate(Carbon $startDate, Carbon $endDate): array
+    {
+        try {
+            // Get organizations that were active at the start of the period
+            $activeAtStart = DB::table('organizations')
+                ->where('status', 'active')
+                ->where('created_at', '<=', $startDate)
+                ->count();
+
+            // Get organizations that churned (became inactive/suspended) during the period
+            $churnedOrgs = DB::table('organizations')
+                ->whereIn('status', ['inactive', 'suspended'])
+                ->whereBetween('updated_at', [$startDate, $endDate])
+                ->where('created_at', '<=', $startDate) // Only count organizations that existed before the period
+                ->count();
+
+            // Calculate churn rate
+            $churnRate = $activeAtStart > 0 ? ($churnedOrgs / $activeAtStart) * 100 : 0;
+
+            // Get previous period churn rate for comparison
+            $prevStartDate = $startDate->copy()->subDays($startDate->diffInDays($endDate));
+            $prevEndDate = $startDate;
+
+            $prevActiveAtStart = DB::table('organizations')
+                ->where('status', 'active')
+                ->where('created_at', '<=', $prevStartDate)
+                ->count();
+
+            $prevChurnedOrgs = DB::table('organizations')
+                ->whereIn('status', ['inactive', 'suspended'])
+                ->whereBetween('updated_at', [$prevStartDate, $prevEndDate])
+                ->where('created_at', '<=', $prevStartDate)
+                ->count();
+
+            $prevChurnRate = $prevActiveAtStart > 0 ? ($prevChurnedOrgs / $prevActiveAtStart) * 100 : 0;
+
+            // Calculate churn rate change (absolute difference)
+            $churnRateChange = $churnRate - $prevChurnRate;
+
+            return [
+                'current' => round($churnRate, 2),
+                'previous' => round($prevChurnRate, 2),
+                'change' => round($churnRateChange, 2),
+                'churned_organizations' => $churnedOrgs,
+                'active_at_start' => $activeAtStart,
+                'period_days' => $startDate->diffInDays($endDate)
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to calculate churn rate', [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'current' => 0,
+                'previous' => 0,
+                'change' => 0,
+                'churned_organizations' => 0,
+                'active_at_start' => 0,
+                'period_days' => 0
+            ];
+        }
+    }
+
+    /**
+     * Get growth metrics
+     */
+    private function getGrowthMetrics(Carbon $startDate, Carbon $endDate): array
+    {
+        try {
+            // New organizations in period
+            $newOrgs = DB::table('organizations')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->count();
+
+            // New users in period
+            $newUsers = DB::table('users')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->count();
+
+            // Previous period for comparison
+            $prevStartDate = $startDate->copy()->subDays($startDate->diffInDays($endDate));
+            $prevEndDate = $startDate;
+
+            $prevNewOrgs = DB::table('organizations')
+                ->whereBetween('created_at', [$prevStartDate, $prevEndDate])
+                ->count();
+
+            $prevNewUsers = DB::table('users')
+                ->whereBetween('created_at', [$prevStartDate, $prevEndDate])
+                ->count();
+
+            $orgGrowthRate = $prevNewOrgs > 0 ? (($newOrgs - $prevNewOrgs) / $prevNewOrgs) * 100 : 0;
+            $userGrowthRate = $prevNewUsers > 0 ? (($newUsers - $prevNewUsers) / $prevNewUsers) * 100 : 0;
+
+            return [
+                'new_organizations' => $newOrgs,
+                'new_users' => $newUsers,
+                'organization_growth_rate' => round($orgGrowthRate, 2),
+                'user_growth_rate' => round($userGrowthRate, 2)
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get growth metrics', ['error' => $e->getMessage()]);
+            return [
+                'new_organizations' => 0,
+                'new_users' => 0,
+                'organization_growth_rate' => 0,
+                'user_growth_rate' => 0
+            ];
+        }
+    }
+
+    /**
+     * Get revenue trends
+     */
+    private function getRevenueTrends(Carbon $startDate, Carbon $endDate): array
+    {
+        try {
+            // Get daily revenue from subscriptions
+            $subscriptionTrends = DB::table('subscriptions')
+                ->join('subscription_plans', 'subscriptions.subscription_plan_id', '=', 'subscription_plans.id')
+                ->where('subscriptions.status', 'active')
+                ->where(function($query) use ($startDate, $endDate) {
+                    $query->whereBetween('subscriptions.created_at', [$startDate, $endDate])
+                          ->orWhere(function($q) use ($startDate, $endDate) {
+                              $q->where('subscriptions.created_at', '<=', $startDate)
+                                ->where('subscriptions.updated_at', '>=', $startDate);
+                          });
+                })
+                ->selectRaw('DATE(subscriptions.created_at) as date, SUM(subscription_plans.price) as daily_revenue')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
+
+            // Get daily revenue from payment transactions
+            $transactionTrends = DB::table('payment_transactions')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->where('status', 'completed')
+                ->selectRaw('DATE(created_at) as date, SUM(amount) as daily_revenue')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
+
+            // Combine both trends
+            $combinedTrends = [];
+
+            // Add subscription trends
+            foreach ($subscriptionTrends as $trend) {
+                $date = $trend->date;
+                if (!isset($combinedTrends[$date])) {
+                    $combinedTrends[$date] = ['date' => $date, 'revenue' => 0];
+                }
+                $combinedTrends[$date]['revenue'] += $trend->daily_revenue;
+            }
+
+            // Add transaction trends
+            foreach ($transactionTrends as $trend) {
+                $date = $trend->date;
+                if (!isset($combinedTrends[$date])) {
+                    $combinedTrends[$date] = ['date' => $date, 'revenue' => 0];
+                }
+                $combinedTrends[$date]['revenue'] += $trend->daily_revenue;
+            }
+
+            return array_values($combinedTrends);
+        } catch (\Exception $e) {
+            Log::error('Failed to get revenue trends', [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Get churn trends
+     */
+    private function getChurnTrends(Carbon $startDate, Carbon $endDate): array
+    {
+        try {
+            $trends = DB::table('organizations')
+                ->whereIn('status', ['inactive', 'suspended'])
+                ->whereBetween('updated_at', [$startDate, $endDate])
+                ->where('created_at', '<=', $startDate) // Only count organizations that existed before the period
+                ->selectRaw('DATE(updated_at) as date, COUNT(*) as daily_churn')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
+
+            return $trends->map(function ($trend) {
+                return [
+                    'date' => $trend->date,
+                    'churn' => $trend->daily_churn
+                ];
+            })->toArray();
+        } catch (\Exception $e) {
+            Log::error('Failed to get churn trends', [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
+
+    /**
+     * Get days from time range
+     */
+    private function getDaysFromTimeRange(string $timeRange): int
+    {
+        return match ($timeRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            '1y' => 365,
+            default => 30
+        };
+    }
+
+    /**
+     * Clear analytics cache
+     */
+    public function clearAnalyticsCache(): bool
+    {
+        try {
+            // Clear all analytics cache keys
+            $cacheKeys = Cache::getRedis()->keys('*analytics_*');
+            foreach ($cacheKeys as $key) {
+                Cache::forget($key);
+            }
+
+            Log::info('Analytics cache cleared successfully');
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to clear analytics cache', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get analytics cache status
+     */
+    public function getAnalyticsCacheStatus(): array
+    {
+        try {
+            $cacheKeys = Cache::getRedis()->keys('*analytics_*');
+            $cacheInfo = [];
+
+            foreach ($cacheKeys as $key) {
+                $ttl = Cache::getRedis()->ttl($key);
+                $cacheInfo[] = [
+                    'key' => $key,
+                    'ttl' => $ttl,
+                    'expires_in' => $ttl > 0 ? $ttl . ' seconds' : 'expired'
+                ];
+            }
+
+            return [
+                'total_cached_items' => count($cacheKeys),
+                'cache_items' => $cacheInfo
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get analytics cache status', [
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'total_cached_items' => 0,
+                'cache_items' => [],
+                'error' => $e->getMessage()
             ];
         }
     }

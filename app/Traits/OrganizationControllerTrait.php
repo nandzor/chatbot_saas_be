@@ -247,7 +247,7 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $analytics = $this->clientManagementService->getStatistics();
+                $analytics = $this->clientManagementService->getAnalytics($params);
                 $message = 'Analytics platform berhasil diambil (Admin View)';
             } else {
                 $analytics = $this->organizationService->getOrganizationStatistics();

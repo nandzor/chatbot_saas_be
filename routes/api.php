@@ -518,6 +518,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/statistics', [OrganizationController::class, 'getStatistics']);
             Route::get('/search', [OrganizationController::class, 'search']);
             Route::get('/analytics', [OrganizationController::class, 'getAllOrganizationsAnalytics']);
+            Route::post('/analytics/cache/clear', [OrganizationController::class, 'clearAnalyticsCache']);
+            Route::get('/analytics/cache/status', [OrganizationController::class, 'getAnalyticsCacheStatus']);
             Route::get('/export', [OrganizationController::class, 'export']);
             Route::get('/deleted', [OrganizationController::class, 'deleted']);
             Route::middleware(['permission:organizations.bulk_actions'])->post('/bulk-action', [OrganizationController::class, 'bulkAction']);

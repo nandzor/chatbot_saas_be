@@ -35,7 +35,8 @@ const ClientManagementDashboard = () => {
     error,
     statistics,
     loadOrganizations,
-    getOrganizationStatistics
+    getOrganizationStatistics,
+    getOrganizationAnalytics
   } = useClientManagement();
 
   const [statisticsData, setStatisticsData] = useState({});
@@ -44,15 +45,20 @@ const ClientManagementDashboard = () => {
   const loadStatistics = useCallback(async () => {
     try {
       setStatisticsLoading(true);
-      const response = await getOrganizationStatistics();
+      const response = await getOrganizationAnalytics({ time_range: '30d' });
+      console.log('Analytics response:', response);
       if (response.success) {
+        console.log('Analytics data:', response.data);
         setStatisticsData(response.data);
+      } else {
+        console.error('Analytics error:', response.error);
       }
     } catch (error) {
+      console.error('Analytics loading error:', error);
     } finally {
       setStatisticsLoading(false);
     }
-  }, [getOrganizationStatistics]);
+  }, [getOrganizationAnalytics]);
 
   React.useEffect(() => {
     loadStatistics();
@@ -71,38 +77,38 @@ const ClientManagementDashboard = () => {
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       loading: statisticsLoading,
-      change: '+12%',
+      change: statisticsData.growth_metrics?.organization_growth_rate ? `+${statisticsData.growth_metrics.organization_growth_rate}%` : '+0%',
       changeType: 'positive'
     },
     {
-      title: 'Active Organizations',
-      value: statisticsData.active_organizations || 0,
-      icon: CheckCircle,
+      title: 'Total Users',
+      value: statisticsData.total_users || 0,
+      icon: Users,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       loading: statisticsLoading,
-      change: '+8%',
+      change: statisticsData.growth_metrics?.user_growth_rate ? `+${statisticsData.growth_metrics.user_growth_rate}%` : '+0%',
       changeType: 'positive'
     },
     {
-      title: 'Trial Organizations',
-      value: statisticsData.trial_organizations || 0,
-      icon: Clock,
+      title: 'Monthly Revenue',
+      value: statisticsData.monthly_revenue?.current ? `$${statisticsData.monthly_revenue.current.toLocaleString()}` : '$0',
+      icon: Activity,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50',
       loading: statisticsLoading,
-      change: '+15%',
+      change: statisticsData.monthly_revenue?.growth_rate ? `+${statisticsData.monthly_revenue.growth_rate}%` : '+0%',
       changeType: 'positive'
     },
     {
-      title: 'Suspended Organizations',
-      value: statisticsData.inactive_organizations || 0,
+      title: 'Churn Rate',
+      value: statisticsData.churn_rate?.current ? `${statisticsData.churn_rate.current}%` : '0%',
       icon: XCircle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       loading: statisticsLoading,
-      change: '-3%',
-      changeType: 'negative'
+      change: statisticsData.churn_rate?.change ? `${statisticsData.churn_rate.change > 0 ? '+' : ''}${statisticsData.churn_rate.change}%` : '+0%',
+      changeType: statisticsData.churn_rate?.change > 0 ? 'negative' : 'positive'
     }
   ];
 
@@ -132,10 +138,7 @@ const ClientManagementDashboard = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Client
-          </Button>
+
         </div>
       </div>
 

@@ -554,6 +554,49 @@ class OrganizationController extends BaseApiController
     }
 
     /**
+     * Clear analytics cache
+     *
+     * Super Admin only
+     */
+    public function clearAnalyticsCache(): JsonResponse
+    {
+        try {
+            if (!$this->isSuperAdmin()) {
+                return $this->errorResponse('Unauthorized. Super admin access required.', 403);
+            }
+
+            $success = $this->clientManagementService->clearAnalyticsCache();
+
+            if ($success) {
+                return $this->successResponse('Analytics cache cleared successfully');
+            } else {
+                return $this->errorResponse('Failed to clear analytics cache', 500);
+            }
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'clearing analytics cache');
+        }
+    }
+
+    /**
+     * Get analytics cache status
+     *
+     * Super Admin only
+     */
+    public function getAnalyticsCacheStatus(): JsonResponse
+    {
+        try {
+            if (!$this->isSuperAdmin()) {
+                return $this->errorResponse('Unauthorized. Super admin access required.', 403);
+            }
+
+            $status = $this->clientManagementService->getAnalyticsCacheStatus();
+            return $this->successResponse('Analytics cache status retrieved successfully', $status);
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'getting analytics cache status');
+        }
+    }
+
+    /**
      * Get organization roles
      *
      * Super Admin: Gets roles of any organization
