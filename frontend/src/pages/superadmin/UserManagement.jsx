@@ -34,6 +34,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  AlertTriangle,
   UserCheck,
   Download,
   Filter,
@@ -67,8 +68,10 @@ import {
 import CreateUserDialog from './CreateUserDialog';
 import EditUserDialog from './EditUserDialog';
 import ViewUserDetailsDialog from './ViewUserDetailsDialog';
+import ViewUserPermissionsDialog from './ViewUserPermissionsDialog';
 import UserBulkActions from './UserBulkActions';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import userManagementService from '@/services/UserManagementService';
 
 const UserManagement = () => {
   const { announce } = useAnnouncement();
@@ -102,6 +105,7 @@ const UserManagement = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isViewPermissionsDialogOpen, setIsViewPermissionsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
 
@@ -203,17 +207,22 @@ const UserManagement = () => {
     try {
       setLoading('delete', true);
 
-      // Simulate delete
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await userManagementService.deleteUser(user.id);
 
-      setUsers(prev => prev.filter(u => u.id !== user.id));
-      announce(`User ${user.name} deleted successfully`);
-    } catch (err) {
-      handleError(err, { context: 'User Delete' });
+      if (response.success) {
+        toast.success(`User ${user.name} deleted successfully`);
+        announce(`User ${user.name} deleted successfully`);
+        loadUsers(); // Refresh the list
+      } else {
+        toast.error(response.message || 'Failed to delete user');
+      }
+    } catch (error) {
+      toast.error('Failed to delete user');
+      console.error('Delete user error:', error);
     } finally {
       setLoading('delete', false);
     }
-  }, [setLoading, announce]);
+  }, [setLoading, announce, loadUsers]);
 
   const handleCloneUser = useCallback((user) => {
     navigator.clipboard.writeText(user.email);
@@ -221,16 +230,51 @@ const UserManagement = () => {
   }, [announce]);
 
   const handleViewPermissions = useCallback((user) => {
-    // TODO: Implement view permissions modal
-    toast.info(`Viewing permissions for user: ${user.name}`);
+    setSelectedUser(user);
+    setIsViewPermissionsDialogOpen(true);
     announce(`Viewing permissions for user: ${user.name}`);
   }, [announce]);
 
-  const handleViewRoles = useCallback((user) => {
-    // TODO: Implement view roles modal
-    toast.info(`Viewing roles for user: ${user.name}`);
-    announce(`Viewing roles for user: ${user.name}`);
-  }, [announce]);
+
+  const handleSuspendUser = useCallback(async (user) => {
+    try {
+      setLoading('suspend', true);
+      const response = await userManagementService.updateUser(user.id, { status: 'suspended' });
+
+      if (response.success) {
+        toast.success(`User ${user.name} has been suspended`);
+        announce(`User ${user.name} has been suspended`);
+        loadUsers(); // Refresh the list
+      } else {
+        toast.error(response.message || 'Failed to suspend user');
+      }
+    } catch (error) {
+      toast.error('Failed to suspend user');
+      console.error('Suspend user error:', error);
+    } finally {
+      setLoading('suspend', false);
+    }
+  }, [setLoading, announce, loadUsers]);
+
+  const handleUnsuspendUser = useCallback(async (user) => {
+    try {
+      setLoading('unsuspend', true);
+      const response = await userManagementService.updateUser(user.id, { status: 'active' });
+
+      if (response.success) {
+        toast.success(`User ${user.name} has been unsuspended`);
+        announce(`User ${user.name} has been unsuspended`);
+        loadUsers(); // Refresh the list
+      } else {
+        toast.error(response.message || 'Failed to unsuspend user');
+      }
+    } catch (error) {
+      toast.error('Failed to unsuspend user');
+      console.error('Unsuspend user error:', error);
+    } finally {
+      setLoading('unsuspend', false);
+    }
+  }, [setLoading, announce, loadUsers]);
 
   // DataTable columns configuration
   const columns = [
@@ -266,16 +310,26 @@ const UserManagement = () => {
       key: 'status',
       title: 'Status',
       sortable: true,
-      render: (value) => (
-        <Badge variant={value === 'active' ? 'default' : 'destructive'}>
-          {value === 'active' ? (
-            <CheckCircle className="w-3 h-3 mr-1" />
-          ) : (
-            <XCircle className="w-3 h-3 mr-1" />
-          )}
-          {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'N/A'}
-        </Badge>
-      )
+      render: (value) => {
+        let badgeVariant, icon;
+        if (value === 'active') {
+          badgeVariant = 'default';
+          icon = <CheckCircle className="w-3 h-3 mr-1" />;
+        } else if (value === 'suspended') {
+          badgeVariant = 'destructive';
+          icon = <AlertTriangle className="w-3 h-3 mr-1" />;
+        } else {
+          badgeVariant = 'secondary';
+          icon = <XCircle className="w-3 h-3 mr-1" />;
+        }
+
+        return (
+          <Badge variant={badgeVariant}>
+            {icon}
+            {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'N/A'}
+          </Badge>
+        );
+      }
     },
     {
       key: 'organization',
@@ -327,10 +381,18 @@ const UserManagement = () => {
               <Shield className="mr-2 h-4 w-4" />
               View Permissions
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleViewRoles(user)}>
-              <Users className="mr-2 h-4 w-4" />
-              View Roles
-            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {user.status === 'suspended' ? (
+              <DropdownMenuItem onClick={() => handleUnsuspendUser(user)}>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Unsuspend User
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={() => handleSuspendUser(user)}>
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Suspend User
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => handleDeleteUser(user)}
@@ -370,18 +432,18 @@ const UserManagement = () => {
   const showEmpty = !loading && users.length === 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6" ref={focusRef}>
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6" ref={focusRef}>
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">User Management</h1>
           <p className="text-muted-foreground">
             Manage users, roles, and permissions
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             onClick={handleRefresh}
@@ -453,6 +515,7 @@ const UserManagement = () => {
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
               </Select>
             </div>
 
@@ -474,7 +537,7 @@ const UserManagement = () => {
       </Card>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <DataContainer>
           <div className="p-0">
             <div className="flex items-center">
@@ -526,6 +589,20 @@ const UserManagement = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Regular Users</p>
                 <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.role === 'user').length}</p>
+              </div>
+            </div>
+          </div>
+        </DataContainer>
+
+        <DataContainer>
+          <div className="p-0">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <XCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Suspended Users</p>
+                <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'suspended').length}</p>
               </div>
             </div>
           </div>
@@ -626,6 +703,12 @@ const UserManagement = () => {
       <ViewUserDetailsDialog
         open={isViewDialogOpen}
         onOpenChange={setIsViewDialogOpen}
+        user={selectedUser}
+      />
+
+      <ViewUserPermissionsDialog
+        isOpen={isViewPermissionsDialogOpen}
+        onClose={() => setIsViewPermissionsDialogOpen(false)}
         user={selectedUser}
       />
       </div>

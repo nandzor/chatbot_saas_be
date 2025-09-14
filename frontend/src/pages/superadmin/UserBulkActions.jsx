@@ -83,6 +83,26 @@ const UserBulkActions = ({ selectedUsers, onSuccess, onClearSelection }) => {
       confirmText: 'DEACTIVATE'
     },
     {
+      id: 'suspend',
+      label: 'Suspend Users',
+      description: 'Suspend selected users',
+      icon: AlertTriangle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      confirmText: 'SUSPEND'
+    },
+    {
+      id: 'unsuspend',
+      label: 'Unsuspend Users',
+      description: 'Unsuspend selected users',
+      icon: CheckCircle,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200',
+      confirmText: 'UNSUSPEND'
+    },
+    {
       id: 'change_role',
       label: 'Change Role',
       description: 'Change role of selected users',
@@ -149,6 +169,12 @@ const UserBulkActions = ({ selectedUsers, onSuccess, onClearSelection }) => {
           break;
         case 'deactivate':
           response = await userManagementService.bulkDeactivate(userIds);
+          break;
+        case 'suspend':
+          response = await userManagementService.bulkSuspend(userIds);
+          break;
+        case 'unsuspend':
+          response = await userManagementService.bulkUnsuspend(userIds);
           break;
         case 'change_role':
           response = await userManagementService.bulkChangeRole(userIds, bulkOptions);

@@ -327,6 +327,156 @@ class UserManagementService {
   }
 
   /**
+   * Bulk suspend users
+   */
+  async bulkSuspend(userIds) {
+    try {
+      const response = await api.patch('/v1/users/bulk-update', {
+        user_ids: userIds,
+        data: { status: 'suspended' }
+      });
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to suspend users');
+    }
+  }
+
+  /**
+   * Bulk unsuspend users
+   */
+  async bulkUnsuspend(userIds) {
+    try {
+      const response = await api.patch('/v1/users/bulk-update', {
+        user_ids: userIds,
+        data: { status: 'active' }
+      });
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to unsuspend users');
+    }
+  }
+
+  /**
+   * Bulk activate users
+   */
+  async bulkActivate(userIds) {
+    try {
+      const response = await api.patch('/v1/users/bulk-update', {
+        user_ids: userIds,
+        data: { status: 'active' }
+      });
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to activate users');
+    }
+  }
+
+  /**
+   * Bulk deactivate users
+   */
+  async bulkDeactivate(userIds) {
+    try {
+      const response = await api.patch('/v1/users/bulk-update', {
+        user_ids: userIds,
+        data: { status: 'inactive' }
+      });
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to deactivate users');
+    }
+  }
+
+  /**
+   * Bulk delete users
+   */
+  async bulkDelete(userIds) {
+    try {
+      const response = await api.delete('/v1/users/bulk-delete', {
+        data: { user_ids: userIds }
+      });
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to delete users');
+    }
+  }
+
+  /**
+   * Bulk change role
+   */
+  async bulkChangeRole(userIds, options) {
+    try {
+      const response = await api.patch('/v1/users/bulk-update', {
+        user_ids: userIds,
+        data: { role: options.role }
+      });
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to change user roles');
+    }
+  }
+
+  /**
+   * Bulk send email
+   */
+  async bulkSendEmail(userIds, options) {
+    try {
+      const response = await api.post('/v1/users/bulk-email', {
+        user_ids: userIds,
+        subject: options.subject,
+        message: options.message
+      });
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to send emails');
+    }
+  }
+
+  /**
+   * Get user permissions
+   */
+  async getUserPermissions(userId) {
+    try {
+      const response = await api.get(`/v1/users/${userId}/permissions`);
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      return this.handleError(error, 'Failed to get user permissions');
+    }
+  }
+
+
+  /**
    * Handle API errors
    */
   handleError(error, defaultMessage) {
