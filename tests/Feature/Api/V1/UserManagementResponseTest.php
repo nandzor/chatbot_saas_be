@@ -22,7 +22,7 @@ class UserManagementResponseTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->organization = Organization::factory()->create([
             'name' => 'Test Organization',
             'status' => 'active'
@@ -34,7 +34,7 @@ class UserManagementResponseTest extends TestCase
             'is_email_verified' => true,
             'status' => 'active',
             'permissions' => [
-                'users.view', 'users.create', 'users.update', 
+                'users.view', 'users.create', 'users.update',
                 'users.delete', 'users.restore', 'users.bulk_update'
             ]
         ]);
@@ -242,7 +242,7 @@ class UserManagementResponseTest extends TestCase
         $response->assertStatus(201);
 
         $createdUser = $response->json('data');
-        
+
         // Verify all submitted data is returned
         $this->assertEquals('Created User', $createdUser['full_name']);
         $this->assertEquals('created@example.com', $createdUser['email']);
@@ -279,7 +279,7 @@ class UserManagementResponseTest extends TestCase
         $response->assertStatus(200);
 
         $updatedUser = $response->json('data');
-        
+
         // Verify updated fields
         $this->assertEquals('Updated Name', $updatedUser['full_name']);
         $this->assertEquals('updated@example.com', $updatedUser['email']);
@@ -309,7 +309,7 @@ class UserManagementResponseTest extends TestCase
         $response->assertStatus(200);
 
         $pagination = $response->json('data');
-        
+
         // Verify pagination structure
         $this->assertArrayHasKey('current_page', $pagination);
         $this->assertArrayHasKey('per_page', $pagination);
@@ -456,7 +456,8 @@ class UserManagementResponseTest extends TestCase
                         'active_users',
                         'verified_users',
                         'inactive_users',
-                        'unverified_users'
+                        'unverified_users',
+                        'suspended_users'
                     ]
                 ]);
 
@@ -488,18 +489,25 @@ class UserManagementResponseTest extends TestCase
             'organization_id' => $this->organization->id
         ]);
 
+        User::factory()->count(1)->create([
+            'status' => 'suspended',
+            'is_email_verified' => true,
+            'organization_id' => $this->organization->id
+        ]);
+
         $response = $this->getJson('/api/v1/users/statistics');
 
         $response->assertStatus(200);
 
         $stats = $response->json('data');
-        
+
         // Verify counts (including admin user)
-        $this->assertEquals(7, $stats['total_users']); // 3 + 2 + 1 + admin
+        $this->assertEquals(8, $stats['total_users']); // 3 + 2 + 1 + 1 + admin
         $this->assertEquals(4, $stats['active_users']); // 3 + 1 + admin
-        $this->assertEquals(5, $stats['verified_users']); // 3 + 2 + admin
+        $this->assertEquals(6, $stats['verified_users']); // 3 + 2 + 1 + admin
         $this->assertEquals(2, $stats['inactive_users']); // 2
         $this->assertEquals(1, $stats['unverified_users']); // 1
+        $this->assertEquals(1, $stats['suspended_users']); // 1
     }
 
     // ========================================================================
@@ -594,7 +602,7 @@ class UserManagementResponseTest extends TestCase
                 ]);
 
         $errors = $response->json('errors');
-        
+
         $this->assertArrayHasKey('email', $errors);
         $this->assertArrayHasKey('full_name', $errors);
         $this->assertArrayHasKey('username', $errors);

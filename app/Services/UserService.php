@@ -258,6 +258,7 @@ class UserService extends BaseService
             'verified_users' => User::where('is_email_verified', true)->count(),
             'inactive_users' => User::where('status', 'inactive')->count(),
             'unverified_users' => User::where('is_email_verified', false)->count(),
+            'suspended_users' => User::where('status', 'suspended')->count(),
         ];
     }
 
