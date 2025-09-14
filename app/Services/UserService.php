@@ -81,7 +81,7 @@ class UserService extends BaseService
     /**
      * Update user profile.
      */
-    public function updateProfile(int $userId, array $data): bool
+    public function updateProfile(string $userId, array $data): bool
     {
         return DB::transaction(function () use ($userId, $data) {
             $updateData = [];
@@ -171,7 +171,7 @@ class UserService extends BaseService
     /**
      * Change user password.
      */
-    public function changePassword(int $userId, string $newPassword): bool
+    public function changePassword(string $userId, string $newPassword): bool
     {
         $result = $this->update($userId, [
             'password' => Hash::make($newPassword),
@@ -182,7 +182,7 @@ class UserService extends BaseService
     /**
      * Activate or deactivate user.
      */
-    public function toggleUserStatus(int $userId): bool
+    public function toggleUserStatus(string $userId): bool
     {
         $user = $this->getById($userId);
         if (!$user) {
@@ -273,7 +273,7 @@ class UserService extends BaseService
     /**
      * Soft delete user (deactivate).
      */
-    public function softDeleteUser(int $userId): bool
+    public function softDeleteUser(string $userId): bool
     {
         $result = $this->update($userId, [
             'deleted_at' => now(),
@@ -284,7 +284,7 @@ class UserService extends BaseService
     /**
      * Restore soft deleted user.
      */
-    public function restoreUser(int $userId): bool
+    public function restoreUser(string $userId): bool
     {
         $result = $this->update($userId, [
             'deleted_at' => null,
@@ -356,7 +356,7 @@ class UserService extends BaseService
     /**
      * Check if email exists.
      */
-    public function emailExists(string $email, ?int $excludeUserId = null): bool
+    public function emailExists(string $email, ?string $excludeUserId = null): bool
     {
         $query = User::where('email', $email);
 
@@ -370,7 +370,7 @@ class UserService extends BaseService
     /**
      * Check if username exists.
      */
-    public function usernameExists(string $username, ?int $excludeUserId = null): bool
+    public function usernameExists(string $username, ?string $excludeUserId = null): bool
     {
         $query = User::where('username', $username);
 
