@@ -161,7 +161,8 @@ const ClientManagement = () => {
         organization={selectedOrganization}
         onEdit={handleEditOrganizationClick}
         onDelete={handleDeleteOrganization}
-        onManageUsers={handleManageUsersClick}
+        onAddUser={handleManageUsersClick}
+        onRemoveUser={handleManageUsersClick}
         onUpdateSubscription={handleUpdateSubscription}
         loading={loading}
       />

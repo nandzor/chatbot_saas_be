@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Badge,
   Button,
@@ -22,11 +22,11 @@ import {
   Textarea,
   Label
 } from '@/components/ui';
-import { 
-  Plus, 
-  Users, 
-  Calendar, 
-  Clock, 
+import {
+  Plus,
+  Users,
+  Calendar,
+  Clock,
   CheckCircle,
   AlertCircle,
   Play,
@@ -188,7 +188,7 @@ const OnboardingPipeline = () => {
             {client.priority}
           </Badge>
         </div>
-        
+
         <div className="space-y-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <Users className="w-3 h-3" />
@@ -210,7 +210,7 @@ const OnboardingPipeline = () => {
             <span className="text-xs font-medium">{client.progress}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className={`h-2 rounded-full ${getProgressColor(client.progress)}`}
               style={{ width: `${client.progress}%` }}
             ></div>
@@ -338,12 +338,12 @@ const OnboardingPipeline = () => {
               <h3 className="font-semibold text-sm">{stage.title}</h3>
               <p className="text-xs opacity-80">{stage.clients.length} clients</p>
             </div>
-            
+
             <div className="space-y-3">
               {stage.clients.map((client) => (
                 <ClientCard key={client.id} client={client} />
               ))}
-              
+
               {stage.clients.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">

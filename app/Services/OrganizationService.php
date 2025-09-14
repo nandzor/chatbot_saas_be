@@ -366,8 +366,8 @@ class OrganizationService extends BaseService
             );
 
         // Apply filters
-        if (isset($params['search']) && !empty($params['search'])) {
-            $search = $params['search'];
+        if (array_key_exists('search', $params) && $params['search'] !== null && !empty(trim($params['search']))) {
+            $search = trim($params['search']);
             $query->where(function($q) use ($search) {
                 $q->where('users.name', 'ilike', "%{$search}%")
                   ->orWhere('users.email', 'ilike', "%{$search}%");
