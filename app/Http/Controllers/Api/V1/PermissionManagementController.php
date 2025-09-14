@@ -24,12 +24,21 @@ class PermissionManagementController extends BaseApiController
     public function index(Request $request): JsonResponse
     {
         try {
-            $permissions = $this->permissionService->getOrganizationPermissions(
+            $permissions = $this->permissionService->getPaginatedPermissions(
                 $this->getCurrentOrganization()?->id,
                 $request->all()
             );
 
-            return $this->successResponse('Permissions retrieved successfully', $permissions);
+            return $this->successResponse(
+                'Permissions retrieved successfully',
+                $permissions,
+                200,
+                [
+                    'execution_time_ms' => round((microtime(true) - LARAVEL_START) * 1000, 2),
+                    'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+                    'queries_count' => 0
+                ]
+            );
 
         } catch (\Exception $e) {
             Log::error('Get permissions error: ' . $e->getMessage(), [

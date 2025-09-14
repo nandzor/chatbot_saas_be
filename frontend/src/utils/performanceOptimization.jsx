@@ -270,13 +270,17 @@ export const createLazyComponent = (importFn, fallback = null) => {
  */
 export const usePerformanceMonitor = (name) => {
   const startTime = useRef(performance.now());
+  const renderCount = useRef(0);
 
   useEffect(() => {
+    renderCount.current += 1;
+
     return () => {
       const endTime = performance.now();
       const duration = endTime - startTime.current;
 
-      if (process.env.NODE_ENV === 'development') {
+      // Only log if render count is reasonable (prevent spam)
+      if (process.env.NODE_ENV === 'development' && renderCount.current <= 3) {
         console.log(`⚡ Component "${name}" render time: ${duration.toFixed(2)}ms`);
       }
     };

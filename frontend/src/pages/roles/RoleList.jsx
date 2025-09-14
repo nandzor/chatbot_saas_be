@@ -44,7 +44,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DataTable
+  DataTable,
+  Pagination
 } from '@/components/ui';
 import {
   Shield,
@@ -75,8 +76,9 @@ import ViewRoleDetailsDialog from './ViewRoleDetailsDialog';
 import RolePermissionsModal from './RolePermissionsModal';
 import RoleAssignmentModal from './RoleAssignmentModal';
 import RoleBulkActions from './RoleBulkActions';
+import { roleManagementService } from '@/services/RoleManagementService';
 
-const RoleList = () => {
+const RoleList = React.memo(() => {
   const { announce } = useAnnouncement();
   const { focusRef, setFocus } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
@@ -97,87 +99,54 @@ const RoleList = () => {
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Sample data - in production, this would come from API
-  const sampleRoles = useMemo(() => [
-    {
-      id: 1,
-      name: 'Super Admin',
-      description: 'Full system access and control',
-      type: 'system',
-      status: 'active',
-      userCount: 2,
-      permissionCount: 25,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-15T10:30:00Z',
-      permissions: ['user.read', 'user.write', 'user.delete', 'system.settings'],
-      isSystem: true
-    },
-    {
-      id: 2,
-      name: 'Admin',
-      description: 'Administrative access to most features',
-      type: 'admin',
-      status: 'active',
-      userCount: 5,
-      permissionCount: 18,
-      createdAt: '2024-01-02T00:00:00Z',
-      updatedAt: '2024-01-14T15:45:00Z',
-      permissions: ['user.read', 'user.write', 'role.read', 'role.write'],
-      isSystem: false
-    },
-    {
-      id: 3,
-      name: 'Manager',
-      description: 'Management access to team and content',
-      type: 'manager',
-      status: 'active',
-      userCount: 12,
-      permissionCount: 12,
-      createdAt: '2024-01-03T00:00:00Z',
-      updatedAt: '2024-01-13T09:15:00Z',
-      permissions: ['user.read', 'content.read', 'content.write'],
-      isSystem: false
-    },
-    {
-      id: 4,
-      name: 'Agent',
-      description: 'Customer support agent access',
-      type: 'agent',
-      status: 'active',
-      userCount: 25,
-      permissionCount: 8,
-      createdAt: '2024-01-04T00:00:00Z',
-      updatedAt: '2024-01-12T14:20:00Z',
-      permissions: ['conversation.read', 'conversation.write', 'knowledge.read'],
-      isSystem: false
-    },
-    {
-      id: 5,
-      name: 'Viewer',
-      description: 'Read-only access to reports and data',
-      type: 'viewer',
-      status: 'inactive',
-      userCount: 0,
-      permissionCount: 5,
-      createdAt: '2024-01-05T00:00:00Z',
-      updatedAt: '2024-01-10T11:30:00Z',
-      permissions: ['report.read', 'dashboard.read'],
-      isSystem: false
-    }
-  ], []);
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    perPage: 10, // Set to 10 items per page
+    total: 0,
+    lastPage: 1
+  });
 
-  // Load roles data
-  const loadRoles = useCallback(async () => {
+  // Load roles data from backend API
+  const loadRoles = useCallback(async (customParams = {}) => {
     try {
       setLoading('initial', true);
       setError(null);
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const params = {
+        page: customParams.page || pagination.currentPage,
+        per_page: customParams.per_page || pagination.perPage,
+        search: customParams.search !== undefined ? customParams.search : searchQuery,
+        scope: customParams.scope !== undefined ? customParams.scope : (typeFilter !== 'all' ? typeFilter : undefined),
+        is_active: customParams.is_active !== undefined ? customParams.is_active : (statusFilter !== 'all' ? (statusFilter === 'active') : undefined),
+        sort_by: 'created_at',
+        sort_order: 'desc'
+      };
 
-      setRoles(sampleRoles);
-      announce('Roles loaded successfully');
+      const response = await roleManagementService.getRoles(params);
+
+      if (response.success) {
+        setRoles(response.data || []);
+
+        // Update pagination from response
+        if (response.pagination) {
+          console.log('Pagination data from API:', response.pagination);
+          setPagination(prev => ({
+            ...prev,
+            currentPage: response.pagination.current_page,
+            total: response.pagination.total,
+            lastPage: response.pagination.last_page
+          }));
+        } else {
+          console.log('No pagination data in response:', response);
+        }
+
+        announce('Roles loaded successfully');
+      } else {
+        throw new Error(response.message || 'Failed to load roles');
+      }
     } catch (err) {
       const errorResult = handleError(err, {
         context: 'Role Management Data Loading',
@@ -187,43 +156,33 @@ const RoleList = () => {
     } finally {
       setLoading('initial', false);
     }
-  }, [sampleRoles, setLoading, announce]);
+  }, [setLoading, announce]);
 
-  // Filter roles based on search and filters
-  const filterRoles = useCallback(() => {
-    let filtered = roles;
-
-    // Search filter
-    if (searchQuery) {
-      const sanitizedQuery = sanitizeInput(searchQuery.toLowerCase());
-      filtered = filtered.filter(role =>
-        role.name.toLowerCase().includes(sanitizedQuery) ||
-        role.description.toLowerCase().includes(sanitizedQuery)
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(role => role.status === statusFilter);
-    }
-
-    // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(role => role.type === typeFilter);
-    }
-
-    setFilteredRoles(filtered);
-  }, [roles, searchQuery, statusFilter, typeFilter]);
-
-  // Load data on mount
+  // Update filtered roles when roles change (backend handles filtering)
   useEffect(() => {
-    loadRoles();
-  }, [loadRoles]);
+    setFilteredRoles(roles);
+  }, [roles]);
 
-  // Filter roles when filters change
+  // Load data when filters or pagination changes (debounced)
   useEffect(() => {
-    filterRoles();
-  }, [filterRoles]);
+    const timeoutId = setTimeout(() => {
+      console.log('Loading roles - isInitialLoad:', isInitialLoad);
+      loadRoles({
+        page: pagination.currentPage,
+        per_page: pagination.perPage,
+        search: searchQuery,
+        scope: typeFilter !== 'all' ? typeFilter : undefined,
+        is_active: statusFilter !== 'all' ? (statusFilter === 'active') : undefined
+      });
+
+      // Mark initial load as complete
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
+    }, isInitialLoad ? 0 : 300); // No debounce for initial load
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, statusFilter, typeFilter, pagination.currentPage, pagination.perPage, isInitialLoad]);
 
   // Handle search
   const handleSearch = useCallback((e) => {
@@ -289,13 +248,20 @@ const RoleList = () => {
     try {
       setLoading('delete', true);
 
-      // Simulate delete
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await roleManagementService.deleteRole(role.id);
 
-      setRoles(prev => prev.filter(r => r.id !== role.id));
-      announce(`Role ${role.name} deleted successfully`);
+      if (response.success) {
+        setRoles(prev => prev.filter(r => r.id !== role.id));
+        announce(`Role ${role.name} deleted successfully`);
+      } else {
+        throw new Error(response.message || 'Failed to delete role');
+      }
     } catch (err) {
-      handleError(err, { context: 'Role Delete' });
+      const errorResult = handleError(err, {
+        context: 'Role Delete',
+        showToast: true
+      });
+      setError(errorResult.message);
     } finally {
       setLoading('delete', false);
     }
@@ -318,8 +284,8 @@ const RoleList = () => {
     announce(`Role name copied: ${role.name}`);
   }, [announce]);
 
-  // DataTable columns configuration
-  const columns = [
+  // DataTable columns configuration (memoized to prevent re-renders)
+  const columns = useMemo(() => [
     {
       key: 'name',
       title: 'Role',
@@ -332,24 +298,24 @@ const RoleList = () => {
           <div>
             <div className="font-medium text-gray-900 flex items-center space-x-2">
               {value}
-              {role.isSystem && (
+              {role.is_system_role && (
                 <Badge variant="secondary" className="text-xs">
                   System
                 </Badge>
               )}
             </div>
-            <div className="text-sm text-gray-500">{role.description}</div>
+            <div className="text-sm text-gray-500">{role.description || 'No description'}</div>
           </div>
         </div>
       )
     },
     {
-      key: 'type',
-      title: 'Type',
+      key: 'scope',
+      title: 'Scope',
       sortable: true,
       render: (value) => (
         <Badge variant="outline">
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'N/A'}
         </Badge>
       )
     },
@@ -364,39 +330,39 @@ const RoleList = () => {
           ) : (
             <XCircle className="w-3 h-3 mr-1" />
           )}
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Unknown'}
         </Badge>
       )
     },
     {
-      key: 'userCount',
+      key: 'users_count',
       title: 'Users',
       sortable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Users className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-900">{value}</span>
+          <span className="text-sm text-gray-900">{value || 0}</span>
         </div>
       )
     },
     {
-      key: 'permissionCount',
+      key: 'permissions_count',
       title: 'Permissions',
       sortable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Settings className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-900">{value}</span>
+          <span className="text-sm text-gray-900">{value || 0}</span>
         </div>
       )
     },
     {
-      key: 'updatedAt',
+      key: 'updated_at',
       title: 'Last Updated',
       sortable: true,
       render: (value) => (
         <div className="text-sm text-gray-500">
-          {new Date(value).toLocaleDateString()}
+          {value ? new Date(value).toLocaleDateString() : 'N/A'}
         </div>
       )
     },
@@ -433,7 +399,7 @@ const RoleList = () => {
               <Copy className="mr-2 h-4 w-4" />
               Copy Name
             </DropdownMenuItem>
-            {!role.isSystem && (
+            {!role.is_system_role && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -449,7 +415,29 @@ const RoleList = () => {
         </DropdownMenu>
       )
     }
-  ];
+  ], [handleViewRole, handleEditRole, handleDeleteRole, handleManagePermissions, handleAssignUsers, handleCopyRole]);
+
+
+  // Pagination handlers (memoized)
+  const handlePageChange = useCallback((page) => {
+    console.log('Page change requested:', page);
+    setPagination(prev => {
+      console.log('Previous pagination:', prev);
+      const newPagination = { ...prev, currentPage: page };
+      console.log('New pagination:', newPagination);
+      return newPagination;
+    });
+  }, []);
+
+  const handlePerPageChange = useCallback((newPerPage) => {
+    console.log('Per page change requested:', newPerPage);
+    setPagination(prev => {
+      console.log('Previous pagination:', prev);
+      const newPagination = { ...prev, perPage: newPerPage, currentPage: 1 };
+      console.log('New pagination:', newPagination);
+      return newPagination;
+    });
+  }, []);
 
   // Focus management on mount
   useEffect(() => {
@@ -544,18 +532,18 @@ const RoleList = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
+              <label className="text-sm font-medium">Scope</label>
               <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder="All scopes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="agent">Agent</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="all">All Scopes</SelectItem>
+                  <SelectItem value="global">Global</SelectItem>
+                  <SelectItem value="organization">Organization</SelectItem>
+                  <SelectItem value="department">Department</SelectItem>
+                  <SelectItem value="team">Team</SelectItem>
+                  <SelectItem value="personal">Personal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -574,6 +562,15 @@ const RoleList = () => {
         />
       )}
 
+      {/* Debug pagination state */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="p-2 bg-gray-100 text-xs">
+          <strong>Debug Pagination:</strong> Current: {pagination.currentPage},
+          Total: {pagination.total}, LastPage: {pagination.lastPage},
+          PerPage: {pagination.perPage}
+        </div>
+      )}
+
       {/* Roles Table */}
       <DataTable
         data={filteredRoles}
@@ -582,15 +579,28 @@ const RoleList = () => {
         error={error}
         searchable={false} // We handle search in filters
         ariaLabel="Roles management table"
-        pagination={{
-          currentPage: 1,
-          totalPages: 1,
-          hasNext: false,
-          hasPrevious: false,
-          onNext: () => {},
-          onPrevious: () => {}
-        }}
+        pagination={null}
       />
+
+      {/* Pagination */}
+      {pagination.total > pagination.perPage && (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.lastPage}
+          totalItems={pagination.total}
+          perPage={pagination.perPage}
+          onPageChange={handlePageChange}
+          onPerPageChange={handlePerPageChange}
+          variant="table"
+          showPageNumbers={true}
+          showFirstLast={true}
+          showPrevNext={true}
+          showPerPageSelector={true}
+          perPageOptions={[5, 10, 15, 25, 50]}
+          maxVisiblePages={5}
+          ariaLabel="Roles table pagination"
+        />
+      )}
 
       {/* Dialogs */}
       <CreateRoleDialog
@@ -639,7 +649,7 @@ const RoleList = () => {
       />
     </div>
   );
-};
+});
 
 export default withErrorHandling(RoleList, {
   context: 'Role List Page'

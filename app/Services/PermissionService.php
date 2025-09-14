@@ -74,6 +74,68 @@ class PermissionService extends BaseService
     }
 
     /**
+     * Get paginated permissions for an organization
+     */
+    public function getPaginatedPermissions(?string $organizationId, array $filters = [])
+    {
+        $query = Permission::query();
+
+        if ($organizationId !== null) {
+            $query->where('organization_id', $organizationId);
+        } else {
+            $query->whereNull('organization_id');
+        }
+
+        // Apply filters
+        if (isset($filters['category'])) {
+            $query->where('category', $filters['category']);
+        }
+
+        if (isset($filters['resource'])) {
+            $query->where('resource', $filters['resource']);
+        }
+
+        if (isset($filters['is_system'])) {
+            $query->where('is_system_permission', $filters['is_system']);
+        }
+
+        if (isset($filters['is_visible'])) {
+            $query->where('is_visible', $filters['is_visible']);
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        // Apply search
+        if (isset($filters['search']) && !empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%")
+                  ->orWhere('resource', 'like', "%{$search}%");
+            });
+        }
+
+        // Apply sorting
+        $sortBy = $filters['sort_by'] ?? 'sort_order';
+        $sortOrder = $filters['sort_order'] ?? 'asc';
+
+        if (in_array($sortBy, ['name', 'description', 'category', 'resource', 'status', 'created_at', 'updated_at', 'sort_order'])) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('sort_order')->orderBy('category')->orderBy('name');
+        }
+
+        // Get pagination parameters
+        $perPage = min((int) ($filters['per_page'] ?? 15), 100);
+        $page = (int) ($filters['page'] ?? 1);
+
+        return $query->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    /**
      * Get permission by ID
      */
     public function getPermissionById(string $permissionId, ?string $organizationId): ?Permission

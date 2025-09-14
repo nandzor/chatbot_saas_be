@@ -29,15 +29,12 @@ class RoleManagementController extends BaseApiController
 
             return $this->successResponse(
                 'Roles retrieved successfully',
-                $roles->items(),
+                $roles,
                 200,
                 [
-                    'pagination' => [
-                        'current_page' => $roles->currentPage(),
-                        'per_page' => $roles->perPage(),
-                        'total' => $roles->total(),
-                        'last_page' => $roles->lastPage()
-                    ]
+                    'execution_time_ms' => round((microtime(true) - LARAVEL_START) * 1000, 2),
+                    'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+                    'queries_count' => 0
                 ]
             );
 

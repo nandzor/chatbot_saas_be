@@ -83,6 +83,23 @@ import {
   Radar
 } from 'recharts';
 
+// Custom Tooltip component to prevent accessibilityLayer prop warning
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-background border rounded p-2 shadow-lg">
+        <p className="font-medium">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm" style={{ color: entry.color }}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const { announce } = useAnnouncement();
@@ -376,7 +393,7 @@ const Dashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="hour" className="text-xs" />
                     <YAxis className="text-xs" />
-                    <Tooltip content={<div className="bg-background border rounded p-2">Chart Tooltip</div>} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Area type="monotone" dataKey="bot" stackId="1" stroke="hsl(var(--chart-1))" fill="url(#colorBot)" />
                     <Area type="monotone" dataKey="agent" stackId="1" stroke="hsl(var(--chart-4))" fill="url(#colorAgent)" />
                     <Legend />
@@ -409,7 +426,7 @@ const Dashboard = () => {
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <Tooltip content={<div className="bg-background border rounded p-2">Chart Tooltip</div>} />
+                    <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
