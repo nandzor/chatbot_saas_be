@@ -329,6 +329,31 @@ const Login = () => {
                 <span className="font-mono">Password123!</span>
               </div>
             </div>
+
+            {/* Production Super Admin */}
+            <div
+              className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg shadow-sm border-2 border-purple-200 p-4 cursor-pointer hover:shadow-md hover:border-purple-300 transition-all duration-200 active:scale-95"
+              onClick={() => {
+                setFormData({
+                  email: 'superadmin@chatbot-saas.com',
+                  password: 'SuperAdmin123!'
+                });
+                announce('Production Super Admin credentials filled - will redirect to /superadmin');
+              }}
+            >
+              <div className="font-bold text-purple-800 uppercase text-sm flex items-center">
+                <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                PRODUCTION SUPER ADMIN
+              </div>
+              <div className="text-sm text-purple-600 mt-1">
+                <span className="font-medium">superadmin@chatbot-saas.com</span>
+                <span className="mx-2">•</span>
+                <span className="font-mono">SuperAdmin123!</span>
+              </div>
+              <div className="text-xs text-purple-500 mt-1 italic">
+                Production environment access
+              </div>
+            </div>
           </CardContent>
         </Card>
 

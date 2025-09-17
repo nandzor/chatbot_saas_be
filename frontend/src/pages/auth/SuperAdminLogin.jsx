@@ -219,6 +219,65 @@ const SuperAdminLogin = () => {
                     </div>
                 </form>
 
+                {/* Demo Accounts */}
+                <Card className="mt-6">
+                    <CardHeader>
+                        <CardTitle className="text-center text-lg font-semibold text-gray-800">
+                            <span className="border-t border-gray-300 w-8 inline-block mr-3"></span>
+                            Demo Accounts
+                            <span className="border-t border-gray-300 w-8 inline-block ml-3"></span>
+                        </CardTitle>
+                        <CardDescription className="text-center text-sm text-gray-600">
+                            Click on any account to auto-fill the login form
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {/* Test Super Admin */}
+                        <div
+                            className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all duration-200 active:scale-95"
+                            onClick={() => {
+                                setFormData({
+                                    email: 'superadmin@test.com',
+                                    password: 'Password123!',
+                                    remember: false
+                                });
+                            }}
+                        >
+                            <div className="font-bold text-gray-800 uppercase text-sm">TEST SUPER ADMIN</div>
+                            <div className="text-sm text-gray-600 mt-1">
+                                <span className="font-medium">superadmin@test.com</span>
+                                <span className="mx-2">•</span>
+                                <span className="font-mono">Password123!</span>
+                            </div>
+                        </div>
+
+                        {/* Production Super Admin */}
+                        <div
+                            className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg shadow-sm border-2 border-purple-200 p-4 cursor-pointer hover:shadow-md hover:border-purple-300 transition-all duration-200 active:scale-95"
+                            onClick={() => {
+                                setFormData({
+                                    email: 'superadmin@chatbot-saas.com',
+                                    password: 'SuperAdmin123!',
+                                    remember: false
+                                });
+                            }}
+                        >
+                            <div className="font-bold text-purple-800 uppercase text-sm flex items-center">
+                                <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                                PRODUCTION SUPER ADMIN
+                            </div>
+                            <div className="text-sm text-purple-600 mt-1">
+                                <span className="font-medium">superadmin@chatbot-saas.com</span>
+                                <span className="mx-2">•</span>
+                                <span className="font-mono">SuperAdmin123!</span>
+                            </div>
+                            <div className="text-xs text-purple-500 mt-1 italic">
+                                Production environment access
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* Back to Main Site */}
                 <div className="text-center">
                     <Button
