@@ -24,8 +24,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - QUEUE_CONNECTION=database
-      - N8N_BASE_URL=http://n8n:5678
+      - N8N_BASE_URL=http://host.docker.internal:5678
       - N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiOTNjNWI5YS1iZGY4LTRiNjYtYmJmMi05YjlmNjQ3NTliNDgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU3MzA5NjU3fQ.UkSlwFR_5k5CB2Ws3lzMsRn6U2ZpBa0UX1qSoGIACJc
+      - WAHA_BASE_URL=http://host.docker.internal:3000
     volumes:
       # Source code synchronization (development friendly)
       - .:/app
@@ -44,6 +45,8 @@ services:
         condition: service_healthy
     networks:
       - chatbot_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health", "||", "exit", "1"]
       interval: 30s

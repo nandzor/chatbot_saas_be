@@ -19,13 +19,27 @@ class WahaController extends BaseApiController
     }
 
     /**
+     * Test WAHA server connection
+     */
+    public function testConnection(): JsonResponse
+    {
+        try {
+            $result = $this->wahaService->testConnection();
+            return $this->successResponse('WAHA connection test completed', $result);
+        } catch (Exception $e) {
+            Log::error('Failed to test WAHA connection', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to test WAHA connection', 500);
+        }
+    }
+
+    /**
      * Get all sessions
      */
     public function getSessions(): JsonResponse
     {
         try {
             $sessions = $this->wahaService->getSessions();
-            return $this->successResponse($sessions, 'Sessions retrieved successfully');
+            return $this->successResponse('Sessions retrieved successfully', $sessions);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA sessions', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to retrieve sessions', 500);
@@ -47,7 +61,7 @@ class WahaController extends BaseApiController
             ]);
 
             $result = $this->wahaService->startSession($sessionId, $config);
-            return $this->successResponse($result, 'Session started successfully');
+            return $this->successResponse('Session started successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to start WAHA session', [
                 'session_id' => $sessionId,
@@ -64,7 +78,7 @@ class WahaController extends BaseApiController
     {
         try {
             $result = $this->wahaService->stopSession($sessionId);
-            return $this->successResponse($result, 'Session stopped successfully');
+            return $this->successResponse('Session stopped successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to stop WAHA session', [
                 'session_id' => $sessionId,
@@ -81,7 +95,7 @@ class WahaController extends BaseApiController
     {
         try {
             $status = $this->wahaService->getSessionStatus($sessionId);
-            return $this->successResponse($status, 'Session status retrieved successfully');
+            return $this->successResponse('Session status retrieved successfully', $status);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA session status', [
                 'session_id' => $sessionId,
@@ -108,7 +122,7 @@ class WahaController extends BaseApiController
                 $data['text']
             );
 
-            return $this->successResponse($result, 'Message sent successfully');
+            return $this->successResponse('Message sent successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to send WAHA text message', [
                 'session_id' => $sessionId,
@@ -137,7 +151,7 @@ class WahaController extends BaseApiController
                 $data['caption'] ?? ''
             );
 
-            return $this->successResponse($result, 'Media message sent successfully');
+            return $this->successResponse('Media message sent successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to send WAHA media message', [
                 'session_id' => $sessionId,
@@ -164,7 +178,7 @@ class WahaController extends BaseApiController
                 $data['page'] ?? 1
             );
 
-            return $this->successResponse($messages, 'Messages retrieved successfully');
+            return $this->successResponse('Messages retrieved successfully', $messages);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA messages', [
                 'session_id' => $sessionId,
@@ -181,7 +195,7 @@ class WahaController extends BaseApiController
     {
         try {
             $contacts = $this->wahaService->getContacts($sessionId);
-            return $this->successResponse($contacts, 'Contacts retrieved successfully');
+            return $this->successResponse('Contacts retrieved successfully', $contacts);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA contacts', [
                 'session_id' => $sessionId,
@@ -198,7 +212,7 @@ class WahaController extends BaseApiController
     {
         try {
             $groups = $this->wahaService->getGroups($sessionId);
-            return $this->successResponse($groups, 'Groups retrieved successfully');
+            return $this->successResponse('Groups retrieved successfully', $groups);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA groups', [
                 'session_id' => $sessionId,
@@ -215,7 +229,7 @@ class WahaController extends BaseApiController
     {
         try {
             $qrCode = $this->wahaService->getQrCode($sessionId);
-            return $this->successResponse($qrCode, 'QR code retrieved successfully');
+            return $this->successResponse('QR code retrieved successfully', $qrCode);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA QR code', [
                 'session_id' => $sessionId,
@@ -232,7 +246,7 @@ class WahaController extends BaseApiController
     {
         try {
             $result = $this->wahaService->deleteSession($sessionId);
-            return $this->successResponse($result, 'Session deleted successfully');
+            return $this->successResponse('Session deleted successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to delete WAHA session', [
                 'session_id' => $sessionId,
@@ -249,7 +263,7 @@ class WahaController extends BaseApiController
     {
         try {
             $info = $this->wahaService->getSessionInfo($sessionId);
-            return $this->successResponse($info, 'Session info retrieved successfully');
+            return $this->successResponse('Session info retrieved successfully', $info);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA session info', [
                 'session_id' => $sessionId,
@@ -266,7 +280,7 @@ class WahaController extends BaseApiController
     {
         try {
             $connected = $this->wahaService->isSessionConnected($sessionId);
-            return $this->successResponse(['connected' => $connected], 'Session connection status retrieved successfully');
+            return $this->successResponse('Session connection status retrieved successfully', ['connected' => $connected]);
         } catch (Exception $e) {
             Log::error('Failed to check WAHA session connection', [
                 'session_id' => $sessionId,
@@ -283,7 +297,7 @@ class WahaController extends BaseApiController
     {
         try {
             $health = $this->wahaService->getSessionHealth($sessionId);
-            return $this->successResponse($health, 'Session health status retrieved successfully');
+            return $this->successResponse('Session health status retrieved successfully', $health);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA session health', [
                 'session_id' => $sessionId,

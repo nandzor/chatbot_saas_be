@@ -14,17 +14,13 @@ class WahaServiceProvider extends ServiceProvider
     {
         $this->app->singleton(WahaService::class, function ($app) {
             $config = $app['config']['waha'];
-            
-            return new WahaService([
-                'base_url' => $config['server']['base_url'],
-                'api_key' => $config['server']['api_key'],
-                'timeout' => $config['server']['timeout'],
-                'retry_attempts' => $config['http']['retry_attempts'],
-                'retry_delay' => $config['http']['retry_delay'],
-                'log_requests' => $config['http']['log_requests'],
-                'log_responses' => $config['http']['log_responses'],
-                'mock_responses' => $config['testing']['mock_responses'],
-            ]);
+            $serverConfig = $config['server'] ?? [];
+            $httpConfig = $config['http'] ?? [];
+            $testingConfig = $config['testing'] ?? [];
+
+            return new WahaService(array_merge($serverConfig, $httpConfig, [
+                'mock_responses' => $testingConfig['mock_responses'] ?? false,
+            ]));
         });
 
         // Register alias for easier access

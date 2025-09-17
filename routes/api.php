@@ -24,6 +24,10 @@ use App\Http\Controllers\Api\V1\SystemConfigurationController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\QueueController;
 
+// Include additional route files
+require_once __DIR__ . '/n8n.php';
+require_once __DIR__ . '/waha.php';
+
 /*
 |--------------------------------------------------------------------------
 | API Routes

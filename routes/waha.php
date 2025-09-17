@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('waha')->group(function () {
+    // Connection test route
+    Route::get('/test', [WahaController::class, 'testConnection']);
+
     // Session management routes
     Route::get('/sessions', [WahaController::class, 'getSessions']);
     Route::post('/sessions/{sessionId}/start', [WahaController::class, 'startSession']);

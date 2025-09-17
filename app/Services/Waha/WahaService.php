@@ -5,6 +5,7 @@ namespace App\Services\Waha;
 use App\Services\Http\BaseHttpClient;
 use App\Services\Waha\Exceptions\WahaException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
@@ -18,20 +19,109 @@ class WahaService extends BaseHttpClient
         $this->apiKey = $config['api_key'] ?? '';
         $this->mockResponses = $config['mock_responses'] ?? false;
 
+        // Validate configuration
+        $this->validateConfig($config);
+
         $headers = [
-            'Authorization' => 'Bearer ' . $this->apiKey,
+            'X-API-Key' => $this->apiKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
 
-        parent::__construct($config['base_url'] ?? 'http://localhost:3000', [
+        // Normalize base URL
+        $rawBaseUrl = $config['base_url'] ?? 'http://localhost:3000';
+        $normalizedBaseUrl = $this->normalizeBaseUrl($rawBaseUrl);
+
+        parent::__construct($normalizedBaseUrl, [
             'headers' => $headers,
             'timeout' => $config['timeout'] ?? 30,
             'retry_attempts' => $config['retry_attempts'] ?? 3,
             'retry_delay' => $config['retry_delay'] ?? 1000,
+            'max_retry_delay' => $config['max_retry_delay'] ?? 10000,
+            'exponential_backoff' => $config['exponential_backoff'] ?? true,
             'log_requests' => $config['log_requests'] ?? true,
             'log_responses' => $config['log_responses'] ?? true,
         ]);
+
+        Log::info('WAHA Service initialized', [
+            'base_url' => $normalizedBaseUrl,
+            'mock_responses' => $this->mockResponses,
+            'has_api_key' => !empty($this->apiKey),
+        ]);
+    }
+
+    /**
+     * Test WAHA server connection
+     */
+    public function testConnection(): array
+    {
+        try {
+            if ($this->mockResponses) {
+                return [
+                    'success' => true,
+                    'message' => 'WAHA service is in mock mode',
+                    'base_url' => $this->baseUrl,
+                    'mock_mode' => true,
+                ];
+            }
+
+            // Basic configuration validation first
+            if (empty($this->baseUrl)) {
+                throw new Exception('WAHA base URL is not configured');
+            }
+
+            if (empty($this->apiKey)) {
+                Log::warning('WAHA API key is not configured - some operations may fail');
+            }
+
+            // Try a simple connectivity test with very short timeout
+            try {
+                $response = Http::timeout(2)
+                    ->connectTimeout(1)
+                    ->withHeaders($this->defaultHeaders)
+                    ->get($this->baseUrl . '/');
+
+                return [
+                    'success' => true,
+                    'message' => 'WAHA server is reachable',
+                    'base_url' => $this->baseUrl,
+                    'status' => $response->status(),
+                    'mock_mode' => false,
+                ];
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                return [
+                    'success' => false,
+                    'message' => 'WAHA server is not running or not accessible',
+                    'base_url' => $this->baseUrl,
+                    'error' => 'Connection refused - server may be down',
+                    'mock_mode' => false,
+                ];
+            } catch (\Illuminate\Http\Client\RequestException $e) {
+                // Server responded but with error status
+                return [
+                    'success' => true,
+                    'message' => 'WAHA server is reachable (but returned error)',
+                    'base_url' => $this->baseUrl,
+                    'status' => $e->response ? $e->response->status() : 'unknown',
+                    'mock_mode' => false,
+                ];
+            } catch (Exception $e) {
+                throw $e;
+            }
+
+        } catch (Exception $e) {
+            Log::error('WAHA connection test failed', [
+                'base_url' => $this->baseUrl,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'WAHA server is not reachable: ' . $e->getMessage(),
+                'base_url' => $this->baseUrl,
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 
     /**
@@ -399,5 +489,98 @@ class WahaService extends BaseHttpClient
                 'last_seen' => null,
             ];
         }
+    }
+
+    /**
+     * Validate WAHA service configuration
+     */
+    protected function validateConfig(array $config): void
+    {
+        // Validate base URL
+        if (empty($config['base_url'])) {
+            throw new WahaException('WAHA base URL is required');
+        }
+
+        if (!filter_var($config['base_url'], FILTER_VALIDATE_URL)) {
+            throw new WahaException('Invalid WAHA base URL format');
+        }
+
+        // Validate timeout
+        if (isset($config['timeout']) && (!is_numeric($config['timeout']) || $config['timeout'] <= 0)) {
+            throw new WahaException('WAHA timeout must be a positive number');
+        }
+
+        // Validate retry attempts
+        if (isset($config['retry_attempts']) && (!is_numeric($config['retry_attempts']) || $config['retry_attempts'] < 0)) {
+            throw new WahaException('WAHA retry attempts must be a non-negative number');
+        }
+
+        // Validate retry delay
+        if (isset($config['retry_delay']) && (!is_numeric($config['retry_delay']) || $config['retry_delay'] < 0)) {
+            throw new WahaException('WAHA retry delay must be a non-negative number');
+        }
+
+        // Warn if API key is missing in non-mock mode
+        if (empty($this->apiKey) && !$this->mockResponses) {
+            Log::warning('WAHA API key is missing - some operations may fail', [
+                'base_url' => $config['base_url'],
+                'mock_responses' => $this->mockResponses,
+            ]);
+        }
+    }
+
+    /**
+     * Normalize base URL to ensure proper format
+     */
+    protected function normalizeBaseUrl(string $baseUrl): string
+    {
+        // Remove trailing slashes
+        $baseUrl = rtrim($baseUrl, '/');
+
+        // Ensure it has a protocol
+        if (!preg_match('/^https?:\/\//', $baseUrl)) {
+            $baseUrl = 'http://' . $baseUrl;
+        }
+
+        return $baseUrl;
+    }
+
+    /**
+     * Enhanced error handling for WAHA specific errors
+     */
+    protected function handleResponse(Response $response, string $operation = 'request'): array
+    {
+        if ($response->successful()) {
+            return $response->json() ?? [];
+        }
+
+        $statusCode = $response->status();
+        $errorData = $response->json() ?? [];
+        $errorMessage = $errorData['message'] ?? $response->body() ?? 'Unknown error';
+
+        // Map WAHA specific error codes
+        $wahaErrorMessages = [
+            400 => 'Bad request - Invalid parameters provided',
+            401 => 'Unauthorized - Invalid API key or session',
+            403 => 'Forbidden - Access denied',
+            404 => 'Not found - Session or resource not found',
+            409 => 'Conflict - Session already exists or is in use',
+            422 => 'Unprocessable entity - Invalid data format',
+            429 => 'Too many requests - Rate limit exceeded',
+            500 => 'Internal server error - WAHA server error',
+            502 => 'Bad gateway - WAHA server unavailable',
+            503 => 'Service unavailable - WAHA server overloaded',
+        ];
+
+        $mappedMessage = $wahaErrorMessages[$statusCode] ?? "HTTP error {$statusCode}";
+
+        Log::error("WAHA API error during {$operation}", [
+            'status' => $statusCode,
+            'error' => $errorData,
+            'operation' => $operation,
+            'base_url' => $this->baseUrl,
+        ]);
+
+        throw new WahaException("WAHA API error ({$statusCode}): {$mappedMessage}. Operation: {$operation}", $statusCode, $errorData);
     }
 }

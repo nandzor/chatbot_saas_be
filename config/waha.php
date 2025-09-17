@@ -23,6 +23,8 @@ return [
     'http' => [
         'retry_attempts' => env('WAHA_RETRY_ATTEMPTS', 3),
         'retry_delay' => env('WAHA_RETRY_DELAY', 1000), // milliseconds
+        'max_retry_delay' => env('WAHA_MAX_RETRY_DELAY', 10000), // milliseconds
+        'exponential_backoff' => env('WAHA_EXPONENTIAL_BACKOFF', true),
         'log_requests' => env('WAHA_LOG_REQUESTS', true),
         'log_responses' => env('WAHA_LOG_RESPONSES', true),
     ],
