@@ -10,14 +10,15 @@
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.25",
         "laravel/reverb": "^1.0",
+        "laravel/sail": "^1.29",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10",
         "league/flysystem-aws-s3-v3": "^3.0",
-        "predis/predis": "^2.2",
-        "tymon/jwt-auth": "^2.2",
-        "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.0",
         "nunomaduro/collision": "*",
-        "laravel/sail": "^1.29"
+        "predis/predis": "^2.2",
+        "rap2hpoutre/laravel-log-viewer": "*",
+        "tymon/jwt-auth": "^2.2",
+        "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
