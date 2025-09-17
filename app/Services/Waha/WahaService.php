@@ -43,11 +43,7 @@ class WahaService extends BaseHttpClient
             'log_responses' => $config['log_responses'] ?? true,
         ]);
 
-        Log::info('WAHA Service initialized', [
-            'base_url' => $normalizedBaseUrl,
-            'mock_responses' => $this->mockResponses,
-            'has_api_key' => !empty($this->apiKey),
-        ]);
+        // Service initialized silently
     }
 
     /**
