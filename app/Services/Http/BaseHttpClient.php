@@ -15,6 +15,8 @@ abstract class BaseHttpClient
     protected int $timeout = 30;
     protected int $retryAttempts = 3;
     protected int $retryDelay = 1000; // milliseconds
+    protected int $maxRetryDelay = 10000; // milliseconds
+    protected bool $exponentialBackoff = true;
     protected bool $logRequests = true;
     protected bool $logResponses = true;
 
@@ -29,6 +31,8 @@ abstract class BaseHttpClient
         $this->timeout = $config['timeout'] ?? $this->timeout;
         $this->retryAttempts = $config['retry_attempts'] ?? $this->retryAttempts;
         $this->retryDelay = $config['retry_delay'] ?? $this->retryDelay;
+        $this->maxRetryDelay = $config['max_retry_delay'] ?? $this->maxRetryDelay;
+        $this->exponentialBackoff = $config['exponential_backoff'] ?? $this->exponentialBackoff;
         $this->logRequests = $config['log_requests'] ?? $this->logRequests;
         $this->logResponses = $config['log_responses'] ?? $this->logResponses;
         $this->defaultHeaders = array_merge($this->defaultHeaders, $config['headers'] ?? []);
@@ -71,14 +75,17 @@ abstract class BaseHttpClient
                 $attempt++;
 
                 if ($attempt < $this->retryAttempts) {
+                    $delay = $this->calculateRetryDelay($attempt);
+                    
                     Log::warning("HTTP Request failed, retrying...", [
                         'attempt' => $attempt,
                         'error' => $e->getMessage(),
                         'url' => $url,
+                        'delay_ms' => $delay,
                         'service' => static::class
                     ]);
 
-                    usleep($this->retryDelay * 1000); // Convert to microseconds
+                    usleep($delay * 1000); // Convert to microseconds
                 }
             }
         }
@@ -115,6 +122,22 @@ abstract class BaseHttpClient
     protected function delete(string $endpoint, array $data = [], array $headers = []): Response
     {
         return $this->makeRequest('DELETE', $endpoint, $data, $headers);
+    }
+
+    /**
+     * Calculate retry delay with optional exponential backoff
+     */
+    protected function calculateRetryDelay(int $attempt): int
+    {
+        if (!$this->exponentialBackoff) {
+            return $this->retryDelay;
+        }
+
+        // Exponential backoff: delay * (2 ^ attempt)
+        $delay = $this->retryDelay * pow(2, $attempt - 1);
+        
+        // Cap at maximum delay
+        return min($delay, $this->maxRetryDelay);
     }
 
     protected function handleResponse(Response $response, string $operation = 'request'): array

@@ -5,6 +5,7 @@ namespace App\Services\N8n;
 use App\Services\Http\BaseHttpClient;
 use App\Services\N8n\Exceptions\N8nException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
@@ -18,19 +19,34 @@ class N8nService extends BaseHttpClient
         $this->apiKey = $config['api_key'] ?? '';
         $this->mockResponses = $config['mock_responses'] ?? false;
 
+        // Validate configuration
+        $this->validateConfig($config);
+
         $headers = [
             'X-N8N-API-KEY' => $this->apiKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
 
-        parent::__construct($config['base_url'] ?? 'http://localhost:5678', [
+        // Normalize base URL: ensure it points to the N8n server root (no trailing /api or /api/v1)
+        $rawBaseUrl = $config['base_url'] ?? 'http://n8n:5678';
+        $normalizedBaseUrl = $this->normalizeBaseUrl($rawBaseUrl);
+
+        parent::__construct($normalizedBaseUrl, [
             'headers' => $headers,
             'timeout' => $config['timeout'] ?? 30,
             'retry_attempts' => $config['retry_attempts'] ?? 3,
             'retry_delay' => $config['retry_delay'] ?? 1000,
+            'max_retry_delay' => $config['max_retry_delay'] ?? 10000,
+            'exponential_backoff' => $config['exponential_backoff'] ?? true,
             'log_requests' => $config['log_requests'] ?? true,
             'log_responses' => $config['log_responses'] ?? true,
+        ]);
+
+        Log::info('N8N Service initialized', [
+            'base_url' => $normalizedBaseUrl,
+            'mock_responses' => $this->mockResponses,
+            'has_api_key' => !empty($this->apiKey),
         ]);
     }
 
@@ -554,6 +570,190 @@ class N8nService extends BaseHttpClient
                 'message' => 'Webhook connectivity test failed: ' . $e->getMessage(),
                 'error' => $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Test N8N server connectivity
+     */
+    public function testConnection(): array
+    {
+        try {
+            if ($this->mockResponses) {
+                return [
+                    'success' => true,
+                    'message' => 'N8N service is in mock mode',
+                    'base_url' => $this->baseUrl,
+                    'mock_mode' => true,
+                ];
+            }
+
+            // Basic configuration validation first
+            if (empty($this->baseUrl)) {
+                throw new Exception('N8N base URL is not configured');
+            }
+
+            if (empty($this->apiKey)) {
+                Log::warning('N8N API key is not configured - some operations may fail');
+            }
+
+            // Try a simple connectivity test with very short timeout
+            try {
+                $response = Http::timeout(2)
+                    ->connectTimeout(1)
+                    ->withHeaders($this->defaultHeaders)
+                    ->get($this->baseUrl . '');
+
+                return [
+                    'success' => true,
+                    'message' => 'N8N server is reachable',
+                    'base_url' => $this->baseUrl,
+                    'status' => $response->status(),
+                    'mock_mode' => false,
+                ];
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                return [
+                    'success' => false,
+                    'message' => 'N8N server is not running or not accessible',
+                    'base_url' => $this->baseUrl,
+                    'error' => 'Connection refused - server may be down',
+                    'mock_mode' => false,
+                ];
+            } catch (\Illuminate\Http\Client\RequestException $e) {
+                // Server responded but with error status
+                return [
+                    'success' => true,
+                    'message' => 'N8N server is reachable (but returned error)',
+                    'base_url' => $this->baseUrl,
+                    'status' => $e->response ? $e->response->status() : 'unknown',
+                    'mock_mode' => false,
+                ];
+            } catch (Exception $e) {
+                throw $e;
+            }
+
+        } catch (Exception $e) {
+            Log::error('N8N connection test failed', [
+                'base_url' => $this->baseUrl,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'N8N server is not reachable: ' . $e->getMessage(),
+                'base_url' => $this->baseUrl,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Validate configuration parameters
+     */
+    private function validateConfig(array $config): void
+    {
+        // Validate base URL
+        if (empty($config['base_url'])) {
+            throw new N8nException('N8N base URL is required');
+        }
+
+        if (!filter_var($config['base_url'], FILTER_VALIDATE_URL)) {
+            throw new N8nException('Invalid N8N base URL format');
+        }
+
+        // Validate timeout
+        if (isset($config['timeout']) && (!is_numeric($config['timeout']) || $config['timeout'] <= 0)) {
+            throw new N8nException('N8N timeout must be a positive number');
+        }
+
+        // Validate retry attempts
+        if (isset($config['retry_attempts']) && (!is_numeric($config['retry_attempts']) || $config['retry_attempts'] < 0)) {
+            throw new N8nException('N8N retry attempts must be a non-negative number');
+        }
+
+        // Validate retry delay
+        if (isset($config['retry_delay']) && (!is_numeric($config['retry_delay']) || $config['retry_delay'] < 0)) {
+            throw new N8nException('N8N retry delay must be a non-negative number');
+        }
+
+        // Warn if API key is missing in non-mock mode
+        if (empty($this->apiKey) && !$this->mockResponses) {
+            Log::warning('N8N API key is missing - some operations may fail', [
+                'base_url' => $config['base_url'],
+                'mock_responses' => $this->mockResponses,
+            ]);
+        }
+    }
+
+    /**
+     * Normalize base URL to remove API paths
+     */
+    private function normalizeBaseUrl(string $rawBaseUrl): string
+    {
+        $normalized = rtrim($rawBaseUrl, '/');
+
+        // Strip trailing /api or /api/v1 (and anything after /api)
+        $normalized = preg_replace('#/api($|/.*$)#i', '', $normalized);
+
+        // Ensure protocol is present
+        if (!preg_match('#^https?://#', $normalized)) {
+            $normalized = 'http://' . $normalized;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Enhanced error handling with specific N8N error codes
+     */
+    protected function handleResponse(Response $response, string $operation = 'request'): array
+    {
+        if ($response->successful()) {
+            return $response->json() ?? [];
+        }
+
+        $statusCode = $response->status();
+        $errorData = $response->json() ?? ['message' => $response->body()];
+
+        // Map common N8N error codes to meaningful messages
+        $errorMessage = $this->mapN8nError($statusCode, $errorData, $operation);
+
+        Log::error("N8N API error during {$operation}", [
+            'status' => $statusCode,
+            'error' => $errorData,
+            'operation' => $operation,
+            'base_url' => $this->baseUrl,
+        ]);
+
+        throw new N8nException($errorMessage, $statusCode, $errorData);
+    }
+
+    /**
+     * Map N8N error codes to user-friendly messages
+     */
+    private function mapN8nError(int $statusCode, array $errorData, string $operation): string
+    {
+        $message = $errorData['message'] ?? 'Unknown error';
+
+        switch ($statusCode) {
+            case 401:
+                return "N8N authentication failed. Please check your API key. Operation: {$operation}";
+            case 403:
+                return "N8N access forbidden. Check API key permissions. Operation: {$operation}";
+            case 404:
+                return "N8N resource not found. Operation: {$operation}";
+            case 422:
+                return "N8N validation error: {$message}. Operation: {$operation}";
+            case 429:
+                return "N8N rate limit exceeded. Please try again later. Operation: {$operation}";
+            case 500:
+                return "N8N server error: {$message}. Operation: {$operation}";
+            case 502:
+            case 503:
+            case 504:
+                return "N8N server unavailable. Please try again later. Operation: {$operation}";
+            default:
+                return "N8N API error ({$statusCode}): {$message}. Operation: {$operation}";
         }
     }
 }

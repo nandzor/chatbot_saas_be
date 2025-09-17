@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('n8n')->group(function () {
+    // Connection test route
+    Route::get('/test', [N8nController::class, 'testConnection']);
+
     // Workflow management routes
     Route::get('/workflows', [N8nController::class, 'getWorkflows']);
     Route::get('/workflows/{workflowId}', [N8nController::class, 'getWorkflow']);

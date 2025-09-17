@@ -25,7 +25,7 @@ class N8nController extends BaseApiController
     {
         try {
             $workflows = $this->n8nService->getWorkflows();
-            return $this->successResponse($workflows, 'Workflows retrieved successfully');
+            return $this->successResponse('Workflows retrieved successfully', $workflows);
         } catch (Exception $e) {
             Log::error('Failed to get N8N workflows', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to retrieve workflows', 500);
@@ -219,7 +219,7 @@ class N8nController extends BaseApiController
     {
         try {
             $credentials = $this->n8nService->getCredentials();
-            return $this->successResponse($credentials, 'Credentials retrieved successfully');
+            return $this->successResponse('Credentials retrieved successfully', $credentials);
         } catch (Exception $e) {
             Log::error('Failed to get N8N credentials', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to retrieve credentials', 500);
@@ -335,6 +335,20 @@ class N8nController extends BaseApiController
                 'error' => $e->getMessage()
             ]);
             return $this->errorResponse('Failed to retrieve webhook URL', 500);
+        }
+    }
+
+    /**
+     * Test N8N connection
+     */
+    public function testConnection(): JsonResponse
+    {
+        try {
+            $result = $this->n8nService->testConnection();
+            return $this->successResponse('N8N connection test completed', $result);
+        } catch (Exception $e) {
+            Log::error('Failed to test N8N connection', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to test N8N connection', 500);
         }
     }
 
