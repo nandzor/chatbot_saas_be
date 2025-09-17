@@ -39,7 +39,7 @@ class N8nController extends BaseApiController
     {
         try {
             $workflow = $this->n8nService->getWorkflow($workflowId);
-            return $this->successResponse($workflow, 'Workflow retrieved successfully');
+            return $this->successResponse('Workflow retrieved successfully', $workflow);
         } catch (Exception $e) {
             Log::error('Failed to get N8N workflow', [
                 'workflow_id' => $workflowId,
@@ -64,7 +64,7 @@ class N8nController extends BaseApiController
             ]);
 
             $workflow = $this->n8nService->createWorkflow($workflowData);
-            return $this->successResponse($workflow, 'Workflow created successfully', 201);
+            return $this->successResponse('Workflow created successfully', $workflow, 201);
         } catch (Exception $e) {
             Log::error('Failed to create N8N workflow', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to create workflow', 500);
@@ -86,7 +86,7 @@ class N8nController extends BaseApiController
             ]);
 
             $result = $this->n8nService->updateWorkflow($workflowId, $workflowData);
-            return $this->successResponse($result, 'Workflow updated successfully');
+            return $this->successResponse('Workflow updated successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to update N8N workflow', [
                 'workflow_id' => $workflowId,
@@ -103,7 +103,7 @@ class N8nController extends BaseApiController
     {
         try {
             $result = $this->n8nService->deleteWorkflow($workflowId);
-            return $this->successResponse($result, 'Workflow deleted successfully');
+            return $this->successResponse('Workflow deleted successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to delete N8N workflow', [
                 'workflow_id' => $workflowId,
@@ -120,7 +120,7 @@ class N8nController extends BaseApiController
     {
         try {
             $result = $this->n8nService->activateWorkflow($workflowId);
-            return $this->successResponse($result, 'Workflow activated successfully');
+            return $this->successResponse('Workflow activated successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to activate N8N workflow', [
                 'workflow_id' => $workflowId,
@@ -137,7 +137,7 @@ class N8nController extends BaseApiController
     {
         try {
             $result = $this->n8nService->deactivateWorkflow($workflowId);
-            return $this->successResponse($result, 'Workflow deactivated successfully');
+            return $this->successResponse('Workflow deactivated successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to deactivate N8N workflow', [
                 'workflow_id' => $workflowId,
@@ -158,7 +158,7 @@ class N8nController extends BaseApiController
             ]);
 
             $result = $this->n8nService->executeWorkflow($workflowId, $inputData['input_data'] ?? []);
-            return $this->successResponse($result, 'Workflow executed successfully');
+            return $this->successResponse('Workflow executed successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to execute N8N workflow', [
                 'workflow_id' => $workflowId,
@@ -185,7 +185,7 @@ class N8nController extends BaseApiController
                 $data['page'] ?? 1
             );
 
-            return $this->successResponse($executions, 'Workflow executions retrieved successfully');
+            return $this->successResponse('Workflow executions retrieved successfully', $executions);
         } catch (Exception $e) {
             Log::error('Failed to get N8N workflow executions', [
                 'workflow_id' => $workflowId,
@@ -202,7 +202,7 @@ class N8nController extends BaseApiController
     {
         try {
             $execution = $this->n8nService->getExecution($executionId);
-            return $this->successResponse($execution, 'Execution retrieved successfully');
+            return $this->successResponse('Execution retrieved successfully', $execution);
         } catch (Exception $e) {
             Log::error('Failed to get N8N execution', [
                 'execution_id' => $executionId,
@@ -233,7 +233,7 @@ class N8nController extends BaseApiController
     {
         try {
             $credential = $this->n8nService->getCredential($credentialId);
-            return $this->successResponse($credential, 'Credential retrieved successfully');
+            return $this->successResponse('Credential retrieved successfully', $credential);
         } catch (Exception $e) {
             Log::error('Failed to get N8N credential', [
                 'credential_id' => $credentialId,
@@ -256,7 +256,7 @@ class N8nController extends BaseApiController
             ]);
 
             $credential = $this->n8nService->createCredential($credentialData);
-            return $this->successResponse($credential, 'Credential created successfully', 201);
+            return $this->successResponse('Credential created successfully', $credential, 201);
         } catch (Exception $e) {
             Log::error('Failed to create N8N credential', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to create credential', 500);
@@ -276,7 +276,7 @@ class N8nController extends BaseApiController
             ]);
 
             $result = $this->n8nService->updateCredential($credentialId, $credentialData);
-            return $this->successResponse($result, 'Credential updated successfully');
+            return $this->successResponse('Credential updated successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to update N8N credential', [
                 'credential_id' => $credentialId,
@@ -293,7 +293,7 @@ class N8nController extends BaseApiController
     {
         try {
             $result = $this->n8nService->deleteCredential($credentialId);
-            return $this->successResponse($result, 'Credential deleted successfully');
+            return $this->successResponse('Credential deleted successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to delete N8N credential', [
                 'credential_id' => $credentialId,
@@ -310,7 +310,7 @@ class N8nController extends BaseApiController
     {
         try {
             $result = $this->n8nService->testCredential($credentialId);
-            return $this->successResponse($result, 'Credential tested successfully');
+            return $this->successResponse('Credential tested successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to test N8N credential', [
                 'credential_id' => $credentialId,
@@ -327,7 +327,7 @@ class N8nController extends BaseApiController
     {
         try {
             $webhookUrl = $this->n8nService->getWebhookUrl($workflowId, $nodeId);
-            return $this->successResponse(['webhook_url' => $webhookUrl], 'Webhook URL retrieved successfully');
+            return $this->successResponse('Webhook URL retrieved successfully', ['webhook_url' => $webhookUrl]);
         } catch (Exception $e) {
             Log::error('Failed to get N8N webhook URL', [
                 'workflow_id' => $workflowId,
@@ -360,7 +360,7 @@ class N8nController extends BaseApiController
         try {
             $data = $request->all();
             $result = $this->n8nService->sendWebhook($workflowId, $nodeId, $data);
-            return $this->successResponse($result, 'Webhook sent successfully');
+            return $this->successResponse('Webhook sent successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to send N8N webhook', [
                 'workflow_id' => $workflowId,
@@ -378,7 +378,7 @@ class N8nController extends BaseApiController
     {
         try {
             $active = $this->n8nService->isWorkflowActive($workflowId);
-            return $this->successResponse(['active' => $active], 'Workflow active status retrieved successfully');
+            return $this->successResponse('Workflow active status retrieved successfully', ['active' => $active]);
         } catch (Exception $e) {
             Log::error('Failed to check N8N workflow active status', [
                 'workflow_id' => $workflowId,
@@ -395,7 +395,7 @@ class N8nController extends BaseApiController
     {
         try {
             $stats = $this->n8nService->getWorkflowStats($workflowId);
-            return $this->successResponse($stats, 'Workflow statistics retrieved successfully');
+            return $this->successResponse('Workflow statistics retrieved successfully', $stats);
         } catch (Exception $e) {
             Log::error('Failed to get N8N workflow statistics', [
                 'workflow_id' => $workflowId,
@@ -412,7 +412,7 @@ class N8nController extends BaseApiController
     {
         try {
             $result = $this->n8nService->testWebhookConnectivity($workflowId, $nodeId);
-            return $this->successResponse($result, 'Webhook connectivity test completed');
+            return $this->successResponse('Webhook connectivity test completed', $result);
         } catch (Exception $e) {
             Log::error('Failed to test N8N webhook connectivity', [
                 'workflow_id' => $workflowId,
