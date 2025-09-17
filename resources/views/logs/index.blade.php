@@ -30,86 +30,66 @@
         .main-container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            border-radius: 20px;
+            border-radius: 16px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            margin: 20px;
+            margin: 10px;
             overflow: hidden;
+            height: calc(100vh - 20px);
+            display: flex;
+            flex-direction: column;
         }
 
         .header {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 2rem;
+            padding: 1rem 1.5rem;
             text-align: center;
+            flex-shrink: 0;
         }
 
         .header h1 {
-            font-size: 2.5rem;
+            font-size: 1.5rem;
             font-weight: 700;
             margin: 0;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin: 0.5rem 0 0 0;
-        }
-
-        .stats-row {
-            background: white;
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .stat-card {
-            text-align: center;
-            padding: 1rem;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-            border: 1px solid var(--border-color);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        .stat-label {
-            color: var(--text-muted);
             font-size: 0.875rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            opacity: 0.9;
+            margin: 0.25rem 0 0 0;
         }
+
 
         .content-area {
-            padding: 2rem;
+            padding: 1rem;
+            flex: 1;
+            display: flex;
+            gap: 1rem;
+            overflow: hidden;
         }
 
         .file-panel {
             background: white;
-            border-radius: 16px;
+            border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid var(--border-color);
             overflow: hidden;
+            width: 280px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .file-panel-header {
             background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-            padding: 1.5rem;
+            padding: 0.75rem 1rem;
             border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
         }
 
         .file-panel-title {
-            font-size: 1.25rem;
+            font-size: 0.875rem;
             font-weight: 600;
             color: var(--dark-color);
             margin: 0;
@@ -118,20 +98,21 @@
         }
 
         .file-panel-title i {
-            margin-right: 0.5rem;
+            margin-right: 0.375rem;
             color: var(--primary-color);
+            font-size: 0.875rem;
         }
 
         .search-container {
-            margin-top: 1rem;
+            margin-top: 0.5rem;
         }
 
         .search-box {
             background: white;
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            padding: 0.75rem 1rem;
-            font-size: 0.875rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
             transition: all 0.2s ease;
             width: 100%;
         }
@@ -139,17 +120,17 @@
         .search-box:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
         }
 
         .file-list {
-            max-height: 500px;
+            flex: 1;
             overflow-y: auto;
             padding: 0;
         }
 
         .file-item {
-            padding: 1rem 1.5rem;
+            padding: 0.5rem 0.75rem;
             border-bottom: 1px solid #f1f5f9;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -160,14 +141,14 @@
 
         .file-item:hover {
             background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-            transform: translateX(4px);
+            transform: translateX(2px);
         }
 
         .file-item.active {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            transform: translateX(8px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
         }
 
         .file-item.active .file-info small {
@@ -176,28 +157,34 @@
 
         .file-info {
             flex: 1;
+            min-width: 0;
         }
 
         .file-name {
             font-weight: 600;
-            font-size: 1rem;
-            margin-bottom: 0.25rem;
+            font-size: 0.75rem;
+            margin-bottom: 0.125rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .file-meta {
-            font-size: 0.875rem;
+            font-size: 0.625rem;
             opacity: 0.7;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
         .file-size {
             background: rgba(99, 102, 241, 0.1);
             color: var(--primary-color);
-            padding: 0.25rem 0.5rem;
-            border-radius: 6px;
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
             font-weight: 500;
+            font-size: 0.625rem;
         }
 
         .file-item.active .file-size {
@@ -207,23 +194,91 @@
 
         .log-panel {
             background: white;
-            border-radius: 16px;
+            border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid var(--border-color);
             overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .log-panel-header {
             background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-            padding: 1.5rem;
+            padding: 0.75rem 1rem;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
+        }
+
+        .log-search-container {
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .log-search-box {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+
+        .log-search-box:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+        }
+
+        .search-results-info {
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .search-highlight {
+            background: #fef08a;
+            color: #92400e;
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .search-nav {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .search-nav-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.625rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-nav-btn:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+        .search-nav-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .log-panel-title {
-            font-size: 1.25rem;
+            font-size: 0.875rem;
             font-weight: 600;
             color: var(--dark-color);
             margin: 0;
@@ -232,31 +287,32 @@
         }
 
         .log-panel-title i {
-            margin-right: 0.5rem;
+            margin-right: 0.375rem;
             color: var(--primary-color);
+            font-size: 0.875rem;
         }
 
         .log-actions {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.375rem;
         }
 
         .log-content {
             background: #1a1a1a;
             color: #e5e5e5;
-            padding: 1.5rem;
-            max-height: 600px;
+            padding: 1rem;
+            height: 500px;
             overflow-y: auto;
             font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-            font-size: 0.875rem;
-            line-height: 1.6;
+            font-size: 0.75rem;
+            line-height: 1.4;
             white-space: pre-wrap;
-            border-radius: 0 0 16px 16px;
+            border-radius: 0 0 12px 12px;
             scroll-behavior: smooth;
         }
 
         .log-content::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         .log-content::-webkit-scrollbar-track {
@@ -265,7 +321,7 @@
 
         .log-content::-webkit-scrollbar-thumb {
             background: #555;
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
         .log-content::-webkit-scrollbar-thumb:hover {
@@ -273,16 +329,17 @@
         }
 
         .btn-modern {
-            border-radius: 8px;
+            border-radius: 6px;
             font-weight: 500;
-            padding: 0.5rem 1rem;
+            padding: 0.375rem 0.75rem;
             transition: all 0.2s ease;
             border: none;
+            font-size: 0.75rem;
         }
 
         .btn-modern:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         .btn-danger-modern {
@@ -302,6 +359,16 @@
 
         .btn-primary-modern:hover {
             background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+        }
+
+        .btn-info-modern {
+            background: linear-gradient(135deg, var(--info-color), #2563eb);
+            color: white;
+        }
+
+        .btn-info-modern:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
         }
 
@@ -374,28 +441,55 @@
 
         @media (max-width: 768px) {
             .main-container {
-                margin: 10px;
-                border-radius: 16px;
+                margin: 5px;
+                border-radius: 12px;
+                height: calc(100vh - 10px);
             }
 
             .header {
-                padding: 1.5rem;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .content-area {
-                padding: 1rem;
-            }
-
-            .file-item {
                 padding: 0.75rem 1rem;
             }
 
+            .header h1 {
+                font-size: 1.25rem;
+            }
+
+            .header p {
+                font-size: 0.75rem;
+            }
+
+
+            .content-area {
+                padding: 0.5rem;
+                flex-direction: column;
+            }
+
+            .file-panel {
+                width: 100%;
+                max-height: 200px;
+                margin-bottom: 0.5rem;
+            }
+
+            .file-item {
+                padding: 0.375rem 0.5rem;
+            }
+
+            .file-name {
+                font-size: 0.625rem;
+            }
+
+            .file-meta {
+                font-size: 0.5rem;
+            }
+
             .log-content {
-                max-height: 400px;
+                font-size: 0.625rem;
+                padding: 0.75rem;
+            }
+
+            .btn-modern {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.625rem;
             }
         }
     </style>
@@ -408,160 +502,126 @@
             <p>Professional Log Management Dashboard</p>
         </div>
 
-        <!-- Stats Row -->
-        <div class="stats-row">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-number">{{ count($files) }}</div>
-                        <div class="stat-label">Total Files</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-number">{{ $current_file ? '1' : '0' }}</div>
-                        <div class="stat-label">Active File</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-number">{{ $current_file ? number_format(strlen($log_content ?? '')) : '0' }}</div>
-                        <div class="stat-label">Characters</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-number">{{ $current_file ? count(explode("\n", $log_content ?? '')) : '0' }}</div>
-                        <div class="stat-label">Lines</div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Content Area -->
         <div class="content-area">
-            <div class="row">
-                <!-- File Panel -->
-                <div class="col-md-4">
-                    <div class="file-panel">
-                        <div class="file-panel-header">
-                            <h5 class="file-panel-title">
-                                <i class="bi bi-folder2-open"></i>
-                                Log Files ({{ count($files) }})
-                            </h5>
-                            <div class="search-container">
-                                <input type="text" class="search-box" id="fileSearch" placeholder="Search files...">
-                            </div>
-                        </div>
-                        <div class="file-list" id="fileList">
-                            @if(count($files) > 0)
-                                @foreach($files as $file)
-                                    @php
-                                        $filePath = storage_path('logs/' . $file);
-                                        $fileSize = \Illuminate\Support\Facades\File::size($filePath);
-                                        $fileModified = \Illuminate\Support\Facades\File::lastModified($filePath);
-                                    @endphp
-                                    <div class="file-item {{ $current_file === $file ? 'active' : '' }}"
-                                         data-filename="{{ strtolower($file) }}"
-                                         onclick="window.location.href='{{ route('logs.public.index', ['l' => encrypt($file)]) }}'">
-                                        <div class="file-info">
-                                            <div class="file-name">{{ $file }}</div>
-                                            <div class="file-meta">
-                                                <span class="file-size">{{ number_format($fileSize) }} bytes</span>
-                                                <span>{{ \Carbon\Carbon::createFromTimestamp($fileModified)->setTimezone(config('app.timezone'))->format('M d, Y H:i T') }}</span>
-                                            </div>
-                                        </div>
-                                        <i class="bi bi-chevron-right"></i>
-                                    </div>
-                                @endforeach
-                            @else
-                                <div class="empty-state">
-                                    <i class="bi bi-file-x"></i>
-                                    <h5>No log files found</h5>
-                                    <p>No log files are available in the storage directory.</p>
-                                </div>
-                            @endif
-                        </div>
+            <!-- File Panel Sidebar -->
+            <div class="file-panel">
+                <div class="file-panel-header">
+                    <h5 class="file-panel-title">
+                        <i class="bi bi-folder2-open"></i>
+                        Log Files ({{ count($files) }})
+                    </h5>
+                    <div class="search-container">
+                        <input type="text" class="search-box" id="fileSearch" placeholder="Search files...">
                     </div>
-
-                    @if($current_file)
-                        <div class="file-panel mt-3">
-                            <div class="file-panel-header">
-                                <h6 class="file-panel-title">
-                                    <i class="bi bi-gear"></i>
-                                    Actions
-                                </h6>
+                </div>
+                <div class="file-list" id="fileList">
+                    @if(count($files) > 0)
+                        @foreach($files as $file)
+                            @php
+                                $filePath = storage_path('logs/' . $file);
+                                $fileSize = \Illuminate\Support\Facades\File::size($filePath);
+                                $fileModified = \Illuminate\Support\Facades\File::lastModified($filePath);
+                            @endphp
+                            <div class="file-item {{ $current_file === $file ? 'active' : '' }}"
+                                 data-filename="{{ strtolower($file) }}"
+                                 onclick="window.location.href='{{ route('logs.public.index', ['l' => encrypt($file)]) }}'">
+                                <div class="file-info">
+                                    <div class="file-name">{{ $file }}</div>
+                                    <div class="file-meta">
+                                        <span class="file-size">{{ number_format($fileSize) }} bytes</span>
+                                        <span>{{ \Carbon\Carbon::createFromTimestamp($fileModified)->setTimezone(config('app.timezone'))->format('M d, H:i') }}</span>
+                                    </div>
+                                </div>
+                                <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
                             </div>
-                            <div class="p-3">
-                                <button class="btn btn-danger-modern btn-modern w-100 mb-2"
-                                        onclick="deleteFile('{{ encrypt($current_file) }}')">
-                                    <i class="bi bi-trash"></i> Delete File
-                                </button>
-                                <button class="btn btn-primary-modern btn-modern w-100"
-                                        onclick="downloadFile('{{ $current_file }}')">
-                                    <i class="bi bi-download"></i> Download
-                                </button>
-                            </div>
+                        @endforeach
+                    @else
+                        <div class="empty-state">
+                            <i class="bi bi-file-x"></i>
+                            <h5>No log files found</h5>
+                            <p>No log files are available in the storage directory.</p>
                         </div>
                     @endif
                 </div>
+            </div>
 
-                <!-- Log Panel -->
-                <div class="col-md-8">
-                    <div class="log-panel">
-                        <div class="log-panel-header">
-                            <h5 class="log-panel-title">
-                                <i class="bi bi-file-text"></i>
-                                @if($current_file)
-                                    {{ $current_file }}
-                                @else
-                                    Select a log file
-                                @endif
-                            </h5>
+            <!-- Log Panel Main Content -->
+            <div class="log-panel">
+                <div class="log-panel-header">
+                    <div>
+                        <h5 class="log-panel-title">
+                            <i class="bi bi-file-text"></i>
                             @if($current_file)
-                                <div class="log-actions">
-                                    <button class="btn btn-primary-modern btn-modern btn-sm" onclick="refreshLog()">
-                                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                                {{ $current_file }}
+                            @else
+                                Select a log file
+                            @endif
+                        </h5>
+                        @if($current_file)
+                            <div class="log-search-container">
+                                <input type="text" class="log-search-box" id="logSearch" placeholder="Search in log content...">
+                                <div class="search-nav">
+                                    <button class="search-nav-btn" id="prevBtn" onclick="searchPrevious()" disabled>
+                                        <i class="bi bi-chevron-up"></i>
+                                    </button>
+                                    <button class="search-nav-btn" id="nextBtn" onclick="searchNext()" disabled>
+                                        <i class="bi bi-chevron-down"></i>
                                     </button>
                                 </div>
-                            @endif
-                        </div>
-                        <div class="log-content" id="logContent">
-                            @if($current_file && $log_content)
-                                @php
-                                    $lines = explode("\n", $log_content);
-                                    $lastLines = array_slice($lines, -100); // Show last 100 lines
-                                @endphp
-                                @foreach($lastLines as $line)
-                                    @php
-                                        $lineClass = '';
-                                        if (strpos($line, 'ERROR') !== false || strpos($line, 'CRITICAL') !== false) {
-                                            $lineClass = 'error';
-                                        } elseif (strpos($line, 'WARNING') !== false) {
-                                            $lineClass = 'warning';
-                                        } elseif (strpos($line, 'INFO') !== false) {
-                                            $lineClass = 'info';
-                                        } elseif (strpos($line, 'SUCCESS') !== false) {
-                                            $lineClass = 'success';
-                                        }
-                                    @endphp
-                                    <div class="log-line {{ $lineClass }}">{{ $line }}</div>
-                                @endforeach
-                            @elseif($current_file)
-                                <div class="empty-state">
-                                    <i class="bi bi-file-x"></i>
-                                    <h5>Log file is empty</h5>
-                                    <p>This log file contains no content or cannot be read.</p>
-                                </div>
-                            @else
-                                <div class="empty-state">
-                                    <i class="bi bi-file-text"></i>
-                                    <h5>Select a log file</h5>
-                                    <p>Choose a log file from the left panel to view its contents.</p>
-                                </div>
-                            @endif
-                        </div>
+                                <div class="search-results-info" id="searchResults"></div>
+                            </div>
+                        @endif
                     </div>
+                    @if($current_file)
+                        <div class="log-actions">
+                            <button class="btn btn-primary-modern btn-modern btn-sm" onclick="refreshLog()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                            <button class="btn btn-danger-modern btn-modern btn-sm" onclick="deleteFile('{{ encrypt($current_file) }}')">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                            <button class="btn btn-info-modern btn-modern btn-sm" onclick="downloadFile('{{ $current_file }}')">
+                                <i class="bi bi-download"></i> Download
+                            </button>
+                        </div>
+                    @endif
+                </div>
+                <div class="log-content" id="logContent">
+                    @if($current_file && $log_content)
+                        @php
+                            $lines = explode("\n", $log_content);
+                            $lastLines = array_slice($lines, -100); // Show last 100 lines
+                        @endphp
+                        @foreach($lastLines as $line)
+                            @php
+                                $lineClass = '';
+                                if (strpos($line, 'ERROR') !== false || strpos($line, 'CRITICAL') !== false) {
+                                    $lineClass = 'error';
+                                } elseif (strpos($line, 'WARNING') !== false) {
+                                    $lineClass = 'warning';
+                                } elseif (strpos($line, 'INFO') !== false) {
+                                    $lineClass = 'info';
+                                } elseif (strpos($line, 'SUCCESS') !== false) {
+                                    $lineClass = 'success';
+                                }
+                            @endphp
+                            <div class="log-line {{ $lineClass }}">{{ $line }}</div>
+                        @endforeach
+                    @elseif($current_file)
+                        <div class="empty-state">
+                            <i class="bi bi-file-x"></i>
+                            <h5>Log file is empty</h5>
+                            <p>This log file contains no content or cannot be read.</p>
+                        </div>
+                    @else
+                        <div class="empty-state">
+                            <i class="bi bi-file-text"></i>
+                            <h5>Select a log file</h5>
+                            <p>Choose a log file from the left panel to view its contents.</p>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -661,6 +721,170 @@
             }, 30000);
         @endif
 
+        // Search functionality
+        let searchResults = [];
+        let currentSearchIndex = -1;
+        let searchTerm = '';
+
+        function performSearch() {
+            const searchInput = document.getElementById('logSearch');
+            const logContent = document.getElementById('logContent');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const resultsInfo = document.getElementById('searchResults');
+
+            if (!searchInput || !logContent) return;
+
+            searchTerm = searchInput.value.trim();
+
+            if (searchTerm === '') {
+                clearSearch();
+                return;
+            }
+
+            // Clear previous highlights
+            clearSearchHighlights();
+
+            // Find all matches
+            const text = logContent.textContent;
+            const regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+            searchResults = [];
+            let match;
+
+            while ((match = regex.exec(text)) !== null) {
+                searchResults.push({
+                    index: match.index,
+                    length: match[0].length
+                });
+            }
+
+            // Update UI
+            if (searchResults.length > 0) {
+                currentSearchIndex = 0;
+                prevBtn.disabled = false;
+                nextBtn.disabled = false;
+                resultsInfo.textContent = `1 of ${searchResults.length}`;
+                highlightSearchResults();
+                scrollToCurrentMatch();
+            } else {
+                currentSearchIndex = -1;
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                resultsInfo.textContent = 'No matches found';
+            }
+        }
+
+        function clearSearch() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const resultsInfo = document.getElementById('searchResults');
+
+            clearSearchHighlights();
+            searchResults = [];
+            currentSearchIndex = -1;
+            searchTerm = '';
+
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            if (resultsInfo) resultsInfo.textContent = '';
+        }
+
+        function clearSearchHighlights() {
+            const highlights = document.querySelectorAll('.search-highlight');
+            highlights.forEach(highlight => {
+                const parent = highlight.parentNode;
+                parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+                parent.normalize();
+            });
+        }
+
+        function highlightSearchResults() {
+            const logContent = document.getElementById('logContent');
+            if (!logContent || searchResults.length === 0) return;
+
+            const text = logContent.textContent;
+            let html = '';
+            let lastIndex = 0;
+
+            searchResults.forEach((result, index) => {
+                // Add text before match
+                html += text.substring(lastIndex, result.index);
+
+                // Add highlighted match
+                const matchText = text.substring(result.index, result.index + result.length);
+                const highlightClass = index === currentSearchIndex ? 'search-highlight' : 'search-highlight';
+                html += `<span class="${highlightClass}" style="background: ${index === currentSearchIndex ? '#fbbf24' : '#fef08a'}; color: #92400e; padding: 0.125rem 0.25rem; border-radius: 3px; font-weight: 600;">${matchText}</span>`;
+
+                lastIndex = result.index + result.length;
+            });
+
+            // Add remaining text
+            html += text.substring(lastIndex);
+
+            logContent.innerHTML = html;
+        }
+
+        function searchNext() {
+            if (searchResults.length === 0) return;
+
+            currentSearchIndex = (currentSearchIndex + 1) % searchResults.length;
+            updateSearchUI();
+            highlightSearchResults();
+            scrollToCurrentMatch();
+        }
+
+        function searchPrevious() {
+            if (searchResults.length === 0) return;
+
+            currentSearchIndex = currentSearchIndex <= 0 ? searchResults.length - 1 : currentSearchIndex - 1;
+            updateSearchUI();
+            highlightSearchResults();
+            scrollToCurrentMatch();
+        }
+
+        function updateSearchUI() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const resultsInfo = document.getElementById('searchResults');
+
+            if (resultsInfo) {
+                resultsInfo.textContent = `${currentSearchIndex + 1} of ${searchResults.length}`;
+            }
+        }
+
+        function scrollToCurrentMatch() {
+            if (currentSearchIndex < 0 || currentSearchIndex >= searchResults.length) return;
+
+            const highlights = document.querySelectorAll('.search-highlight');
+            if (highlights[currentSearchIndex]) {
+                highlights[currentSearchIndex].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }
+
+        // Add search event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const logSearch = document.getElementById('logSearch');
+            if (logSearch) {
+                logSearch.addEventListener('input', performSearch);
+                logSearch.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            searchPrevious();
+                        } else {
+                            searchNext();
+                        }
+                    } else if (e.key === 'Escape') {
+                        clearSearch();
+                        logSearch.value = '';
+                    }
+                });
+            }
+        });
+
         // Add keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey || e.metaKey) {
@@ -671,7 +895,21 @@
                         break;
                     case 'f':
                         e.preventDefault();
-                        document.getElementById('fileSearch').focus();
+                        const fileSearch = document.getElementById('fileSearch');
+                        const logSearch = document.getElementById('logSearch');
+                        if (logSearch && logSearch.offsetParent !== null) {
+                            logSearch.focus();
+                        } else if (fileSearch) {
+                            fileSearch.focus();
+                        }
+                        break;
+                    case 'g':
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            searchPrevious();
+                        } else {
+                            searchNext();
+                        }
                         break;
                     case 'end':
                         e.preventDefault();
