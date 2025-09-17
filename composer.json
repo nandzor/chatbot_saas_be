@@ -17,8 +17,7 @@
         "tymon/jwt-auth": "^2.2",
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.0",
         "nunomaduro/collision": "*",
-        "laravel/sail": "^1.29",
-        "fakerphp/faker": "^1.24"
+        "laravel/sail": "^1.29"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",

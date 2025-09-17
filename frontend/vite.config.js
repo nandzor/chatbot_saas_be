@@ -7,7 +7,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [react()],
-    base: isProduction ? '/chatbot-saas/' : '/',
+    base: '/',
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

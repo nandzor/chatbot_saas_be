@@ -104,6 +104,7 @@ deploy.config.js
 docker-compose.yml
 Dockerfile
 .dockerignore
-nginx.conf
+# keep nginx.conf so it can be copied into the image
+# nginx.conf
 nginx-proxy.conf
 vercel.json
