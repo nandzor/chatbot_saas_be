@@ -70,15 +70,15 @@ import EditUserDialog from './EditUserDialog';
 import ViewUserDetailsDialog from './ViewUserDetailsDialog';
 import ViewUserPermissionsDialog from './ViewUserPermissionsDialog';
 import UserBulkActions from './UserBulkActions';
-import { useUserManagement } from '@/hooks/useUserManagement';
-import userManagementService from '@/services/UserManagementService';
+import { useSuperAdminUserManagement } from '@/hooks/useSuperAdminUserManagement';
+import superAdminUserManagementService from '@/services/SuperAdminUserManagementService';
 
 const UserManagement = () => {
   const { announce } = useAnnouncement();
   const { focusRef, setFocus } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
 
-  // Use user management hook
+  // Use superadmin user management hook
   const {
     users,
     loading,
@@ -89,10 +89,10 @@ const UserManagement = () => {
     createUser,
     updateUser,
     deleteUser,
+    updateFilters,
     handlePageChange,
-    handlePerPageChange,
-    updateFilters
-  } = useUserManagement();
+    handlePerPageChange
+  } = useSuperAdminUserManagement();
 
   // Local UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -209,7 +209,7 @@ const UserManagement = () => {
     try {
       setLoading('delete', true);
 
-      const response = await userManagementService.deleteUser(user.id);
+      const response = await superAdminUserManagementService.deleteUser(user.id);
 
       if (response.success) {
         toast.success(`User ${user.name} deleted successfully`);
@@ -241,7 +241,7 @@ const UserManagement = () => {
   const handleSuspendUser = useCallback(async (user) => {
     try {
       setLoading('suspend', true);
-      const response = await userManagementService.updateUser(user.id, { status: 'suspended' });
+      const response = await superAdminUserManagementService.updateUser(user.id, { status: 'suspended' });
 
       if (response.success) {
         toast.success(`User ${user.name} has been suspended`);
@@ -261,7 +261,7 @@ const UserManagement = () => {
   const handleUnsuspendUser = useCallback(async (user) => {
     try {
       setLoading('unsuspend', true);
-      const response = await userManagementService.updateUser(user.id, { status: 'active' });
+      const response = await superAdminUserManagementService.updateUser(user.id, { status: 'active' });
 
       if (response.success) {
         toast.success(`User ${user.name} has been unsuspended`);

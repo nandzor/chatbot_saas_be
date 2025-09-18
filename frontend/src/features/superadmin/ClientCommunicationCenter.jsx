@@ -1,34 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Textarea,
-  Label,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Switch,
-  Checkbox,
-  Separator
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Select, SelectItem, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Textarea, Label, Tabs, TabsContent, TabsList, TabsTrigger, Switch, Checkbox, Separator} from '@/components/ui';
 import { 
   Plus, 
   Send, 
@@ -379,17 +350,12 @@ Your Customer Success Team`,
                 </div>
                 <div>
                   <Label htmlFor="campaignType">Campaign Type</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="feature-announcement">Feature Announcement</SelectItem>
+                  <Select placeholder="Select type">
+              <SelectItem value="feature-announcement">Feature Announcement</SelectItem>
                       <SelectItem value="maintenance">Maintenance Notice</SelectItem>
                       <SelectItem value="tips">Usage Tips</SelectItem>
                       <SelectItem value="newsletter">Newsletter</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
               </div>
               
@@ -429,18 +395,13 @@ Your Customer Success Team`,
                 </div>
                 <div>
                   <Label htmlFor="template">Use Template</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((template) => (
+                  <Select placeholder="Select template">
+{templates.map((template) => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
               </div>
 

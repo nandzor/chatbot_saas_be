@@ -35,7 +35,7 @@ import {
   EmptyState,
   Skeleton
 } from '@/components/ui';
-import userManagementService from '@/services/UserManagementService';
+import superAdminUserManagementService from '@/services/SuperAdminUserManagementService';
 
 const ViewUserPermissionsDialog = ({
   isOpen,
@@ -61,7 +61,7 @@ const ViewUserPermissionsDialog = ({
       setLoading(true);
       setError(null);
 
-      const response = await userManagementService.getUserPermissions(user.id);
+      const response = await superAdminUserManagementService.getUserPermissions(user.id);
 
       if (response.success) {
         // Ensure permissions is always an array

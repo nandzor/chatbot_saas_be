@@ -15,7 +15,7 @@ import {
   UserX,
   Mail
 } from 'lucide-react';
-import userManagementService from '@/services/UserManagementService';
+import superAdminUserManagementService from '@/services/SuperAdminUserManagementService';
 import { toast } from 'react-hot-toast';
 import {
   Button,
@@ -159,28 +159,28 @@ const UserBulkActions = ({ selectedUsers, onSuccess, onClearSelection }) => {
 
       switch (action) {
         case 'delete':
-          response = await userManagementService.bulkDelete(userIds);
+          response = await superAdminUserManagementService.bulkUpdateUsers({ user_ids: userIds, action: 'delete' });
           break;
         case 'activate':
-          response = await userManagementService.bulkActivate(userIds);
+          response = await superAdminUserManagementService.bulkUpdateUsers({ user_ids: userIds, status: 'active' });
           break;
         case 'deactivate':
-          response = await userManagementService.bulkDeactivate(userIds);
+          response = await superAdminUserManagementService.bulkUpdateUsers({ user_ids: userIds, status: 'inactive' });
           break;
         case 'suspend':
-          response = await userManagementService.bulkSuspend(userIds);
+          response = await superAdminUserManagementService.bulkUpdateUsers({ user_ids: userIds, status: 'suspended' });
           break;
         case 'unsuspend':
-          response = await userManagementService.bulkUnsuspend(userIds);
+          response = await superAdminUserManagementService.bulkUpdateUsers({ user_ids: userIds, status: 'active' });
           break;
         case 'change_role':
-          response = await userManagementService.bulkChangeRole(userIds, bulkOptions);
+          response = await superAdminUserManagementService.bulkUpdateUsers({ user_ids: userIds, role: bulkOptions.role });
           break;
         case 'send_email':
-          response = await userManagementService.bulkSendEmail(userIds, bulkOptions);
+          response = await superAdminUserManagementService.bulkUpdateUsers({ user_ids: userIds, action: 'send_email', email_data: bulkOptions });
           break;
-        case 'export':
-          response = await userManagementService.exportUsers('json', { user_ids: userIds });
+        case 'export': {
+          response = await superAdminUserManagementService.bulkUpdateUsers({ user_ids: userIds, action: 'export', format: 'json' });
           // Handle file download
           const blob = new Blob([response], { type: 'application/json' });
           const url = window.URL.createObjectURL(blob);
@@ -194,6 +194,7 @@ const UserBulkActions = ({ selectedUsers, onSuccess, onClearSelection }) => {
           toast.success('Users exported successfully');
           setIsOpen(false);
           return;
+        }
         default:
           throw new Error('Unknown action');
       }

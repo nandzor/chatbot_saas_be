@@ -1,36 +1,6 @@
 import React, { useState } from 'react';
 import UserAvatar from '@/components/common/UserAvatar';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Button,
-  Badge,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Label,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Switch
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Avatar, AvatarFallback, AvatarImage, Label, Input, Select, SelectItem, Textarea, Switch} from '@/components/ui';
 import { 
   Users,
   Plus,
@@ -635,11 +605,8 @@ const TeamTab = ({
                 <div className="space-y-2">
                   <Label htmlFor="invite-role">Role *</Label>
                   <Select value={inviteFormData.role} onValueChange={(value) => handleInviteInputChange('role', value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">
+                    23903
+                    <SelectItem value="admin">
                         <div className="flex items-center gap-2">
                           <Shield className="w-4 h-4" />
                           Admin - Full access to all features
@@ -657,7 +624,6 @@ const TeamTab = ({
                           Viewer - Read-only access
                         </div>
                       </SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
 
@@ -758,11 +724,8 @@ const TeamTab = ({
                 <div className="space-y-2">
                   <Label htmlFor="edit-role">Role *</Label>
                   <Select value={editFormData.role} onValueChange={(value) => handleEditInputChange('role', value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">
+                    29577
+                    <SelectItem value="admin">
                         <div className="flex items-center gap-2">
                           <Shield className="w-4 h-4" />
                           Admin - Full access to all features
@@ -780,7 +743,6 @@ const TeamTab = ({
                           Viewer - Read-only access
                         </div>
                       </SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
 
@@ -934,16 +896,12 @@ const TeamTab = ({
                 <div className="space-y-2">
                   <Label htmlFor="agent-specialization">Specialization *</Label>
                   <Select value={agentFormData.specialization} onValueChange={(value) => handleAgentInputChange('specialization', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select agent specialization" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Customer Support">Customer Support</SelectItem>
+                    37393
+                    <SelectItem value="Customer Support">Customer Support</SelectItem>
                       <SelectItem value="Technical Support">Technical Support</SelectItem>
                       <SelectItem value="Sales">Sales</SelectItem>
                       <SelectItem value="Billing">Billing</SelectItem>
                       <SelectItem value="General">General</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
 
@@ -964,11 +922,8 @@ const TeamTab = ({
                   <div className="space-y-2">
                     <Label htmlFor="bot-personality">Bot Personality</Label>
                     <Select value={agentFormData.botPersonalityId.toString()} onValueChange={(value) => handleAgentInputChange('botPersonalityId', parseInt(value))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {botPersonalities.map((personality) => (
+                      39027
+                      {botPersonalities.map((personality) => (
                           <SelectItem key={personality.id} value={personality.id.toString()}>
                             <div className="flex items-center gap-2">
                               <Bot className="w-4 h-4" />
@@ -976,7 +931,6 @@ const TeamTab = ({
                             </div>
                           </SelectItem>
                         ))}
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -1079,16 +1033,12 @@ const TeamTab = ({
                 <div className="space-y-2">
                   <Label htmlFor="edit-agent-specialization">Specialization *</Label>
                   <Select value={agentFormData.specialization} onValueChange={(value) => handleAgentInputChange('specialization', value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Customer Support">Customer Support</SelectItem>
+                    44363
+                    <SelectItem value="Customer Support">Customer Support</SelectItem>
                       <SelectItem value="Technical Support">Technical Support</SelectItem>
                       <SelectItem value="Sales">Sales</SelectItem>
                       <SelectItem value="Billing">Billing</SelectItem>
                       <SelectItem value="General">General</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
 
@@ -1108,11 +1058,8 @@ const TeamTab = ({
                   <div className="space-y-2">
                     <Label htmlFor="edit-bot-personality">Bot Personality</Label>
                     <Select value={agentFormData.botPersonalityId.toString()} onValueChange={(value) => handleAgentInputChange('botPersonalityId', parseInt(value))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {botPersonalities.map((personality) => (
+                      45872
+                      {botPersonalities.map((personality) => (
                           <SelectItem key={personality.id} value={personality.id.toString()}>
                             <div className="flex items-center gap-2">
                               <Bot className="w-4 h-4" />
@@ -1120,7 +1067,6 @@ const TeamTab = ({
                             </div>
                           </SelectItem>
                         ))}
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>

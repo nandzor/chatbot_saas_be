@@ -1,46 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Badge,
-  Alert,
-  AlertDescription,
-  Skeleton,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Checkbox,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Input, Badge, Alert, AlertDescription, Skeleton, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Label, Select, SelectItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Checkbox, Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui';
 import {
   Search,
   Plus,
@@ -454,18 +413,13 @@ const FinancialManagement = () => {
                     />
                   </div>
                 </div>
-                <Select value={subscriptionStatusFilter} onValueChange={setSubscriptionStatusFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
+                <Select value={subscriptionStatusFilter} onValueChange={setSubscriptionStatusFilter} className="w-full md:w-48" placeholder="Filter by status">
+              <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="trial">Trial</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                     <SelectItem value="suspended">Suspended</SelectItem>
-                  </SelectContent>
-                </Select>
+</Select>
               </div>
             </CardContent>
           </Card>
@@ -637,18 +591,13 @@ const FinancialManagement = () => {
                     />
                   </div>
                 </div>
-                <Select value={transactionStatusFilter} onValueChange={setTransactionStatusFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
+                <Select value={transactionStatusFilter} onValueChange={setTransactionStatusFilter} className="w-full md:w-48" placeholder="Filter by status">
+              <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="success">Success</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="refunded">Refunded</SelectItem>
-                  </SelectContent>
-                </Select>
+</Select>
                 <Button variant="outline" onClick={() => loadTransactions()}>
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh

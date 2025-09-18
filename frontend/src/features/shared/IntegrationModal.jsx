@@ -1,23 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  Label,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  Separator
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Input, Label, Textarea, Select, SelectItem, Switch, Separator} from '@/components/ui';
 import { 
   X,
   Save,
@@ -281,14 +263,10 @@ const IntegrationModal = ({ integration, isOpen, onClose, onSave }) => {
                 value={config.emailProvider || 'smtp'}
                 onValueChange={(value) => handleConfigChange('emailProvider', value)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="smtp">SMTP</SelectItem>
+                9958
+                <SelectItem value="smtp">SMTP</SelectItem>
                   <SelectItem value="sendgrid">SendGrid</SelectItem>
                   <SelectItem value="mailgun">Mailgun</SelectItem>
-                </SelectContent>
               </Select>
             </div>
 
@@ -403,14 +381,10 @@ const IntegrationModal = ({ integration, isOpen, onClose, onSave }) => {
                 value={config.timezone || 'Asia/Jakarta'}
                 onValueChange={(value) => handleConfigChange('timezone', value)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB)</SelectItem>
+                15515
+                <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB)</SelectItem>
                   <SelectItem value="Asia/Makassar">Asia/Makassar (WITA)</SelectItem>
                   <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT)</SelectItem>
-                </SelectContent>
               </Select>
             </div>
 
@@ -467,14 +441,10 @@ const IntegrationModal = ({ integration, isOpen, onClose, onSave }) => {
                 value={config.mapProvider || 'google_maps'}
                 onValueChange={(value) => handleConfigChange('mapProvider', value)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="google_maps">Google Maps</SelectItem>
+                18148
+                <SelectItem value="google_maps">Google Maps</SelectItem>
                   <SelectItem value="mapbox">Mapbox</SelectItem>
                   <SelectItem value="here">HERE Maps</SelectItem>
-                </SelectContent>
               </Select>
             </div>
 
@@ -604,13 +574,9 @@ const IntegrationModal = ({ integration, isOpen, onClose, onSave }) => {
                 value={config.environment || 'sandbox'}
                 onValueChange={(value) => handleConfigChange('environment', value)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                23643
+                <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
                   <SelectItem value="production">Production</SelectItem>
-                </SelectContent>
               </Select>
             </div>
 

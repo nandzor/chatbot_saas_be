@@ -81,7 +81,7 @@ const RoleBasedRoute = ({
     }
 
     // Fallback: Org admin can access org_admin specific routes
-    if (user?.role === 'org_admin' && requiredPermission === 'manage_settings') {
+    if (user?.role === 'org_admin' && (requiredPermission === 'manage_settings' || requiredPermission === 'users.view')) {
       return children;
     }
 

@@ -1,19 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Select, SelectItem} from '@/components/ui';
 import {
   Plus,
   Users,

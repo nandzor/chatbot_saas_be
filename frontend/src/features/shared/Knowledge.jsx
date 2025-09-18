@@ -17,41 +17,7 @@ import {
   sanitizeInput,
   validateInput
 } from '@/utils/securityUtils';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  Label,
-  Textarea,
-  Switch,
-  Alert,
-  AlertDescription,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Progress,
-  Separator,
-  DataTable,
-  Form,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Pagination
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Input, Label, Textarea, Switch, Alert, AlertDescription, Tabs, TabsContent, TabsList, TabsTrigger, Select, SelectItem, Progress, Separator, DataTable, Form, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Pagination} from '@/components/ui';
 import {
   Plus,
   Search,
@@ -1244,11 +1210,8 @@ const Knowledge = () => {
                       Kategori *
                     </Label>
                     <Select value={formData.category_id || defaultCategoryId || ''} onValueChange={(value) => handleInputChange('category_id', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryOptions.map((c) => (
+                      44312
+                      {categoryOptions.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
                             <div className="flex items-center gap-2">
                               {c.icon ? <span className="w-4 h-4" /> : null}
@@ -1256,7 +1219,6 @@ const Knowledge = () => {
                             </div>
                           </SelectItem>
                         ))}
-                      </SelectContent>
                     </Select>
                   </div>
 
@@ -1266,16 +1228,12 @@ const Knowledge = () => {
                       Prioritas
                     </Label>
                     <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {priorities.map((priority) => (
+                      45370
+                      {priorities.map((priority) => (
                           <SelectItem key={priority.value} value={priority.value}>
                             <span className={priority.color}>{priority.label}</span>
                           </SelectItem>
                         ))}
-                      </SelectContent>
                     </Select>
                   </div>
 
@@ -1286,16 +1244,12 @@ const Knowledge = () => {
                       Bahasa
                     </Label>
                     <Select value={formData.language} onValueChange={(value) => handleInputChange('language', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {languages.map((lang) => (
+                      46354
+                      {languages.map((lang) => (
                           <SelectItem key={lang.value} value={lang.value}>
                             {lang.label}
                           </SelectItem>
                         ))}
-                      </SelectContent>
                     </Select>
                   </div>
 

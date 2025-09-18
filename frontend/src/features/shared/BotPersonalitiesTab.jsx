@@ -1,28 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  Label,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Switch
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Input, Label, Textarea, Select, SelectItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch} from '@/components/ui';
 import { 
   Bot,
   Plus,
@@ -263,16 +240,12 @@ const BotPersonalitiesTab = () => {
                 if (personality) setSelectedPersonality(personality);
               }}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {botPersonalities.map((personality) => (
+              8358
+              {botPersonalities.map((personality) => (
                   <SelectItem key={personality.id} value={personality.id.toString()}>
                     {personality.name}
                   </SelectItem>
                 ))}
-              </SelectContent>
             </Select>
           </div>
 
@@ -302,30 +275,20 @@ const BotPersonalitiesTab = () => {
             <div className="space-y-3">
               <Label htmlFor="language-select">Bahasa</Label>
               <Select value={selectedPersonality.language.toLowerCase()}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="id">Bahasa Indonesia</SelectItem>
+              <SelectItem value="id">Bahasa Indonesia</SelectItem>
                   <SelectItem value="en">English</SelectItem>
                   <SelectItem value="es">Español</SelectItem>
                   <SelectItem value="fr">Français</SelectItem>
-                </SelectContent>
-              </Select>
+</Select>
             </div>
             <div className="space-y-3">
               <Label htmlFor="tone-select">Tone</Label>
               <Select value={selectedPersonality.tone.toLowerCase()}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="formal">Formal</SelectItem>
+              <SelectItem value="formal">Formal</SelectItem>
                   <SelectItem value="informal">Informal</SelectItem>
                   <SelectItem value="friendly">Ramah</SelectItem>
                   <SelectItem value="professional">Profesional</SelectItem>
-                </SelectContent>
-              </Select>
+</Select>
             </div>
           </div>
 
@@ -368,31 +331,23 @@ const BotPersonalitiesTab = () => {
                   <div className="space-y-2">
                     <Label htmlFor="language">Language *</Label>
                     <Select value={formData.language} onValueChange={(value) => handleInputChange('language', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
+                      12236
+                      <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
                         <SelectItem value="en">🇺🇸 English</SelectItem>
                         <SelectItem value="es">🇪🇸 Español</SelectItem>
                         <SelectItem value="fr">🇫🇷 Français</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="tone">Tone *</Label>
                     <Select value={formData.tone} onValueChange={(value) => handleInputChange('tone', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="formal">Formal</SelectItem>
+                      13002
+                      <SelectItem value="formal">Formal</SelectItem>
                         <SelectItem value="informal">Informal</SelectItem>
                         <SelectItem value="friendly">Friendly</SelectItem>
                         <SelectItem value="professional">Professional</SelectItem>
                         <SelectItem value="casual">Casual</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -504,31 +459,23 @@ const BotPersonalitiesTab = () => {
                   <div className="space-y-2">
                     <Label htmlFor="edit-language">Language *</Label>
                     <Select value={formData.language} onValueChange={(value) => handleInputChange('language', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
+                      18516
+                      <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
                         <SelectItem value="en">🇺🇸 English</SelectItem>
                         <SelectItem value="es">🇪🇸 Español</SelectItem>
                         <SelectItem value="fr">🇫🇷 Français</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-tone">Tone *</Label>
                     <Select value={formData.tone} onValueChange={(value) => handleInputChange('tone', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="formal">Formal</SelectItem>
+                      19287
+                      <SelectItem value="formal">Formal</SelectItem>
                         <SelectItem value="informal">Informal</SelectItem>
                         <SelectItem value="friendly">Friendly</SelectItem>
                         <SelectItem value="professional">Professional</SelectItem>
                         <SelectItem value="casual">Casual</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>

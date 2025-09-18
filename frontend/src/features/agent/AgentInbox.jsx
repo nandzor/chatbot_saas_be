@@ -1,38 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Switch,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Label, Select, SelectItem, Textarea, Switch, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui';
 import { 
   MessageSquare,
   Clock,
@@ -417,17 +384,12 @@ const AgentInbox = () => {
               />
             </div>
             
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-7 text-xs bg-white border-gray-300">
-                <SelectValue placeholder="Filter status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
+            <Select value={filterStatus} onValueChange={setFilterStatus} className="h-7 text-xs bg-white border-gray-300" placeholder="Filter status">
+              <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="waiting">Waiting</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-              </SelectContent>
-            </Select>
+</Select>
           </div>
         </div>
 
@@ -582,17 +544,12 @@ const AgentInbox = () => {
                       <div className="space-y-4">
                         <div>
                           <Label htmlFor="transferTo" className="text-sm font-medium">Transfer ke</Label>
-                          <Select>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Pilih agent atau departemen" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="agent-sarah">Agent Sarah</SelectItem>
+                          <Select className="mt-1" placeholder="Pilih agent atau departemen">
+              <SelectItem value="agent-sarah">Agent Sarah</SelectItem>
                               <SelectItem value="agent-mike">Agent Mike</SelectItem>
                               <SelectItem value="technical-team">Tim Teknis</SelectItem>
                               <SelectItem value="billing-team">Tim Billing</SelectItem>
-                            </SelectContent>
-                          </Select>
+</Select>
                         </div>
                         <div>
                           <Label htmlFor="transferReason" className="text-sm font-medium">Alasan Transfer</Label>
@@ -633,17 +590,12 @@ const AgentInbox = () => {
                       <div className="space-y-4">
                         <div>
                           <Label htmlFor="category" className="text-sm font-medium">Kategori Sesi</Label>
-                          <Select>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Pilih kategori" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="technical">Masalah Teknis</SelectItem>
+                          <Select className="mt-1" placeholder="Pilih kategori">
+              <SelectItem value="technical">Masalah Teknis</SelectItem>
                               <SelectItem value="billing">Pertanyaan Billing</SelectItem>
                               <SelectItem value="general">Pertanyaan Umum</SelectItem>
                               <SelectItem value="feature">Permintaan Fitur</SelectItem>
-                            </SelectContent>
-                          </Select>
+</Select>
                         </div>
                         <div>
                           <Label className="text-sm font-medium">Tandai untuk Tim Lain</Label>

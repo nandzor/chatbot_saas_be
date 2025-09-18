@@ -31,6 +31,10 @@ export const hasPermission = (user, permission) => {
     const orgAdminPermissions = [
       'manage_organization',
       'manage_users',
+      'users.view',
+      'users.create',
+      'users.update',
+      'users.delete',
       'manage_agents',
       'manage_chatbots',
       'view_analytics',
@@ -39,7 +43,7 @@ export const hasPermission = (user, permission) => {
       'manage_knowledge_base',
       'manage_settings'
     ];
-    
+
     return orgAdminPermissions.includes(permission);
   }
 
@@ -116,7 +120,7 @@ export const getRolePermissions = (role) => {
  * @returns {boolean} - True if user can access settings
  */
 export const canAccessSettings = (user) => {
-  return hasPermission(user, 'manage_settings') || 
+  return hasPermission(user, 'manage_settings') ||
          hasPermission(user, 'settings.manage') ||
          hasRole(user, 'super_admin') ||
          hasRole(user, 'org_admin');

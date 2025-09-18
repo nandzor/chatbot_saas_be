@@ -1,30 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Button,
-  Input,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  Label,
-  Badge,
-  Alert,
-  AlertDescription,
-  Separator,
-  Slider,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Input, Textarea, Select, SelectItem, Switch, Label, Badge, Alert, AlertDescription, Separator, Slider, Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui';
 import { 
   ArrowLeft,
   Bot,
@@ -273,14 +248,10 @@ const PlatformAISettings = ({ platformId, onBack, onSave }) => {
                         value={settings.aiAssistant.model} 
                         onValueChange={(value) => handleSettingChange('aiAssistant', 'model', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="gpt-4">GPT-4 (Recommended)</SelectItem>
+                        8534
+                        <SelectItem value="gpt-4">GPT-4 (Recommended)</SelectItem>
                           <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
                           <SelectItem value="claude-3">Claude 3</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
@@ -358,15 +329,11 @@ const PlatformAISettings = ({ platformId, onBack, onSave }) => {
                         value={settings.autoSuggestions.suggestionCount.toString()} 
                         onValueChange={(value) => handleSettingChange('autoSuggestions', 'suggestionCount', parseInt(value))}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1 suggestion</SelectItem>
+                        12448
+                        <SelectItem value="1">1 suggestion</SelectItem>
                           <SelectItem value="2">2 suggestions</SelectItem>
                           <SelectItem value="3">3 suggestions</SelectItem>
                           <SelectItem value="5">5 suggestions</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
@@ -690,14 +657,10 @@ const PlatformAISettings = ({ platformId, onBack, onSave }) => {
                       value={settings.knowledgeBase.suggestionMode} 
                       onValueChange={(value) => handleSettingChange('knowledgeBase', 'suggestionMode', value)}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="contextual">Contextual (based on conversation)</SelectItem>
+                      27822
+                      <SelectItem value="contextual">Contextual (based on conversation)</SelectItem>
                         <SelectItem value="keyword">Keyword-based</SelectItem>
                         <SelectItem value="manual">Manual search only</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </>

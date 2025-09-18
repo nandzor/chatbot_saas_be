@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Button
-} from '@/components/ui';
+import {Input, Select, SelectItem, Button} from '@/components/ui';
 import { Search, Filter, X } from 'lucide-react';
 import IntegrationCard from './IntegrationCard';
 import { integrationsData } from '@/data/sampleData';
@@ -92,19 +84,14 @@ const IntegrationsTab = ({
             />
           </div>
           <div className="w-64">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories ({(integrationsState || []).length})</SelectItem>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory} placeholder="Filter by category">
+              <SelectItem value="all">All Categories ({(integrationsState || []).length})</SelectItem>
                 {Object.entries(integrationsByCategory).map(([category, integrations]) => (
                   <SelectItem key={category} value={category}>
                     {categoryNames[category]} ({integrations.length})
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
+</Select>
           </div>
         </div>
       </div>

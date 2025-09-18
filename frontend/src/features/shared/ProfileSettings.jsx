@@ -21,43 +21,7 @@ import {
   sanitizeInput,
   validateInput
 } from '@/utils/securityUtils';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  Label,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  Separator,
-  Alert,
-  AlertDescription,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Progress,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  useToast,
-  Form
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Input, Label, Textarea, Select, SelectItem, Switch, Separator, Alert, AlertDescription, Tabs, TabsContent, TabsList, TabsTrigger, Progress, Avatar, AvatarFallback, AvatarImage, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, useToast, Form} from '@/components/ui';
 import ProfileService from '@/services/ProfileService';
 
 const profileService = new ProfileService();

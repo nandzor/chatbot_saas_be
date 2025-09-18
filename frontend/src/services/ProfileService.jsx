@@ -13,7 +13,7 @@ class ProfileService {
   async _makeApiCall(method, endpoint, data = null, config = {}) {
     const response = await this.authService.api.request({
       method,
-      url: `/api/v1${endpoint}`,
+      url: `/v1${endpoint}`,
       data,
       ...config
     });

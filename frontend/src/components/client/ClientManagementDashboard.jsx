@@ -9,21 +9,7 @@ import {
   Users,
   Activity
 } from 'lucide-react';
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Skeleton,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui';
+import {Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Skeleton, Select, SelectItem} from '@/components/ui';
 import { useClientManagement } from '@/hooks/useClientManagement';
 
 const ClientManagementDashboard = () => {
@@ -123,17 +109,12 @@ const ClientManagementDashboard = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <Select value={viewMode} onValueChange={setViewMode}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
+          <Select value={viewMode} onValueChange={setViewMode} className="w-40">
               <SelectItem value="overview">Overview</SelectItem>
               <SelectItem value="table">Table View</SelectItem>
               <SelectItem value="analytics">Analytics</SelectItem>
               <SelectItem value="settings">Settings</SelectItem>
-            </SelectContent>
-          </Select>
+</Select>
           <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

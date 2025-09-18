@@ -21,32 +21,7 @@ import {
   sanitizeInput,
   validateInput
 } from '@/utils/securityUtils';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  Label,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Alert,
-  AlertDescription,
-  DataTable,
-  Form
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Input, Label, Textarea, Select, SelectItem, Switch, Tabs, TabsContent, TabsList, TabsTrigger, Alert, AlertDescription, DataTable, Form} from '@/components/ui';
 import {
   Plus,
   Play,
@@ -510,31 +485,21 @@ const Automations = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange} placeholder="All statuses">
+              <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+</Select>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Type</label>
-              <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+              <Select value={typeFilter} onValueChange={handleTypeFilterChange} placeholder="All types">
+              <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="welcome">Welcome</SelectItem>
                   <SelectItem value="escalation">Escalation</SelectItem>
                   <SelectItem value="followup">Follow-up</SelectItem>
-                </SelectContent>
-              </Select>
+</Select>
             </div>
           </div>
         </CardContent>

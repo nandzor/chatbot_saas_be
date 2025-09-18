@@ -1,39 +1,6 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Textarea,
-  Switch
-} from '@/components/ui';
-import { 
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Label, Select, SelectItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, Switch} from '@/components/ui';
+import {
   Search,
   Filter,
   Eye,
@@ -322,36 +289,26 @@ const AdminInbox = () => {
                     className="pl-10"
                   />
                 </div>
-                
+
                 <div>
                   <Label className="text-xs text-gray-700 mb-1 block">Status</Label>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="error">Error</SelectItem>
-                    </SelectContent>
+                  <Select value={filterStatus} onValueChange={setFilterStatus} placeholder="All Status">
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
                   </Select>
                 </div>
 
                 <div>
                   <Label className="text-xs text-gray-700 mb-1 block">Platform Type</Label>
-                  <Select value={filterPlatform} onValueChange={setFilterPlatform}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="messaging">Messaging</SelectItem>
-                      <SelectItem value="social">Social Media</SelectItem>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="sms">SMS</SelectItem>
-                    </SelectContent>
+                  <Select value={filterPlatform} onValueChange={setFilterPlatform} placeholder="All Types">
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="messaging">Messaging</SelectItem>
+                    <SelectItem value="social">Social Media</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="sms">SMS</SelectItem>
                   </Select>
                 </div>
               </div>
@@ -370,7 +327,7 @@ const AdminInbox = () => {
                     {connectionPlatforms.filter(p => p.connectionStatus === 'connected').length}
                   </Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                   <div className="flex items-center space-x-2">
                     <Activity className="w-4 h-4 text-green-600" />
@@ -416,9 +373,9 @@ const AdminInbox = () => {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-gray-900 truncate">{platform.name}</p>
                         <p className="text-xs text-gray-500">
-                          {new Date(platform.lastActivity).toLocaleTimeString('id-ID', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
+                          {new Date(platform.lastActivity).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit'
                           })}
                         </p>
                       </div>
@@ -473,8 +430,8 @@ const AdminInbox = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={`${getStatusColor(platform.status)}`}
                           >
                             {platform.status}
@@ -514,7 +471,7 @@ const AdminInbox = () => {
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
-                            
+
                             <Button
                               variant="ghost"
                               size="sm"
@@ -527,7 +484,7 @@ const AdminInbox = () => {
                             >
                               <Settings className="w-4 h-4" />
                             </Button>
-                            
+
                             <Button
                               variant="ghost"
                               size="sm"
@@ -540,7 +497,7 @@ const AdminInbox = () => {
                             >
                               <Users className="w-4 h-4" />
                             </Button>
-                            
+
                             <Button
                               variant="ghost"
                               size="sm"
@@ -553,7 +510,7 @@ const AdminInbox = () => {
                             >
                               <Bot className="w-4 h-4" />
                             </Button>
-                            
+
                             <Button
                               variant="ghost"
                               size="sm"
@@ -566,7 +523,7 @@ const AdminInbox = () => {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            
+
                             <Button
                               variant="ghost"
                               size="sm"
@@ -603,7 +560,7 @@ const AdminInbox = () => {
               Detailed information about the platform configuration and performance
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedPlatform && (
             <div className="space-y-6">
               {/* Basic Info */}
@@ -745,57 +702,47 @@ const AdminInbox = () => {
               Configure platform settings, webhooks, and connection parameters
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedPlatform && (
             <div className="space-y-4">
               <div>
                 <Label className="text-sm font-medium text-gray-700">Webhook URL</Label>
-                <Input 
-                  value={selectedPlatform.webhookUrl} 
+                <Input
+                  value={selectedPlatform.webhookUrl}
                   className="mt-1 font-mono"
                   readOnly
                 />
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">Rate Limit</Label>
-                <Input 
-                  value={selectedPlatform.rateLimit} 
+                <Input
+                  value={selectedPlatform.rateLimit}
                   className="mt-1"
                   readOnly
                 />
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">Working Hours</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select working hours" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="9:00-17:00">9:00 AM - 5:00 PM</SelectItem>
+                <Select placeholder="Select working hours">
+              <SelectItem value="9:00-17:00">9:00 AM - 5:00 PM</SelectItem>
                     <SelectItem value="8:00-18:00">8:00 AM - 6:00 PM</SelectItem>
                     <SelectItem value="24/7">24/7</SelectItem>
                     <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
+</Select>
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">Languages</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select languages" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="id">Indonesian</SelectItem>
+                <Select placeholder="Select languages">
+              <SelectItem value="id">Indonesian</SelectItem>
                     <SelectItem value="en">English</SelectItem>
                     <SelectItem value="id,en">Indonesian + English</SelectItem>
                     <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
+</Select>
               </div>
-              
+
               <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsConfigureOpen(false)}>
                   Cancel
@@ -821,7 +768,7 @@ const AdminInbox = () => {
               Manage agents assigned to this platform, their roles, and permissions
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedPlatform && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -838,7 +785,7 @@ const AdminInbox = () => {
                   Add Agent
                 </Button>
               </div>
-              
+
               <div className="border border-gray-200 rounded-lg">
                 <Table>
                   <TableHeader>
@@ -875,8 +822,8 @@ const AdminInbox = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={agent.status === 'online' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200'}
                           >
                             {agent.status}
@@ -888,8 +835,8 @@ const AdminInbox = () => {
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <div className="w-16 bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-green-600 h-2 rounded-full" 
+                              <div
+                                className="bg-green-600 h-2 rounded-full"
                                 style={{ width: `${agent.performance}%` }}
                               ></div>
                             </div>
@@ -928,7 +875,7 @@ const AdminInbox = () => {
               Configure AI behavior, auto-replies, and intelligent responses
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedPlatform && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -938,7 +885,7 @@ const AdminInbox = () => {
                 </div>
                 <Switch checked={selectedPlatform.config.aiEnabled} />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Auto Reply</Label>
@@ -946,46 +893,36 @@ const AdminInbox = () => {
                 </div>
                 <Switch checked={selectedPlatform.config.autoReply} />
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">AI Model</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select AI model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gpt-4">GPT-4 (Advanced)</SelectItem>
+                <Select placeholder="Select AI model">
+              <SelectItem value="gpt-4">GPT-4 (Advanced)</SelectItem>
                     <SelectItem value="gpt-3.5">GPT-3.5 (Standard)</SelectItem>
                     <SelectItem value="claude">Claude (Alternative)</SelectItem>
                     <SelectItem value="custom">Custom Model</SelectItem>
-                  </SelectContent>
-                </Select>
+</Select>
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">Response Style</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select response style" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="professional">Professional</SelectItem>
+                <Select placeholder="Select response style">
+              <SelectItem value="professional">Professional</SelectItem>
                     <SelectItem value="friendly">Friendly</SelectItem>
                     <SelectItem value="casual">Casual</SelectItem>
                     <SelectItem value="technical">Technical</SelectItem>
-                  </SelectContent>
-                </Select>
+</Select>
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">Auto Reply Templates</Label>
-                <Textarea 
+                <Textarea
                   placeholder="Enter common auto-reply templates..."
                   rows={4}
                   className="mt-1"
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsAISettingsOpen(false)}>
                   Cancel
@@ -1011,57 +948,47 @@ const AdminInbox = () => {
               Modify platform settings and configuration
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedPlatform && (
             <div className="space-y-4">
               <div>
                 <Label className="text-sm font-medium text-gray-700">Platform Name</Label>
-                <Input 
-                  value={selectedPlatform.name} 
+                <Input
+                  value={selectedPlatform.name}
                   className="mt-1"
                   readOnly
                 />
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">Platform Type</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select platform type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="messaging">Messaging</SelectItem>
+                <Select placeholder="Select platform type">
+              <SelectItem value="messaging">Messaging</SelectItem>
                     <SelectItem value="social">Social Media</SelectItem>
                     <SelectItem value="email">Email</SelectItem>
                     <SelectItem value="sms">SMS</SelectItem>
-                  </SelectContent>
-                </Select>
+</Select>
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">Status</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
+                <Select placeholder="Select status">
+              <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
                     <SelectItem value="maintenance">Maintenance</SelectItem>
                     <SelectItem value="error">Error</SelectItem>
-                  </SelectContent>
-                </Select>
+</Select>
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-700">Description</Label>
-                <Textarea 
+                <Textarea
                   placeholder="Enter platform description..."
                   rows={3}
                   className="mt-1"
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsEditOpen(false)}>
                   Cancel
@@ -1087,7 +1014,7 @@ const AdminInbox = () => {
               Are you sure you want to delete this platform? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedPlatform && (
             <div className="space-y-4">
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -1103,13 +1030,13 @@ const AdminInbox = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
                   Cancel
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={() => handleDeletePlatform(selectedPlatform.id)}
                 >
                   Delete Platform

@@ -1,47 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Badge,
-  Alert,
-  AlertDescription,
-  Skeleton,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Checkbox,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Textarea
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Input, Badge, Alert, AlertDescription, Skeleton, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Label, Select, SelectItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Checkbox, Tabs, TabsContent, TabsList, TabsTrigger, Textarea} from '@/components/ui';
 import {
   Search,
   Plus,
@@ -574,19 +532,14 @@ const SystemAdministration = () => {
                     />
                   </div>
                 </div>
-                <Select value={permissionGroupFilter} onValueChange={setPermissionGroupFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="Filter by group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Groups</SelectItem>
+                <Select value={permissionGroupFilter} onValueChange={setPermissionGroupFilter} className="w-full md:w-48" placeholder="Filter by group">
+              <SelectItem value="all">All Groups</SelectItem>
                     {getPermissionGroups().map((group) => (
                       <SelectItem key={group} value={group}>
                         {group}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
+</Select>
               </div>
             </CardContent>
           </Card>

@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import {Select, SelectItem} from '@/components/ui';
 import {
   ChevronLeft,
   ChevronRight,
@@ -103,16 +103,12 @@ export const AdvancedPagination = ({
               onValueChange={(value) => handleItemsPerPageChange(parseInt(value))}
               disabled={disabled || loading}
             >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {pageSizeOptions.map((size) => (
+              3050
+              {pageSizeOptions.map((size) => (
                   <SelectItem key={size} value={size.toString()}>
                     {size}
                   </SelectItem>
                 ))}
-              </SelectContent>
             </Select>
             <span className="text-sm text-muted-foreground">per page</span>
           </div>
@@ -383,16 +379,12 @@ export const PaginationWithSize = ({
             onValueChange={(value) => onItemsPerPageChange?.(parseInt(value))}
             disabled={disabled || loading}
           >
-            <SelectTrigger className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {pageSizeOptions.map((size) => (
+            10927
+            {pageSizeOptions.map((size) => (
                 <SelectItem key={size} value={size.toString()}>
                   {size}
                 </SelectItem>
               ))}
-            </SelectContent>
           </Select>
         </div>
 
@@ -535,18 +527,13 @@ export const PaginationWithFilters = ({
 
         <div className="flex items-center space-x-2">
           {sortOptions.length > 0 && (
-            <Select onValueChange={onSortChange} disabled={disabled || loading}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((option) => (
+            <Select onValueChange={onSortChange} disabled={disabled || loading} className="w-40" placeholder="Sort by">
+{sortOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
+</Select>
           )}
         </div>
       </div>

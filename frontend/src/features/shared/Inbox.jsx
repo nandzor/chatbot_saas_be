@@ -9,24 +9,7 @@ import {
   Smile,
   AlertCircle
 } from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-CardTitle,
-  Badge,
-  Input,
-  Button,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Input, Button, Avatar, AvatarFallback, AvatarImage, Select, SelectItem} from '@/components/ui';
 
 const Inbox = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -162,18 +145,13 @@ const Inbox = () => {
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search conversations..." className="pl-9" />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Conversations</SelectItem>
+            <Select value={filterStatus} onValueChange={setFilterStatus} placeholder="Filter by status">
+              <SelectItem value="all">All Conversations</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="bot_handled">Bot Handled</SelectItem>
                 <SelectItem value="agent_handled">Agent Handled</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
+</Select>
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto p-2">

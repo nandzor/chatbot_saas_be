@@ -1,32 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Progress,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Label,
-  Checkbox,
-  Input,
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Progress, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Label, Checkbox, Input, Select, SelectItem} from '@/components/ui';
 import { 
   Play, 
   CheckCircle, 
@@ -183,30 +156,20 @@ const ClientSuccessPlays = ({ clientData }) => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="playCategory">Category</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="onboarding">Onboarding</SelectItem>
+                  <Select placeholder="Select category">
+              <SelectItem value="onboarding">Onboarding</SelectItem>
                       <SelectItem value="retention">Retention</SelectItem>
                       <SelectItem value="adoption">Adoption</SelectItem>
                       <SelectItem value="upsell">Upsell</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="playAssignee">Assign To</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sarah">Sarah Johnson</SelectItem>
+                  <Select placeholder="Select assignee">
+              <SelectItem value="sarah">Sarah Johnson</SelectItem>
                       <SelectItem value="mike">Mike Chen</SelectItem>
                       <SelectItem value="lisa">Lisa Wang</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
                 <div className="flex gap-3 pt-4 border-t">
                   <Button className="flex-1">Create Play</Button>

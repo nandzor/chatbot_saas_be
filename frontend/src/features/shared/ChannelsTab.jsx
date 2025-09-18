@@ -1,28 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  Label,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Input, Label, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Select, SelectItem, Textarea} from '@/components/ui';
 import { 
   MessageSquare, 
   Plus, 
@@ -460,11 +437,8 @@ const ChannelsTab = ({ channels, showApiKey, setShowApiKey }) => {
                 <div className="space-y-2">
                   <Label htmlFor="type">Channel Type *</Label>
                   <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a channel type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {channelTypes.map((type) => {
+                    14634
+                    {channelTypes.map((type) => {
                         const IconComponent = type.icon;
                         return (
                           <SelectItem key={type.id} value={type.id}>
@@ -475,7 +449,6 @@ const ChannelsTab = ({ channels, showApiKey, setShowApiKey }) => {
                           </SelectItem>
                         );
                       })}
-                    </SelectContent>
                   </Select>
                   {selectedChannelType && (
                     <p className="text-sm text-gray-600">{selectedChannelType.description}</p>

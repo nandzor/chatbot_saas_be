@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import {Select, SelectItem} from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Progress } from '@/components/ui';
 import {
@@ -176,13 +176,9 @@ export const ExportOptionsPanel = ({
             value={options.dataFormat || 'formatted'}
             onValueChange={(value) => handleOptionChange('dataFormat', value)}
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="formatted">Formatted (Human readable)</SelectItem>
+            5942
+            <SelectItem value="formatted">Formatted (Human readable)</SelectItem>
               <SelectItem value="raw">Raw (Database values)</SelectItem>
-            </SelectContent>
           </Select>
         </div>
       </div>

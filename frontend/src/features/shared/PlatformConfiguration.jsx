@@ -1,24 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Button,
-  Input,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  Label,
-  Alert,
-  AlertDescription,
-  Separator
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Input, Textarea, Select, SelectItem, Switch, Label, Alert, AlertDescription, Separator} from '@/components/ui';
 import { 
   ArrowLeft,
   Save,
@@ -179,14 +160,10 @@ const PlatformConfiguration = ({ platformId, onBack, onSave }) => {
                 <div className="space-y-2">
                   <Label htmlFor="language">Language</Label>
                   <Select value={config.language} onValueChange={(value) => handleDirectChange('language', value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="id">Bahasa Indonesia</SelectItem>
+                    5384
+                    <SelectItem value="id">Bahasa Indonesia</SelectItem>
                       <SelectItem value="en">English</SelectItem>
                       <SelectItem value="ms">Bahasa Malaysia</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
               </div>
@@ -273,14 +250,10 @@ const PlatformConfiguration = ({ platformId, onBack, onSave }) => {
                         value={config.workingHours.timezone} 
                         onValueChange={(value) => handleInputChange('workingHours', 'timezone', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB)</SelectItem>
+                        9510
+                        <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB)</SelectItem>
                           <SelectItem value="Asia/Makassar">Asia/Makassar (WITA)</SelectItem>
                           <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT)</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                   </div>

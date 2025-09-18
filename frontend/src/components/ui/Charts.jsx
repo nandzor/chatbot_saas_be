@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
-import { Button, Badge, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from '@/components/ui';
+import {Button, Badge, Select, SelectItem, Skeleton} from '@/components/ui';
 import {
   BarChart3,
   RefreshCw,
@@ -740,16 +740,12 @@ export const FilterableChart = ({
                   value={selectedFilters[filter.key] || ''}
                   onValueChange={(value) => handleFilterChange(filter.key, value)}
                 >
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder={filter.placeholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filter.options.map((option) => (
+                  19763
+                  {filter.options.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
                     ))}
-                  </SelectContent>
                 </Select>
               </div>
             ))}

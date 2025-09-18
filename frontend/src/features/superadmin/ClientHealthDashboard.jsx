@@ -1,23 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Progress,
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Progress, Button, Select, SelectItem} from '@/components/ui';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -116,17 +98,12 @@ const ClientHealthDashboard = () => {
           <p className="text-muted-foreground">Portfolio health overview and Customer Success metrics</p>
         </div>
         <div className="flex items-center gap-4">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Time Range" />
-            </SelectTrigger>
-            <SelectContent>
+          <Select value={timeRange} onValueChange={setTimeRange} className="w-[180px]" placeholder="Time Range">
               <SelectItem value="7d">Last 7 Days</SelectItem>
               <SelectItem value="30d">Last 30 Days</SelectItem>
               <SelectItem value="90d">Last 90 Days</SelectItem>
               <SelectItem value="1y">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
+</Select>
           <Button>
             <BarChart3 className="w-4 h-4 mr-2" />
             Export Report

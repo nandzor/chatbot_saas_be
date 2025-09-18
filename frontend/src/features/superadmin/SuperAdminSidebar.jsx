@@ -15,16 +15,7 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui';
+import {Avatar, AvatarFallback, AvatarImage, Select, SelectItem} from '@/components/ui';
 
 const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
   const { user } = useAuth();
@@ -214,12 +205,8 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
             <p className="text-sm font-medium text-foreground">
               {user?.name || 'Super Admin'}
             </p>
-            <Select value={userStatus} onValueChange={setUserStatus}>
-              <SelectTrigger className="h-6 text-xs border-0 p-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="online">
+            <Select value={userStatus} onValueChange={setUserStatus} className="h-6 text-xs border-0 p-0">
+              <SelectItem value="online">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-green-500" />
                     Online
@@ -237,8 +224,7 @@ const SuperAdminSidebar = ({ activeMenu, setActiveMenu }) => {
                     Offline
                   </div>
                 </SelectItem>
-              </SelectContent>
-            </Select>
+</Select>
           </div>
         </div>
 

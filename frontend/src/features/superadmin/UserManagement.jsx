@@ -1,43 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Badge,
-  Alert,
-  AlertDescription,
-  Skeleton,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Checkbox
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Input, Badge, Alert, AlertDescription, Skeleton, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Label, Select, SelectItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Checkbox} from '@/components/ui';
 import {
   Search,
   Plus,
@@ -505,27 +467,27 @@ const UserManagement = () => {
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={(value) => handleFilterChange('status', value)}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-              </SelectContent>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => handleFilterChange('status', value)}
+              className="w-full md:w-48"
+              placeholder="Filter by status"
+            >
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
             </Select>
-            <Select value={roleFilter} onValueChange={(value) => handleFilterChange('role', value)}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="super_admin">Super Admin</SelectItem>
-                <SelectItem value="org_admin">Organization Admin</SelectItem>
-                <SelectItem value="user">User</SelectItem>
-              </SelectContent>
+            <Select
+              value={roleFilter}
+              onValueChange={(value) => handleFilterChange('role', value)}
+              className="w-full md:w-48"
+              placeholder="Filter by role"
+            >
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="super_admin">Super Admin</SelectItem>
+              <SelectItem value="org_admin">Organization Admin</SelectItem>
+              <SelectItem value="user">User</SelectItem>
             </Select>
             <Button variant="outline" onClick={() => loadUsers()}>
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -731,28 +693,26 @@ const UserManagement = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select value={userForm.role} onValueChange={(value) => setUserForm({ ...userForm, role: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="org_admin">Organization Admin</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
+              <Select
+                value={userForm.role}
+                onValueChange={(value) => setUserForm({ ...userForm, role: value })}
+                placeholder="Select role"
+              >
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="org_admin">Organization Admin</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={userForm.status} onValueChange={(value) => setUserForm({ ...userForm, status: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                </SelectContent>
+              <Select
+                value={userForm.status}
+                onValueChange={(value) => setUserForm({ ...userForm, status: value })}
+                placeholder="Select status"
+              >
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
               </Select>
             </div>
             <div className="space-y-2">
@@ -836,28 +796,26 @@ const UserManagement = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-role">Role</Label>
-              <Select value={userForm.role} onValueChange={(value) => setUserForm({ ...userForm, role: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="org_admin">Organization Admin</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
+              <Select
+                value={userForm.role}
+                onValueChange={(value) => setUserForm({ ...userForm, role: value })}
+                placeholder="Select role"
+              >
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="org_admin">Organization Admin</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-status">Status</Label>
-              <Select value={userForm.status} onValueChange={(value) => setUserForm({ ...userForm, status: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                </SelectContent>
+              <Select
+                value={userForm.status}
+                onValueChange={(value) => setUserForm({ ...userForm, status: value })}
+                placeholder="Select status"
+              >
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
               </Select>
             </div>
           </div>

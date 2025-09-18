@@ -1,15 +1,14 @@
 /* eslint-disable no-console */
 import { useState, useEffect, useCallback } from 'react';
-import UserManagementService from '@/services/UserManagementService';
+import SuperAdminUserManagementService from '@/services/SuperAdminUserManagementService';
 import { handleError } from '@/utils/errorHandler';
 import toast from 'react-hot-toast';
 
-const userManagementService = new UserManagementService();
+const superAdminUserManagementService = new SuperAdminUserManagementService();
 
-export const useUserManagement = () => {
+export const useSuperAdminUserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [paginationLoading, setPaginationLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -21,6 +20,7 @@ export const useUserManagement = () => {
     search: '',
     status: 'all',
     role: 'all',
+    organization: 'all',
     sortBy: 'created_at',
     sortOrder: 'desc'
   });
@@ -28,14 +28,7 @@ export const useUserManagement = () => {
   // Load users
   const loadUsers = useCallback(async (params = {}) => {
     try {
-      // Check if this is a pagination change (not initial load)
-      const isPaginationChange = params.page || params.per_page;
-
-      if (isPaginationChange) {
-        setPaginationLoading(true);
-      } else {
-        setLoading(true);
-      }
+      setLoading(true);
       setError(null);
 
       const queryParams = {
@@ -45,23 +38,11 @@ export const useUserManagement = () => {
         ...params
       };
 
-      if (import.meta.env.DEV) {
-        console.log('Loading users with params:', queryParams);
-      }
-
-      const response = await userManagementService.getUsers(queryParams);
+      const response = await superAdminUserManagementService.getUsers(queryParams);
 
       if (Array.isArray(response)) {
         setUsers(response);
-        // Reset pagination if response is array (no pagination info)
-        setPagination(prev => ({
-          ...prev,
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: response.length,
-          perPage: response.length
-        }));
-      } else if (response && response.data) {
+      } else if (response.data) {
         setUsers(response.data);
         if (response.pagination) {
           setPagination(prev => ({
@@ -71,20 +52,9 @@ export const useUserManagement = () => {
             totalItems: response.pagination.total || 0,
             perPage: response.pagination.per_page || 10
           }));
-
-          if (import.meta.env.DEV) {
-            console.log('Updated pagination:', response.pagination);
-          }
         }
       } else {
         setUsers([]);
-        setPagination(prev => ({
-          ...prev,
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: 0,
-          perPage: 10
-        }));
       }
     } catch (err) {
       const errorMessage = handleError(err);
@@ -93,18 +63,8 @@ export const useUserManagement = () => {
       if (import.meta.env.DEV) {
         console.error('Error loading users:', err);
       }
-
-      // Reset pagination on error
-      setPagination(prev => ({
-        ...prev,
-        currentPage: 1,
-        totalPages: 1,
-        totalItems: 0,
-        perPage: 10
-      }));
     } finally {
       setLoading(false);
-      setPaginationLoading(false);
     }
   }, [pagination.currentPage, pagination.perPage, filters]);
 
@@ -114,7 +74,7 @@ export const useUserManagement = () => {
       setLoading(true);
       setError(null);
 
-      const response = await userManagementService.searchUsers(query, {
+      const response = await superAdminUserManagementService.searchUsers(query, {
         page: pagination.currentPage,
         per_page: pagination.perPage,
         ...filters
@@ -122,34 +82,10 @@ export const useUserManagement = () => {
 
       if (Array.isArray(response)) {
         setUsers(response);
-        // Reset pagination for search results
-        setPagination(prev => ({
-          ...prev,
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: response.length,
-          perPage: response.length
-        }));
-      } else if (response && response.data) {
+      } else if (response.data) {
         setUsers(response.data);
-        if (response.pagination) {
-          setPagination(prev => ({
-            ...prev,
-            currentPage: response.pagination.current_page || 1,
-            totalPages: response.pagination.last_page || 1,
-            totalItems: response.pagination.total || 0,
-            perPage: response.pagination.per_page || 10
-          }));
-        }
       } else {
         setUsers([]);
-        setPagination(prev => ({
-          ...prev,
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: 0,
-          perPage: 10
-        }));
       }
     } catch (err) {
       const errorMessage = handleError(err);
@@ -158,18 +94,8 @@ export const useUserManagement = () => {
       if (import.meta.env.DEV) {
         console.error('Error searching users:', err);
       }
-
-      // Reset pagination on error
-      setPagination(prev => ({
-        ...prev,
-        currentPage: 1,
-        totalPages: 1,
-        totalItems: 0,
-        perPage: 10
-      }));
     } finally {
       setLoading(false);
-      setPaginationLoading(false);
     }
   }, [pagination.currentPage, pagination.perPage, filters]);
 
@@ -179,7 +105,7 @@ export const useUserManagement = () => {
       setLoading(true);
       setError(null);
 
-      const response = await userManagementService.createUser(userData);
+      const response = await superAdminUserManagementService.createUser(userData);
 
       toast.success('Pengguna berhasil dibuat');
       await loadUsers(); // Reload users list
@@ -195,7 +121,6 @@ export const useUserManagement = () => {
       throw err;
     } finally {
       setLoading(false);
-      setPaginationLoading(false);
     }
   }, [loadUsers]);
 
@@ -205,7 +130,7 @@ export const useUserManagement = () => {
       setLoading(true);
       setError(null);
 
-      const response = await userManagementService.updateUser(userId, userData);
+      const response = await superAdminUserManagementService.updateUser(userId, userData);
 
       toast.success('Pengguna berhasil diperbarui');
       await loadUsers(); // Reload users list
@@ -221,7 +146,6 @@ export const useUserManagement = () => {
       throw err;
     } finally {
       setLoading(false);
-      setPaginationLoading(false);
     }
   }, [loadUsers]);
 
@@ -231,7 +155,7 @@ export const useUserManagement = () => {
       setLoading(true);
       setError(null);
 
-      await userManagementService.deleteUser(userId);
+      await superAdminUserManagementService.deleteUser(userId);
 
       toast.success('Pengguna berhasil dihapus');
       await loadUsers(); // Reload users list
@@ -245,7 +169,6 @@ export const useUserManagement = () => {
       throw err;
     } finally {
       setLoading(false);
-      setPaginationLoading(false);
     }
   }, [loadUsers]);
 
@@ -255,7 +178,7 @@ export const useUserManagement = () => {
       setLoading(true);
       setError(null);
 
-      const response = await userManagementService.toggleUserStatus(userId);
+      const response = await superAdminUserManagementService.toggleUserStatus(userId);
 
       toast.success('Status pengguna berhasil diubah');
       await loadUsers(); // Reload users list
@@ -271,7 +194,6 @@ export const useUserManagement = () => {
       throw err;
     } finally {
       setLoading(false);
-      setPaginationLoading(false);
     }
   }, [loadUsers]);
 
@@ -280,7 +202,7 @@ export const useUserManagement = () => {
     try {
       setError(null);
 
-      const response = await userManagementService.getUserById(userId);
+      const response = await superAdminUserManagementService.getUserById(userId);
       return response;
     } catch (err) {
       const errorMessage = handleError(err);
@@ -298,7 +220,7 @@ export const useUserManagement = () => {
     try {
       setError(null);
 
-      const response = await userManagementService.getUserActivity(userId);
+      const response = await superAdminUserManagementService.getUserActivity(userId);
       return response;
     } catch (err) {
       const errorMessage = handleError(err);
@@ -316,7 +238,7 @@ export const useUserManagement = () => {
     try {
       setError(null);
 
-      const response = await userManagementService.getUserSessions(userId);
+      const response = await superAdminUserManagementService.getUserSessions(userId);
       return response;
     } catch (err) {
       const errorMessage = handleError(err);
@@ -334,7 +256,7 @@ export const useUserManagement = () => {
     try {
       setError(null);
 
-      const response = await userManagementService.getUserPermissions(userId);
+      const response = await superAdminUserManagementService.getUserPermissions(userId);
       return response;
     } catch (err) {
       const errorMessage = handleError(err);
@@ -352,7 +274,7 @@ export const useUserManagement = () => {
     try {
       setError(null);
 
-      const response = await userManagementService.getUserStatistics();
+      const response = await superAdminUserManagementService.getUserStatistics();
       return response;
     } catch (err) {
       const errorMessage = handleError(err);
@@ -370,7 +292,7 @@ export const useUserManagement = () => {
     try {
       setError(null);
 
-      const response = await userManagementService.checkEmail(email);
+      const response = await superAdminUserManagementService.checkEmail(email);
       return response;
     } catch (err) {
       const errorMessage = handleError(err);
@@ -387,7 +309,7 @@ export const useUserManagement = () => {
     try {
       setError(null);
 
-      const response = await userManagementService.checkUsername(username);
+      const response = await superAdminUserManagementService.checkUsername(username);
       return response;
     } catch (err) {
       const errorMessage = handleError(err);
@@ -405,7 +327,7 @@ export const useUserManagement = () => {
       setLoading(true);
       setError(null);
 
-      const response = await userManagementService.bulkUpdateUsers(updates);
+      const response = await superAdminUserManagementService.bulkUpdateUsers(updates);
 
       toast.success('Pengguna berhasil diperbarui secara massal');
       await loadUsers(); // Reload users list
@@ -421,7 +343,6 @@ export const useUserManagement = () => {
       throw err;
     } finally {
       setLoading(false);
-      setPaginationLoading(false);
     }
   }, [loadUsers]);
 
@@ -437,57 +358,13 @@ export const useUserManagement = () => {
 
   // Handle page change
   const handlePageChange = useCallback((page) => {
-    if (page >= 1 && page <= pagination.totalPages && page !== pagination.currentPage) {
-      try {
-        updatePagination({ currentPage: page });
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('Error changing page:', error);
-        }
-        toast.error('Gagal mengubah halaman');
-      }
-    }
-  }, [pagination.totalPages, pagination.currentPage, updatePagination]);
+    updatePagination({ currentPage: page });
+  }, [updatePagination]);
 
   // Handle per page change
   const handlePerPageChange = useCallback((perPage) => {
-    try {
-      if (perPage > 0 && perPage <= 100) {
-        updatePagination({ perPage, currentPage: 1 });
-      } else {
-        toast.error('Jumlah item per halaman harus antara 1-100');
-      }
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Error changing per page:', error);
-      }
-      toast.error('Gagal mengubah jumlah item per halaman');
-    }
+    updatePagination({ perPage, currentPage: 1 });
   }, [updatePagination]);
-
-  // Go to first page
-  const goToFirstPage = useCallback(() => {
-    updatePagination({ currentPage: 1 });
-  }, [updatePagination]);
-
-  // Go to last page
-  const goToLastPage = useCallback(() => {
-    updatePagination({ currentPage: pagination.totalPages });
-  }, [pagination.totalPages, updatePagination]);
-
-  // Go to previous page
-  const goToPreviousPage = useCallback(() => {
-    if (pagination.currentPage > 1) {
-      updatePagination({ currentPage: pagination.currentPage - 1 });
-    }
-  }, [pagination.currentPage, updatePagination]);
-
-  // Go to next page
-  const goToNextPage = useCallback(() => {
-    if (pagination.currentPage < pagination.totalPages) {
-      updatePagination({ currentPage: pagination.currentPage + 1 });
-    }
-  }, [pagination.currentPage, pagination.totalPages, updatePagination]);
 
   // Load users on mount and when filters/pagination change
   useEffect(() => {
@@ -498,7 +375,6 @@ export const useUserManagement = () => {
     // State
     users,
     loading,
-    paginationLoading,
     error,
     pagination,
     filters,
@@ -520,14 +396,8 @@ export const useUserManagement = () => {
     bulkUpdateUsers,
     updateFilters,
     updatePagination,
-
-    // Pagination actions
     handlePageChange,
     handlePerPageChange,
-    goToFirstPage,
-    goToLastPage,
-    goToPreviousPage,
-    goToNextPage,
 
     // Computed
     activeUsers: users.filter(user => user.status === 'active'),

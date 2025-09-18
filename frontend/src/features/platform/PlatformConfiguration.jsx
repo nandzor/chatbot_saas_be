@@ -1,38 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Input, Label, Select, SelectItem, Textarea, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui';
 import { 
   Key, 
   Shield, 
@@ -279,19 +246,14 @@ const PlatformConfiguration = () => {
           <p className="text-gray-600">Manage third-party credentials, feature flags, and platform settings</p>
         </div>
         <div className="flex items-center gap-4">
-          <Select value={selectedEnvironment} onValueChange={setSelectedEnvironment}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select environment" />
-            </SelectTrigger>
-            <SelectContent>
+          <Select value={selectedEnvironment} onValueChange={setSelectedEnvironment} className="w-48" placeholder="Select environment">
               <SelectItem value="all">🌐 All Environments</SelectItem>
               {environments.map(env => (
                 <SelectItem key={env.value} value={env.value}>
                   {env.label}
                 </SelectItem>
               ))}
-            </SelectContent>
-          </Select>
+</Select>
         </div>
       </div>
 
@@ -352,16 +314,12 @@ const PlatformConfiguration = () => {
                     <div className="space-y-3">
                       <Label htmlFor="provider">Provider *</Label>
                       <Select value={credentialForm.provider} onValueChange={(value) => setCredentialForm(prev => ({ ...prev, provider: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select provider" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {providers.map(provider => (
+                        11394
+                        {providers.map(provider => (
                             <SelectItem key={provider.value} value={provider.value}>
                               {provider.icon} {provider.label}
                             </SelectItem>
                           ))}
-                        </SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -392,16 +350,12 @@ const PlatformConfiguration = () => {
                   <div className="space-y-3">
                     <Label htmlFor="environment">Environment *</Label>
                     <Select value={credentialForm.environment} onValueChange={(value) => setCredentialForm(prev => ({ ...prev, environment: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select environment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {environments.map(env => (
+                      13269
+                      {environments.map(env => (
                           <SelectItem key={env.value} value={env.value}>
                             {env.label}
                           </SelectItem>
                         ))}
-                      </SelectContent>
                     </Select>
                   </div>
 
@@ -555,16 +509,12 @@ const PlatformConfiguration = () => {
                     <div className="space-y-3">
                       <Label htmlFor="flagEnvironment">Environment *</Label>
                       <Select value={featureFlagForm.environment} onValueChange={(value) => setFeatureFlagForm(prev => ({ ...prev, environment: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select environment" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {environments.map(env => (
+                        21284
+                        {environments.map(env => (
                             <SelectItem key={env.value} value={env.value}>
                               {env.label}
                             </SelectItem>
                           ))}
-                        </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-3">

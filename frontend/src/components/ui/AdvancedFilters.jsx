@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './car
 import { Button } from './button';
 import { Input } from './input';
 import { Label } from './label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
+import {Select, SelectItem} from './select';
 import { Checkbox } from './checkbox';
 import { Badge } from './badge';
 import {

@@ -1,27 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Label
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Textarea, Select, SelectItem, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Label} from '@/components/ui';
 import { 
   Plus, 
   FileText, 
@@ -263,15 +241,11 @@ const ClientNotes = ({ clientData }) => {
                 <div className="space-y-2">
                   <Label htmlFor="noteType">Type</Label>
                   <Select value={formData.type} onValueChange={(value) => handleFormChange('type', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="call">Phone Call</SelectItem>
+                    7926
+                    <SelectItem value="call">Phone Call</SelectItem>
                       <SelectItem value="email">Email</SelectItem>
                       <SelectItem value="meeting">Meeting</SelectItem>
                       <SelectItem value="note">General Note</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -362,31 +336,21 @@ const ClientNotes = ({ clientData }) => {
               </div>
             </div>
             <div className="w-full md:w-48">
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+              <Select value={filterType} onValueChange={setFilterType} placeholder="Filter by type">
+              <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="call">Phone Calls</SelectItem>
                   <SelectItem value="email">Emails</SelectItem>
                   <SelectItem value="meeting">Meetings</SelectItem>
                   <SelectItem value="note">General Notes</SelectItem>
-                </SelectContent>
-              </Select>
+</Select>
             </div>
             <div className="w-full md:w-48">
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">Date</SelectItem>
+              <Select value={sortBy} onValueChange={setSortBy} placeholder="Sort by">
+              <SelectItem value="date">Date</SelectItem>
                   <SelectItem value="title">Title</SelectItem>
                   <SelectItem value="author">Author</SelectItem>
                   <SelectItem value="type">Type</SelectItem>
-                </SelectContent>
-              </Select>
+</Select>
             </div>
             <Button
               variant="outline"

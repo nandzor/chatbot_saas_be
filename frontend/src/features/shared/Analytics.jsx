@@ -21,28 +21,7 @@ import {
   sanitizeInput,
   validateInput
 } from '@/utils/securityUtils';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Badge,
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Alert,
-  AlertDescription,
-  DataTable
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button, Input, Select, SelectItem, Alert, AlertDescription, DataTable} from '@/components/ui';
 import {
   LineChart,
   Line,
@@ -419,17 +398,12 @@ const Analytics = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Date Range</label>
-              <Select value={dateRange} onValueChange={handleDateRangeChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select date range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1d">Last 24 hours</SelectItem>
+              <Select value={dateRange} onValueChange={handleDateRangeChange} placeholder="Select date range">
+              <SelectItem value="1d">Last 24 hours</SelectItem>
                   <SelectItem value="7d">Last 7 days</SelectItem>
                   <SelectItem value="30d">Last 30 days</SelectItem>
                   <SelectItem value="90d">Last 90 days</SelectItem>
-                </SelectContent>
-              </Select>
+</Select>
             </div>
 
             <div className="space-y-2">

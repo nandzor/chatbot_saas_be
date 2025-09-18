@@ -36,30 +36,7 @@ import {
   Filter,
   Search
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Badge,
-  Alert,
-  AlertDescription,
-  DataTable
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Input, Select, SelectItem, Badge, Alert, AlertDescription, DataTable} from '@/components/ui';
 import {
   LineChart,
   Line,

@@ -15,30 +15,7 @@ import {
 } from 'lucide-react';
 import { permissionManagementService } from '@/services/PermissionManagementService';
 import { toast } from 'react-hot-toast';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea
-} from '@/components/ui';
+import {Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Select, SelectItem, Textarea} from '@/components/ui';
 
 const PermissionBulkActions = ({ selectedPermissions, onSuccess, onClearSelection }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -308,11 +285,8 @@ const PermissionBulkActions = ({ selectedPermissions, onSuccess, onClearSelectio
                       value={bulkOptions.newCategory || ''}
                       onValueChange={(value) => setBulkOptions(prev => ({ ...prev, newCategory: value }))}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Keep original category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
+                      10750
+                      <SelectItem value="general">General</SelectItem>
                         <SelectItem value="user_management">User Management</SelectItem>
                         <SelectItem value="role_management">Role Management</SelectItem>
                         <SelectItem value="permission_management">Permission Management</SelectItem>
@@ -320,7 +294,6 @@ const PermissionBulkActions = ({ selectedPermissions, onSuccess, onClearSelectio
                         <SelectItem value="content_management">Content Management</SelectItem>
                         <SelectItem value="reporting">Reporting</SelectItem>
                         <SelectItem value="api_access">API Access</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -334,13 +307,9 @@ const PermissionBulkActions = ({ selectedPermissions, onSuccess, onClearSelectio
                       value={bulkOptions.newStatus || ''}
                       onValueChange={(value) => setBulkOptions(prev => ({ ...prev, newStatus: value }))}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select new status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
+                      12164
+                      <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>

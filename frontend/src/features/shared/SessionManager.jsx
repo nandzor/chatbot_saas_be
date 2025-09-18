@@ -28,29 +28,7 @@ import {
   ChevronDown,
   Upload
 } from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Input,
-  Button,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Textarea
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Input, Button, Avatar, AvatarFallback, AvatarImage, Select, SelectItem, Tabs, TabsContent, TabsList, TabsTrigger, Textarea} from '@/components/ui';
 import { 
   chatSessionsData, 
   customersData, 
@@ -329,48 +307,33 @@ const SessionManager = () => {
             </div>
             
             {/* Filter Kanal */}
-            <Select value={filterChannel} onValueChange={setFilterChannel}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter berdasarkan kanal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kanal</SelectItem>
+            <Select value={filterChannel} onValueChange={setFilterChannel} placeholder="Filter berdasarkan kanal">
+              <SelectItem value="all">Semua Kanal</SelectItem>
                 <SelectItem value="whatsapp">WhatsApp</SelectItem>
                 <SelectItem value="web">Website</SelectItem>
                 <SelectItem value="telegram">Telegram</SelectItem>
                 <SelectItem value="facebook">Facebook</SelectItem>
-              </SelectContent>
-            </Select>
+</Select>
             
             {/* Filter Status */}
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter berdasarkan status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
+            <Select value={filterStatus} onValueChange={setFilterStatus} placeholder="Filter berdasarkan status">
+              <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="active">Aktif</SelectItem>
                 <SelectItem value="bot_handled">Ditangani Bot</SelectItem>
                 <SelectItem value="agent_handled">Ditangani Agent</SelectItem>
                 <SelectItem value="completed">Selesai</SelectItem>
-              </SelectContent>
-            </Select>
+</Select>
             
             {/* Filter Agent */}
-            <Select value={filterAgent} onValueChange={setFilterAgent}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter berdasarkan agent" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Agent</SelectItem>
+            <Select value={filterAgent} onValueChange={setFilterAgent} placeholder="Filter berdasarkan agent">
+              <SelectItem value="all">Semua Agent</SelectItem>
                 <SelectItem value="unassigned">Belum Ditugaskan</SelectItem>
                 {agentsData.map(agent => (
                   <SelectItem key={agent.id} value={agent.id.toString()}>
                     {agent.name}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
+</Select>
             
             {/* Filter Tags */}
             <Input 
@@ -655,12 +618,8 @@ const SessionManager = () => {
                     <Select 
                       value={assignedAgent || selectedSession.agent_id?.toString() || ''} 
                       onValueChange={handleAssignAgent}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih agent..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Belum ditugaskan</SelectItem>
+                     placeholder="Pilih agent...">
+              <SelectItem value="">Belum ditugaskan</SelectItem>
                         {agentsData.filter(agent => agent.status === 'online').map(agent => (
                           <SelectItem key={agent.id} value={agent.id.toString()}>
                             <div className="flex items-center gap-2">
@@ -669,8 +628,7 @@ const SessionManager = () => {
                             </div>
                           </SelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
+</Select>
                   </div>
                   
                   <div>

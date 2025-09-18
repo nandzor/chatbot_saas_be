@@ -14,30 +14,7 @@ import {
 } from 'lucide-react';
 import { roleManagementService } from '@/services/RoleManagementService';
 import { toast } from 'react-hot-toast';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea
-} from '@/components/ui';
+import {Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Select, SelectItem, Textarea} from '@/components/ui';
 
 const RoleBulkActions = ({ selectedRoles, onSuccess, onClearSelection }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -310,16 +287,12 @@ const RoleBulkActions = ({ selectedRoles, onSuccess, onClearSelection }) => {
                       value={bulkOptions.newScope || ''}
                       onValueChange={(value) => setBulkOptions(prev => ({ ...prev, newScope: value }))}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Keep original scope" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="global">Global</SelectItem>
+                      10435
+                      <SelectItem value="global">Global</SelectItem>
                         <SelectItem value="organization">Organization</SelectItem>
                         <SelectItem value="department">Department</SelectItem>
                         <SelectItem value="team">Team</SelectItem>
                         <SelectItem value="personal">Personal</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -343,16 +316,12 @@ const RoleBulkActions = ({ selectedRoles, onSuccess, onClearSelection }) => {
                       value={bulkOptions.assignmentScope || 'organization'}
                       onValueChange={(value) => setBulkOptions(prev => ({ ...prev, assignmentScope: value }))}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="global">Global</SelectItem>
+                      12044
+                      <SelectItem value="global">Global</SelectItem>
                         <SelectItem value="organization">Organization</SelectItem>
                         <SelectItem value="department">Department</SelectItem>
                         <SelectItem value="team">Team</SelectItem>
                         <SelectItem value="personal">Personal</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>

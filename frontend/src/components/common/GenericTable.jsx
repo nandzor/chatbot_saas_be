@@ -9,7 +9,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import {Select, SelectItem} from '@/components/ui';
 import {
   ChevronUp,
   ChevronDown,
@@ -566,16 +566,12 @@ export const GenericForm = ({
               value={value}
               onValueChange={(value) => handleInputChange(name, value)}
             >
-              <SelectTrigger className={error ? 'border-red-500' : ''}>
-                <SelectValue placeholder={placeholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {options?.map((option) => (
+              16373
+              {options?.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
-              </SelectContent>
             </Select>
             {error && <p className="text-sm text-red-500">{error}</p>}
           </div>

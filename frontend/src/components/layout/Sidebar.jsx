@@ -1,12 +1,9 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import UserAvatar from '@/components/common/UserAvatar';
 import {
   Home,
-  Building2,
   Users,
   CreditCard,
-  Activity,
   Shield,
   MessageSquare,
   BarChart3,
@@ -15,18 +12,14 @@ import {
   Settings,
   User,
   Bot,
-  ChevronLeft,
-  ChevronRight,
   DollarSign,
   Heart,
   UserPlus,
   Zap,
   Smartphone
 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
-const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
-  const { user } = useAuth();
+const Sidebar = ({ role, isCollapsed, isMobile }) => {
   const location = useLocation();
 
     const getSidebarItems = () => {
@@ -52,6 +45,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
           { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, href: '/dashboard/knowledge' },
           { id: 'automations', label: 'Automations', icon: Workflow, href: '/dashboard/automations' },
           { id: 'whatsapp', label: 'WhatsApp Integration', icon: Smartphone, href: '/dashboard/whatsapp' },
+          { id: 'users', label: 'User Management', icon: Users, href: '/dashboard/users' },
           { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' },
           { id: 'profile', label: 'Profile Settings', icon: User, href: '/dashboard/profile' }
         ];

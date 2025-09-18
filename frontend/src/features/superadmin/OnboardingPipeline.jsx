@@ -1,27 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Textarea,
-  Label
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Select, SelectItem, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Textarea, Label} from '@/components/ui';
 import {
   Plus,
   Users,
@@ -271,28 +249,20 @@ const OnboardingPipeline = () => {
               <div>
                 <Label htmlFor="plan">Plan</Label>
                 <Select value={newClient.plan} onValueChange={(value) => setNewClient({ ...newClient, plan: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="basic">Basic</SelectItem>
+                  8025
+                  <SelectItem value="basic">Basic</SelectItem>
                     <SelectItem value="professional">Professional</SelectItem>
                     <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="csm">Assigned CSM</Label>
                 <Select value={newClient.csm} onValueChange={(value) => setNewClient({ ...newClient, csm: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select CSM" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mike-chen">Mike Chen</SelectItem>
+                  8686
+                  <SelectItem value="mike-chen">Mike Chen</SelectItem>
                     <SelectItem value="sarah-johnson">Sarah Johnson</SelectItem>
                     <SelectItem value="david-kim">David Kim</SelectItem>
                     <SelectItem value="lisa-wang">Lisa Wang</SelectItem>
-                  </SelectContent>
                 </Select>
               </div>
               <div>

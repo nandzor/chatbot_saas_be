@@ -3035,9 +3035,79 @@ class OrganizationService extends BaseService
                 ];
             }
 
-            // Update user data
+            // Validate and update user profile data
+            $updateData = [];
+
+            if (isset($data['full_name'])) {
+                $updateData['full_name'] = $data['full_name'];
+            }
+
+            if (isset($data['email'])) {
+                // Check if email is unique within organization
+                $existingUser = User::where('email', $data['email'])
+                    ->where('organization_id', $organizationId)
+                    ->where('id', '!=', $userId)
+                    ->first();
+
+                if ($existingUser) {
+                    return [
+                        'success' => false,
+                        'message' => 'Email already exists in this organization'
+                    ];
+                }
+                $updateData['email'] = $data['email'];
+            }
+
+            if (isset($data['phone'])) {
+                $updateData['phone'] = $data['phone'];
+            }
+
+            if (isset($data['username'])) {
+                // Check if username is unique within organization
+                $existingUser = User::where('username', $data['username'])
+                    ->where('organization_id', $organizationId)
+                    ->where('id', '!=', $userId)
+                    ->first();
+
+                if ($existingUser) {
+                    return [
+                        'success' => false,
+                        'message' => 'Username already exists in this organization'
+                    ];
+                }
+                $updateData['username'] = $data['username'];
+            }
+
+            if (isset($data['status'])) {
+                $validStatuses = ['active', 'inactive', 'suspended'];
+                if (!in_array($data['status'], $validStatuses)) {
+                    return [
+                        'success' => false,
+                        'message' => 'Invalid status. Must be one of: ' . implode(', ', $validStatuses)
+                    ];
+                }
+                $updateData['status'] = $data['status'];
+            }
+
+            if (isset($data['bio'])) {
+                $updateData['bio'] = $data['bio'];
+            }
+
+            if (isset($data['timezone'])) {
+                $updateData['timezone'] = $data['timezone'];
+            }
+
+            if (isset($data['language'])) {
+                $updateData['language'] = $data['language'];
+            }
+
+            // Update user profile data
+            if (!empty($updateData)) {
+                $user->update($updateData);
+            }
+
+            // Update user role
             if (isset($data['role'])) {
-                // Update user role
                 $userRole = UserRole::where('user_id', $userId)->first();
                 if ($userRole) {
                     $role = OrganizationRole::where('slug', $data['role'])
@@ -3046,18 +3116,43 @@ class OrganizationService extends BaseService
 
                     if ($role) {
                         $userRole->update(['role_id' => $role->id]);
+                    } else {
+                        return [
+                            'success' => false,
+                            'message' => 'Invalid role for this organization'
+                        ];
                     }
                 }
             }
 
-            if (isset($data['status'])) {
-                $user->update(['status' => $data['status']]);
+            // Update user permissions
+            if (isset($data['permissions'])) {
+                if (is_array($data['permissions'])) {
+                    // Validate permissions exist
+                    $validPermissions = Permission::whereIn('id', $data['permissions'])->pluck('id')->toArray();
+                    if (count($validPermissions) !== count($data['permissions'])) {
+                        return [
+                            'success' => false,
+                            'message' => 'Some permissions are invalid'
+                        ];
+                    }
+                    $user->permissions()->sync($data['permissions']);
+                }
             }
 
-            if (isset($data['permissions'])) {
-                // Update user permissions
-                $user->permissions()->sync($data['permissions']);
+            // Update user preferences
+            if (isset($data['preferences'])) {
+                $user->preferences = $data['preferences'];
+                $user->save();
             }
+
+            // Log the update
+            Log::info('Organization user updated', [
+                'organization_id' => $organizationId,
+                'user_id' => $userId,
+                'updated_by' => auth()->id(),
+                'updated_fields' => array_keys($data)
+            ]);
 
             return [
                 'success' => true,
@@ -3068,12 +3163,13 @@ class OrganizationService extends BaseService
             Log::error('Failed to update organization user', [
                 'organization_id' => $organizationId,
                 'user_id' => $userId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return [
                 'success' => false,
-                'message' => 'Failed to update user'
+                'message' => 'Failed to update user: ' . $e->getMessage()
             ];
         }
     }
@@ -3125,3 +3221,4 @@ class OrganizationService extends BaseService
         }
     }
 }
+

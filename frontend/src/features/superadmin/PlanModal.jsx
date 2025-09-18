@@ -1,26 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-  Button,
-  Input,
-  Label,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Badge,
-  Switch,
-  Separator,
-  Alert,
-  AlertDescription
-} from '@/components/ui';
+import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, Button, Input, Label, Textarea, Select, SelectItem, Badge, Switch, Separator, Alert, AlertDescription} from '@/components/ui';
 import {
   Save,
   X,
@@ -284,14 +263,10 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   Tier Paket
                 </Label>
                 <Select value={formData.tier} onValueChange={(value) => setFormData(prev => ({ ...prev, tier: value }))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="starter">Starter</SelectItem>
+                  8255
+                  <SelectItem value="starter">Starter</SelectItem>
                     <SelectItem value="professional">Professional</SelectItem>
                     <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
                 </Select>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className={`${getTierColor(formData.tier)} text-sm font-medium`}>
@@ -390,12 +365,8 @@ const PlanModal = ({ plan, isOpen, onClose, onSave }) => {
                   Mata Uang
                 </Label>
                 <Select value={formData.currency} onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="IDR">IDR (Rupiah)</SelectItem>
-                  </SelectContent>
+                  13214
+                  <SelectItem value="IDR">IDR (Rupiah)</SelectItem>
                 </Select>
               </div>
             </div>

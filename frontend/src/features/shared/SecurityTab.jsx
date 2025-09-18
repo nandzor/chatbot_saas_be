@@ -1,34 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Button,
-  Badge,
-  Alert,
-  AlertDescription,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  Textarea,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Alert, AlertDescription, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Input, Label, Select, SelectItem, Switch, Textarea, Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui';
 import { 
   Shield,
   AlertTriangle,
@@ -436,45 +407,33 @@ const SecurityTab = () => {
                         <div className="space-y-2">
                           <Label htmlFor="sessionTimeout">Session Timeout (hours)</Label>
                           <Select value={securitySettings.sessionTimeout} onValueChange={(value) => handleSettingChange('general', 'sessionTimeout', value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">1 hour</SelectItem>
+                            16743
+                            <SelectItem value="1">1 hour</SelectItem>
                               <SelectItem value="4">4 hours</SelectItem>
                               <SelectItem value="8">8 hours</SelectItem>
                               <SelectItem value="24">24 hours</SelectItem>
                               <SelectItem value="168">1 week</SelectItem>
-                            </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="maxLoginAttempts">Maximum Login Attempts</Label>
                           <Select value={securitySettings.maxLoginAttempts} onValueChange={(value) => handleSettingChange('general', 'maxLoginAttempts', value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="3">3 attempts</SelectItem>
+                            17707
+                            <SelectItem value="3">3 attempts</SelectItem>
                               <SelectItem value="5">5 attempts</SelectItem>
                               <SelectItem value="10">10 attempts</SelectItem>
-                            </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="lockoutDuration">Account Lockout Duration (minutes)</Label>
                           <Select value={securitySettings.lockoutDuration} onValueChange={(value) => handleSettingChange('general', 'lockoutDuration', value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="15">15 minutes</SelectItem>
+                            18543
+                            <SelectItem value="15">15 minutes</SelectItem>
                               <SelectItem value="30">30 minutes</SelectItem>
                               <SelectItem value="60">1 hour</SelectItem>
                               <SelectItem value="1440">24 hours</SelectItem>
-                            </SelectContent>
                           </Select>
                         </div>
                       </div>
@@ -490,16 +449,12 @@ const SecurityTab = () => {
                         <div className="space-y-2">
                           <Label htmlFor="passwordExpiry">Password Expiry (days)</Label>
                           <Select value={securitySettings.passwordExpiry} onValueChange={(value) => handleSettingChange('general', 'passwordExpiry', value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="30">30 days</SelectItem>
+                            19849
+                            <SelectItem value="30">30 days</SelectItem>
                               <SelectItem value="60">60 days</SelectItem>
                               <SelectItem value="90">90 days</SelectItem>
                               <SelectItem value="180">180 days</SelectItem>
                               <SelectItem value="365">1 year</SelectItem>
-                            </SelectContent>
                           </Select>
                         </div>
 
@@ -555,14 +510,10 @@ const SecurityTab = () => {
                             <div className="space-y-2">
                               <Label htmlFor="twoFactorMethod">2FA Method</Label>
                               <Select value={securitySettings.twoFactorMethod} onValueChange={(value) => handleSettingChange('authentication', 'twoFactorMethod', value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="app">Authenticator App (TOTP)</SelectItem>
+                                23456
+                                <SelectItem value="app">Authenticator App (TOTP)</SelectItem>
                                   <SelectItem value="sms">SMS Code</SelectItem>
                                   <SelectItem value="email">Email Code</SelectItem>
-                                </SelectContent>
                               </Select>
                             </div>
 
@@ -697,32 +648,24 @@ const SecurityTab = () => {
                         <div className="space-y-2">
                           <Label htmlFor="apiRateLimit">API Rate Limit (requests per minute)</Label>
                           <Select value={securitySettings.apiRateLimit} onValueChange={(value) => handleSettingChange('api', 'apiRateLimit', value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="100">100/min</SelectItem>
+                            31048
+                            <SelectItem value="100">100/min</SelectItem>
                               <SelectItem value="500">500/min</SelectItem>
                               <SelectItem value="1000">1000/min</SelectItem>
                               <SelectItem value="5000">5000/min</SelectItem>
                               <SelectItem value="10000">10000/min</SelectItem>
-                            </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="apiKeyExpiry">API Key Expiry (days)</Label>
                           <Select value={securitySettings.apiKeyExpiry} onValueChange={(value) => handleSettingChange('api', 'apiKeyExpiry', value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="30">30 days</SelectItem>
+                            32011
+                            <SelectItem value="30">30 days</SelectItem>
                               <SelectItem value="90">90 days</SelectItem>
                               <SelectItem value="180">180 days</SelectItem>
                               <SelectItem value="365">1 year</SelectItem>
                               <SelectItem value="0">Never expire</SelectItem>
-                            </SelectContent>
                           </Select>
                         </div>
                       </div>
@@ -820,16 +763,12 @@ const SecurityTab = () => {
                         <div className="space-y-2">
                           <Label htmlFor="auditLogRetention">Audit Log Retention (days)</Label>
                           <Select value={securitySettings.auditLogRetention} onValueChange={(value) => handleSettingChange('data', 'auditLogRetention', value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="30">30 days</SelectItem>
+                            37875
+                            <SelectItem value="30">30 days</SelectItem>
                               <SelectItem value="90">90 days</SelectItem>
                               <SelectItem value="180">180 days</SelectItem>
                               <SelectItem value="365">1 year</SelectItem>
                               <SelectItem value="1095">3 years</SelectItem>
-                            </SelectContent>
                           </Select>
                         </div>
 

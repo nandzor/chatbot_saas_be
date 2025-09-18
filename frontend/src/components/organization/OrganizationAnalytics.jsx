@@ -13,21 +13,7 @@ import {
   ArrowDownRight,
   Minus
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Skeleton
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Select, SelectItem, Skeleton} from '@/components/ui';
 
 const OrganizationAnalytics = ({
   organization,
@@ -89,17 +75,12 @@ const OrganizationAnalytics = ({
           <p className="text-sm text-gray-600">Organization performance and trends</p>
         </div>
         <div className="flex items-center space-x-3">
-          <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
+          <Select value={timeRange} onValueChange={handleTimeRangeChange} className="w-32">
               <SelectItem value="7d">Last 7 days</SelectItem>
               <SelectItem value="30d">Last 30 days</SelectItem>
               <SelectItem value="90d">Last 90 days</SelectItem>
               <SelectItem value="1y">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+</Select>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading || analyticsLoading}>
             <Activity className="h-4 w-4 mr-2" />
             Refresh

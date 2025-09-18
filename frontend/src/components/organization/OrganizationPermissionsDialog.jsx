@@ -20,39 +20,7 @@ import {
   Lock,
   Unlock
 } from 'lucide-react';
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Switch,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Separator,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  Skeleton,
-  Checkbox
-} from '@/components/ui';
+import {Button, Input, Select, SelectItem, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch, Tabs, TabsContent, TabsList, TabsTrigger, Separator, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Skeleton, Checkbox} from '@/components/ui';
 import { useOrganizationPermissions } from '@/hooks/useOrganizationPermissions';
 
 const OrganizationPermissionsDialog = ({

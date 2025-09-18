@@ -50,48 +50,17 @@ import EditPermissionDialog from './EditPermissionDialog';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import PermissionBulkActions from './PermissionBulkActions';
 
-import {
-  // Header & container
-  PageHeaderWithActions,
-  DataContainer,
-  // Filters
-  FilterBar,
-  // Cards
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  // Badges & Buttons
-  Badge,
-  Button,
-  // Input & Select
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  // Table & pagination
-  DataTable,
-  Pagination,
-  // Dropdown
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  // Alert
-  Alert,
-  AlertDescription,
-  // Confirm dialog - DeleteConfirmDialog removed (not available)
+import {// Header & container
+  PageHeaderWithActions, DataContainer, // Filters
+  FilterBar, // Cards
+  Card, CardContent, CardDescription, CardHeader, CardTitle, // Badges & Buttons
+  Badge, Button, // Input & Select
+  Input, Label, Select, SelectItem, // Table & pagination
+  DataTable, Pagination, // Dropdown
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, // Alert
+  Alert, AlertDescription, // Confirm dialog - DeleteConfirmDialog removed (not available)
   // States
-  Skeleton,
-  EmptyState,
-  ErrorMessage
-} from '@/components/ui';
+  Skeleton, EmptyState, ErrorMessage} from '@/components/ui';
 
 // Custom debounce hook
 const useDebounce = (value, delay) => {

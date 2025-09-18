@@ -13,35 +13,7 @@ import {
   Upload,
   Download
 } from 'lucide-react';
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Skeleton,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Input,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Avatar,
-  AvatarFallback,
-  AvatarImage
-} from '@/components/ui';
+import {Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Skeleton, Select, SelectItem, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Avatar, AvatarFallback, AvatarImage} from '@/components/ui';
 import { useClientManagement } from '@/hooks/useClientManagement';
 import { formatDate } from '@/utils/formatters';
 
@@ -133,18 +105,13 @@ const ClientManagementTable = () => {
               />
             </div>
           </div>
-          <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
+          <Select value={statusFilter} onValueChange={handleStatusFilterChange} className="w-48" placeholder="Filter by status">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="trial">Trial</SelectItem>
               <SelectItem value="suspended">Suspended</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
+</Select>
         </div>
 
         {/* Organizations Table */}

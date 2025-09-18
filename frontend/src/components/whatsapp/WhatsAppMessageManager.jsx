@@ -1,35 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Label,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Badge,
-  Alert,
-  AlertDescription,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Input, Label, Textarea, Select, SelectItem, Badge, Alert, AlertDescription, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui';
 import {
   Send,
   Image,
@@ -268,12 +238,8 @@ const WhatsAppMessageManager = () => {
             {/* Session Selection */}
             <div className="space-y-2">
               <Label htmlFor="session">Sesi WAHA</Label>
-              <Select value={selectedSession} onValueChange={setSelectedSession}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih sesi WAHA" />
-                </SelectTrigger>
-                <SelectContent>
-                  {connectedSessions.map((session) => (
+              <Select value={selectedSession} onValueChange={setSelectedSession} placeholder="Pilih sesi WAHA">
+{connectedSessions.map((session) => (
                     <SelectItem key={session.id} value={session.id}>
                       <div className="flex items-center gap-2">
                         <MessageSquare className="w-4 h-4" />
@@ -281,8 +247,7 @@ const WhatsAppMessageManager = () => {
                       </div>
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
+</Select>
               {connectedSessions.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   Tidak ada sesi yang terhubung. Buat sesi WAHA terlebih dahulu.
@@ -294,11 +259,7 @@ const WhatsAppMessageManager = () => {
             <div className="space-y-2">
               <Label htmlFor="messageType">Tipe Pesan</Label>
               <Select value={messageType} onValueChange={setMessageType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">
+              <SelectItem value="text">
                     <div className="flex items-center gap-2">
                       <MessageSquare className="w-4 h-4" />
                       Pesan Teks
@@ -310,8 +271,7 @@ const WhatsAppMessageManager = () => {
                       Media (Gambar/Dokumen)
                     </div>
                   </SelectItem>
-                </SelectContent>
-              </Select>
+</Select>
             </div>
 
             {/* Recipient */}

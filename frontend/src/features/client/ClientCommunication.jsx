@@ -1,31 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Label,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Textarea, Select, SelectItem, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Label, Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui';
 import { 
   Plus, 
   Send, 
@@ -310,15 +284,11 @@ const ClientCommunication = ({ clientData }) => {
                   Communication Type *
                 </Label>
                 <Select value={formData.type} onValueChange={(value) => handleFormChange('type', value)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select communication type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="email">📧 Email</SelectItem>
+                  9474
+                  <SelectItem value="email">📧 Email</SelectItem>
                     <SelectItem value="call">📞 Phone Call</SelectItem>
                     <SelectItem value="meeting">🤝 Meeting</SelectItem>
                     <SelectItem value="message">💬 Internal Message</SelectItem>
-                  </SelectContent>
                 </Select>
               </div>
 
@@ -343,14 +313,10 @@ const ClientCommunication = ({ clientData }) => {
                   Recipient *
                 </Label>
                 <Select value={formData.recipient} onValueChange={(value) => handleFormChange('recipient', value)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select recipient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">👤 John Doe (Admin)</SelectItem>
+                  10941
+                  <SelectItem value="admin">👤 John Doe (Admin)</SelectItem>
                     <SelectItem value="it">👨‍💻 Jane Smith (IT Manager)</SelectItem>
                     <SelectItem value="team">👥 All Users</SelectItem>
-                  </SelectContent>
                 </Select>
               </div>
 
@@ -377,14 +343,10 @@ const ClientCommunication = ({ clientData }) => {
                     Priority
                   </Label>
                   <Select value={formData.priority} onValueChange={(value) => handleFormChange('priority', value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">🔴 High</SelectItem>
+                    12468
+                    <SelectItem value="high">🔴 High</SelectItem>
                       <SelectItem value="medium">🟡 Medium</SelectItem>
                       <SelectItem value="low">🟢 Low</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
                 
@@ -466,30 +428,20 @@ const ClientCommunication = ({ clientData }) => {
                   </div>
                 </div>
                 <div className="w-full md:w-48">
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
+                  <Select value={filterStatus} onValueChange={setFilterStatus} placeholder="Filter by status">
+              <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="sent">Sent</SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
                 <div className="w-full md:w-48">
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
+                  <Select value={filterType} onValueChange={setFilterType} placeholder="Filter by type">
+              <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="email">Email</SelectItem>
                       <SelectItem value="call">Phone Call</SelectItem>
                       <SelectItem value="meeting">Meeting</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
               </div>
             </CardContent>
@@ -607,17 +559,12 @@ const ClientCommunication = ({ clientData }) => {
                   </div>
                 </div>
                 <div className="w-full md:w-48">
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
+                  <Select value={filterType} onValueChange={setFilterType} placeholder="Filter by type">
+              <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="email">Email</SelectItem>
                       <SelectItem value="call">Phone Call</SelectItem>
                       <SelectItem value="meeting">Meeting</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
               </div>
             </CardContent>

@@ -182,6 +182,22 @@ class AuthService {
   }
 
   /**
+   * Get current user information synchronously from localStorage
+   */
+  getCurrentUserSync() {
+    try {
+      const savedUser = localStorage.getItem('chatbot_user');
+      if (savedUser) {
+        return JSON.parse(savedUser);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting user from localStorage:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get current user information
    */
   async getCurrentUser() {

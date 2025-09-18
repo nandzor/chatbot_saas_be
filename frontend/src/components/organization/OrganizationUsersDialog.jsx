@@ -20,43 +20,7 @@ import {
   UserCheck,
   UserX
 } from 'lucide-react';
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Skeleton,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Separator,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  Pagination
-} from '@/components/ui';
+import {Button, Input, Select, SelectItem, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, Separator, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Pagination} from '@/components/ui';
 import { usePagination } from '@/hooks/usePagination';
 import { useOrganizationUsers } from '@/hooks/useOrganizationUsers';
 
@@ -253,28 +217,18 @@ const OrganizationUsersDialog = ({
                 />
               </div>
             </div>
-            <Select value={filters.role} onValueChange={handleRoleFilterChange}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
+            <Select value={filters.role} onValueChange={handleRoleFilterChange} className="w-40" placeholder="Role">
+              <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="org_admin">Admin</SelectItem>
                 <SelectItem value="agent">Agent</SelectItem>
                 <SelectItem value="viewer">Viewer</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filters.status} onValueChange={handleStatusFilterChange}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+</Select>
+            <Select value={filters.status} onValueChange={handleStatusFilterChange} className="w-40" placeholder="Status">
+              <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-              </SelectContent>
-            </Select>
+</Select>
           </div>
 
           {/* Bulk Actions */}

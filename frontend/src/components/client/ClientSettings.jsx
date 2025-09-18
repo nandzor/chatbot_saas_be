@@ -1,27 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useClientSettings from '@/hooks/useClientSettings';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Label,
-  Switch,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Badge,
-  Separator,
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Input, Label, Switch, Select, SelectItem, Textarea, Badge, Separator, Alert, AlertDescription, AlertTitle, } from '@/components/ui';
 import {
   AlertCircle,
   CheckCircle,
@@ -111,15 +90,11 @@ const ClientSettings = () => {
               value={settings.general.defaultOrganizationStatus}
               onValueChange={(value) => updateSetting('general', 'defaultOrganizationStatus', value)}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
+              2803
+              <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="suspended">Suspended</SelectItem>
                 <SelectItem value="trial">Trial</SelectItem>
-              </SelectContent>
             </Select>
           </div>
 
@@ -222,14 +197,10 @@ const ClientSettings = () => {
               value={settings.userManagement.defaultUserRole}
               onValueChange={(value) => updateSetting('userManagement', 'defaultUserRole', value)}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="member">Member</SelectItem>
+              7110
+              <SelectItem value="member">Member</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="viewer">Viewer</SelectItem>
-              </SelectContent>
             </Select>
           </div>
 
@@ -507,14 +478,10 @@ const ClientSettings = () => {
               value={settings.notifications.smsProvider}
               onValueChange={(value) => updateSetting('notifications', 'smsProvider', value)}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="twilio">Twilio</SelectItem>
+              18270
+              <SelectItem value="twilio">Twilio</SelectItem>
                 <SelectItem value="aws-sns">AWS SNS</SelectItem>
                 <SelectItem value="sendgrid">SendGrid</SelectItem>
-              </SelectContent>
             </Select>
           </div>
         </div>
@@ -606,15 +573,11 @@ const ClientSettings = () => {
               value={settings.dataManagement.backupFrequency}
               onValueChange={(value) => updateSetting('dataManagement', 'backupFrequency', value)}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hourly">Hourly</SelectItem>
+              22500
+              <SelectItem value="hourly">Hourly</SelectItem>
                 <SelectItem value="daily">Daily</SelectItem>
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
             </Select>
           </div>
 
@@ -636,15 +599,11 @@ const ClientSettings = () => {
               value={settings.dataManagement.dataRetentionPolicy}
               onValueChange={(value) => updateSetting('dataManagement', 'dataRetentionPolicy', value)}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="standard">Standard (7 years)</SelectItem>
+              23671
+              <SelectItem value="standard">Standard (7 years)</SelectItem>
                 <SelectItem value="extended">Extended (10 years)</SelectItem>
                 <SelectItem value="minimal">Minimal (3 years)</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
             </Select>
           </div>
         </div>
@@ -760,15 +719,11 @@ const ClientSettings = () => {
               value={settings.integrations.ssoProvider}
               onValueChange={(value) => updateSetting('integrations', 'ssoProvider', value)}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="oauth2">OAuth 2.0</SelectItem>
+              28652
+              <SelectItem value="oauth2">OAuth 2.0</SelectItem>
                 <SelectItem value="saml">SAML</SelectItem>
                 <SelectItem value="ldap">LDAP</SelectItem>
                 <SelectItem value="openid">OpenID Connect</SelectItem>
-              </SelectContent>
             </Select>
           </div>
         </div>

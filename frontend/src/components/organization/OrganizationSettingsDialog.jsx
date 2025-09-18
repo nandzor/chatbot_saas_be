@@ -28,34 +28,7 @@ import {
   Bell,
   Zap
 } from 'lucide-react';
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Switch,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Separator,
-  Label,
-  Textarea,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  Skeleton
-} from '@/components/ui';
+import {Button, Input, Select, SelectItem, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Switch, Tabs, TabsContent, TabsList, TabsTrigger, Separator, Label, Textarea, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Skeleton} from '@/components/ui';
 
 const OrganizationSettingsDialog = ({
   isOpen,
@@ -290,16 +263,12 @@ const OrganizationSettingsDialog = ({
                         value={formData.businessType || 'startup'}
                         onValueChange={(value) => handleFieldChange('businessType', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="startup">Startup</SelectItem>
+                        9538
+                        <SelectItem value="startup">Startup</SelectItem>
                           <SelectItem value="small_business">Small Business</SelectItem>
                           <SelectItem value="medium_business">Medium Business</SelectItem>
                           <SelectItem value="enterprise">Enterprise</SelectItem>
                           <SelectItem value="non_profit">Non-Profit</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                     <div>
@@ -308,18 +277,14 @@ const OrganizationSettingsDialog = ({
                         value={formData.industry || 'technology'}
                         onValueChange={(value) => handleFieldChange('industry', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="technology">Technology</SelectItem>
+                        10517
+                        <SelectItem value="technology">Technology</SelectItem>
                           <SelectItem value="healthcare">Healthcare</SelectItem>
                           <SelectItem value="finance">Finance</SelectItem>
                           <SelectItem value="education">Education</SelectItem>
                           <SelectItem value="retail">Retail</SelectItem>
                           <SelectItem value="manufacturing">Manufacturing</SelectItem>
                           <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                     <div>
@@ -328,15 +293,11 @@ const OrganizationSettingsDialog = ({
                         value={formData.companySize || 'small'}
                         onValueChange={(value) => handleFieldChange('companySize', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="small">1-10 employees</SelectItem>
+                        11634
+                        <SelectItem value="small">1-10 employees</SelectItem>
                           <SelectItem value="medium">11-50 employees</SelectItem>
                           <SelectItem value="large">51-200 employees</SelectItem>
                           <SelectItem value="enterprise">200+ employees</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -366,15 +327,11 @@ const OrganizationSettingsDialog = ({
                         value={formData.timezone || 'Asia/Jakarta'}
                         onValueChange={(value) => handleFieldChange('timezone', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Asia/Jakarta">Asia/Jakarta</SelectItem>
+                        13310
+                        <SelectItem value="Asia/Jakarta">Asia/Jakarta</SelectItem>
                           <SelectItem value="Asia/Singapore">Asia/Singapore</SelectItem>
                           <SelectItem value="Asia/Bangkok">Asia/Bangkok</SelectItem>
                           <SelectItem value="UTC">UTC</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                     <div>
@@ -383,15 +340,11 @@ const OrganizationSettingsDialog = ({
                         value={formData.locale || 'id'}
                         onValueChange={(value) => handleFieldChange('locale', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="id">Indonesian</SelectItem>
+                        14182
+                        <SelectItem value="id">Indonesian</SelectItem>
                           <SelectItem value="en">English</SelectItem>
                           <SelectItem value="ms">Malay</SelectItem>
                           <SelectItem value="th">Thai</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                     <div>
@@ -400,15 +353,11 @@ const OrganizationSettingsDialog = ({
                         value={formData.currency || 'IDR'}
                         onValueChange={(value) => handleFieldChange('currency', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="IDR">IDR (Indonesian Rupiah)</SelectItem>
+                        15015
+                        <SelectItem value="IDR">IDR (Indonesian Rupiah)</SelectItem>
                           <SelectItem value="USD">USD (US Dollar)</SelectItem>
                           <SelectItem value="SGD">SGD (Singapore Dollar)</SelectItem>
                           <SelectItem value="THB">THB (Thai Baht)</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -498,16 +447,12 @@ const OrganizationSettingsDialog = ({
                         value={formData.subscriptionStatus || 'trial'}
                         onValueChange={(value) => handleFieldChange('subscriptionStatus', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="trial">Trial</SelectItem>
+                        19288
+                        <SelectItem value="trial">Trial</SelectItem>
                           <SelectItem value="active">Active</SelectItem>
                           <SelectItem value="inactive">Inactive</SelectItem>
                           <SelectItem value="suspended">Suspended</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                     <div>
@@ -516,14 +461,10 @@ const OrganizationSettingsDialog = ({
                         value={formData.subscriptionPlan?.id || ''}
                         onValueChange={(value) => handleFieldChange('subscriptionPlan', value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select plan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="basic">Basic Plan</SelectItem>
+                        20243
+                        <SelectItem value="basic">Basic Plan</SelectItem>
                           <SelectItem value="pro">Pro Plan</SelectItem>
                           <SelectItem value="enterprise">Enterprise Plan</SelectItem>
-                        </SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -562,14 +503,10 @@ const OrganizationSettingsDialog = ({
                       value={formData.passwordPolicy || 'standard'}
                       onValueChange={(value) => handleFieldChange('passwordPolicy', value)}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="basic">Basic (8+ characters)</SelectItem>
+                      22247
+                      <SelectItem value="basic">Basic (8+ characters)</SelectItem>
                         <SelectItem value="standard">Standard (8+ chars, mixed case)</SelectItem>
                         <SelectItem value="strong">Strong (12+ chars, mixed case, numbers, symbols)</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
 

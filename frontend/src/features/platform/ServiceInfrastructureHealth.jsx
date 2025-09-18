@@ -1,37 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Progress,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Input, Label, Select, SelectItem, Progress, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui';
 import { 
   Server, 
   Database, 
@@ -379,15 +347,11 @@ const ServiceInfrastructureHealth = () => {
               className="rounded border-gray-300"
             />
             <Select value={refreshInterval.toString()} onValueChange={(value) => setRefreshInterval(parseInt(value))}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10s</SelectItem>
+              9943
+              <SelectItem value="10">10s</SelectItem>
                 <SelectItem value="30">30s</SelectItem>
                 <SelectItem value="60">1m</SelectItem>
                 <SelectItem value="300">5m</SelectItem>
-              </SelectContent>
             </Select>
           </div>
           <Button variant="outline">

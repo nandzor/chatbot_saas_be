@@ -1,33 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Textarea,
-  Label,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Switch,
-  Separator
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Select, SelectItem, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Textarea, Label, Tabs, TabsContent, TabsList, TabsTrigger, Switch, Separator} from '@/components/ui';
 import { 
   Plus, 
   Settings, 
@@ -331,17 +303,12 @@ const AutomationPlaybooks = () => {
                 </div>
                 <div>
                   <Label htmlFor="playbookCategory">Category</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="onboarding">Onboarding</SelectItem>
+                  <Select placeholder="Select category">
+              <SelectItem value="onboarding">Onboarding</SelectItem>
                       <SelectItem value="retention">Retention</SelectItem>
                       <SelectItem value="adoption">Adoption</SelectItem>
                       <SelectItem value="upsell">Upsell</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
                 <div>
                   <Label htmlFor="playbookSteps">Steps (one per line)</Label>
@@ -382,17 +349,12 @@ const AutomationPlaybooks = () => {
                 </div>
                 <div>
                   <Label htmlFor="automationTrigger">Trigger Condition (IF)</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select trigger condition" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="health-score-low">Health Score &lt; 40</SelectItem>
+                  <Select placeholder="Select trigger condition">
+              <SelectItem value="health-score-low">Health Score &lt; 40</SelectItem>
                       <SelectItem value="usage-high">Usage &gt;= 95% of quota</SelectItem>
                       <SelectItem value="trial-expiring">Trial expires in 7 days</SelectItem>
                       <SelectItem value="no-activity">No activity for 14 days</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
                 <div>
                   <Label htmlFor="automationActions">Actions (THEN)</Label>

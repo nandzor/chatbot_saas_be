@@ -1,34 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Button,
-  Badge,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Switch,
-  Alert,
-  AlertDescription,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Input, Label, Select, SelectItem, Textarea, Switch, Alert, AlertDescription, Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui';
 import { 
   Key,
   Webhook,
@@ -955,29 +926,21 @@ const DeveloperTab = () => {
                   <div className="space-y-2">
                     <Label htmlFor="retryCount">Jumlah Retry</Label>
                     <Select value={webhookFormData.retryCount.toString()} onValueChange={(value) => setWebhookFormData(prev => ({ ...prev, retryCount: parseInt(value) }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 kali</SelectItem>
+                      37863
+                      <SelectItem value="1">1 kali</SelectItem>
                         <SelectItem value="3">3 kali</SelectItem>
                         <SelectItem value="5">5 kali</SelectItem>
                         <SelectItem value="10">10 kali</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="timeout">Timeout (detik)</Label>
                     <Select value={webhookFormData.timeout.toString()} onValueChange={(value) => setWebhookFormData(prev => ({ ...prev, timeout: parseInt(value) }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">15 detik</SelectItem>
+                      38660
+                      <SelectItem value="15">15 detik</SelectItem>
                         <SelectItem value="30">30 detik</SelectItem>
                         <SelectItem value="45">45 detik</SelectItem>
                         <SelectItem value="60">60 detik</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -1102,29 +1065,21 @@ const DeveloperTab = () => {
                   <div className="space-y-2">
                     <Label htmlFor="edit-retryCount">Jumlah Retry</Label>
                     <Select value={webhookFormData.retryCount.toString()} onValueChange={(value) => setWebhookFormData(prev => ({ ...prev, retryCount: parseInt(value) }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 kali</SelectItem>
+                      45086
+                      <SelectItem value="1">1 kali</SelectItem>
                         <SelectItem value="3">3 kali</SelectItem>
                         <SelectItem value="5">5 kali</SelectItem>
                         <SelectItem value="10">10 kali</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-timeout">Timeout (detik)</Label>
                     <Select value={webhookFormData.timeout.toString()} onValueChange={(value) => setWebhookFormData(prev => ({ ...prev, timeout: parseInt(value) }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">15 detik</SelectItem>
+                      45888
+                      <SelectItem value="15">15 detik</SelectItem>
                         <SelectItem value="30">30 detik</SelectItem>
                         <SelectItem value="45">45 detik</SelectItem>
                         <SelectItem value="60">60 detik</SelectItem>
-                      </SelectContent>
                     </Select>
                   </div>
                 </div>

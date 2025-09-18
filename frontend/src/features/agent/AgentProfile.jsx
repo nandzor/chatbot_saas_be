@@ -1,38 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Switch,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Label, Select, SelectItem, Textarea, Switch, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui';
 import { 
   User,
   Settings,
@@ -320,15 +287,11 @@ const AgentProfile = () => {
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 rounded-full ${getAvailabilityStatusColor(availabilityData.status)}`}></div>
             <Select value={availabilityData.status} onValueChange={(value) => setAvailabilityData(prev => ({ ...prev, status: value }))}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="online">Online</SelectItem>
+              8172
+              <SelectItem value="online">Online</SelectItem>
                 <SelectItem value="away">Away</SelectItem>
                 <SelectItem value="busy">Busy</SelectItem>
                 <SelectItem value="offline">Offline</SelectItem>
-              </SelectContent>
             </Select>
           </div>
         </div>
@@ -554,15 +517,11 @@ const AgentProfile = () => {
                 <div>
                   <Label htmlFor="status">Status</Label>
                   <Select value={availabilityData.status} onValueChange={(value) => setAvailabilityData(prev => ({ ...prev, status: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="online">🟢 Online</SelectItem>
+                    18528
+                    <SelectItem value="online">🟢 Online</SelectItem>
                       <SelectItem value="away">🟡 Away</SelectItem>
                       <SelectItem value="busy">🔴 Busy</SelectItem>
                       <SelectItem value="offline">⚫ Offline</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
 
@@ -669,15 +628,10 @@ const AgentProfile = () => {
                 <div>
                   <Label htmlFor="timezone">Timezone</Label>
                   <Select value={availabilityData.workingHours.timezone}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB)</SelectItem>
+              <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB)</SelectItem>
                       <SelectItem value="Asia/Makassar">Asia/Makassar (WITA)</SelectItem>
                       <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT)</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
               </CardContent>
             </Card>
@@ -841,14 +795,10 @@ const AgentProfile = () => {
                             emailDigest: { ...prev.emailDigest, frequency: value }
                           }))}
                         >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="daily">Daily</SelectItem>
+                          31244
+                          <SelectItem value="daily">Daily</SelectItem>
                             <SelectItem value="weekly">Weekly</SelectItem>
                             <SelectItem value="monthly">Monthly</SelectItem>
-                          </SelectContent>
                         </Select>
                       </div>
                       <div>
@@ -906,14 +856,10 @@ const AgentProfile = () => {
                     <div>
                       <Label htmlFor="templateCategory">Category</Label>
                       <Select value={templateForm.category} onValueChange={(value) => setTemplateForm(prev => ({ ...prev, category: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {templateCategories.map(cat => (
+                        34279
+                        {templateCategories.map(cat => (
                             <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
                           ))}
-                        </SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -1038,55 +984,39 @@ const AgentProfile = () => {
                 <div>
                   <Label htmlFor="theme">Theme</Label>
                   <Select value={uiPreferences.theme} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, theme: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">🌞 Light</SelectItem>
+                    40312
+                    <SelectItem value="light">🌞 Light</SelectItem>
                       <SelectItem value="dark">🌙 Dark</SelectItem>
                       <SelectItem value="auto">🔄 Auto</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
 
                 <div>
                   <Label htmlFor="language">Language</Label>
                   <Select value={uiPreferences.language} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, language: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
+                    40979
+                    <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
                       <SelectItem value="en">🇺🇸 English</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
 
                 <div>
                   <Label htmlFor="fontSize">Font Size</Label>
                   <Select value={uiPreferences.fontSize} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, fontSize: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="small">Small</SelectItem>
+                    41592
+                    <SelectItem value="small">Small</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="large">Large</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
 
                 <div>
                   <Label htmlFor="density">Density</Label>
                   <Select value={uiPreferences.density} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, density: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="compact">Compact</SelectItem>
+                    42252
+                    <SelectItem value="compact">Compact</SelectItem>
                       <SelectItem value="comfortable">Comfortable</SelectItem>
                       <SelectItem value="spacious">Spacious</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
               </CardContent>
@@ -1149,14 +1079,10 @@ const AgentProfile = () => {
                 <div>
                   <Label htmlFor="chatLayout">Chat Layout</Label>
                   <Select value={uiPreferences.chatLayout} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, chatLayout: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bubbles">Message Bubbles</SelectItem>
+                    45439
+                    <SelectItem value="bubbles">Message Bubbles</SelectItem>
                       <SelectItem value="compact">Compact View</SelectItem>
                       <SelectItem value="threaded">Threaded View</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
               </CardContent>

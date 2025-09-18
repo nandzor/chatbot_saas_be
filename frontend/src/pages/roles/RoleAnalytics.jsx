@@ -14,23 +14,7 @@ import {
 } from 'lucide-react';
 import { roleManagementService } from '@/services/RoleManagementService';
 import { toast } from 'react-hot-toast';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Select, SelectItem, Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui';
 
 const RoleAnalytics = () => {
   const [analytics, setAnalytics] = useState({

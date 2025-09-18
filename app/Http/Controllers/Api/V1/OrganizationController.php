@@ -296,9 +296,18 @@ class OrganizationController extends BaseApiController
     {
         try {
             $request->validate([
+                'full_name' => 'sometimes|string|max:255',
+                'email' => 'sometimes|email|max:255',
+                'phone' => 'sometimes|string|max:20',
+                'username' => 'sometimes|string|max:50|alpha_dash',
                 'role' => 'sometimes|string|in:org_admin,agent,viewer',
                 'status' => 'sometimes|string|in:active,inactive,suspended',
-                'permissions' => 'sometimes|array'
+                'bio' => 'sometimes|string|max:1000',
+                'timezone' => 'sometimes|string|max:50',
+                'language' => 'sometimes|string|max:10',
+                'permissions' => 'sometimes|array',
+                'permissions.*' => 'integer|exists:permissions,id',
+                'preferences' => 'sometimes|array'
             ]);
 
             $isSuperAdmin = $this->isSuperAdmin();
@@ -309,11 +318,13 @@ class OrganizationController extends BaseApiController
                 $result = $this->organizationService->updateOrganizationUser($id, $userId, $request->all());
             }
 
-            if (!$result) {
-                return $this->errorResponse('Gagal mengupdate user', 400);
+            if (!$result || !$result['success']) {
+                return $this->errorResponse($result['message'] ?? 'Gagal mengupdate user', 400);
             }
 
-            return $this->successResponse('User berhasil diupdate', $result);
+            return $this->successResponse($result['message'], $result['data']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->errorResponse('Validation failed', 422, $e->errors());
         } catch (\Exception $e) {
             return $this->handleException($e, 'updating organization user', [
                 'id' => $id,

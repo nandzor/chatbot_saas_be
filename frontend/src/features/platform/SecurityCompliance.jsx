@@ -1,39 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  Badge,
-  Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Switch,
-  Checkbox,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Input, Label, Select, SelectItem, Textarea, Switch, Checkbox, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui';
 import { 
   Shield, 
   Lock, 
@@ -444,62 +410,42 @@ const SecurityCompliance = () => {
                 </div>
                 <div>
                   <Label htmlFor="filterAction">Action</Label>
-                  <Select value={filterAction} onValueChange={setFilterAction}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All actions" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Actions</SelectItem>
+                  <Select value={filterAction} onValueChange={setFilterAction} placeholder="All actions">
+              <SelectItem value="all">All Actions</SelectItem>
                       <SelectItem value="login_attempt">Login Attempt</SelectItem>
                       <SelectItem value="user_login">User Login</SelectItem>
                       <SelectItem value="credential_updated">Credential Updated</SelectItem>
                       <SelectItem value="feature_flag_modified">Feature Flag Modified</SelectItem>
                       <SelectItem value="data_export">Data Export</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
                 <div>
                   <Label htmlFor="filterUser">User</Label>
-                  <Select value={filterUser} onValueChange={setFilterUser}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All users" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Users</SelectItem>
+                  <Select value={filterUser} onValueChange={setFilterUser} placeholder="All users">
+              <SelectItem value="all">All Users</SelectItem>
                       <SelectItem value="admin@company.com">admin@company.com</SelectItem>
                       <SelectItem value="john.doe@company.com">john.doe@company.com</SelectItem>
                       <SelectItem value="ops.team@company.com">ops.team@company.com</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
                 <div>
                   <Label htmlFor="filterSeverity">Severity</Label>
-                  <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All severities" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Severities</SelectItem>
+                  <Select value={filterSeverity} onValueChange={setFilterSeverity} placeholder="All severities">
+              <SelectItem value="all">All Severities</SelectItem>
                       <SelectItem value="low">Low</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="high">High</SelectItem>
                       <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
                 <div>
                   <Label htmlFor="dateRange">Date Range</Label>
                   <Select value={dateRange} onValueChange={setDateRange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1d">Last 24 hours</SelectItem>
+              <SelectItem value="1d">Last 24 hours</SelectItem>
                       <SelectItem value="7d">Last 7 days</SelectItem>
                       <SelectItem value="30d">Last 30 days</SelectItem>
                       <SelectItem value="90d">Last 90 days</SelectItem>
-                    </SelectContent>
-                  </Select>
+</Select>
                 </div>
               </div>
             </CardContent>
@@ -950,17 +896,12 @@ const SecurityCompliance = () => {
                         <Label className="font-medium">Session Timeout</Label>
                         <p className="text-sm text-gray-600">Auto-logout inactive sessions</p>
                       </div>
-                      <Select defaultValue="8h">
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1h">1 hour</SelectItem>
+                      <Select defaultValue="8h" className="w-24">
+              <SelectItem value="1h">1 hour</SelectItem>
                           <SelectItem value="4h">4 hours</SelectItem>
                           <SelectItem value="8h">8 hours</SelectItem>
                           <SelectItem value="24h">24 hours</SelectItem>
-                        </SelectContent>
-                      </Select>
+</Select>
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -986,17 +927,12 @@ const SecurityCompliance = () => {
                         <Label className="font-medium">Audit Log Retention</Label>
                         <p className="text-sm text-gray-600">How long to keep audit logs</p>
                       </div>
-                      <Select defaultValue="1y">
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="3m">3 months</SelectItem>
+                      <Select defaultValue="1y" className="w-24">
+              <SelectItem value="3m">3 months</SelectItem>
                           <SelectItem value="6m">6 months</SelectItem>
                           <SelectItem value="1y">1 year</SelectItem>
                           <SelectItem value="2y">2 years</SelectItem>
-                        </SelectContent>
-                      </Select>
+</Select>
                     </div>
 
                     <div className="flex items-center justify-between">

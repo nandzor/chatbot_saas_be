@@ -12,22 +12,7 @@ import {
   Zap,
   RefreshCw
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Badge,
-  Progress,
-  Button,
-  Skeleton
-} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Select, SelectItem, Badge, Progress, Button, Skeleton} from '@/components/ui';
 import { useClientAnalytics } from '@/hooks/useClientAnalytics';
 
 const ClientAnalytics = () => {
@@ -153,28 +138,18 @@ const ClientAnalytics = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
+          <Select value={timeRange} onValueChange={handleTimeRangeChange} className="w-32">
               <SelectItem value="7d">Last 7 days</SelectItem>
               <SelectItem value="30d">Last 30 days</SelectItem>
               <SelectItem value="90d">Last 90 days</SelectItem>
               <SelectItem value="1y">Last year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={metricType} onValueChange={handleMetricTypeChange}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
+</Select>
+          <Select value={metricType} onValueChange={handleMetricTypeChange} className="w-40">
               <SelectItem value="overview">Overview</SelectItem>
               <SelectItem value="growth">Growth</SelectItem>
               <SelectItem value="revenue">Revenue</SelectItem>
               <SelectItem value="engagement">Engagement</SelectItem>
-            </SelectContent>
-          </Select>
+</Select>
           <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
