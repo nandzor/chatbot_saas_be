@@ -14,9 +14,19 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Add auth token to headers if available
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const jwtToken = localStorage.getItem('jwt_token');
+    const sanctumToken = localStorage.getItem('sanctum_token');
+    const authToken = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    // Try JWT token first, then fallback to auth token
+    const token = jwtToken || authToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Add Sanctum token as fallback
+    if (sanctumToken) {
+      config.headers['X-Sanctum-Token'] = sanctumToken;
     }
 
     // Add request timestamp for debugging
@@ -50,6 +60,8 @@ apiClient.interceptors.response.use(
       switch (status) {
         case 401:
           // Unauthorized - clear auth data and redirect to login
+          localStorage.removeItem('jwt_token');
+          localStorage.removeItem('sanctum_token');
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('chatbot_user');
           window.location.href = '/auth/login';

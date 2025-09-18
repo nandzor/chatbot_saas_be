@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { BaseApiService } from '@/api/BaseApiService';
 import { handleError } from '@/utils/errorHandler';
 
@@ -12,10 +13,22 @@ class ProfileService extends BaseApiService {
    */
   async getCurrentProfile() {
     try {
-      const response = await this.get('/me');
-      return response.data.data;
+      // Use the /auth/me endpoint
+      const response = await this.get('/auth/me');
+
+      // BaseApiService wraps response in { success, data, status, headers }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
+      // Return the data, handling both response.data.data and response.data structures
+      return response.data.data || response.data;
     } catch (error) {
-      console.error('Error getting current profile:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error getting current profile:', error);
+        console.error('Response:', error.response?.data);
+        console.error('Status:', error.response?.status);
+      }
       throw handleError(error);
     }
   }
@@ -26,9 +39,18 @@ class ProfileService extends BaseApiService {
   async updateProfile(profileData) {
     try {
       const response = await this.put('/me/profile', profileData);
-      return response.data.data;
+
+      // BaseApiService wraps response in { success, data, status, headers }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
+      // Return the data, handling both response.data.data and response.data structures
+      return response.data.data || response.data;
     } catch (error) {
-      console.error('Error updating profile:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error updating profile:', error);
+      }
       throw handleError(error);
     }
   }
@@ -39,9 +61,17 @@ class ProfileService extends BaseApiService {
   async changePassword(passwordData) {
     try {
       const response = await this.post('/auth/change-password', passwordData);
+
+      // BaseApiService wraps response in { success, data, status, headers }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
       return response.data;
     } catch (error) {
-      console.error('Error changing password:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error changing password:', error);
+      }
       throw handleError(error);
     }
   }
@@ -59,9 +89,18 @@ class ProfileService extends BaseApiService {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return response.data.data;
+
+      // BaseApiService wraps response in { success, data, status, headers }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
+      // Return the data, handling both response.data.data and response.data structures
+      return response.data.data || response.data;
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error uploading avatar:', error);
+      }
       throw handleError(error);
     }
   }
@@ -72,25 +111,21 @@ class ProfileService extends BaseApiService {
   async deleteAvatar() {
     try {
       const response = await this.delete('/me/avatar');
+
+      // BaseApiService wraps response in { success, data, status, headers }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
       return response.data;
     } catch (error) {
-      console.error('Error deleting avatar:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error deleting avatar:', error);
+      }
       throw handleError(error);
     }
   }
 
-  /**
-   * Get user sessions
-   */
-  async getUserSessions() {
-    try {
-      const response = await this.get('/me/sessions');
-      return response.data.data;
-    } catch (error) {
-      console.error('Error getting user sessions:', error);
-      throw handleError(error);
-    }
-  }
 
   /**
    * Logout from all devices
@@ -98,38 +133,21 @@ class ProfileService extends BaseApiService {
   async logoutAllDevices() {
     try {
       const response = await this.post('/auth/logout-all');
+
+      // BaseApiService wraps response in { success, data, status, headers }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
       return response.data;
     } catch (error) {
-      console.error('Error logging out all devices:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error logging out all devices:', error);
+      }
       throw handleError(error);
     }
   }
 
-  /**
-   * Update user preferences
-   */
-  async updatePreferences(preferences) {
-    try {
-      const response = await this.put('/me/preferences', preferences);
-      return response.data.data;
-    } catch (error) {
-      console.error('Error updating preferences:', error);
-      throw handleError(error);
-    }
-  }
-
-  /**
-   * Get user preferences
-   */
-  async getPreferences() {
-    try {
-      const response = await this.get('/me/preferences');
-      return response.data.data;
-    } catch (error) {
-      console.error('Error getting preferences:', error);
-      throw handleError(error);
-    }
-  }
 
   /**
    * Validate email
@@ -137,9 +155,17 @@ class ProfileService extends BaseApiService {
   async validateEmail(email) {
     try {
       const response = await this.post('/users/check-email', { email });
+
+      // BaseApiService wraps response in { success, data, status, headers }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
       return response.data;
     } catch (error) {
-      console.error('Error validating email:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error validating email:', error);
+      }
       throw handleError(error);
     }
   }
@@ -150,9 +176,17 @@ class ProfileService extends BaseApiService {
   async validatePhone(phone) {
     try {
       const response = await this.post('/users/check-phone', { phone });
+
+      // BaseApiService wraps response in { success, data, status, headers }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
       return response.data;
     } catch (error) {
-      console.error('Error validating phone:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error validating phone:', error);
+      }
       throw handleError(error);
     }
   }

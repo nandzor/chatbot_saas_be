@@ -3,7 +3,7 @@
  * Generic API service dengan reusable methods
  */
 
-import { api } from './axios';
+import apiClient from './axios';
 import { HTTP_STATUS, API_ENDPOINTS } from '@/utils/constants';
 import { getErrorMessage, retry } from '@/utils/helpers';
 
@@ -20,7 +20,7 @@ export class BaseApiService {
    */
   async request(method, endpoint, data = null, config = {}) {
     try {
-      const response = await api.request({
+      const response = await apiClient.request({
         method,
         url: `${this.baseEndpoint}${endpoint}`,
         data,

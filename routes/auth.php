@@ -64,14 +64,6 @@ Route::prefix('auth')->middleware(['unified.auth'])->group(function () {
     Route::post('/logout-all', [AuthController::class, 'logoutAll'])
          ->name('auth.logout-all');
 
-    // Get active sessions
-    Route::get('/sessions', [AuthController::class, 'sessions'])
-         ->name('auth.sessions');
-
-    // Revoke specific session
-    Route::delete('/sessions/{sessionId}', [AuthController::class, 'revokeSession'])
-         ->name('auth.sessions.revoke')
-         ->where('sessionId', '[0-9a-f-]+');
 
     // Update user profile
     Route::put('/profile', [AuthController::class, 'updateProfile'])
