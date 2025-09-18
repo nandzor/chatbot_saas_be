@@ -103,7 +103,24 @@ export const AuthProvider = ({ children }) => {
           } catch (apiError) {
             console.warn('⚠️ API validation failed, checking local storage');
 
-            // Fallback to local storage
+            // Check if it's a token expired error
+            if (apiError.response?.status === 401) {
+              console.log('🔒 Token expired, redirecting to login');
+              // Clear auth data and redirect to login
+              localStorage.removeItem(STORAGE_KEYS.USER);
+              localStorage.removeItem(STORAGE_KEYS.SESSION);
+              setUser(null);
+              setIsAuthenticated(false);
+              setError('Session expired, please login again');
+
+              // Redirect to login if not already there
+              if (window.location.pathname !== '/auth/login') {
+                window.location.href = '/auth/login';
+              }
+              return;
+            }
+
+            // Fallback to local storage for other errors
             const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
             if (savedUser) {
               const userData = JSON.parse(savedUser);
@@ -125,9 +142,15 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error('⚠️ Error initializing auth:', error);
         localStorage.removeItem(STORAGE_KEYS.USER);
+        localStorage.removeItem(STORAGE_KEYS.SESSION);
         setUser(null);
         setIsAuthenticated(false);
         setError('Failed to restore user session');
+
+        // Redirect to login if not already there and not on login page
+        if (!isLoginPage && window.location.pathname !== '/auth/login') {
+          window.location.href = '/auth/login';
+        }
       } finally {
         setIsLoading(false);
       }
@@ -298,7 +321,24 @@ export const AuthProvider = ({ children }) => {
       } catch (apiError) {
         console.warn('⚠️ API validation failed, checking local storage');
 
-        // Fallback to local storage validation
+        // Check if it's a token expired error
+        if (apiError.response?.status === 401) {
+          console.log('🔒 Token expired during checkAuth, redirecting to login');
+          // Clear auth data and redirect to login
+          localStorage.removeItem(STORAGE_KEYS.USER);
+          localStorage.removeItem(STORAGE_KEYS.SESSION);
+          setUser(null);
+          setIsAuthenticated(false);
+          setError('Session expired, please login again');
+
+          // Redirect to login if not already there
+          if (window.location.pathname !== '/auth/login') {
+            window.location.href = '/auth/login';
+          }
+          return false;
+        }
+
+        // Fallback to local storage validation for other errors
         const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
         if (savedUser) {
           const userData = JSON.parse(savedUser);
@@ -323,11 +363,14 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = useCallback((permissionCode) => {
     if (!user) return false;
 
-    console.log('Checking permission:', {
-      required: permissionCode,
-      userRole: user.role,
-      userPermissions: user.permissions
-    });
+    // Debug permission checking in development
+    if (import.meta.env.DEV) {
+      console.log('Checking permission:', {
+        required: permissionCode,
+        userRole: user.role,
+        userPermissions: user.permissions
+      });
+    }
 
     // Use utility function for permission checking
     const hasPermission = checkPermission(user, permissionCode);

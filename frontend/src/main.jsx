@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from '@/contexts/AuthContext';
+// import { AuthProvider } from '@/contexts/AuthContext';
 import App from '@/App.jsx';
 
 // Professional Error Boundary Component
@@ -16,7 +16,7 @@ class ErrorBoundary extends React.Component {
     };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(_error) {
     return { hasError: true };
   }
 
@@ -53,7 +53,7 @@ class ErrorBoundary extends React.Component {
                 Something went wrong
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                We're sorry, but something unexpected happened. Please try refreshing the page.
+                We&apos;re sorry, but something unexpected happened. Please try refreshing the page.
               </p>
 
               {this.state.errorId && (

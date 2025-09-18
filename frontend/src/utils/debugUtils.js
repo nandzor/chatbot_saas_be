@@ -87,6 +87,7 @@ export const trackStateChange = (contextName, stateName, oldValue, newValue) => 
 
   // Only log if values actually changed
   if (oldValue !== newValue) {
+    console.log(`[${contextName}] ${stateName} changed:`, {
       from: oldValue,
       to: newValue,
       timestamp: new Date().toISOString()

@@ -1,8 +1,21 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
 
 const RoleBasedRedirect = () => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, checkAuth } = useAuth();
+
+  // Check authentication status on mount
+  useEffect(() => {
+    const verifyAuth = async () => {
+      if (!isLoading && !isAuthenticated) {
+        // Try to check auth status one more time
+        await checkAuth();
+      }
+    };
+
+    verifyAuth();
+  }, [isLoading, isAuthenticated, checkAuth]);
 
   // Show loading while checking authentication
   if (isLoading) {
