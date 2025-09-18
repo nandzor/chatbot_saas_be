@@ -136,58 +136,63 @@ const Settings = () => {
       setSuccess(null);
 
       // Sanitize and validate input data
+      const toNumber = (val, fallback) => {
+        const n = Number(val ?? fallback);
+        return Number.isFinite(n) ? n : Number(fallback ?? 0);
+      };
+
       const sanitizedData = {
         general: {
-          name: sanitizeInput(values.general?.name || settings.general?.name),
-          displayName: sanitizeInput(values.general?.displayName || settings.general?.displayName),
-          email: sanitizeInput(values.general?.email || settings.general?.email),
-          phone: sanitizeInput(values.general?.phone || settings.general?.phone),
-          website: sanitizeInput(values.general?.website || settings.general?.website),
-          taxId: sanitizeInput(values.general?.taxId || settings.general?.taxId),
-          address: sanitizeInput(values.general?.address || settings.general?.address),
-          description: sanitizeInput(values.general?.description || settings.general?.description),
-          timezone: values.general?.timezone || settings.general?.timezone,
-          locale: values.general?.locale || settings.general?.locale,
-          currency: values.general?.currency || settings.general?.currency
+          name: sanitizeInput(values.general?.name ?? settings.general?.name),
+          displayName: sanitizeInput(values.general?.displayName ?? settings.general?.displayName),
+          email: sanitizeInput(values.general?.email ?? settings.general?.email),
+          phone: sanitizeInput(values.general?.phone ?? settings.general?.phone),
+          website: sanitizeInput(values.general?.website ?? settings.general?.website),
+          taxId: sanitizeInput(values.general?.taxId ?? settings.general?.taxId),
+          address: sanitizeInput(values.general?.address ?? settings.general?.address),
+          description: sanitizeInput(values.general?.description ?? settings.general?.description),
+          timezone: values.general?.timezone ?? settings.general?.timezone,
+          locale: values.general?.locale ?? settings.general?.locale,
+          currency: values.general?.currency ?? settings.general?.currency
         },
         system: {
-          status: values.system?.status || settings.system?.status,
-          businessType: values.system?.businessType || settings.system?.businessType,
-          industry: values.system?.industry || settings.system?.industry,
-          companySize: values.system?.companySize || settings.system?.companySize,
-          foundedYear: parseInt(values.system?.foundedYear || settings.system?.foundedYear),
-          employeeCount: parseInt(values.system?.employeeCount || settings.system?.employeeCount),
-          annualRevenue: parseFloat(values.system?.annualRevenue || settings.system?.annualRevenue),
-          socialMedia: values.system?.socialMedia || settings.system?.socialMedia || {}
+          status: values.system?.status ?? settings.system?.status,
+          businessType: values.system?.businessType ?? settings.system?.businessType,
+          industry: values.system?.industry ?? settings.system?.industry,
+          companySize: values.system?.companySize ?? settings.system?.companySize,
+          foundedYear: toNumber(values.system?.foundedYear, settings.system?.foundedYear),
+          employeeCount: toNumber(values.system?.employeeCount, settings.system?.employeeCount),
+          annualRevenue: toNumber(values.system?.annualRevenue, settings.system?.annualRevenue),
+          socialMedia: values.system?.socialMedia ?? settings.system?.socialMedia ?? {}
         },
         api: {
-          apiKey: values.api?.apiKey || settings.api?.apiKey,
-          webhookUrl: sanitizeInput(values.api?.webhookUrl || settings.api?.webhookUrl),
-          webhookSecret: sanitizeInput(values.api?.webhookSecret || settings.api?.webhookSecret),
-          rateLimit: parseInt(values.api?.rateLimit || settings.api?.rateLimit),
-          allowedOrigins: values.api?.allowedOrigins || settings.api?.allowedOrigins || [],
-          enableApiAccess: values.api?.enableApiAccess || settings.api?.enableApiAccess,
-          enableWebhooks: values.api?.enableWebhooks || settings.api?.enableWebhooks
+          apiKey: values.api?.apiKey ?? settings.api?.apiKey,
+          webhookUrl: sanitizeInput(values.api?.webhookUrl ?? settings.api?.webhookUrl),
+          webhookSecret: sanitizeInput(values.api?.webhookSecret ?? settings.api?.webhookSecret),
+          rateLimit: toNumber(values.api?.rateLimit, settings.api?.rateLimit),
+          allowedOrigins: (values.api?.allowedOrigins ?? settings.api?.allowedOrigins ?? []).map(o => typeof o === 'string' ? o.trim() : o),
+          enableApiAccess: values.api?.enableApiAccess ?? settings.api?.enableApiAccess,
+          enableWebhooks: values.api?.enableWebhooks ?? settings.api?.enableWebhooks
         },
         security: {
-          twoFactorAuth: values.security?.twoFactorAuth || settings.security?.twoFactorAuth,
-          ssoEnabled: values.security?.ssoEnabled || settings.security?.ssoEnabled,
-          ssoProvider: values.security?.ssoProvider || settings.security?.ssoProvider,
-          passwordPolicy: values.security?.passwordPolicy || settings.security?.passwordPolicy,
-          sessionTimeout: parseInt(values.security?.sessionTimeout || settings.security?.sessionTimeout),
-          ipWhitelist: values.security?.ipWhitelist || settings.security?.ipWhitelist || [],
-          allowedDomains: values.security?.allowedDomains || settings.security?.allowedDomains || []
+          twoFactorAuth: values.security?.twoFactorAuth ?? settings.security?.twoFactorAuth,
+          ssoEnabled: values.security?.ssoEnabled ?? settings.security?.ssoEnabled,
+          ssoProvider: values.security?.ssoProvider ?? settings.security?.ssoProvider,
+          passwordPolicy: values.security?.passwordPolicy ?? settings.security?.passwordPolicy,
+          sessionTimeout: toNumber(values.security?.sessionTimeout, settings.security?.sessionTimeout),
+          ipWhitelist: values.security?.ipWhitelist ?? settings.security?.ipWhitelist ?? [],
+          allowedDomains: values.security?.allowedDomains ?? settings.security?.allowedDomains ?? []
         },
         notifications: {
-          email: values.notifications?.email || settings.notifications?.email || {},
-          push: values.notifications?.push || settings.notifications?.push || {},
-          webhook: values.notifications?.webhook || settings.notifications?.webhook || {}
+          email: values.notifications?.email ?? settings.notifications?.email ?? {},
+          push: values.notifications?.push ?? settings.notifications?.push ?? {},
+          webhook: values.notifications?.webhook ?? settings.notifications?.webhook ?? {}
         },
         features: {
-          chatbot: values.features?.chatbot || settings.features?.chatbot || {},
-          analytics: values.features?.analytics || settings.features?.analytics || {},
-          integrations: values.features?.integrations || settings.features?.integrations || {},
-          customBranding: values.features?.customBranding || settings.features?.customBranding || {}
+          chatbot: values.features?.chatbot ?? settings.features?.chatbot ?? {},
+          analytics: values.features?.analytics ?? settings.features?.analytics ?? {},
+          integrations: values.features?.integrations ?? settings.features?.integrations ?? {},
+          customBranding: values.features?.customBranding ?? settings.features?.customBranding ?? {}
         }
       };
 
