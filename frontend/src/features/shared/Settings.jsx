@@ -3,7 +3,7 @@
  * Settings dengan Form components dan enhanced error handling
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useContext } from 'react';
 import {
   useLoadingStates,
   LoadingWrapper,
@@ -53,7 +53,12 @@ import {
   EyeOff,
   Smartphone,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Building2,
+  Globe,
+  Users,
+  CreditCard,
+  Zap
 } from 'lucide-react';
 import { agentsData, integrationsData } from '@/data/sampleData';
 import IntegrationCard from './IntegrationCard';
@@ -65,14 +70,38 @@ import DeveloperTab from './DeveloperTab';
 import BotPersonalitiesTab from './BotPersonalitiesTab';
 import TeamTab from './TeamTab';
 import SecurityTab from './SecurityTab';
+import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
+import organizationManagementService from '@/services/OrganizationManagementService';
+import { AuthContext } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const Settings = () => {
   const { announce } = useAnnouncement();
   const { focusRef, setFocus } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
+  const { user, organization } = useContext(AuthContext);
+
+  // Get organization ID from context or URL params
+  const organizationId = organization?.id || user?.organization_id;
+
+  // Use organization settings hook
+  const {
+    settings,
+    loading: settingsLoading,
+    error: settingsError,
+    hasChanges,
+    loadSettings,
+    updateSetting,
+    updateSettings,
+    saveSettings,
+    resetSettings,
+    generateApiKey,
+    testWebhook,
+    refreshSettings
+  } = useOrganizationSettings(organizationId);
 
   // State management
-  const [activeTab, setActiveTab] = useState('channels');
+  const [activeTab, setActiveTab] = useState('general');
   const [showApiKey, setShowApiKey] = useState(false);
   const [editingAgent, setEditingAgent] = useState(null);
   const [integrationsState, setIntegrationsState] = useState(integrationsData);
@@ -82,29 +111,10 @@ const Settings = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
-  // Settings form data
-  const [settingsData, setSettingsData] = useState({
-    general: {
-      siteName: 'My Chatbot',
-      siteDescription: 'AI-powered customer support',
-      timezone: 'UTC',
-      language: 'en',
-      theme: 'light'
-    },
-    security: {
-      twoFactorAuth: false,
-      sessionTimeout: 30,
-      passwordPolicy: 'strong',
-      ipWhitelist: []
-    },
-    notifications: {
-      emailNotifications: true,
-      pushNotifications: true,
-      smsNotifications: false,
-      notificationFrequency: 'immediate'
-    }
-  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [changeHistory, setChangeHistory] = useState([]);
+  const [webhookTestResult, setWebhookTestResult] = useState(null);
 
   // Sample data untuk channels
   const channels = [
@@ -113,77 +123,155 @@ const Settings = () => {
     { id: 3, name: 'Facebook Messenger', type: 'Facebook', status: 'Nonaktif', lastUsed: '2 jam lalu' },
   ];
 
-  // Load settings data
-  const loadSettings = useCallback(async () => {
-    try {
-      setLoading('initial', true);
-      setError(null);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // In production, this would load from API
-      announce('Settings loaded successfully');
-    } catch (err) {
-      const errorResult = handleError(err, {
-        context: 'Settings Data Loading',
-        showToast: true
-      });
-      setError(errorResult.message);
-    } finally {
-      setLoading('initial', false);
-    }
-  }, [setLoading, announce]);
-
-  // Save settings
+  // Enhanced save settings with proper API integration
   const handleSaveSettings = useCallback(async (values, options = {}) => {
+    if (!organizationId) {
+      toast.error('No organization selected');
+      return;
+    }
+
     try {
-      setLoading('save', true);
+      setIsSaving(true);
       setError(null);
       setSuccess(null);
 
-      // Sanitize input
+      // Sanitize and validate input data
       const sanitizedData = {
         general: {
-          siteName: sanitizeInput(values.siteName),
-          siteDescription: sanitizeInput(values.siteDescription),
-          timezone: values.timezone,
-          language: values.language,
-          theme: values.theme
+          name: sanitizeInput(values.general?.name || settings.general?.name),
+          displayName: sanitizeInput(values.general?.displayName || settings.general?.displayName),
+          email: sanitizeInput(values.general?.email || settings.general?.email),
+          phone: sanitizeInput(values.general?.phone || settings.general?.phone),
+          website: sanitizeInput(values.general?.website || settings.general?.website),
+          taxId: sanitizeInput(values.general?.taxId || settings.general?.taxId),
+          address: sanitizeInput(values.general?.address || settings.general?.address),
+          description: sanitizeInput(values.general?.description || settings.general?.description),
+          timezone: values.general?.timezone || settings.general?.timezone,
+          locale: values.general?.locale || settings.general?.locale,
+          currency: values.general?.currency || settings.general?.currency
+        },
+        system: {
+          status: values.system?.status || settings.system?.status,
+          businessType: values.system?.businessType || settings.system?.businessType,
+          industry: values.system?.industry || settings.system?.industry,
+          companySize: values.system?.companySize || settings.system?.companySize,
+          foundedYear: parseInt(values.system?.foundedYear || settings.system?.foundedYear),
+          employeeCount: parseInt(values.system?.employeeCount || settings.system?.employeeCount),
+          annualRevenue: parseFloat(values.system?.annualRevenue || settings.system?.annualRevenue),
+          socialMedia: values.system?.socialMedia || settings.system?.socialMedia || {}
+        },
+        api: {
+          apiKey: values.api?.apiKey || settings.api?.apiKey,
+          webhookUrl: sanitizeInput(values.api?.webhookUrl || settings.api?.webhookUrl),
+          webhookSecret: sanitizeInput(values.api?.webhookSecret || settings.api?.webhookSecret),
+          rateLimit: parseInt(values.api?.rateLimit || settings.api?.rateLimit),
+          allowedOrigins: values.api?.allowedOrigins || settings.api?.allowedOrigins || [],
+          enableApiAccess: values.api?.enableApiAccess || settings.api?.enableApiAccess,
+          enableWebhooks: values.api?.enableWebhooks || settings.api?.enableWebhooks
         },
         security: {
-          twoFactorAuth: values.twoFactorAuth,
-          sessionTimeout: parseInt(values.sessionTimeout),
-          passwordPolicy: values.passwordPolicy,
-          ipWhitelist: values.ipWhitelist || []
+          twoFactorAuth: values.security?.twoFactorAuth || settings.security?.twoFactorAuth,
+          ssoEnabled: values.security?.ssoEnabled || settings.security?.ssoEnabled,
+          ssoProvider: values.security?.ssoProvider || settings.security?.ssoProvider,
+          passwordPolicy: values.security?.passwordPolicy || settings.security?.passwordPolicy,
+          sessionTimeout: parseInt(values.security?.sessionTimeout || settings.security?.sessionTimeout),
+          ipWhitelist: values.security?.ipWhitelist || settings.security?.ipWhitelist || [],
+          allowedDomains: values.security?.allowedDomains || settings.security?.allowedDomains || []
         },
         notifications: {
-          emailNotifications: values.emailNotifications,
-          pushNotifications: values.pushNotifications,
-          smsNotifications: values.smsNotifications,
-          notificationFrequency: values.notificationFrequency
+          email: values.notifications?.email || settings.notifications?.email || {},
+          push: values.notifications?.push || settings.notifications?.push || {},
+          webhook: values.notifications?.webhook || settings.notifications?.webhook || {}
+        },
+        features: {
+          chatbot: values.features?.chatbot || settings.features?.chatbot || {},
+          analytics: values.features?.analytics || settings.features?.analytics || {},
+          integrations: values.features?.integrations || settings.features?.integrations || {},
+          customBranding: values.features?.customBranding || settings.features?.customBranding || {}
         }
       };
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Save settings using the hook
+      const result = await saveSettings(sanitizedData);
 
-      setSettingsData(sanitizedData);
+      if (result.success) {
       setSuccess('Settings saved successfully!');
       announce('Settings saved successfully');
+        toast.success('Settings saved successfully');
+        setLastSaved(new Date());
+
+        // Track change history
+        const changeEntry = {
+          id: Date.now(),
+          timestamp: new Date(),
+          type: 'settings_save',
+          changes: Object.keys(sanitizedData),
+          user: user?.name || 'Unknown User'
+        };
+        setChangeHistory(prev => [changeEntry, ...prev.slice(0, 9)]); // Keep last 10 changes
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error(result.error || 'Failed to save settings');
+      }
     } catch (err) {
       const errorResult = handleError(err, {
         context: 'Settings Save',
         showToast: true
       });
       setError(errorResult.message);
+      toast.error(errorResult.message);
     } finally {
-      setLoading('save', false);
+      setIsSaving(false);
     }
-  }, [setLoading, announce]);
+  }, [organizationId, settings, saveSettings, announce]);
+
+  // Enhanced webhook testing
+  const handleTestWebhook = useCallback(async () => {
+    if (!organizationId) {
+      toast.error('No organization selected');
+      return;
+    }
+
+    if (!settings?.api?.webhookUrl) {
+      toast.error('Please enter a webhook URL first');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setWebhookTestResult(null);
+
+      const result = await testWebhook();
+
+      if (result.success) {
+        setWebhookTestResult({
+          success: true,
+          message: 'Webhook test successful',
+          timestamp: new Date()
+        });
+        toast.success('Webhook test successful');
+      } else {
+        setWebhookTestResult({
+          success: false,
+          message: result.error || 'Webhook test failed',
+          timestamp: new Date()
+        });
+        toast.error('Webhook test failed');
+      }
+    } catch (err) {
+      const errorMessage = err.message || 'Webhook test failed';
+      setWebhookTestResult({
+        success: false,
+        message: errorMessage,
+        timestamp: new Date()
+      });
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [organizationId, settings?.api?.webhookUrl, testWebhook]);
 
   // Handle tab change
   const handleTabChange = useCallback((value) => {
@@ -235,26 +323,94 @@ const Settings = () => {
     setFocus();
   }, [setFocus]);
 
-  // General settings form fields
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ctrl/Cmd + S to save
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        if (hasChanges && !isSaving) {
+          handleSaveSettings(settings);
+        }
+      }
+      // Escape to reset changes
+      if (event.key === 'Escape' && hasChanges) {
+        resetSettings();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [hasChanges, isSaving, settings, handleSaveSettings, resetSettings]);
+
+  // General settings form fields - Updated to match backend API structure
   const generalFields = [
     {
-      name: 'siteName',
+      name: 'general.name',
       type: 'text',
-      label: 'Site Name',
-      placeholder: 'Enter site name',
+      label: 'Organization Name',
+      placeholder: 'Enter organization name',
       required: true,
-      description: 'The name of your chatbot application'
+      description: 'The name of your organization'
     },
     {
-      name: 'siteDescription',
+      name: 'general.displayName',
+      type: 'text',
+      label: 'Display Name',
+      placeholder: 'Enter display name',
+      required: false,
+      description: 'Public display name for your organization'
+    },
+    {
+      name: 'general.email',
+      type: 'email',
+      label: 'Contact Email',
+      placeholder: 'Enter contact email',
+      required: true,
+      description: 'Primary contact email for your organization'
+    },
+    {
+      name: 'general.phone',
+      type: 'tel',
+      label: 'Phone Number',
+      placeholder: 'Enter phone number',
+      required: false,
+      description: 'Contact phone number'
+    },
+    {
+      name: 'general.website',
+      type: 'url',
+      label: 'Website',
+      placeholder: 'https://your-website.com',
+      required: false,
+      description: 'Organization website URL'
+    },
+    {
+      name: 'general.taxId',
+      type: 'text',
+      label: 'Tax ID',
+      placeholder: 'Enter tax ID',
+      required: false,
+      description: 'Business tax identification number'
+    },
+    {
+      name: 'general.address',
       type: 'textarea',
-      label: 'Site Description',
-      placeholder: 'Enter site description',
-      required: true,
-      description: 'Brief description of your chatbot'
+      label: 'Address',
+      placeholder: 'Enter organization address',
+      required: false,
+      description: 'Physical address of your organization'
     },
     {
-      name: 'timezone',
+      name: 'general.description',
+      type: 'textarea',
+      label: 'Description',
+      placeholder: 'Enter organization description',
+      required: false,
+      description: 'Brief description of your organization'
+    },
+    {
+      name: 'general.timezone',
       type: 'select',
       label: 'Timezone',
       required: true,
@@ -266,131 +422,343 @@ const Settings = () => {
         { value: 'America/Los_Angeles', label: 'Pacific Time' },
         { value: 'Europe/London', label: 'London' },
         { value: 'Europe/Paris', label: 'Paris' },
-        { value: 'Asia/Tokyo', label: 'Tokyo' }
+        { value: 'Asia/Tokyo', label: 'Tokyo' },
+        { value: 'Asia/Jakarta', label: 'Jakarta' },
+        { value: 'Asia/Singapore', label: 'Singapore' }
       ]
     },
     {
-      name: 'language',
+      name: 'general.locale',
       type: 'select',
-      label: 'Language',
+      label: 'Locale',
       required: true,
       options: [
-        { value: 'en', label: 'English' },
-        { value: 'id', label: 'Indonesian' },
-        { value: 'es', label: 'Spanish' },
-        { value: 'fr', label: 'French' },
-        { value: 'de', label: 'German' }
+        { value: 'en', label: 'English (US)' },
+        { value: 'id', label: 'Bahasa Indonesia' }
       ]
     },
     {
-      name: 'theme',
+      name: 'general.currency',
       type: 'select',
-      label: 'Theme',
+      label: 'Currency',
       required: true,
       options: [
-        { value: 'light', label: 'Light' },
-        { value: 'dark', label: 'Dark' },
-        { value: 'auto', label: 'Auto' }
+        { value: 'USD', label: 'US Dollar (USD)' },
+        { value: 'IDR', label: 'Indonesian Rupiah (IDR)' }
       ]
     }
   ];
 
-  // Security settings form fields
+  // Security settings form fields - Updated to match backend API structure
   const securityFields = [
     {
-      name: 'twoFactorAuth',
+      name: 'security.twoFactorAuth',
       type: 'checkbox',
       label: 'Enable Two-Factor Authentication',
       description: 'Add an extra layer of security to your account'
     },
     {
-      name: 'sessionTimeout',
+      name: 'security.ssoEnabled',
+      type: 'checkbox',
+      label: 'Enable Single Sign-On (SSO)',
+      description: 'Allow users to sign in with external identity providers'
+    },
+    {
+      name: 'security.ssoProvider',
+      type: 'select',
+      label: 'SSO Provider',
+      required: false,
+      options: [
+        { value: '', label: 'None' },
+        { value: 'google', label: 'Google' },
+        { value: 'microsoft', label: 'Microsoft' },
+        { value: 'okta', label: 'Okta' },
+        { value: 'auth0', label: 'Auth0' },
+        { value: 'saml', label: 'SAML' }
+      ]
+    },
+    {
+      name: 'security.sessionTimeout',
       type: 'number',
       label: 'Session Timeout (minutes)',
       placeholder: 'Enter timeout in minutes',
       required: true,
-      description: 'How long before users are automatically logged out'
+      description: 'How long before users are automatically logged out (5-480 minutes)'
     },
     {
-      name: 'passwordPolicy',
+      name: 'security.passwordPolicy.minLength',
+      type: 'number',
+      label: 'Minimum Password Length',
+      placeholder: 'Enter minimum length',
+      required: true,
+      description: 'Minimum number of characters required in passwords'
+    },
+    {
+      name: 'security.passwordPolicy.requireUppercase',
+      type: 'checkbox',
+      label: 'Require Uppercase Letters',
+      description: 'Passwords must contain uppercase letters'
+    },
+    {
+      name: 'security.passwordPolicy.requireLowercase',
+      type: 'checkbox',
+      label: 'Require Lowercase Letters',
+      description: 'Passwords must contain lowercase letters'
+    },
+    {
+      name: 'security.passwordPolicy.requireNumbers',
+      type: 'checkbox',
+      label: 'Require Numbers',
+      description: 'Passwords must contain numbers'
+    },
+    {
+      name: 'security.passwordPolicy.requireSymbols',
+      type: 'checkbox',
+      label: 'Require Special Characters',
+      description: 'Passwords must contain special characters'
+    }
+  ];
+
+  // System settings form fields
+  const systemFields = [
+    {
+      name: 'system.businessType',
       type: 'select',
-      label: 'Password Policy',
+      label: 'Business Type',
       required: true,
       options: [
-        { value: 'basic', label: 'Basic (8+ characters)' },
-        { value: 'strong', label: 'Strong (8+ chars, mixed case, numbers)' },
-        { value: 'very-strong', label: 'Very Strong (12+ chars, special chars)' }
+        { value: 'saas', label: 'SaaS' },
+        { value: 'ecommerce', label: 'E-commerce' },
+        { value: 'education', label: 'Education' },
+        { value: 'healthcare', label: 'Healthcare' },
+        { value: 'finance', label: 'Finance' },
+        { value: 'retail', label: 'Retail' },
+        { value: 'manufacturing', label: 'Manufacturing' },
+        { value: 'consulting', label: 'Consulting' },
+        { value: 'other', label: 'Other' }
       ]
+    },
+    {
+      name: 'system.industry',
+      type: 'text',
+      label: 'Industry',
+      placeholder: 'Enter industry',
+      required: false,
+      description: 'Primary industry your organization operates in'
+    },
+    {
+      name: 'system.companySize',
+      type: 'select',
+      label: 'Company Size',
+      required: true,
+      options: [
+        { value: 'startup', label: 'Startup (1-10 employees)' },
+        { value: 'small', label: 'Small (11-50 employees)' },
+        { value: 'medium', label: 'Medium (51-200 employees)' },
+        { value: 'large', label: 'Large (201-1000 employees)' },
+        { value: 'enterprise', label: 'Enterprise (1000+ employees)' }
+      ]
+    },
+    {
+      name: 'system.foundedYear',
+      type: 'number',
+      label: 'Founded Year',
+      placeholder: 'Enter founded year',
+      required: false,
+      description: 'Year your organization was founded'
+    },
+    {
+      name: 'system.employeeCount',
+      type: 'number',
+      label: 'Employee Count',
+      placeholder: 'Enter employee count',
+      required: false,
+      description: 'Current number of employees'
+    },
+    {
+      name: 'system.annualRevenue',
+      type: 'number',
+      label: 'Annual Revenue',
+      placeholder: 'Enter annual revenue',
+      required: false,
+      description: 'Annual revenue in your organization currency'
+    }
+  ];
+
+  // API settings form fields
+  const apiFields = [
+    {
+      name: 'api.enableApiAccess',
+      type: 'checkbox',
+      label: 'Enable API Access',
+      description: 'Allow API access for your organization'
+    },
+    {
+      name: 'api.rateLimit',
+      type: 'number',
+      label: 'Rate Limit (requests per minute)',
+      placeholder: 'Enter rate limit',
+      required: true,
+      description: 'Maximum API requests per minute (1-100,000)'
+    },
+    {
+      name: 'api.enableWebhooks',
+      type: 'checkbox',
+      label: 'Enable Webhooks',
+      description: 'Allow webhook notifications'
+    },
+    {
+      name: 'api.webhookUrl',
+      type: 'url',
+      label: 'Webhook URL',
+      placeholder: 'https://your-domain.com/webhook',
+      required: false,
+      description: 'URL to receive webhook notifications'
+    },
+    {
+      name: 'api.webhookSecret',
+      type: 'password',
+      label: 'Webhook Secret',
+      placeholder: 'Enter webhook secret',
+      required: false,
+      description: 'Secret key for webhook verification'
     }
   ];
 
   // Enhanced notification settings form fields
   const notificationFields = [
     {
-      name: 'emailNotifications',
+      name: 'notifications.email.enabled',
       type: 'checkbox',
       label: 'Email Notifications',
       description: 'Receive notifications via email',
       icon: 'Mail'
     },
     {
-      name: 'pushNotifications',
+      name: 'notifications.email.newUser',
+      type: 'checkbox',
+      label: 'New User Notifications',
+      description: 'Get notified when new users join'
+    },
+    {
+      name: 'notifications.email.userActivity',
+      type: 'checkbox',
+      label: 'User Activity Notifications',
+      description: 'Get notified about important user activities'
+    },
+    {
+      name: 'notifications.email.systemUpdates',
+      type: 'checkbox',
+      label: 'System Updates',
+      description: 'Get notified about system updates and maintenance'
+    },
+    {
+      name: 'notifications.email.securityAlerts',
+      type: 'checkbox',
+      label: 'Security Alerts',
+      description: 'Get notified about security-related events'
+    },
+    {
+      name: 'notifications.push.enabled',
       type: 'checkbox',
       label: 'Push Notifications',
       description: 'Receive push notifications in browser',
       icon: 'Bell'
     },
     {
-      name: 'smsNotifications',
+      name: 'notifications.webhook.enabled',
       type: 'checkbox',
-      label: 'SMS Notifications',
-      description: 'Receive notifications via SMS',
-      icon: 'MessageSquare'
-    },
-    {
-      name: 'notificationFrequency',
-      type: 'select',
-      label: 'Notification Frequency',
-      required: true,
-      description: 'How often you want to receive notifications',
-      options: [
-        { value: 'immediate', label: 'Immediate - Get notified right away' },
-        { value: 'hourly', label: 'Hourly - Digest every hour' },
-        { value: 'daily', label: 'Daily - Daily summary at 9 AM' },
-        { value: 'weekly', label: 'Weekly - Weekly summary on Monday' }
-      ]
+      label: 'Webhook Notifications',
+      description: 'Send notifications via webhooks',
+      icon: 'Zap'
     }
   ];
+
+  // Show loading state if no organization ID
+  if (!organizationId) {
+    return (
+      <div className="space-y-6" ref={focusRef}>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Organization Selected</h3>
+            <p className="text-muted-foreground">
+              Please select an organization to manage settings.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" ref={focusRef}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center">
+            <SettingsIcon className="h-8 w-8 mr-3 text-blue-600" />
+            Organization Settings
+          </h1>
           <p className="text-muted-foreground">
-            Manage your application settings and preferences
+            Manage your organization settings and preferences
           </p>
+          {organization && (
+            <div className="flex items-center mt-2 text-sm text-muted-foreground">
+              <Building2 className="h-4 w-4 mr-2" />
+              {organization.name}
+            </div>
+          )}
+          <div className="flex items-center mt-2 text-xs text-muted-foreground space-x-4">
+            {lastSaved && (
+              <div className="flex items-center">
+                <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
+                Last saved: {lastSaved.toLocaleTimeString()}
+              </div>
+            )}
+            {hasChanges && (
+              <div className="flex items-center text-amber-600">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Unsaved changes
+              </div>
+            )}
+            <div className="flex items-center text-muted-foreground">
+              <span className="text-xs">
+                Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Ctrl+S</kbd> to save, <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Esc</kbd> to reset
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center space-x-2">
+          {hasChanges && (
           <Button
             variant="outline"
-            onClick={loadSettings}
-            disabled={getLoadingState('refresh')}
+              onClick={resetSettings}
+              disabled={isSaving}
+              aria-label="Reset changes"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset Changes
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={refreshSettings}
+            disabled={settingsLoading}
             aria-label="Refresh settings"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${getLoadingState('refresh') ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${settingsLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
       </div>
 
       {/* Error Alert */}
-      {error && (
+      {(error || settingsError) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || settingsError}</AlertDescription>
         </Alert>
       )}
 
@@ -404,464 +772,270 @@ const Settings = () => {
 
       {/* Settings Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-8">
+          <TabsTrigger value="general" className="flex items-center">
+            <Building2 className="h-4 w-4 mr-2" />
+            General
+          </TabsTrigger>
+          <TabsTrigger value="system" className="flex items-center">
+            <Globe className="h-4 w-4 mr-2" />
+            System
+          </TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center">
+            <Shield className="h-4 w-4 mr-2" />
+            Security
+          </TabsTrigger>
+          <TabsTrigger value="api" className="flex items-center">
+            <Zap className="h-4 w-4 mr-2" />
+            API
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center">
+            <Bell className="h-4 w-4 mr-2" />
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="channels" className="flex items-center">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Channels
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="flex items-center">
+            <SettingsIcon className="h-4 w-4 mr-2" />
+            Integrations
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="flex items-center">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Billing
+          </TabsTrigger>
         </TabsList>
 
         {/* General Settings */}
         <TabsContent value="general">
           <LoadingWrapper
-            isLoading={getLoadingState('initial')}
+            isLoading={settingsLoading}
             loadingComponent={<SkeletonCard />}
           >
             <Form
               title="General Settings"
-              description="Configure basic application settings"
+              description="Configure basic organization information and preferences"
               fields={generalFields}
-              initialValues={settingsData.general}
+              initialValues={settings}
               validationRules={{
-                siteName: { required: true, minLength: 2, maxLength: 50 },
-                siteDescription: { required: true, minLength: 10, maxLength: 200 },
-                timezone: { required: true },
-                language: { required: true },
-                theme: { required: true }
+                'general.name': { required: true, minLength: 2, maxLength: 255 },
+                'general.email': { required: true, email: true, maxLength: 255 },
+                'general.phone': { maxLength: 20 },
+                'general.website': { url: true, maxLength: 255 },
+                'general.taxId': { maxLength: 50 },
+                'general.address': { maxLength: 500 },
+                'general.description': { maxLength: 1000 },
+                'general.timezone': { required: true, maxLength: 50 },
+                'general.locale': { required: true, maxLength: 10 },
+                'general.currency': { required: true, maxLength: 3 }
               }}
               onSubmit={handleSaveSettings}
               submitText="Save General Settings"
               showProgress={true}
               autoSave={false}
+              loading={isSaving}
+            />
+          </LoadingWrapper>
+        </TabsContent>
+
+        {/* System Settings */}
+        <TabsContent value="system">
+          <LoadingWrapper
+            isLoading={settingsLoading}
+            loadingComponent={<SkeletonCard />}
+          >
+            <Form
+              title="System Settings"
+              description="Configure organization system information and business details"
+              fields={systemFields}
+              initialValues={settings}
+              validationRules={{
+                'system.businessType': { required: true, maxLength: 50 },
+                'system.industry': { maxLength: 100 },
+                'system.companySize': { required: true, maxLength: 50 },
+                'system.foundedYear': { integer: true, min: 1800, max: new Date().getFullYear() },
+                'system.employeeCount': { integer: true, min: 0, max: 1000000 },
+                'system.annualRevenue': { numeric: true, min: 0 }
+              }}
+              onSubmit={handleSaveSettings}
+              submitText="Save System Settings"
+              showProgress={true}
+              autoSave={false}
+              loading={isSaving}
             />
           </LoadingWrapper>
         </TabsContent>
 
         {/* Security Settings */}
-        <TabsContent value="security" className="space-y-6">
+        <TabsContent value="security">
           <LoadingWrapper
-            isLoading={getLoadingState('initial')}
+            isLoading={settingsLoading}
             loadingComponent={<SkeletonCard />}
           >
-            {/* Security Header */}
+            <Form
+              title="Security Settings"
+              description="Configure security and authentication settings to protect your organization"
+              fields={securityFields}
+              initialValues={settings}
+              validationRules={{
+                'security.sessionTimeout': { required: true, integer: true, min: 5, max: 480 },
+                'security.passwordPolicy.minLength': { required: true, integer: true, min: 6, max: 32 },
+                'security.ssoProvider': { maxLength: 50 }
+              }}
+              onSubmit={handleSaveSettings}
+              submitText="Save Security Settings"
+              showProgress={true}
+              autoSave={false}
+              loading={isSaving}
+            />
+          </LoadingWrapper>
+        </TabsContent>
+
+        {/* API Settings */}
+        <TabsContent value="api">
+          <LoadingWrapper
+            isLoading={settingsLoading}
+            loadingComponent={<SkeletonCard />}
+          >
+            <div className="space-y-6">
+              {/* API Key Section */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-2xl font-bold flex items-center">
-                      <Shield className="h-6 w-6 mr-3 text-blue-600" />
-                      Security Settings
+                  <CardTitle className="flex items-center">
+                    <Key className="h-5 w-5 mr-2" />
+                    API Key Management
                     </CardTitle>
-                    <CardDescription className="text-base mt-2">
-                      Configure security and authentication settings to protect your account
+                  <CardDescription>
+                    Manage your organization's API access and authentication
                     </CardDescription>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground mb-1">Security Level</div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: '85%' }}></div>
-                      </div>
-                      <span className="text-sm font-medium text-green-600">Strong</span>
-                    </div>
-                  </div>
-                </div>
               </CardHeader>
-            </Card>
-
-            {/* Security Features */}
-            <div className="grid gap-6">
-              {/* Two-Factor Authentication */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
+                <CardContent className="space-y-4">
                     <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Smartphone className="h-6 w-6 text-blue-600" />
-                      </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Add an extra layer of security to your account
-                        </p>
-                        <div className="mt-2">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            settingsData.security.twoFactorAuth
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {settingsData.security.twoFactorAuth ? (
-                              <>
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Enabled
-                              </>
-                            ) : (
-                              <>
-                                <AlertTriangle className="w-3 h-3 mr-1" />
-                                Disabled
-                              </>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium">API Key</label>
+                      <div className="flex items-center space-x-2 mt-1">
                       <input
-                        type="checkbox"
-                        checked={settingsData.security.twoFactorAuth}
-                        onChange={(e) => setSettingsData(prev => ({
-                          ...prev,
-                          security: {
-                            ...prev.security,
-                            twoFactorAuth: e.target.checked
-                          }
-                        }))}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Session Timeout */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-orange-100 rounded-lg">
-                        <Clock className="h-6 w-6 text-orange-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">Session Timeout</h3>
-                        <p className="text-sm text-muted-foreground">
-                          How long before users are automatically logged out
-                        </p>
-                      </div>
-                    </div>
-                    <div className="ml-12">
-                      <div className="flex items-center space-x-4">
-                        <input
-                          type="number"
-                          value={settingsData.security.sessionTimeout}
-                          onChange={(e) => setSettingsData(prev => ({
-                            ...prev,
-                            security: {
-                              ...prev.security,
-                              sessionTimeout: parseInt(e.target.value) || 30
-                            }
-                          }))}
-                          min="5"
-                          max="1440"
-                          className="w-24 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          type={showApiKey ? 'text' : 'password'}
+                          value={settings?.api?.apiKey || ''}
+                          readOnly
+                          className="flex-1 p-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
                         />
-                        <span className="text-sm text-muted-foreground">minutes</span>
-                      </div>
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Recommended: 30-60 minutes for better security
-                      </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowApiKey(!showApiKey)}
+                        >
+                          {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={generateApiKey}
+                          disabled={isSaving}
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Generate New
+                        </Button>
+                    </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Keep your API key secure and never share it publicly
+                      </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Password Policy */}
+              {/* API Configuration Form */}
+              <Form
+                title="API Configuration"
+                description="Configure API access settings and webhook endpoints"
+                fields={apiFields}
+                initialValues={settings}
+                validationRules={{
+                  'api.rateLimit': { required: true, integer: true, min: 1, max: 100000 },
+                  'api.webhookUrl': { url: true, maxLength: 255 },
+                  'api.webhookSecret': { maxLength: 255 }
+                }}
+                onSubmit={handleSaveSettings}
+                submitText="Save API Settings"
+                showProgress={true}
+                autoSave={false}
+                loading={isSaving}
+              />
+
+              {/* Webhook Test Section */}
+              {settings?.api?.webhookUrl && (
               <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-red-100 rounded-lg">
-                        <Key className="h-6 w-6 text-red-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">Password Policy</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Set requirements for user passwords
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Zap className="h-5 w-5 mr-2" />
+                      Webhook Testing
+                    </CardTitle>
+                    <CardDescription>
+                      Test your webhook endpoint to ensure it's working correctly
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button
+                      onClick={handleTestWebhook}
+                      disabled={isSaving || !settings?.api?.webhookUrl}
+                      className="w-full"
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      {isSaving ? 'Testing...' : 'Test Webhook'}
+                    </Button>
+
+                    {webhookTestResult && (
+                      <div className={`p-3 rounded-lg border ${
+                        webhookTestResult.success
+                          ? 'bg-green-50 border-green-200 text-green-800'
+                          : 'bg-red-50 border-red-200 text-red-800'
+                      }`}>
+                        <div className="flex items-center">
+                          {webhookTestResult.success ? (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                          )}
+                          <div className="flex-1">
+                            <p className="font-medium">{webhookTestResult.message}</p>
+                            <p className="text-xs opacity-75">
+                              Tested at {webhookTestResult.timestamp.toLocaleTimeString()}
                         </p>
                       </div>
                     </div>
-                    <div className="ml-12">
-                      <select
-                        value={settingsData.security.passwordPolicy}
-                        onChange={(e) => setSettingsData(prev => ({
-                          ...prev,
-                          security: {
-                            ...prev.security,
-                            passwordPolicy: e.target.value
-                          }
-                        }))}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      >
-                        <option value="basic">Basic (8+ characters)</option>
-                        <option value="strong">Strong (8+ chars, mixed case, numbers)</option>
-                        <option value="very-strong">Very Strong (12+ chars, special chars)</option>
-                      </select>
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        {settingsData.security.passwordPolicy === 'basic' && 'Minimum 8 characters required'}
-                        {settingsData.security.passwordPolicy === 'strong' && '8+ characters, uppercase, lowercase, and numbers required'}
-                        {settingsData.security.passwordPolicy === 'very-strong' && '12+ characters with special characters, uppercase, lowercase, and numbers required'}
-                      </div>
-                    </div>
-                  </div>
+                        </div>
+                    )}
                 </CardContent>
               </Card>
-
-              {/* IP Whitelist */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <Lock className="h-6 w-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">IP Whitelist</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Restrict access to specific IP addresses (optional)
-                        </p>
-                      </div>
-                    </div>
-                    <div className="ml-12">
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">
-                          Current IP addresses: {settingsData.security.ipWhitelist.length}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Leave empty to allow access from any IP address
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Security Recommendations */}
-            <Card className="border-amber-200 bg-amber-50">
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-amber-800">Security Recommendations</h4>
-                    <ul className="mt-2 text-sm text-amber-700 space-y-1">
-                      <li>• Enable Two-Factor Authentication for maximum security</li>
-                      <li>• Use a strong password policy to protect user accounts</li>
-                      <li>• Set appropriate session timeout to balance security and usability</li>
-                      <li>• Consider IP whitelisting for admin accounts</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Save Button */}
-            <div className="flex justify-end">
-              <Button
-                onClick={() => handleSaveSettings(settingsData)}
-                disabled={getLoadingState('save')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
-              >
-                {getLoadingState('save') ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Security Settings
-                  </>
-                )}
-              </Button>
+              )}
             </div>
           </LoadingWrapper>
         </TabsContent>
 
         {/* Notification Settings */}
-        <TabsContent value="notifications" className="space-y-6">
+        <TabsContent value="notifications">
           <LoadingWrapper
-            isLoading={getLoadingState('initial')}
+            isLoading={settingsLoading}
             loadingComponent={<SkeletonCard />}
           >
-            {/* Progress Indicator */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-2xl font-bold">Notification Settings</CardTitle>
-                    <CardDescription className="text-base mt-2">
-                      Configure how you receive notifications
-                    </CardDescription>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground mb-1">Setup Progress</div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: '100%' }}></div>
-                      </div>
-                      <span className="text-sm font-medium text-blue-600">100% Complete</span>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Notification Types */}
-            <div className="grid gap-6">
-              {/* Email Notifications */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Mail className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">Email Notifications</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Receive notifications via email
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.emailNotifications}
-                        onChange={(e) => setSettingsData(prev => ({
-                          ...prev,
-                          notifications: {
-                            ...prev.notifications,
-                            emailNotifications: e.target.checked
-                          }
-                        }))}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Push Notifications */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Bell className="h-6 w-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">Push Notifications</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Receive push notifications in browser
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.pushNotifications}
-                        onChange={(e) => setSettingsData(prev => ({
-                          ...prev,
-                          notifications: {
-                            ...prev.notifications,
-                            pushNotifications: e.target.checked
-                          }
-                        }))}
-                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* SMS Notifications */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <MessageSquare className="h-6 w-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">SMS Notifications</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Receive notifications via SMS
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.smsNotifications}
-                        onChange={(e) => setSettingsData(prev => ({
-                          ...prev,
-                          notifications: {
-                            ...prev.notifications,
-                            smsNotifications: e.target.checked
-                          }
-                        }))}
-                        className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Notification Frequency */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-lg font-semibold flex items-center">
-                        Notification Frequency
-                        <span className="text-red-500 ml-1">*</span>
-                      </label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        How often you want to receive notifications
-                      </p>
-                    </div>
-                    <select
-                      value={settingsData.notifications.notificationFrequency}
-                      onChange={(e) => setSettingsData(prev => ({
-                        ...prev,
-                        notifications: {
-                          ...prev.notifications,
-                          notificationFrequency: e.target.value
-                        }
-                      }))}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="immediate">Immediate - Get notified right away</option>
-                      <option value="hourly">Hourly - Digest every hour</option>
-                      <option value="daily">Daily - Daily summary at 9 AM</option>
-                      <option value="weekly">Weekly - Weekly summary on Monday</option>
-                    </select>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Save Button */}
-            <div className="flex justify-end">
-              <Button
-                onClick={() => handleSaveSettings(settingsData)}
-                disabled={getLoadingState('save')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
-              >
-                {getLoadingState('save') ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Notification Settings
-                  </>
-                )}
-              </Button>
-            </div>
+            <Form
+              title="Notification Settings"
+              description="Configure how you receive notifications and alerts"
+              fields={notificationFields}
+              initialValues={settings}
+              validationRules={{
+                'notifications.email.enabled': { boolean: true },
+                'notifications.push.enabled': { boolean: true },
+                'notifications.webhook.enabled': { boolean: true }
+              }}
+              onSubmit={handleSaveSettings}
+              submitText="Save Notification Settings"
+              showProgress={true}
+              autoSave={false}
+              loading={isSaving}
+            />
           </LoadingWrapper>
         </TabsContent>
 
@@ -869,7 +1043,7 @@ const Settings = () => {
         <TabsContent value="channels">
           <ChannelsTab
             channels={channels}
-            loading={getLoadingState('initial')}
+            loading={settingsLoading}
           />
         </TabsContent>
 
@@ -879,13 +1053,13 @@ const Settings = () => {
             integrations={integrationsState}
             onConfigure={handleConfigureIntegration}
             onToggle={handleToggleIntegration}
-            loading={getLoadingState('initial')}
+            loading={settingsLoading}
           />
         </TabsContent>
 
         {/* Billing Tab */}
         <TabsContent value="billing">
-          <BillingTab loading={getLoadingState('initial')} />
+          <BillingTab loading={settingsLoading} />
         </TabsContent>
       </Tabs>
 

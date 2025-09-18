@@ -590,7 +590,7 @@ class OrganizationManagementService {
     try {
 
       const response = await api.post(`/v1/organizations/${organizationId}/webhook/test`, {
-        url: webhookUrl
+        webhook_url: webhookUrl
       });
 
       return {
