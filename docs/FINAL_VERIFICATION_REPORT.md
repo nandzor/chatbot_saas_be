@@ -19,7 +19,7 @@ Sistem unified authentication (JWT + Sanctum + Refresh Token) dan admin manageme
 - **Services**: 4 Admin Services berfungsi dengan baik
 - **Resources**: 8 API Resources berfungsi dengan baik
 - **Requests**: 5 Form Requests berfungsi dengan baik
-- **Middleware**: `AdminPermissionMiddleware` berfungsi dengan baik
+- **Middleware**: `AdminPermissionMiddleware` - REMOVED (replaced with robust PermissionMiddleware)
 
 #### 3. **MODEL INTEGRATION** ✅
 - **User Model**: Method `hasPermission`, `hasRole`, `hasAnyRole`, `hasAllRoles` berfungsi
@@ -150,11 +150,11 @@ Total: 52 endpoints
 
 ✅ app/Http/Middleware/
    ├── UnifiedAuthMiddleware.php
-   └── AdminPermissionMiddleware.php
+   └── AdminPermissionMiddleware.php - REMOVED
 
 ✅ routes/
    ├── auth.php (Unified Authentication)
-   └── admin.php (Admin Management)
+   └── admin.php - REMOVED (migrated to /api/v1)
 
 ✅ frontend/src/
    ├── services/AuthService.jsx

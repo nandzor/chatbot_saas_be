@@ -83,7 +83,7 @@ Route::prefix('auth')->middleware(['unified.auth'])->group(function () {
 });
 
 // Administrative routes (require admin permissions)
-Route::prefix('auth')->middleware(['unified.auth', 'admin.only'])->group(function () {
+Route::prefix('auth')->middleware(['unified.auth', 'permission:auth.manage'])->group(function () {
 
     // Force logout user (admin only)
     Route::post('/force-logout/{userId}', [AuthController::class, 'forceLogout'])

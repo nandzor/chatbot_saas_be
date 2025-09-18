@@ -697,7 +697,7 @@ Route::prefix('v1')->group(function () {
         // ====================================================================
 
         Route::prefix('bot-personalities')
-            ->middleware(['admin.only', 'organization'])
+            ->middleware(['permission:bot_personalities.manage', 'organization'])
             ->group(function () {
                 Route::get('/', [BotPersonalityController::class, 'index']);
                 Route::post('/', [BotPersonalityController::class, 'store']);

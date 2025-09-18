@@ -12,7 +12,7 @@ This document provides comprehensive documentation for all API endpoints in the 
 
 ### 2. **Client Management Endpoints** (`/api/admin/clients/`)
 **Purpose**: Super admin only operations
-**Controller**: `ClientManagementController` (Dedicated Admin)
+**Controller**: `OrganizationController` (Integrated with Permission System)
 
 ---
 

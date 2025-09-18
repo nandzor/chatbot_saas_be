@@ -32,17 +32,17 @@ graph TD
     
     E[ClientManagementController] --> F[ClientManagementService]
     
-    G[Middleware Layer] --> H[OrganizationRoleMiddleware]
-    G --> I[OrganizationScopeMiddleware]
-    G --> J[OrganizationAdminMiddleware]
-    G --> K[OrganizationPermissionMiddleware]
+    G[Middleware Layer] --> H[PermissionMiddleware]
+    G --> I[OrganizationAccessMiddleware]
+    G --> J[OrganizationManagementMiddleware]
+    G --> K[SuperAdminMiddleware]
     
     L[Trait Layer] --> M[OrganizationControllerTrait]
 ```
 
 ### **2. Middleware Architecture**
 
-#### **OrganizationRoleMiddleware**
+#### **PermissionMiddleware** (Replaces OrganizationRoleMiddleware)
 ```php
 // Handles role-based access control
 Route::middleware(['organization.role:super_admin'])->group(function () {
@@ -54,7 +54,7 @@ Route::middleware(['organization.role:organization_admin'])->group(function () {
 });
 ```
 
-#### **OrganizationScopeMiddleware**
+#### **OrganizationAccessMiddleware** (Replaces OrganizationScopeMiddleware)
 ```php
 // Handles organization-scoped access
 Route::middleware(['organization.scope'])->group(function () {
@@ -62,7 +62,7 @@ Route::middleware(['organization.scope'])->group(function () {
 });
 ```
 
-#### **OrganizationAdminMiddleware**
+#### **OrganizationManagementMiddleware** (Replaces OrganizationAdminMiddleware)
 ```php
 // Ensures organization admin can only manage their own organization
 Route::middleware(['organization.admin'])->group(function () {
@@ -70,7 +70,7 @@ Route::middleware(['organization.admin'])->group(function () {
 });
 ```
 
-#### **OrganizationPermissionMiddleware**
+#### **SuperAdminMiddleware** (Replaces OrganizationPermissionMiddleware)
 ```php
 // Integrates with existing permission system
 Route::middleware(['organization.permission:organizations.update'])->group(function () {
@@ -163,7 +163,7 @@ Route::prefix('organizations')
 ### **2. Admin Route Structure (Maintained)**
 
 ```php
-// routes/admin.php - Admin-specific routes
+// routes/admin.php - REMOVED (migrated to /api/v1 with robust permission system)
 Route::prefix('clients')
     ->middleware(['client.management'])
     ->group(function () {
