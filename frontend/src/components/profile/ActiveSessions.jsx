@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { profileService } from '@/services/ProfileService';
+import ProfileService from '@/services/ProfileService';
+
+const profileService = new ProfileService();
 import { handleError } from '@/utils/errorHandler';
 import {
   Computer,

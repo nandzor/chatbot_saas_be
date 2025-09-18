@@ -57,13 +57,11 @@ import {
   Building2,
   Globe,
   Users,
-  Computer,
   CreditCard,
   Zap
 } from 'lucide-react';
 import { agentsData, integrationsData } from '@/data/sampleData';
 import IntegrationCard from './IntegrationCard';
-import ActiveSessions from '@/components/profile/ActiveSessions';
 import IntegrationModal from './IntegrationModal';
 import ChannelsTab from './ChannelsTab';
 import IntegrationsTab from './IntegrationsTab';
@@ -95,7 +93,6 @@ const Settings = () => {
     hasChanges,
     loadSettings,
     updateSetting,
-    updateSettings,
     saveSettings,
     resetSettings,
     generateApiKey,
@@ -137,6 +134,14 @@ const Settings = () => {
       setIsSaving(true);
       setError(null);
       setSuccess(null);
+
+      // Validate required fields
+      if (!values?.general?.name) {
+        throw new Error('Organization name is required');
+      }
+      if (!values?.general?.email) {
+        throw new Error('Contact email is required');
+      }
 
       // Sanitize and validate input data
       const toNumber = (val, fallback) => {
@@ -203,8 +208,8 @@ const Settings = () => {
       const result = await saveSettings(sanitizedData);
 
       if (result.success) {
-      setSuccess('Settings saved successfully!');
-      announce('Settings saved successfully');
+        setSuccess('Settings saved successfully!');
+        announce('Settings saved successfully');
         toast.success('Settings saved successfully');
         setLastSaved(new Date());
 
@@ -218,8 +223,8 @@ const Settings = () => {
         };
         setChangeHistory(prev => [changeEntry, ...prev.slice(0, 9)]); // Keep last 10 changes
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000);
       } else {
         throw new Error(result.error || 'Failed to save settings');
       }
@@ -247,9 +252,18 @@ const Settings = () => {
       return;
     }
 
+    // Validate webhook URL format
+    try {
+      new URL(settings.api.webhookUrl);
+    } catch {
+      toast.error('Please enter a valid webhook URL');
+      return;
+    }
+
     try {
       setIsSaving(true);
       setWebhookTestResult(null);
+      setError(null);
 
       const result = await testWebhook();
 
@@ -749,7 +763,14 @@ const Settings = () => {
           )}
           <Button
             variant="outline"
-            onClick={refreshSettings}
+            onClick={async () => {
+              try {
+                await refreshSettings();
+                toast.success('Settings refreshed successfully');
+              } catch (err) {
+                toast.error('Failed to refresh settings');
+              }
+            }}
             disabled={settingsLoading}
             aria-label="Refresh settings"
           >
@@ -805,10 +826,6 @@ const Settings = () => {
           <TabsTrigger value="integrations" className="flex items-center">
             <SettingsIcon className="h-4 w-4 mr-2" />
             Integrations
-          </TabsTrigger>
-          <TabsTrigger value="sessions" className="flex items-center">
-            <Computer className="h-4 w-4 mr-2" />
-            Sessions
           </TabsTrigger>
           <TabsTrigger value="billing" className="flex items-center">
             <CreditCard className="h-4 w-4 mr-2" />
@@ -940,10 +957,17 @@ const Settings = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={generateApiKey}
+                          onClick={async () => {
+                            try {
+                              await generateApiKey();
+                              toast.success('API key generated successfully');
+                            } catch (err) {
+                              toast.error('Failed to generate API key');
+                            }
+                          }}
                           disabled={isSaving}
                         >
-                          <RefreshCw className="h-4 w-4 mr-2" />
+                          <RefreshCw className={`h-4 w-4 mr-2 ${isSaving ? 'animate-spin' : ''}`} />
                           Generate New
                         </Button>
                     </div>
@@ -1066,10 +1090,6 @@ const Settings = () => {
           />
         </TabsContent>
 
-        {/* Sessions Tab */}
-        <TabsContent value="sessions">
-          <ActiveSessions />
-        </TabsContent>
 
         {/* Billing Tab */}
         <TabsContent value="billing">

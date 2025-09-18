@@ -22,6 +22,7 @@ import Knowledge from '@/pages/knowledge/Knowledge';
 import Automations from '@/pages/automations/Automations';
 import Settings from '@/pages/settings/Settings';
 import ProfileSettings from '@/features/shared/ProfileSettings';
+import WhatsAppIntegration from '@/pages/WhatsAppIntegration';
 
 // Role Management Pages
 import RoleList from '@/pages/roles/RoleList';
@@ -160,6 +161,14 @@ export const router = createBrowserRouter([
           {
             path: 'profile',
             element: <ProfileSettings />
+          },
+          {
+            path: 'whatsapp',
+            element: (
+              <RoleBasedRoute requiredPermission="manage_settings">
+                <WhatsAppIntegration />
+              </RoleBasedRoute>
+            )
           },
         ],
       },

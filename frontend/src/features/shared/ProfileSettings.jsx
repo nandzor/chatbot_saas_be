@@ -58,7 +58,9 @@ import {
   useToast,
   Form
 } from '@/components/ui';
-import { profileService } from '@/services/ProfileService';
+import ProfileService from '@/services/ProfileService';
+
+const profileService = new ProfileService();
 import { useAuth } from '@/contexts/AuthContext';
 import {
   User,
@@ -939,4 +941,5 @@ const ProfileSettings = () => {
   );
 };
 
-export default withErrorHandling(ProfileSettings);
+const ProfileSettingsWithErrorHandling = withErrorHandling(ProfileSettings);
+export default ProfileSettingsWithErrorHandling;
