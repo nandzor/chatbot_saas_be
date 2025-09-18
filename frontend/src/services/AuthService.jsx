@@ -10,6 +10,7 @@ class AuthService {
     });
 
     this.refreshPromise = null;
+    this.getCurrentUserPromise = null; // Track getCurrentUser calls
     this.setupInterceptors();
   }
 
@@ -184,6 +185,27 @@ class AuthService {
    * Get current user information
    */
   async getCurrentUser() {
+    // If there's already a pending request, return that promise
+    if (this.getCurrentUserPromise) {
+      return this.getCurrentUserPromise;
+    }
+
+    // Create new promise and store it
+    this.getCurrentUserPromise = this._fetchCurrentUser();
+
+    try {
+      const result = await this.getCurrentUserPromise;
+      return result;
+    } finally {
+      // Clear the promise after completion
+      this.getCurrentUserPromise = null;
+    }
+  }
+
+  /**
+   * Internal method to fetch current user
+   */
+  async _fetchCurrentUser() {
     try {
       const response = await this.api.get('/auth/me');
       return response.data.data;

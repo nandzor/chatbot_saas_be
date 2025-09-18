@@ -319,10 +319,7 @@ const Settings = () => {
     announce(`${integration?.name} integration ${integration?.enabled ? 'disabled' : 'enabled'}`);
   }, [integrationsState, announce]);
 
-  // Load data on mount
-  useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+  // Load data on mount - handled by useOrganizationSettings hook
 
   // Focus management on mount
   useEffect(() => {

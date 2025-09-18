@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { authService } from '@/services/AuthService';
 import { hasPermission as checkPermission, hasRole as checkRole } from '@/utils/permissionUtils';
 
@@ -54,6 +55,11 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState(null);
 
+  // Get current location to avoid API calls on login page
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/auth/login' || location.pathname === '/login';
+
+
   // Safe toaster usage - memoized to prevent infinite loops
   const toaster = useMemo(() => {
     try {
@@ -76,6 +82,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Don't make API calls on login page
+        if (isLoginPage) {
+          setIsLoading(false);
+          return;
+        }
+
         // First check if we have valid tokens
         if (authService.isAuthenticated()) {
           // Try to validate with API
@@ -122,7 +134,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     initializeAuth();
-  }, []);
+  }, [isLoginPage]);
 
   // Login function with unified auth support
   const login = useCallback(async (usernameOrEmail, password) => {
@@ -423,7 +435,7 @@ export const AuthProvider = ({ children }) => {
     isRole,
     getUserPermissions,
     getUserRoles
-  }), [user, isLoading, isAuthenticated, error, login, logout, updateUser, checkAuth, hasPermission, hasAnyPermission, hasAllPermissions, isRole, getUserPermissions, getUserRoles]);
+  }), [user, isLoading, isAuthenticated, error]); // Only include state variables, not functions
 
   // Development logging
   if (import.meta.env.DEV) {

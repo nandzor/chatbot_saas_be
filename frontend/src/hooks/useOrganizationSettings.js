@@ -124,6 +124,7 @@ export const useOrganizationSettings = (organizationId) => {
   // Refs to prevent unnecessary re-renders
   const isInitialLoad = useRef(true);
   const lastLoadParams = useRef(null);
+  const isLoadingRef = useRef(false);
 
   // Load organization settings
   const loadSettings = useCallback(async (forceRefresh = false) => {
@@ -139,6 +140,12 @@ export const useOrganizationSettings = (organizationId) => {
       return;
     }
 
+    // Prevent multiple simultaneous calls
+    if (isLoadingRef.current) {
+      return;
+    }
+
+    isLoadingRef.current = true;
     setLoading(true);
     setError(null);
     lastLoadParams.current = currentParams;
@@ -280,6 +287,7 @@ export const useOrganizationSettings = (organizationId) => {
       toast.error(errorMessage);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
       isInitialLoad.current = false;
     }
   }, [organizationId]);
@@ -287,7 +295,7 @@ export const useOrganizationSettings = (organizationId) => {
   // Load settings on mount
   useEffect(() => {
     loadSettings();
-  }, [loadSettings]);
+  }, [organizationId]); // Only depend on organizationId, not loadSettings
 
   // Update setting field
   const updateSetting = useCallback((path, value) => {

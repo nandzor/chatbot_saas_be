@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache - ChatBot Pro</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        .icon {
+            width: 80px;
+            height: 80px;
+            background: #10B981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+        }
+        h1 {
+            color: #1F2937;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        p {
+            color: #6B7280;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .button {
+            background: #3B82F6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 0 10px;
+        }
+        .button:hover {
+            background: #2563EB;
+        }
+        .button.secondary {
+            background: #6B7280;
+        }
+        .button.secondary:hover {
+            background: #4B5563;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #D1FAE5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+        .status.error {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🧹</div>
+        <h1>Clear Cache & Storage</h1>
+        <p>
+            This will clear all browser cache, local storage, and session data that might contain old redirects to <code>/chatbot-saas/</code>.
+        </p>
+        <button class="button" onclick="clearAll()">Clear All Data</button>
+        <button class="button secondary" onclick="goHome()">Go to Home</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function clearAll() {
+            try {
+                // Clear all local storage
+                localStorage.clear();
+                console.log('✅ Local storage cleared');
+
+                // Clear all session storage
+                sessionStorage.clear();
+                console.log('✅ Session storage cleared');
+
+                // Clear all cookies
+                document.cookie.split(";").forEach(function(c) {
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
+                console.log('✅ Cookies cleared');
+
+                // Clear all caches
+                if ('caches' in window) {
+                    caches.keys().then(function(names) {
+                        for (let name of names) {
+                            caches.delete(name);
+                        }
+                        console.log('✅ Caches cleared');
+                    });
+                }
+
+                // Clear service worker if exists
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                        for(let registration of registrations) {
+                            registration.unregister();
+                        }
+                        console.log('✅ Service workers cleared');
+                    });
+                }
+
+                showStatus('✅ All data cleared successfully! Redirecting to home...', 'success');
+
+                // Redirect to home after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+
+            } catch (error) {
+                console.error('❌ Error clearing data:', error);
+                showStatus('❌ Error clearing data: ' + error.message, 'error');
+            }
+        }
+
+        function goHome() {
+            window.location.href = '/';
+        }
+
+        // Auto-clear on page load
+        window.addEventListener('load', function() {
+            // Check if we're coming from a redirect
+            if (window.location.search.includes('clear=true')) {
+                clearAll();
+            }
+        });
+    </script>
+</body>
+</html>
