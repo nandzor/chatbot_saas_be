@@ -22,7 +22,7 @@ export class ErrorBoundary extends React.Component {
     });
 
     // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
     }
 
     // You can also log the error to an error reporting service here
@@ -60,7 +60,7 @@ export class ErrorBoundary extends React.Component {
               We encountered an unexpected error. Please try again or contact support if the problem persists.
             </p>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="text-left mb-6 p-4 bg-gray-50 rounded-lg">
                 <summary className="cursor-pointer text-sm font-medium text-gray-700 mb-2">
                   Error Details (Development)

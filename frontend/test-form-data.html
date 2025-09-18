@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Form Data - ChatBot Pro</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+        }
+        .icon {
+            width: 80px;
+            height: 80px;
+            background: #10B981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+        }
+        h1 {
+            color: #1F2937;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        p {
+            color: #6B7280;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .data-display {
+            background: #F3F4F6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+            font-family: monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .field-test {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .field-test h3 {
+            color: #1E40AF;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .field-test .field-value {
+            color: #059669;
+            font-weight: 500;
+        }
+        .field-test .field-path {
+            color: #6B7280;
+            font-size: 12px;
+        }
+        .button {
+            background: #3B82F6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 0 10px;
+        }
+        .button:hover {
+            background: #2563EB;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🧪</div>
+        <h1>Test Form Data Mapping</h1>
+        <p>
+            Testing how backend data maps to frontend form fields for General Settings tab.
+        </p>
+
+        <div class="data-display">
+            <h3>Backend Data Structure:</h3>
+            <pre id="backend-data"></pre>
+        </div>
+
+        <div class="data-display">
+            <h3>Form Field Mapping Test:</h3>
+            <div id="field-tests"></div>
+        </div>
+
+        <button class="button" onclick="testFormMapping()">Test Form Mapping</button>
+        <button class="button" onclick="goToSettings()">Go to Settings</button>
+    </div>
+
+    <script>
+        // Backend data structure
+        const backendData = {
+            "general": {
+                "name": "Test Company Ltd",
+                "displayName": "Test Co.",
+                "email": "admin@test.com",
+                "phone": "+6281234567890",
+                "website": "https://testorg.com",
+                "taxId": null,
+                "address": "Jl. Test No. 123, Jakarta",
+                "description": null,
+                "logo": null,
+                "timezone": "Asia/Jakarta",
+                "locale": "id",
+                "currency": "IDR"
+            },
+            "system": {
+                "status": "active",
+                "businessType": "Technology",
+                "industry": "Software Development",
+                "companySize": "10-50",
+                "foundedYear": null,
+                "employeeCount": 0,
+                "annualRevenue": "0.00",
+                "socialMedia": []
+            },
+            "api": {
+                "apiKey": null,
+                "webhookUrl": null,
+                "webhookSecret": null,
+                "rateLimit": 1000,
+                "allowedOrigins": [],
+                "enableApiAccess": false,
+                "enableWebhooks": false
+            },
+            "subscription": {
+                "plan": "free",
+                "billingCycle": "monthly",
+                "status": "trial",
+                "startDate": null,
+                "endDate": null,
+                "autoRenew": true,
+                "features": [],
+                "limits": []
+            },
+            "security": {
+                "twoFactorAuth": false,
+                "ssoEnabled": false,
+                "ssoProvider": null,
+                "passwordPolicy": [],
+                "sessionTimeout": 30,
+                "ipWhitelist": [],
+                "allowedDomains": []
+            },
+            "notifications": {
+                "email": [],
+                "push": [],
+                "webhook": []
+            },
+            "features": {
+                "chatbot": [],
+                "analytics": [],
+                "integrations": [],
+                "customBranding": []
+            }
+        };
+
+        // Form field definitions
+        const generalFields = [
+            { name: 'general.name', label: 'Organization Name' },
+            { name: 'general.displayName', label: 'Display Name' },
+            { name: 'general.email', label: 'Contact Email' },
+            { name: 'general.phone', label: 'Phone Number' },
+            { name: 'general.website', label: 'Website' },
+            { name: 'general.taxId', label: 'Tax ID' },
+            { name: 'general.address', label: 'Address' },
+            { name: 'general.description', label: 'Description' },
+            { name: 'general.timezone', label: 'Timezone' },
+            { name: 'general.locale', label: 'Locale' },
+            { name: 'general.currency', label: 'Currency' }
+        ];
+
+        // Helper function to get nested value
+        function getNestedValue(obj, path) {
+            return path.split('.').reduce((current, key) => {
+                return current && current[key] !== undefined ? current[key] : '';
+            }, obj);
+        }
+
+        function testFormMapping() {
+            // Display backend data
+            document.getElementById('backend-data').textContent = JSON.stringify(backendData, null, 2);
+
+            // Test field mapping
+            const fieldTestsContainer = document.getElementById('field-tests');
+            fieldTestsContainer.innerHTML = '';
+
+            generalFields.forEach(field => {
+                const value = getNestedValue(backendData, field.name);
+                const fieldTest = document.createElement('div');
+                fieldTest.className = 'field-test';
+                fieldTest.innerHTML = `
+                    <h3>${field.label}</h3>
+                    <div class="field-path">Path: ${field.name}</div>
+                    <div class="field-value">Value: ${value || '(empty)'}</div>
+                `;
+                fieldTestsContainer.appendChild(fieldTest);
+            });
+        }
+
+        function goToSettings() {
+            window.location.href = '/dashboard/settings';
+        }
+
+        // Auto-run test on page load
+        window.addEventListener('load', testFormMapping);
+    </script>
+</body>
+</html>

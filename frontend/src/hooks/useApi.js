@@ -53,7 +53,7 @@ export const useApi = (apiFunction, options = {}) => {
     setRefreshing(false);
   }, [execute]);
 
-  const retry = useCallback(async (params = {}) => {
+  const retryRequest = useCallback(async (params = {}) => {
     if (retry > 0) {
       for (let i = 0; i < retry; i++) {
         try {
@@ -82,7 +82,7 @@ export const useApi = (apiFunction, options = {}) => {
     refreshing,
     execute,
     refresh,
-    retry,
+    retry: retryRequest,
     setData,
     setError
   };

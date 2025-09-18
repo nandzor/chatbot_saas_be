@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/services/AuthService';
 
@@ -9,6 +9,9 @@ const useClientSettings = () => {
   const [error, setError] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
   const { isAuthenticated } = useAuth();
+
+  // Ref to prevent multiple simultaneous calls
+  const isLoadingRef = useRef(false);
 
   // Get token from localStorage
   const getToken = () => {
@@ -41,6 +44,12 @@ const useClientSettings = () => {
       return;
     }
 
+    // Prevent multiple simultaneous calls
+    if (isLoadingRef.current) {
+      return;
+    }
+
+    isLoadingRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -69,6 +78,7 @@ const useClientSettings = () => {
       setSettings(getDefaultSettings());
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
   }, [isAuthenticated, API_BASE_URL]);
 
@@ -291,7 +301,7 @@ const useClientSettings = () => {
   // Load settings on mount
   useEffect(() => {
     loadSettings();
-  }, [loadSettings]);
+  }, [isAuthenticated]); // Only depend on isAuthenticated, not loadSettings
 
   return {
     settings,

@@ -525,9 +525,9 @@ class User extends Authenticatable implements JWTSubject
             return true;
         }
 
-        // Check direct permissions (stored as codes in permissions field)
+        // Check direct permissions (stored as key-value pairs in permissions field)
         $directPermissions = $this->permissions ?? [];
-        if (in_array($permissionCode, $directPermissions)) {
+        if (isset($directPermissions[$permissionCode]) && $directPermissions[$permissionCode] === true) {
             return true;
         }
 
@@ -541,8 +541,16 @@ class User extends Authenticatable implements JWTSubject
      */
     public function hasAnyPermission(array $permissions): bool
     {
-        $userPermissions = $this->getAllPermissions()->pluck('code')->toArray();
+        // Check direct permissions first
+        $directPermissions = $this->permissions ?? [];
+        foreach ($permissions as $permission) {
+            if (isset($directPermissions[$permission]) && $directPermissions[$permission] === true) {
+                return true;
+            }
+        }
 
+        // Check permissions from roles
+        $userPermissions = $this->getAllPermissions()->pluck('code')->toArray();
         return !empty(array_intersect($permissions, $userPermissions));
     }
 
@@ -551,8 +559,21 @@ class User extends Authenticatable implements JWTSubject
      */
     public function hasAllPermissions(array $permissions): bool
     {
-        $userPermissions = $this->getAllPermissions()->pluck('code')->toArray();
+        // Check direct permissions first
+        $directPermissions = $this->permissions ?? [];
+        $hasAllDirect = true;
+        foreach ($permissions as $permission) {
+            if (!isset($directPermissions[$permission]) || $directPermissions[$permission] !== true) {
+                $hasAllDirect = false;
+                break;
+            }
+        }
+        if ($hasAllDirect) {
+            return true;
+        }
 
+        // Check permissions from roles
+        $userPermissions = $this->getAllPermissions()->pluck('code')->toArray();
         return empty(array_diff($permissions, $userPermissions));
     }
 
@@ -561,11 +582,17 @@ class User extends Authenticatable implements JWTSubject
      */
     public function hasRole(string $role): bool
     {
-        if (!$this->relationLoaded('roles')) {
-            $this->load('roles');
+        // Check direct role field first
+        if ($this->role === $role) {
+            return true;
         }
 
-        return $this->roles->contains('code', $role);
+        // Check roles through relation if loaded
+        if ($this->relationLoaded('roles')) {
+            return $this->roles->contains('code', $role);
+        }
+
+        return false;
     }
 
     /**
@@ -573,13 +600,18 @@ class User extends Authenticatable implements JWTSubject
      */
     public function hasAnyRole(array $roles): bool
     {
-        if (!$this->relationLoaded('roles')) {
-            $this->load('roles');
+        // Check direct role field first
+        if (in_array($this->role, $roles)) {
+            return true;
         }
 
-        $userRoles = $this->roles->pluck('code')->toArray();
+        // Check roles through relation if loaded
+        if ($this->relationLoaded('roles')) {
+            $userRoles = $this->roles->pluck('code')->toArray();
+            return !empty(array_intersect($roles, $userRoles));
+        }
 
-        return !empty(array_intersect($roles, $userRoles));
+        return false;
     }
 
     /**

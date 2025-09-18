@@ -93,7 +93,6 @@ const Settings = () => {
     hasChanges,
     loadSettings,
     updateSetting,
-    updateSettings,
     saveSettings,
     resetSettings,
     generateApiKey,
@@ -135,6 +134,14 @@ const Settings = () => {
       setIsSaving(true);
       setError(null);
       setSuccess(null);
+
+      // Validate required fields
+      if (!values?.general?.name) {
+        throw new Error('Organization name is required');
+      }
+      if (!values?.general?.email) {
+        throw new Error('Contact email is required');
+      }
 
       // Sanitize and validate input data
       const toNumber = (val, fallback) => {
@@ -201,8 +208,8 @@ const Settings = () => {
       const result = await saveSettings(sanitizedData);
 
       if (result.success) {
-      setSuccess('Settings saved successfully!');
-      announce('Settings saved successfully');
+        setSuccess('Settings saved successfully!');
+        announce('Settings saved successfully');
         toast.success('Settings saved successfully');
         setLastSaved(new Date());
 
@@ -216,8 +223,8 @@ const Settings = () => {
         };
         setChangeHistory(prev => [changeEntry, ...prev.slice(0, 9)]); // Keep last 10 changes
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000);
       } else {
         throw new Error(result.error || 'Failed to save settings');
       }
@@ -245,9 +252,18 @@ const Settings = () => {
       return;
     }
 
+    // Validate webhook URL format
+    try {
+      new URL(settings.api.webhookUrl);
+    } catch {
+      toast.error('Please enter a valid webhook URL');
+      return;
+    }
+
     try {
       setIsSaving(true);
       setWebhookTestResult(null);
+      setError(null);
 
       const result = await testWebhook();
 
@@ -319,10 +335,7 @@ const Settings = () => {
     announce(`${integration?.name} integration ${integration?.enabled ? 'disabled' : 'enabled'}`);
   }, [integrationsState, announce]);
 
-  // Load data on mount
-  useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+  // Load data on mount - handled by useOrganizationSettings hook
 
   // Focus management on mount
   useEffect(() => {
@@ -750,7 +763,14 @@ const Settings = () => {
           )}
           <Button
             variant="outline"
-            onClick={refreshSettings}
+            onClick={async () => {
+              try {
+                await refreshSettings();
+                toast.success('Settings refreshed successfully');
+              } catch (err) {
+                toast.error('Failed to refresh settings');
+              }
+            }}
             disabled={settingsLoading}
             aria-label="Refresh settings"
           >
@@ -937,10 +957,17 @@ const Settings = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={generateApiKey}
+                          onClick={async () => {
+                            try {
+                              await generateApiKey();
+                              toast.success('API key generated successfully');
+                            } catch (err) {
+                              toast.error('Failed to generate API key');
+                            }
+                          }}
                           disabled={isSaving}
                         >
-                          <RefreshCw className="h-4 w-4 mr-2" />
+                          <RefreshCw className={`h-4 w-4 mr-2 ${isSaving ? 'animate-spin' : ''}`} />
                           Generate New
                         </Button>
                     </div>
@@ -1062,6 +1089,7 @@ const Settings = () => {
             loading={settingsLoading}
           />
         </TabsContent>
+
 
         {/* Billing Tab */}
         <TabsContent value="billing">

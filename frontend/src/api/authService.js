@@ -7,16 +7,16 @@ class AuthService {
     try {
       const response = await api.post('/auth/login', credentials);
       const { token, user } = response.data;
-      
+
       // Store auth data
       localStorage.setItem(AUTH_TOKEN_KEY, token);
       localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
-      
+
       return { success: true, user, token };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Login failed' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Login failed'
       };
     }
   }
@@ -27,9 +27,9 @@ class AuthService {
       const response = await api.post('/auth/register', userData);
       return { success: true, data: response.data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Registration failed' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Registration failed'
       };
     }
   }
@@ -40,6 +40,7 @@ class AuthService {
       // Call logout endpoint if available
       await api.post('/auth/logout');
     } catch (error) {
+      console.warn('Logout API error:', error);
     } finally {
       // Clear local storage regardless of API call success
       localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -53,7 +54,7 @@ class AuthService {
     try {
       const response = await api.post('/auth/refresh');
       const { token } = response.data;
-      
+
       localStorage.setItem(AUTH_TOKEN_KEY, token);
       return { success: true, token };
     } catch (error) {
@@ -67,9 +68,9 @@ class AuthService {
       const response = await api.post('/auth/forgot-password', { email });
       return { success: true, data: response.data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Password reset request failed' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Password reset request failed'
       };
     }
   }
@@ -83,9 +84,9 @@ class AuthService {
       });
       return { success: true, data: response.data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Password reset failed' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Password reset failed'
       };
     }
   }
@@ -96,9 +97,9 @@ class AuthService {
       const response = await api.get('/auth/me');
       return { success: true, user: response.data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Failed to get user data' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to get user data'
       };
     }
   }
@@ -107,17 +108,17 @@ class AuthService {
   async updateProfile(userData) {
     try {
       const response = await api.put('/auth/profile', userData);
-      
+
       // Update stored user data
       const currentUser = JSON.parse(localStorage.getItem(USER_DATA_KEY) || '{}');
       const updatedUser = { ...currentUser, ...response.data };
       localStorage.setItem(USER_DATA_KEY, JSON.stringify(updatedUser));
-      
+
       return { success: true, user: updatedUser };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Profile update failed' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Profile update failed'
       };
     }
   }
@@ -131,9 +132,9 @@ class AuthService {
       });
       return { success: true, data: response.data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Password change failed' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Password change failed'
       };
     }
   }

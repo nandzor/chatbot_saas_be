@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Button,
   Badge,
@@ -14,7 +14,7 @@ import {
   Progress,
   Separator
 } from '@/components/ui';
-import { 
+import {
   QrCode,
   Smartphone,
   CheckCircle,
@@ -26,6 +26,9 @@ import {
   Clock,
   Zap
 } from 'lucide-react';
+import { wahaService } from '@/services/WahaService';
+import { handleError } from '@/utils/errorHandler';
+import toast from 'react-hot-toast';
 
 const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
   const [connectionStep, setConnectionStep] = useState('initializing'); // initializing, qr-ready, scanning, connected, naming, completed
@@ -34,25 +37,45 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
   const [sessionId, setSessionId] = useState('');
   const [connectionTimeout, setConnectionTimeout] = useState(120); // 2 minutes
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [monitoringInterval, setMonitoringInterval] = useState(null);
 
-  // Simulate QR generation
+  // Initialize WAHA session and get QR code
   useEffect(() => {
     if (connectionStep === 'initializing') {
-      setIsLoading(true);
-      // Simulate WAHA session initialization
-      const timer = setTimeout(() => {
-        const generatedSessionId = `session_${Date.now()}`;
-        setSessionId(generatedSessionId);
-        // Generate QR code data (in real implementation, this would come from WAHA API)
-        setQrCode(`https://wa.me/qr/${generatedSessionId}_${Date.now()}`);
-        setConnectionStep('qr-ready');
-        setIsLoading(false);
-        startConnectionTimer();
-      }, 3000);
-
-      return () => clearTimeout(timer);
+      initializeWahaSession();
     }
   }, [connectionStep]);
+
+  const initializeWahaSession = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Generate unique session ID
+      const generatedSessionId = `whatsapp_${Date.now()}`;
+      setSessionId(generatedSessionId);
+
+      // Create WAHA session
+      const result = await wahaService.createSession(generatedSessionId);
+
+      if (result.qrCode) {
+        setQrCode(result.qrCode);
+        setConnectionStep('qr-ready');
+        startConnectionTimer();
+        startMonitoring();
+      } else {
+        throw new Error('QR code tidak tersedia');
+      }
+    } catch (err) {
+      const errorMessage = handleError(err);
+      setError(errorMessage);
+      toast.error(`Gagal membuat sesi WAHA: ${errorMessage.message}`);
+      setConnectionStep('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Connection timeout timer
   const startConnectionTimer = () => {
@@ -69,39 +92,55 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
       });
     }, 1000);
 
-    // Simulate successful connection after some time
-    const connectionTimer = setTimeout(() => {
-      if (connectionStep === 'qr-ready' || connectionStep === 'scanning') {
-        setConnectionStep('connected');
-        clearInterval(interval);
-      }
-    }, 15000); // Simulate connection after 15 seconds
+    return () => clearInterval(interval);
+  };
 
-    return () => {
-      clearInterval(interval);
-      clearTimeout(connectionTimer);
-    };
+  // Start monitoring session connection
+  const startMonitoring = () => {
+    if (!sessionId) return;
+
+    const stopMonitoring = wahaService.monitorSession(sessionId, (status) => {
+      if (status.connected) {
+        setConnectionStep('connected');
+        toast.success('WhatsApp berhasil terhubung!');
+        stopMonitoring();
+      } else if (status.status === 'error') {
+        setError(status.error);
+        setConnectionStep('error');
+        stopMonitoring();
+      }
+    }, 2000);
+
+    setMonitoringInterval(() => stopMonitoring);
   };
 
   const handleRetry = () => {
+    // Clean up monitoring
+    if (monitoringInterval) {
+      monitoringInterval();
+      setMonitoringInterval(null);
+    }
+
     setConnectionStep('initializing');
     setConnectionTimeout(120);
     setQrCode('');
     setSessionId('');
+    setError(null);
   };
 
-  const handleSaveInbox = () => {
+  const handleSaveInbox = async () => {
     if (!inboxName.trim()) {
-      alert('Nama inbox wajib diisi');
+      toast.error('Nama inbox wajib diisi');
       return;
     }
 
-    setIsLoading(true);
-    // Simulate saving inbox
-    setTimeout(() => {
+    try {
+      setIsLoading(true);
+
+      // Here you would typically save the inbox configuration to your backend
+      // For now, we'll just simulate the success
       setConnectionStep('completed');
-      setIsLoading(false);
-      
+
       // Call success callback
       setTimeout(() => {
         onSuccess?.({
@@ -109,10 +148,16 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
           name: inboxName,
           platform: 'whatsapp',
           status: 'connected',
-          method: 'qr_scan'
+          method: 'qr_scan',
+          wahaSessionId: sessionId
         });
       }, 2000);
-    }, 1500);
+    } catch (err) {
+      const errorMessage = handleError(err);
+      toast.error(`Gagal menyimpan inbox: ${errorMessage.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -121,6 +166,15 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (monitoringInterval) {
+        monitoringInterval();
+      }
+    };
+  }, [monitoringInterval]);
+
   const getStepProgress = () => {
     const steps = {
       'initializing': 0,
@@ -128,7 +182,9 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
       'scanning': 50,
       'connected': 75,
       'naming': 90,
-      'completed': 100
+      'completed': 100,
+      'error': 0,
+      'timeout': 0
     };
     return steps[connectionStep] || 0;
   };
@@ -161,7 +217,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
           <Alert className="border-orange-200 bg-orange-50">
             <AlertTriangle className="h-4 w-4 text-orange-600" />
             <AlertDescription className="text-orange-800">
-              <strong>Penting:</strong> Metode WAHA Session bersifat tidak resmi dan memiliki risiko pemblokiran oleh WhatsApp. 
+              <strong>Penting:</strong> Metode WAHA Session bersifat tidak resmi dan memiliki risiko pemblokiran oleh WhatsApp.
               Cocok untuk skala kecil atau masa percobaan.
             </AlertDescription>
           </Alert>
@@ -196,9 +252,22 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
 
               {/* QR Code Display */}
               <div className="bg-white p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
-                <QrCode className="w-32 h-32 mx-auto text-gray-400 mb-4" />
-                <p className="text-xs text-muted-foreground">QR Code akan muncul di sini</p>
-                <p className="text-xs text-muted-foreground mt-1">Session ID: {sessionId}</p>
+                {qrCode ? (
+                  <div className="space-y-2">
+                    <img
+                      src={qrCode}
+                      alt="WhatsApp QR Code"
+                      className="w-32 h-32 mx-auto border rounded"
+                    />
+                    <p className="text-xs text-green-600 font-medium">QR Code siap dipindai</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <QrCode className="w-32 h-32 mx-auto text-gray-400" />
+                    <p className="text-xs text-muted-foreground">Memuat QR Code...</p>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">Session ID: {sessionId}</p>
               </div>
 
               {/* Instructions */}
@@ -219,8 +288,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
                 <Badge variant="outline">{formatTime(connectionTimeout)}</Badge>
               </div>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleRetry}
                 className="w-full"
               >
@@ -259,8 +328,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
                   WhatsApp telah terhubung dengan platform. Berikan nama untuk inbox ini.
                 </p>
               </div>
-              <Button 
-                onClick={() => setConnectionStep('naming')} 
+              <Button
+                onClick={() => setConnectionStep('naming')}
                 className="w-full"
               >
                 Lanjutkan
@@ -320,14 +389,14 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
               </div>
 
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setConnectionStep('connected')}
                   className="flex-1"
                 >
                   Kembali
                 </Button>
-                <Button 
+                <Button
                   onClick={handleSaveInbox}
                   disabled={!inboxName.trim() || isLoading}
                   className="flex-1"
@@ -374,6 +443,30 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
               <Button onClick={onClose} className="w-full">
                 <Zap className="w-4 h-4 mr-2" />
                 Mulai Menggunakan Inbox
+              </Button>
+            </div>
+          )}
+
+          {/* Error Step */}
+          {connectionStep === 'error' && (
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2 text-red-700">Terjadi Kesalahan</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {error?.message || 'Gagal membuat sesi WAHA. Silakan coba lagi.'}
+                </p>
+                {error?.details && (
+                  <p className="text-xs text-muted-foreground">
+                    Detail: {error.details}
+                  </p>
+                )}
+              </div>
+              <Button onClick={handleRetry} className="w-full">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Coba Lagi
               </Button>
             </div>
           )}

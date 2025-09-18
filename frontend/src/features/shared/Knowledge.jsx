@@ -49,7 +49,8 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
+  Pagination
 } from '@/components/ui';
 import {
   Plus,
@@ -118,6 +119,14 @@ const Knowledge = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingArticle, setEditingArticle] = useState(null);
   const [activeTab, setActiveTab] = useState('qa');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [paginationLoading, setPaginationLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // Enhanced loading states
   const {
@@ -284,61 +293,106 @@ const Knowledge = () => {
   const activeArticleCount = articles.filter(article => article.status === 'active').length;
   const activeArticle = articles.find(article => article.status === 'active');
 
-  // Enhanced data loading with better error handling
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setLoadingState(LOADING_TYPES.INITIAL, true);
-        clearErrorState();
-        setLoadError('');
+  // Enhanced data loading with pagination support
+  const fetchData = async (page = currentPage, itemsPerPage = perPage, search = searchTerm) => {
+    try {
+      setLoading(true);
+      setPaginationLoading(true);
+      setLoadingState(LOADING_TYPES.INITIAL, true);
+      clearErrorState();
+      setLoadError('');
 
-        announce('Loading knowledge base data...');
+      announce('Loading knowledge base data...');
 
-        const [itemsRes, catsRes] = await Promise.all([
-          KnowledgeBaseService.list({ per_page: 50 }),
-          KnowledgeBaseService.getCategories({ only_public: false })
-        ]);
+      // Build query parameters
+      const queryParams = {
+        page,
+        per_page: itemsPerPage,
+        ...(search && { search })
+      };
 
-        if (catsRes.success) {
-          setCategoryOptions(catsRes.data || []);
-          // Set default category only if not already set
-          setDefaultCategoryId(prev => {
-            if (!prev && (catsRes.data?.length || 0) > 0) {
-              return catsRes.data[0].id;
-            }
-            return prev;
-          });
-          announce(`Loaded ${catsRes.data?.length || 0} categories`);
-        } else {
-          handleApiError(catsRes, 'load categories');
-        }
+      const [itemsRes, catsRes] = await Promise.all([
+        KnowledgeBaseService.list(queryParams),
+        KnowledgeBaseService.getCategories({ only_public: false })
+      ]);
 
-        if (itemsRes.success) {
-          const items = (itemsRes.data?.data || []).map(it => transformBackendToFrontend(it));
-          setArticles(items);
-          // Set default category from first article only if not already set
-          setDefaultCategoryId(prev => {
-            if (!prev && items.length > 0 && items[0].category_id) {
-              return items[0].category_id;
-            }
-            return prev;
-          });
-          announce(`Loaded ${items.length} knowledge articles`);
-        } else {
-          handleApiError(itemsRes, 'load articles');
-        }
-      } catch (error) {
-        const errorMessage = handleApiError(error, 'load knowledge base data');
-        setLoadError(errorMessage);
-        announce(`Error: ${errorMessage}`);
-      } finally {
-        setLoading(false);
-        setLoadingState(LOADING_TYPES.INITIAL, false);
+      if (catsRes.success) {
+        setCategoryOptions(catsRes.data || []);
+        // Set default category only if not already set
+        setDefaultCategoryId(prev => {
+          if (!prev && (catsRes.data?.length || 0) > 0) {
+            return catsRes.data[0].id;
+          }
+          return prev;
+        });
+        announce(`Loaded ${catsRes.data?.length || 0} categories`);
+      } else {
+        handleApiError(catsRes, 'load categories');
       }
-    };
+
+      if (itemsRes.success) {
+        const items = (itemsRes.data?.data || []).map(it => transformBackendToFrontend(it));
+        setArticles(items);
+
+        // Update pagination info
+        if (itemsRes.data?.pagination) {
+          const pagination = itemsRes.data.pagination;
+          setTotalPages(pagination.last_page || 1);
+          setTotalItems(pagination.total || 0);
+          setCurrentPage(pagination.current_page || 1);
+        }
+
+        // Set default category from first article only if not already set
+        setDefaultCategoryId(prev => {
+          if (!prev && items.length > 0 && items[0].category_id) {
+            return items[0].category_id;
+          }
+          return prev;
+        });
+        announce(`Loaded ${items.length} knowledge articles`);
+      } else {
+        handleApiError(itemsRes, 'load articles');
+      }
+    } catch (error) {
+      const errorMessage = handleApiError(error, 'load knowledge base data');
+      setLoadError(errorMessage);
+      announce(`Error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+      setPaginationLoading(false);
+      setLoadingState(LOADING_TYPES.INITIAL, false);
+    }
+  };
+
+  // Initial data loading
+  useEffect(() => {
     fetchData();
   }, []);
+
+  // Handle pagination changes
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchData(page, perPage, searchTerm);
+  };
+
+  const handlePerPageChange = (newPerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1); // Reset to first page
+    fetchData(1, newPerPage, searchTerm);
+  };
+
+  // Handle search with pagination and debounce
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setCurrentPage(1); // Reset to first page when searching
+    setSearchLoading(true);
+    // Debounce search to avoid too many API calls
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      fetchData(1, perPage, term);
+      setSearchLoading(false);
+    }, 500); // 500ms delay
+  };
 
   const transformBackendToFrontend = (item) => {
     const isQA = (item.content_type === 'qa_collection');
@@ -385,11 +439,8 @@ const Knowledge = () => {
     }
   };
 
-  // Filter articles berdasarkan search term
-  const filteredArticles = articles.filter(article =>
-    article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    article.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Articles are now filtered server-side, so we use articles directly
+  const filteredArticles = articles;
 
   // Fungsi untuk toggle status active/inactive (hanya 1 yang bisa aktif)
   // Enhanced toggle status with error handling
@@ -451,7 +502,8 @@ const Knowledge = () => {
       const res = await KnowledgeBaseService.remove(id);
 
       if (res.success) {
-        setArticles(prev => prev.filter(a => a.id !== id));
+        // Refresh list with current pagination
+        await fetchData(currentPage, perPage, searchTerm);
         announce('Knowledge article deleted successfully');
         clearErrorState();
       } else {
@@ -646,11 +698,8 @@ const Knowledge = () => {
       }
 
       if (res.success) {
-        // Refresh list
-        const list = await KnowledgeBaseService.list({ per_page: 50 });
-        if (list.success) {
-          setArticles((list.data?.data || []).map(transformBackendToFrontend));
-        }
+        // Refresh list with current pagination
+        await fetchData(currentPage, perPage, searchTerm);
         // Reset form and close
         resetForm();
         setIsCreating(false);
@@ -920,9 +969,15 @@ const Knowledge = () => {
         <Input
           placeholder="Cari knowledge..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           className="pl-10"
+          disabled={searchLoading}
         />
+        {searchLoading && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
       </div>
 
       {/* Articles Table */}
@@ -930,7 +985,20 @@ const Knowledge = () => {
         <CardHeader>
           <CardTitle>Daftar Knowledge</CardTitle>
           <CardDescription>
-            {loading ? 'Memuat...' : `${filteredArticles.length} knowledge tersedia`}
+            {loading ? 'Memuat...' : (
+              <div className="flex items-center justify-between">
+                <span>
+                  {searchTerm ? `Hasil pencarian "${searchTerm}"` : 'Semua knowledge'} -
+                  Menampilkan {filteredArticles.length} dari {totalItems} total
+                </span>
+                {searchLoading && (
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm">Mencari...</span>
+                  </div>
+                )}
+              </div>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1045,6 +1113,31 @@ const Knowledge = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            perPage={perPage}
+            onPageChange={handlePageChange}
+            onPerPageChange={handlePerPageChange}
+            perPageOptions={[5, 10, 25, 50, 100]}
+            variant="table"
+            size="default"
+            loading={paginationLoading}
+            showPageInfo={true}
+            showPerPageSelector={true}
+            showFirstLast={true}
+            showPrevNext={true}
+            showPageNumbers={true}
+            className="w-full max-w-4xl"
+            ariaLabel="Knowledge articles pagination"
+          />
+        </div>
+      )}
 
       {/* Create/Edit Modal */}
       {isCreating && (

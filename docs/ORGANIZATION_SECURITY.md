@@ -20,7 +20,7 @@ Dokumen ini menjelaskan implementasi keamanan untuk memastikan organization admi
 
 ## 🏗️ Komponen Keamanan
 
-### **1. OrganizationAdminMiddleware**
+### **1. OrganizationManagementMiddleware** (Replaces OrganizationAdminMiddleware)
 
 ```php
 // Middleware khusus untuk organization admin
@@ -35,7 +35,7 @@ Route::middleware(['organization.admin'])->group(function () {
 - ✅ **Type Safety**: Konversi ID ke integer untuk perbandingan yang akurat
 - ✅ **Debug Info**: Menyediakan informasi debug untuk troubleshooting
 
-### **2. OrganizationScopeMiddleware (Enhanced)**
+### **2. OrganizationAccessMiddleware (Enhanced)** (Replaces OrganizationScopeMiddleware)
 
 ```php
 // Middleware untuk scope organization
@@ -282,8 +282,8 @@ Log::warning('Organization access denied', [
 ### **1. Middleware Registration**
 ```php
 // bootstrap/app.php
-'organization.admin' => \App\Http\Middleware\OrganizationAdminMiddleware::class,
-'organization.scope' => \App\Http\Middleware\OrganizationScopeMiddleware::class,
+'organization.management' => \App\Http\Middleware\OrganizationManagementMiddleware::class,
+'organization' => \App\Http\Middleware\OrganizationAccessMiddleware::class,
 ```
 
 ### **2. Route Usage**

@@ -68,11 +68,6 @@ Route::prefix('auth')->middleware(['unified.auth'])->group(function () {
     Route::get('/sessions', [AuthController::class, 'sessions'])
          ->name('auth.sessions');
 
-    // Revoke specific session
-    Route::delete('/sessions/{sessionId}', [AuthController::class, 'revokeSession'])
-         ->name('auth.sessions.revoke')
-         ->where('sessionId', '[0-9a-f-]+');
-
     // Update user profile
     Route::put('/profile', [AuthController::class, 'updateProfile'])
          ->name('auth.profile.update');
@@ -83,7 +78,7 @@ Route::prefix('auth')->middleware(['unified.auth'])->group(function () {
 });
 
 // Administrative routes (require admin permissions)
-Route::prefix('auth')->middleware(['unified.auth', 'admin.only'])->group(function () {
+Route::prefix('auth')->middleware(['unified.auth', 'permission:auth.manage'])->group(function () {
 
     // Force logout user (admin only)
     Route::post('/force-logout/{userId}', [AuthController::class, 'forceLogout'])

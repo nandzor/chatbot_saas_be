@@ -228,7 +228,7 @@ trait OrganizationControllerTrait
                 $analytics = $this->clientManagementService->getOrganizationAnalytics($id, $params);
                 $message = 'Analytics organisasi berhasil diambil (Admin View)';
             } else {
-                $analytics = $this->organizationService->getOrganizationAnalytics((int) $id, $params);
+                $analytics = $this->organizationService->getOrganizationAnalytics($id, $params);
                 $message = 'Analytics organisasi berhasil diambil';
             }
 
@@ -272,7 +272,7 @@ trait OrganizationControllerTrait
                 $health = $this->clientManagementService->getOrganizationHealth($id);
                 $message = 'Status kesehatan organisasi berhasil diambil (Admin View)';
             } else {
-                $health = $this->organizationService->getOrganizationHealth((int) $id);
+                $health = $this->organizationService->getOrganizationHealth($id);
                 $message = 'Status kesehatan organisasi berhasil diambil';
             }
 
@@ -294,7 +294,7 @@ trait OrganizationControllerTrait
                 $metrics = $this->clientManagementService->getOrganizationMetrics($id, $params);
                 $message = 'Metrics organisasi berhasil diambil (Admin View)';
             } else {
-                $metrics = $this->organizationService->getOrganizationMetrics((int) $id, $params);
+                $metrics = $this->organizationService->getOrganizationMetrics($id, $params);
                 $message = 'Metrics organisasi berhasil diambil';
             }
 
@@ -423,7 +423,7 @@ trait OrganizationControllerTrait
                 $logs = $this->clientManagementService->getOrganizationActivityLogs($id, $params);
                 $message = 'Log aktivitas organisasi berhasil diambil (Admin View)';
             } else {
-                $logs = $this->organizationService->getOrganizationActivityLogs((int) $id, $params);
+                $logs = $this->organizationService->getOrganizationActivityLogs($id, $params);
                 $message = 'Log aktivitas organisasi berhasil diambil';
             }
 
@@ -436,7 +436,7 @@ trait OrganizationControllerTrait
     /**
      * Handle organization settings with role-based access
      */
-    protected function handleOrganizationSettings(int $organizationId, array $settings = null): JsonResponse
+    protected function handleOrganizationSettings(string $organizationId, array $settings = null): JsonResponse
     {
         try {
             $isSuperAdmin = $this->isSuperAdmin();
@@ -477,13 +477,13 @@ trait OrganizationControllerTrait
      */
     protected function handleOrganizationSettingsById(string $organizationId, array $settings = null): JsonResponse
     {
-        return $this->handleOrganizationSettings((int) $organizationId, $settings);
+        return $this->handleOrganizationSettings($organizationId, $settings);
     }
 
     /**
      * Handle organization roles with role-based access
      */
-    protected function handleOrganizationRoles(int $organizationId, array $roleData = null): JsonResponse
+    protected function handleOrganizationRoles(string $organizationId, array $roleData = null): JsonResponse
     {
         try {
             $isSuperAdmin = $this->isSuperAdmin();
@@ -512,13 +512,13 @@ trait OrganizationControllerTrait
      */
     protected function handleOrganizationRolesById(string $organizationId, array $roleData = null): JsonResponse
     {
-        return $this->handleOrganizationRoles((int) $organizationId, $roleData);
+        return $this->handleOrganizationRoles($organizationId, $roleData);
     }
 
     /**
      * Handle webhook testing with role-based access
      */
-    protected function handleWebhookTest(int $organizationId, string $webhookUrl): JsonResponse
+    protected function handleWebhookTest(string $organizationId, string $webhookUrl): JsonResponse
     {
         try {
             $result = $this->organizationService->testWebhook($organizationId, $webhookUrl);
@@ -537,7 +537,7 @@ trait OrganizationControllerTrait
      */
     protected function handleWebhookTestById(string $organizationId, string $webhookUrl): JsonResponse
     {
-        return $this->handleWebhookTest((int) $organizationId, $webhookUrl);
+        return $this->handleWebhookTest($organizationId, $webhookUrl);
     }
 
     /**
@@ -593,9 +593,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->sendNotification((int) $organizationId, $type, $data);
+                $result = $this->clientManagementService->sendNotification($organizationId, $type, $data);
             } else {
-                $result = $this->organizationService->sendNotification((int) $organizationId, $type, $data);
+                $result = $this->organizationService->sendNotification($organizationId, $type, $data);
             }
 
             if (!$result['success']) {
@@ -621,9 +621,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->getNotifications((int) $organizationId, $params);
+                $result = $this->clientManagementService->getNotifications($organizationId, $params);
             } else {
-                $result = $this->organizationService->getNotifications((int) $organizationId, $params);
+                $result = $this->organizationService->getNotifications($organizationId, $params);
             }
 
             return $this->successResponse('Daftar notifikasi berhasil diambil', $result);
@@ -644,9 +644,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->markNotificationRead((int) $organizationId, (int) $notificationId);
+                $result = $this->clientManagementService->markNotificationRead($organizationId, $notificationId);
             } else {
-                $result = $this->organizationService->markNotificationRead((int) $organizationId, (int) $notificationId);
+                $result = $this->organizationService->markNotificationRead($organizationId, $notificationId);
             }
 
             if (!$result) {
@@ -671,9 +671,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->markAllNotificationsRead((int) $organizationId);
+                $result = $this->clientManagementService->markAllNotificationsRead($organizationId);
             } else {
-                $result = $this->organizationService->markAllNotificationsRead((int) $organizationId);
+                $result = $this->organizationService->markAllNotificationsRead($organizationId);
             }
 
             if (!$result) {
@@ -697,9 +697,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->deleteNotification((int) $organizationId, (int) $notificationId);
+                $result = $this->clientManagementService->deleteNotification($organizationId, $notificationId);
             } else {
-                $result = $this->organizationService->deleteNotification((int) $organizationId, (int) $notificationId);
+                $result = $this->organizationService->deleteNotification($organizationId, $notificationId);
             }
 
             if (!$result) {
@@ -724,9 +724,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->getAuditLogs((int) $organizationId, $params);
+                $result = $this->clientManagementService->getAuditLogs($organizationId, $params);
             } else {
-                $result = $this->organizationService->getAuditLogs((int) $organizationId, $params);
+                $result = $this->organizationService->getAuditLogs($organizationId, $params);
             }
 
             return $this->successResponse('Daftar audit logs berhasil diambil', $result);
@@ -747,9 +747,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->createAuditLog((int) $organizationId, $action, $data);
+                $result = $this->clientManagementService->createAuditLog($organizationId, $action, $data);
             } else {
-                $result = $this->organizationService->createAuditLog((int) $organizationId, $action, $data);
+                $result = $this->organizationService->createAuditLog($organizationId, $action, $data);
             }
 
             if (!$result) {
@@ -775,9 +775,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->getSystemLogs((int) $organizationId, $params);
+                $result = $this->clientManagementService->getSystemLogs($organizationId, $params);
             } else {
-                $result = $this->organizationService->getSystemLogs((int) $organizationId, $params);
+                $result = $this->organizationService->getSystemLogs($organizationId, $params);
             }
 
             return $this->successResponse('Daftar system logs berhasil diambil', $result);
@@ -798,9 +798,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->createSystemLog((int) $organizationId, $level, $message, $data);
+                $result = $this->clientManagementService->createSystemLog($organizationId, $level, $message, $data);
             } else {
-                $result = $this->organizationService->createSystemLog((int) $organizationId, $level, $message, $data);
+                $result = $this->organizationService->createSystemLog($organizationId, $level, $message, $data);
             }
 
             if (!$result) {
@@ -827,9 +827,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->getBackupStatus((int) $organizationId);
+                $result = $this->clientManagementService->getBackupStatus($organizationId);
             } else {
-                $result = $this->organizationService->getBackupStatus((int) $organizationId);
+                $result = $this->organizationService->getBackupStatus($organizationId);
             }
 
             return $this->successResponse('Status backup berhasil diambil', $result);
@@ -849,9 +849,9 @@ trait OrganizationControllerTrait
             $isSuperAdmin = $this->isSuperAdmin();
 
             if ($isSuperAdmin) {
-                $result = $this->clientManagementService->createBackup((int) $organizationId);
+                $result = $this->clientManagementService->createBackup($organizationId);
             } else {
-                $result = $this->organizationService->createBackup((int) $organizationId);
+                $result = $this->organizationService->createBackup($organizationId);
             }
 
             if (!$result['success']) {

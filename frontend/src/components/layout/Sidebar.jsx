@@ -20,7 +20,8 @@ import {
   DollarSign,
   Heart,
   UserPlus,
-  Zap
+  Zap,
+  Smartphone
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
@@ -50,6 +51,7 @@ const Sidebar = ({ role, isCollapsed, onToggle, isMobile }) => {
           { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/dashboard/analytics' },
           { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, href: '/dashboard/knowledge' },
           { id: 'automations', label: 'Automations', icon: Workflow, href: '/dashboard/automations' },
+          { id: 'whatsapp', label: 'WhatsApp Integration', icon: Smartphone, href: '/dashboard/whatsapp' },
           { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' },
           { id: 'profile', label: 'Profile Settings', icon: User, href: '/dashboard/profile' }
         ];

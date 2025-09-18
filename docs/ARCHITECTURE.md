@@ -11,7 +11,7 @@ Sistem ini menggunakan **Hybrid Architecture Pattern** dengan dua layer utama:
 
 ### 1. **Single Responsibility Principle**
 - **OrganizationController**: Hybrid controller yang melayani kedua role
-- **ClientManagementController**: Dedicated admin controller
+- **OrganizationController**: Integrated with permission system
 - **OrganizationService**: Organization-specific operations
 - **ClientManagementService**: Platform-wide operations
 
@@ -44,7 +44,7 @@ if ($isAdmin) {
 - ✅ Provide unified API interface
 - ✅ Handle organization-specific operations
 
-### ClientManagementController (Dedicated Admin)
+### OrganizationController (Integrated with Permission System)
 ```php
 // Always uses ClientManagementService
 $result = $this->clientManagementService->getOrganizations($params);
@@ -65,7 +65,7 @@ GET /api/v1/organizations/                    // All organizations
 GET /api/v1/organizations/statistics          // Platform statistics
 GET /api/v1/organizations/123/health          // Organization health
 
-// Via ClientManagementController (Dedicated)
+// Via OrganizationController (Integrated)
 GET /api/admin/clients/                       // All organizations
 GET /api/admin/clients/statistics             // Platform statistics
 GET /api/admin/clients/123/health             // Organization health
@@ -113,7 +113,7 @@ GET /api/v1/organizations/123/users           // Own organization users
 ### Admin Routes (`/api/admin/clients/`)
 - **Purpose**: Super admin only
 - **Middleware**: `client.management`
-- **Controller**: ClientManagementController (Dedicated)
+- **Controller**: OrganizationController (Integrated)
 
 ## 🔐 Security Model
 

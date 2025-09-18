@@ -25,7 +25,7 @@ This document outlines the implementation of DRY (Don't Repeat Yourself) princip
 
 ### **1. Middleware Layer**
 
-#### **OrganizationRoleMiddleware**
+#### **PermissionMiddleware** (Replaces OrganizationRoleMiddleware)
 ```php
 // Handles role-based access control
 Route::middleware(['organization.role:super_admin'])->group(function () {
@@ -47,7 +47,7 @@ Route::middleware(['organization.role:organization_member'])->group(function () 
 - ✅ **Request Enhancement**: Adds user role info to request
 - ✅ **Reusable**: Can be applied to any route group
 
-#### **OrganizationScopeMiddleware**
+#### **OrganizationAccessMiddleware** (Replaces OrganizationScopeMiddleware)
 ```php
 // Handles organization-scoped access
 Route::middleware(['organization.scope'])->group(function () {

@@ -14,14 +14,24 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Add auth token to headers if available
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const jwtToken = localStorage.getItem('jwt_token');
+    const sanctumToken = localStorage.getItem('sanctum_token');
+    const authToken = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    // Try JWT token first, then fallback to auth token
+    const token = jwtToken || authToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
+    // Add Sanctum token as fallback
+    if (sanctumToken) {
+      config.headers['X-Sanctum-Token'] = sanctumToken;
+    }
+
     // Add request timestamp for debugging
     config.metadata = { startTime: new Date() };
-    
+
     return config;
   },
   (error) => {
@@ -34,22 +44,24 @@ apiClient.interceptors.response.use(
   (response) => {
     // Calculate request duration
     const endTime = new Date();
-    const duration = endTime - response.config.metadata.startTime;
-    
-    
+    // const duration = endTime - response.config.metadata.startTime;
+
+
     return response;
   },
   (error) => {
     // Handle different types of errors
     if (error.response) {
       // Server responded with error status
-      const { status, data } = error.response;
-      
-      
+      const { status } = error.response;
+
+
       // Handle specific error cases
       switch (status) {
         case 401:
           // Unauthorized - clear auth data and redirect to login
+          localStorage.removeItem('jwt_token');
+          localStorage.removeItem('sanctum_token');
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('chatbot_user');
           window.location.href = '/auth/login';
@@ -71,7 +83,7 @@ apiClient.interceptors.response.use(
     } else {
       // Other error
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -80,19 +92,19 @@ apiClient.interceptors.response.use(
 export const api = {
   // GET request
   get: (url, config = {}) => apiClient.get(url, config),
-  
+
   // POST request
   post: (url, data = {}, config = {}) => apiClient.post(url, data, config),
-  
+
   // PUT request
   put: (url, data = {}, config = {}) => apiClient.put(url, data, config),
-  
+
   // PATCH request
   patch: (url, data = {}, config = {}) => apiClient.patch(url, data, config),
-  
+
   // DELETE request
   delete: (url, config = {}) => apiClient.delete(url, config),
-  
+
   // Upload file
   upload: (url, formData, config = {}) => {
     return apiClient.post(url, formData, {
@@ -103,7 +115,7 @@ export const api = {
       },
     });
   },
-  
+
   // Download file
   download: (url, config = {}) => {
     return apiClient.get(url, {

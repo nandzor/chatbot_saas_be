@@ -5,7 +5,7 @@
 
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api',
   VERSION: 'v1',
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
