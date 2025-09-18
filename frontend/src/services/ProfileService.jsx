@@ -11,17 +11,13 @@ class ProfileService {
    * Helper method to make API calls using AuthService
    */
   async _makeApiCall(method, endpoint, data = null, config = {}) {
-    try {
-      const response = await this.authService.api.request({
-        method,
-        url: `/api/v1${endpoint}`,
-        data,
-        ...config
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.authService.api.request({
+      method,
+      url: `/api/v1${endpoint}`,
+      data,
+      ...config
+    });
+    return response.data;
   }
 
   /**
@@ -132,6 +128,28 @@ class ProfileService {
     }
   }
 
+
+  /**
+   * Get active sessions
+   */
+  async getActiveSessions() {
+    try {
+      const response = await this._makeApiCall('GET', '/auth/sessions');
+
+      // Backend returns { success: true, data: [...] }
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
+      // Return the sessions array directly
+      return response.data || [];
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Error getting active sessions:', error);
+      }
+      throw handleError(error);
+    }
+  }
 
   /**
    * Logout from all devices

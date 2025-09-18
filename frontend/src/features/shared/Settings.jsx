@@ -57,11 +57,13 @@ import {
   Building2,
   Globe,
   Users,
+  Computer,
   CreditCard,
   Zap
 } from 'lucide-react';
 import { agentsData, integrationsData } from '@/data/sampleData';
 import IntegrationCard from './IntegrationCard';
+import ActiveSessions from '@/components/profile/ActiveSessions';
 import IntegrationModal from './IntegrationModal';
 import ChannelsTab from './ChannelsTab';
 import IntegrationsTab from './IntegrationsTab';
@@ -804,6 +806,10 @@ const Settings = () => {
             <SettingsIcon className="h-4 w-4 mr-2" />
             Integrations
           </TabsTrigger>
+          <TabsTrigger value="sessions" className="flex items-center">
+            <Computer className="h-4 w-4 mr-2" />
+            Sessions
+          </TabsTrigger>
           <TabsTrigger value="billing" className="flex items-center">
             <CreditCard className="h-4 w-4 mr-2" />
             Billing
@@ -1058,6 +1064,11 @@ const Settings = () => {
             onToggle={handleToggleIntegration}
             loading={settingsLoading}
           />
+        </TabsContent>
+
+        {/* Sessions Tab */}
+        <TabsContent value="sessions">
+          <ActiveSessions />
         </TabsContent>
 
         {/* Billing Tab */}

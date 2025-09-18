@@ -64,6 +64,9 @@ Route::prefix('auth')->middleware(['unified.auth'])->group(function () {
     Route::post('/logout-all', [AuthController::class, 'logoutAll'])
          ->name('auth.logout-all');
 
+    // Get active sessions
+    Route::get('/sessions', [AuthController::class, 'sessions'])
+         ->name('auth.sessions');
 
     // Update user profile
     Route::put('/profile', [AuthController::class, 'updateProfile'])
