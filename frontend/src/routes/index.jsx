@@ -23,7 +23,7 @@ import Automations from '@/pages/automations/Automations';
 import Settings from '@/pages/settings/Settings';
 import ProfileSettings from '@/features/shared/ProfileSettings';
 import WhatsAppIntegration from '@/pages/WhatsAppIntegration';
-import OrgUserManagement from '@/features/user-management/UserManagement';
+import UserList from '@/pages/user-management/UserList';
 
 // Role Management Pages
 import RoleList from '@/pages/roles/RoleList';
@@ -175,7 +175,7 @@ export const router = createBrowserRouter([
             path: 'users',
             element: (
               <RoleBasedRoute requiredPermission="users.view">
-                <OrgUserManagement />
+                <UserList />
               </RoleBasedRoute>
             )
           },

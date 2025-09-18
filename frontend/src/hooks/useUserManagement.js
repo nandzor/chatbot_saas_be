@@ -106,7 +106,7 @@ export const useUserManagement = () => {
       setLoading(false);
       setPaginationLoading(false);
     }
-  }, [pagination.currentPage, pagination.perPage, filters]);
+  }, []);
 
   // Search users
   const searchUsers = useCallback(async (query) => {
@@ -171,7 +171,7 @@ export const useUserManagement = () => {
       setLoading(false);
       setPaginationLoading(false);
     }
-  }, [pagination.currentPage, pagination.perPage, filters]);
+  }, []);
 
   // Create user
   const createUser = useCallback(async (userData) => {
@@ -436,10 +436,12 @@ export const useUserManagement = () => {
   }, []);
 
   // Handle page change
-  const handlePageChange = useCallback((page) => {
+  const handlePageChange = useCallback(async (page) => {
     if (page >= 1 && page <= pagination.totalPages && page !== pagination.currentPage) {
       try {
         updatePagination({ currentPage: page });
+        // Load users for the new page
+        await loadUsers({ page });
       } catch (error) {
         if (import.meta.env.DEV) {
           console.error('Error changing page:', error);
@@ -447,13 +449,15 @@ export const useUserManagement = () => {
         toast.error('Gagal mengubah halaman');
       }
     }
-  }, [pagination.totalPages, pagination.currentPage, updatePagination]);
+  }, [pagination.totalPages, pagination.currentPage, updatePagination, loadUsers]);
 
   // Handle per page change
-  const handlePerPageChange = useCallback((perPage) => {
+  const handlePerPageChange = useCallback(async (perPage) => {
     try {
       if (perPage > 0 && perPage <= 100) {
         updatePagination({ perPage, currentPage: 1 });
+        // Load users with new per page setting
+        await loadUsers({ per_page: perPage, page: 1 });
       } else {
         toast.error('Jumlah item per halaman harus antara 1-100');
       }
@@ -463,36 +467,42 @@ export const useUserManagement = () => {
       }
       toast.error('Gagal mengubah jumlah item per halaman');
     }
-  }, [updatePagination]);
+  }, [updatePagination, loadUsers]);
 
   // Go to first page
-  const goToFirstPage = useCallback(() => {
+  const goToFirstPage = useCallback(async () => {
     updatePagination({ currentPage: 1 });
-  }, [updatePagination]);
+    await loadUsers({ page: 1 });
+  }, [updatePagination, loadUsers]);
 
   // Go to last page
-  const goToLastPage = useCallback(() => {
+  const goToLastPage = useCallback(async () => {
     updatePagination({ currentPage: pagination.totalPages });
-  }, [pagination.totalPages, updatePagination]);
+    await loadUsers({ page: pagination.totalPages });
+  }, [pagination.totalPages, updatePagination, loadUsers]);
 
   // Go to previous page
-  const goToPreviousPage = useCallback(() => {
+  const goToPreviousPage = useCallback(async () => {
     if (pagination.currentPage > 1) {
-      updatePagination({ currentPage: pagination.currentPage - 1 });
+      const newPage = pagination.currentPage - 1;
+      updatePagination({ currentPage: newPage });
+      await loadUsers({ page: newPage });
     }
-  }, [pagination.currentPage, updatePagination]);
+  }, [pagination.currentPage, updatePagination, loadUsers]);
 
   // Go to next page
-  const goToNextPage = useCallback(() => {
+  const goToNextPage = useCallback(async () => {
     if (pagination.currentPage < pagination.totalPages) {
-      updatePagination({ currentPage: pagination.currentPage + 1 });
+      const newPage = pagination.currentPage + 1;
+      updatePagination({ currentPage: newPage });
+      await loadUsers({ page: newPage });
     }
-  }, [pagination.currentPage, pagination.totalPages, updatePagination]);
+  }, [pagination.currentPage, pagination.totalPages, updatePagination, loadUsers]);
 
-  // Load users on mount and when filters/pagination change
+  // Load users on mount and when filters change
   useEffect(() => {
     loadUsers();
-  }, [loadUsers]);
+  }, [filters]);
 
   return {
     // State
