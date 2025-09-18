@@ -695,7 +695,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization settings
      */
-    public function getOrganizationSettings(int $organizationId): array
+    public function getOrganizationSettings(string $organizationId): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -769,7 +769,7 @@ class OrganizationService extends BaseService
     /**
      * Save organization settings
      */
-    public function saveOrganizationSettings(int $organizationId, array $settings): array
+    public function saveOrganizationSettings(string $organizationId, array $settings): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -901,7 +901,7 @@ class OrganizationService extends BaseService
     /**
      * Test webhook
      */
-    public function testWebhook(int $organizationId, string $webhookUrl): array
+    public function testWebhook(string $organizationId, string $webhookUrl): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -1018,7 +1018,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization analytics
      */
-    public function getOrganizationAnalytics(int $organizationId, array $params = []): array
+    public function getOrganizationAnalytics(string $organizationId, array $params = []): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -1055,7 +1055,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization health status
      */
-    public function getOrganizationHealth(int $organizationId): array
+    public function getOrganizationHealth(string $organizationId): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -1117,7 +1117,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization metrics
      */
-    public function getOrganizationMetrics(int $organizationId, array $params = []): array
+    public function getOrganizationMetrics(string $organizationId, array $params = []): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -1155,7 +1155,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization activity logs
      */
-    public function getOrganizationActivityLogs(int $organizationId, array $params = []): array
+    public function getOrganizationActivityLogs(string $organizationId, array $params = []): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -1292,7 +1292,7 @@ class OrganizationService extends BaseService
     /**
      * Get recent activity count for organization
      */
-    private function getRecentActivity(int $organizationId): int
+    private function getRecentActivity(string $organizationId): int
     {
         return $this->getModel()
             ->findOrFail($organizationId)
@@ -1304,7 +1304,7 @@ class OrganizationService extends BaseService
     /**
      * Get total requests for organization
      */
-    private function getTotalRequests(int $organizationId, int $days): int
+    private function getTotalRequests(string $organizationId, int $days): int
     {
         // This would typically come from a requests/activity log table
         // For now, return a mock value based on audit logs
@@ -1318,7 +1318,7 @@ class OrganizationService extends BaseService
     /**
      * Get successful requests for organization
      */
-    private function getSuccessfulRequests(int $organizationId, int $days): int
+    private function getSuccessfulRequests(string $organizationId, int $days): int
     {
         // This would typically come from a requests/activity log table
         // For now, return 90% of total requests as successful
@@ -1329,7 +1329,7 @@ class OrganizationService extends BaseService
     /**
      * Get failed requests for organization
      */
-    private function getFailedRequests(int $organizationId, int $days): int
+    private function getFailedRequests(string $organizationId, int $days): int
     {
         // This would typically come from a requests/activity log table
         // For now, return 10% of total requests as failed
@@ -1340,7 +1340,7 @@ class OrganizationService extends BaseService
     /**
      * Get average response time for organization
      */
-    private function getAverageResponseTime(int $organizationId, int $days): float
+    private function getAverageResponseTime(string $organizationId, int $days): float
     {
         // This would typically come from a performance metrics table
         // For now, return a mock value
@@ -1350,7 +1350,7 @@ class OrganizationService extends BaseService
     /**
      * Get uptime percentage for organization
      */
-    private function getUptime(int $organizationId): float
+    private function getUptime(string $organizationId): float
     {
         // This would typically come from a monitoring system
         // For now, return a mock value
@@ -1360,7 +1360,7 @@ class OrganizationService extends BaseService
     /**
      * Get error rate for organization
      */
-    private function getErrorRate(int $organizationId, int $days): float
+    private function getErrorRate(string $organizationId, int $days): float
     {
         $total = $this->getTotalRequests($organizationId, $days);
         $failed = $this->getFailedRequests($organizationId, $days);
@@ -1375,7 +1375,7 @@ class OrganizationService extends BaseService
     /**
      * Get throughput for organization
      */
-    private function getThroughput(int $organizationId, int $days): float
+    private function getThroughput(string $organizationId, int $days): float
     {
         $total = $this->getTotalRequests($organizationId, $days);
         return $total / $days; // requests per day
@@ -1384,7 +1384,7 @@ class OrganizationService extends BaseService
     /**
      * Clear organization cache
      */
-    public function clearOrganizationCache(int $organizationId = null): bool
+    public function clearOrganizationCache(string $organizationId = null): bool
     {
         try {
             // Clear general organization caches
@@ -1809,7 +1809,7 @@ class OrganizationService extends BaseService
     /**
      * Get analytics data from database
      */
-    private function getAnalyticsFromDatabase(int $organizationId, int $days): array
+    private function getAnalyticsFromDatabase(string $organizationId, int $days): array
     {
         $startDate = now()->subDays($days);
 
@@ -1946,7 +1946,7 @@ class OrganizationService extends BaseService
     /**
      * Get top features
      */
-    private function getTopFeatures(int $organizationId): array
+    private function getTopFeatures(string $organizationId): array
     {
         // Get feature usage from user activities
         $features = DB::table('user_activities')
@@ -2008,7 +2008,7 @@ class OrganizationService extends BaseService
     /**
      * Get activity log
      */
-    private function getActivityLog(int $organizationId, int $days): array
+    private function getActivityLog(string $organizationId, int $days): array
     {
         $startDate = now()->subDays($days);
 
@@ -2211,7 +2211,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization roles
      */
-    public function getOrganizationRoles(int $organizationId): array
+    public function getOrganizationRoles(string $organizationId): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -2256,7 +2256,7 @@ class OrganizationService extends BaseService
     /**
      * Save role permissions
      */
-    public function saveRolePermissions(int $organizationId, int $roleId, array $permissions): array
+    public function saveRolePermissions(string $organizationId, string $roleId, array $permissions): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -2308,7 +2308,7 @@ class OrganizationService extends BaseService
     /**
      * Save all permissions
      */
-    public function saveAllPermissions(int $organizationId, array $rolePermissions): array
+    public function saveAllPermissions(string $organizationId, array $rolePermissions): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -2371,7 +2371,7 @@ class OrganizationService extends BaseService
     /**
      * Generate admin token
      */
-    public function generateAdminToken(int $organizationId): string
+    public function generateAdminToken(string $organizationId): string
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -2410,7 +2410,7 @@ class OrganizationService extends BaseService
     /**
      * Force password reset
      */
-    public function forcePasswordReset(int $organizationId, string $email, string $organizationName): array
+    public function forcePasswordReset(string $organizationId, string $email, string $organizationName): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
@@ -2486,7 +2486,7 @@ class OrganizationService extends BaseService
     /**
      * Send notification to organization using event system
      */
-    public function sendNotification(int $organizationId, string $type, array $data = []): array
+    public function sendNotification(string $organizationId, string $type, array $data = []): array
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2534,7 +2534,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization notifications
      */
-    public function getNotifications(int $organizationId, array $params = []): array
+    public function getNotifications(string $organizationId, array $params = []): array
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2597,7 +2597,7 @@ class OrganizationService extends BaseService
     /**
      * Mark notification as read
      */
-    public function markNotificationRead(int $organizationId, int $notificationId): bool
+    public function markNotificationRead(string $organizationId, string $notificationId): bool
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2625,7 +2625,7 @@ class OrganizationService extends BaseService
     /**
      * Mark all notifications as read
      */
-    public function markAllNotificationsRead(int $organizationId): bool
+    public function markAllNotificationsRead(string $organizationId): bool
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2652,7 +2652,7 @@ class OrganizationService extends BaseService
     /**
      * Delete notification
      */
-    public function deleteNotification(int $organizationId, int $notificationId): bool
+    public function deleteNotification(string $organizationId, string $notificationId): bool
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2681,7 +2681,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization audit logs
      */
-    public function getAuditLogs(int $organizationId, array $params = []): array
+    public function getAuditLogs(string $organizationId, array $params = []): array
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2747,7 +2747,7 @@ class OrganizationService extends BaseService
     /**
      * Create audit log entry
      */
-    public function createAuditLog(int $organizationId, string $action, array $data = []): bool
+    public function createAuditLog(string $organizationId, string $action, array $data = []): bool
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2784,7 +2784,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization system logs
      */
-    public function getSystemLogs(int $organizationId, array $params = []): array
+    public function getSystemLogs(string $organizationId, array $params = []): array
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2847,7 +2847,7 @@ class OrganizationService extends BaseService
     /**
      * Create system log entry
      */
-    public function createSystemLog(int $organizationId, string $level, string $message, array $data = []): bool
+    public function createSystemLog(string $organizationId, string $level, string $message, array $data = []): bool
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2883,7 +2883,7 @@ class OrganizationService extends BaseService
     /**
      * Get organization backup status
      */
-    public function getBackupStatus(int $organizationId): array
+    public function getBackupStatus(string $organizationId): array
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
@@ -2927,7 +2927,7 @@ class OrganizationService extends BaseService
     /**
      * Create organization backup
      */
-    public function createBackup(int $organizationId): array
+    public function createBackup(string $organizationId): array
     {
         try {
             $organization = $this->getModel()->findOrFail($organizationId);
