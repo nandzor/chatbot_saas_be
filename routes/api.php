@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\WebhookEventController;
 use App\Http\Controllers\Api\V1\SystemConfigurationController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\QueueController;
+use App\Http\Controllers\Api\V1\PermissionSyncController;
 
 // Include additional route files
 require_once __DIR__ . '/n8n.php';
@@ -286,6 +287,15 @@ Route::prefix('v1')->group(function () {
             Route::prefix('users')->group(function () {
                 Route::get('/permissions', [PermissionManagementController::class, 'getUserPermissions']);
                 Route::middleware(['permission:permissions.check'])->post('/check-permission', [PermissionManagementController::class, 'checkUserPermission']);
+            });
+
+            // Permission synchronization
+            Route::prefix('sync')->middleware(['permission:permissions.manage'])->group(function () {
+                Route::post('/user/{userId}', [PermissionSyncController::class, 'syncUser']);
+                Route::post('/role', [PermissionSyncController::class, 'syncByRole']);
+                Route::post('/all', [PermissionSyncController::class, 'syncAll']);
+                Route::get('/user/{userId}/compare', [PermissionSyncController::class, 'compareUser']);
+                Route::get('/statistics', [PermissionSyncController::class, 'statistics']);
             });
         });
 

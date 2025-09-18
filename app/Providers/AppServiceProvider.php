@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\PaymentTransaction;
 use App\Models\BillingInvoice;
+use App\Models\User;
 use App\Observers\PaymentTransactionObserver;
 use App\Observers\BillingInvoiceObserver;
+use App\Observers\UserPermissionObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -70,5 +72,6 @@ class AppServiceProvider extends ServiceProvider
     {
         PaymentTransaction::observe(PaymentTransactionObserver::class);
         BillingInvoice::observe(BillingInvoiceObserver::class);
+        User::observe(UserPermissionObserver::class);
     }
 }

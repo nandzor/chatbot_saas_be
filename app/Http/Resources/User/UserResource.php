@@ -188,8 +188,18 @@ class UserResource extends JsonResource
     protected function getPermissionsData(): array
     {
         try {
-            // Get direct permissions from user's permissions field
+            // Get direct permissions from user's permissions field (associative array)
             $directPermissions = $this->permissions ?? [];
+
+            // Convert associative array to array of permission codes
+            $directPermissionCodes = [];
+            if (is_array($directPermissions)) {
+                foreach ($directPermissions as $permission => $value) {
+                    if ($value === true) {
+                        $directPermissionCodes[] = $permission;
+                    }
+                }
+            }
 
             // Get permissions from roles
             $rolePermissions = [];
@@ -205,10 +215,10 @@ class UserResource extends JsonResource
             }
 
             // Merge and return unique permission codes
-            $allPermissions = array_merge($directPermissions, $rolePermissions);
+            $allPermissions = array_merge($directPermissionCodes, $rolePermissions);
             return array_values(array_unique($allPermissions));
         } catch (\Exception $e) {
-            return $this->permissions ?? [];
+            return [];
         }
     }
 }
