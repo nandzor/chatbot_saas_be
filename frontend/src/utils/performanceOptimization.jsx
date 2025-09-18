@@ -280,7 +280,7 @@ export const usePerformanceMonitor = (name) => {
       const duration = endTime - startTime.current;
 
       // Only log if render count is reasonable (prevent spam)
-      if (process.env.NODE_ENV === 'development' && renderCount.current <= 3) {
+      if (import.meta.env.DEV && renderCount.current <= 3) {
         console.log(`⚡ Component "${name}" render time: ${duration.toFixed(2)}ms`);
       }
     };
@@ -341,7 +341,7 @@ export const withPerformanceOptimization = (Component, options = {}) => {
     OptimizedComponent = memo(OptimizedComponent, propsAreEqual);
   }
 
-  if (monitorPerformance && process.env.NODE_ENV === 'development') {
+  if (monitorPerformance && import.meta.env.DEV) {
     OptimizedComponent = (props) => {
       const { markStart, markEnd } = usePerformanceMonitor(Component.displayName || Component.name);
 

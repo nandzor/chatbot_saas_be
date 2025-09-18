@@ -20,6 +20,7 @@ export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 export { default as Textarea } from './Textarea';
 export { default as Separator } from './Separator';
 export { default as Toaster } from './Toaster';
+export { useToast } from './use-toast';
 export { Avatar, AvatarFallback, AvatarImage } from './Avatar';
 export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './DropdownMenu';
 export { default as Switch } from './Switch';

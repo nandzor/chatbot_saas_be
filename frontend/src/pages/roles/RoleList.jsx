@@ -570,7 +570,7 @@ const RoleList = React.memo(() => {
       )}
 
       {/* Debug pagination state */}
-      {process.env.NODE_ENV === 'development' && (
+      {import.meta.env.DEV && (
         <div className="p-2 bg-gray-100 text-xs">
           <strong>Debug Pagination:</strong> Current: {pagination.currentPage},
           Total: {pagination.total}, LastPage: {pagination.lastPage},

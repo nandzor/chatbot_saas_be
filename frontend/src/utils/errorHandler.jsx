@@ -91,7 +91,7 @@ export const handleError = (error, options = {}) => {
   const message = getErrorMessage(error, errorType);
 
   // Log error for debugging
-  if (logError && process.env.NODE_ENV === 'development') {
+  if (logError && import.meta.env.DEV) {
     console.group(`🚨 Error in ${context}`);
     console.log('Type:', errorType);
     console.log('Message:', message);

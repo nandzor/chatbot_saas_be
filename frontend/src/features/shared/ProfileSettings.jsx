@@ -1,9 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+/**
+ * Enhanced Profile Settings Component
+ * Profile Settings dengan Form components dan enhanced error handling
+ */
+
+import React, { useState, useCallback, useEffect, useContext } from 'react';
+import {
+  useLoadingStates,
+  LoadingWrapper,
+  SkeletonCard
+} from '@/utils/loadingStates';
+import {
+  handleError,
+  withErrorHandling
+} from '@/utils/errorHandler';
+import {
+  useAnnouncement,
+  useFocusManagement
+} from '@/utils/accessibilityUtils';
+import {
+  sanitizeInput,
+  validateInput
+} from '@/utils/securityUtils';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Button,
   Badge,
@@ -32,9 +54,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
+  useToast,
+  Form
 } from '@/components/ui';
-import { 
+import { profileService } from '@/services/ProfileService';
+import { useAuth } from '@/contexts/AuthContext';
+import {
   User,
   Mail,
   Phone,
@@ -61,30 +87,44 @@ import {
 } from 'lucide-react';
 
 const ProfileSettings = () => {
+  const { user, updateUser } = useAuth();
+  const { toast } = useToast();
+
+  // Loading states
+  const {
+    isLoading,
+    setLoading,
+    loadingStates,
+    getLoadingState
+  } = useLoadingStates();
+
+  // Accessibility
+  const { announce } = useAnnouncement();
+  const { manageFocus } = useFocusManagement();
+
   const [activeTab, setActiveTab] = useState('profile');
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
-  
-  // Profile data state
-  const [profileData, setProfileData] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@company.com',
-    phone: '+62 812-3456-7890',
-    avatarUrl: null
-  });
 
-  // Password change state
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-
-  // Interface preferences state
-  const [preferences, setPreferences] = useState({
+  // Form data state - using single state object like Settings.jsx
+  const [formData, setFormData] = useState({
+    profile: {
+      full_name: '',
+      email: '',
+      phone: '',
+      avatar_url: null,
+      bio: '',
+      timezone: 'Asia/Jakarta',
+      language: 'id'
+    },
+    password: {
+      current_password: '',
+      new_password: '',
+      confirm_password: ''
+    },
+    preferences: {
     language: 'id',
     theme: 'auto',
     notifications: {
@@ -96,6 +136,7 @@ const ProfileSettings = () => {
       inApp: {
         newTeamMember: true,
         integrationStatus: true
+        }
       }
     }
   });
@@ -137,42 +178,257 @@ const ProfileSettings = () => {
   const [errors, setErrors] = useState({});
   const [passwordStrength, setPasswordStrength] = useState(0);
 
+  // Profile fields definition - similar to Settings.jsx
+  const profileFields = [
+    {
+      name: 'profile.full_name',
+      type: 'text',
+      label: 'Nama Lengkap',
+      placeholder: 'Masukkan nama lengkap Anda',
+      required: true,
+      description: 'Nama lengkap yang akan ditampilkan di profil Anda'
+    },
+    {
+      name: 'profile.email',
+      type: 'email',
+      label: 'Alamat Email',
+      placeholder: 'Masukkan alamat email Anda',
+      required: true,
+      description: 'Alamat email utama untuk akun Anda'
+    },
+    {
+      name: 'profile.phone',
+      type: 'tel',
+      label: 'Nomor Telepon',
+      placeholder: 'Masukkan nomor telepon Anda',
+      required: false,
+      description: 'Nomor telepon untuk verifikasi dan notifikasi'
+    },
+    {
+      name: 'profile.bio',
+      type: 'textarea',
+      label: 'Bio',
+      placeholder: 'Ceritakan sedikit tentang diri Anda',
+      required: false,
+      description: 'Deskripsi singkat tentang diri Anda'
+    },
+    {
+      name: 'profile.timezone',
+      type: 'select',
+      label: 'Zona Waktu',
+      required: true,
+      options: [
+        { value: 'UTC', label: 'UTC' },
+        { value: 'Asia/Jakarta', label: 'Jakarta (WIB)' },
+        { value: 'Asia/Makassar', label: 'Makassar (WITA)' },
+        { value: 'Asia/Jayapura', label: 'Jayapura (WIT)' },
+        { value: 'America/New_York', label: 'Eastern Time' },
+        { value: 'America/Chicago', label: 'Central Time' },
+        { value: 'America/Denver', label: 'Mountain Time' },
+        { value: 'America/Los_Angeles', label: 'Pacific Time' },
+        { value: 'Europe/London', label: 'London' },
+        { value: 'Europe/Paris', label: 'Paris' },
+        { value: 'Asia/Tokyo', label: 'Tokyo' },
+        { value: 'Asia/Singapore', label: 'Singapore' }
+      ]
+    },
+    {
+      name: 'profile.language',
+      type: 'select',
+      label: 'Bahasa',
+      required: true,
+      options: [
+        { value: 'id', label: 'Bahasa Indonesia' },
+        { value: 'en', label: 'English (US)' }
+      ]
+    }
+  ];
+
+  // Password fields definition
+  const passwordFields = [
+    {
+      name: 'password.current_password',
+      type: 'password',
+      label: 'Kata Sandi Saat Ini',
+      placeholder: 'Masukkan kata sandi saat ini',
+      required: true,
+      description: 'Kata sandi yang sedang Anda gunakan'
+    },
+    {
+      name: 'password.new_password',
+      type: 'password',
+      label: 'Kata Sandi Baru',
+      placeholder: 'Masukkan kata sandi baru',
+      required: true,
+      description: 'Kata sandi baru yang akan Anda gunakan'
+    },
+    {
+      name: 'password.confirm_password',
+      type: 'password',
+      label: 'Konfirmasi Kata Sandi',
+      placeholder: 'Konfirmasi kata sandi baru',
+      required: true,
+      description: 'Ulangi kata sandi baru untuk konfirmasi'
+    }
+  ];
+
+  // Preferences fields definition
+  const preferencesFields = [
+    {
+      name: 'preferences.language',
+      type: 'select',
+      label: 'Bahasa Interface',
+      required: true,
+      options: [
+        { value: 'id', label: 'Bahasa Indonesia' },
+        { value: 'en', label: 'English (US)' }
+      ]
+    },
+    {
+      name: 'preferences.theme',
+      type: 'select',
+      label: 'Tema',
+      required: true,
+      options: [
+        { value: 'light', label: 'Terang' },
+        { value: 'dark', label: 'Gelap' },
+        { value: 'auto', label: 'Otomatis' }
+      ]
+    },
+    {
+      name: 'preferences.notifications.email.weeklyReport',
+      type: 'checkbox',
+      label: 'Laporan Mingguan',
+      description: 'Terima laporan mingguan via email'
+    },
+    {
+      name: 'preferences.notifications.email.billing',
+      type: 'checkbox',
+      label: 'Notifikasi Tagihan',
+      description: 'Terima notifikasi terkait tagihan dan pembayaran'
+    },
+    {
+      name: 'preferences.notifications.email.securityAlerts',
+      type: 'checkbox',
+      label: 'Peringatan Keamanan',
+      description: 'Terima peringatan keamanan penting'
+    },
+    {
+      name: 'preferences.notifications.inApp.newTeamMember',
+      type: 'checkbox',
+      label: 'Anggota Tim Baru',
+      description: 'Notifikasi saat ada anggota tim baru'
+    },
+    {
+      name: 'preferences.notifications.inApp.integrationStatus',
+      type: 'checkbox',
+      label: 'Status Integrasi',
+      description: 'Notifikasi tentang status integrasi'
+    }
+  ];
+
+  // Load profile data from backend
+  const loadProfileData = useCallback(async () => {
+    try {
+      setLoading('profile', true);
+      announce('Memuat data profil...');
+
+      const profile = await profileService.getCurrentProfile();
+
+      setFormData(prev => ({
+        ...prev,
+        profile: {
+          full_name: profile.full_name || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          avatar_url: profile.avatar_url || null,
+          bio: profile.bio || '',
+          timezone: profile.timezone || 'Asia/Jakarta',
+          language: profile.language || 'id'
+        }
+      }));
+
+      // Load preferences
+      try {
+        setLoading('preferences', true);
+        const userPreferences = await profileService.getPreferences();
+        setFormData(prev => ({
+          ...prev,
+          preferences: {
+            ...prev.preferences,
+            ...userPreferences
+          }
+        }));
+        setLoading('preferences', false);
+      } catch (error) {
+        console.warn('Could not load preferences:', error);
+        setLoading('preferences', false);
+      }
+
+      // Load sessions
+      try {
+        setLoading('sessions', true);
+        const sessions = await profileService.getUserSessions();
+        setActiveSessions(sessions);
+        setLoading('sessions', false);
+      } catch (error) {
+        console.warn('Could not load sessions:', error);
+        setLoading('sessions', false);
+      }
+
+      announce('Data profil berhasil dimuat');
+    } catch (error) {
+      console.error('Error loading profile data:', error);
+      handleError(error, 'Gagal memuat data profil', toast);
+      announce('Gagal memuat data profil');
+    } finally {
+      setLoading('profile', false);
+    }
+  }, [toast, announce, setLoading]);
+
+  // Load data on component mount
+  useEffect(() => {
+    loadProfileData();
+  }, [loadProfileData]);
+
   // Check for profile changes
   useEffect(() => {
+    if (!user) return;
+
     const originalData = {
-      fullName: 'John Doe',
-      email: 'john.doe@company.com',
-      phone: '+62 812-3456-7890'
+      full_name: user.full_name || '',
+      email: user.email || '',
+      phone: user.phone || ''
     };
 
-    const hasChanges = 
-      profileData.fullName !== originalData.fullName ||
-      profileData.email !== originalData.email ||
-      profileData.phone !== originalData.phone;
+    const hasChanges =
+      formData.profile.full_name !== originalData.full_name ||
+      formData.profile.email !== originalData.email ||
+      formData.profile.phone !== originalData.phone;
 
     setHasProfileChanges(hasChanges);
-  }, [profileData]);
+  }, [formData.profile, user]);
 
   // Check for password changes
   useEffect(() => {
-    const hasChanges = 
-      passwordData.currentPassword !== '' ||
-      passwordData.newPassword !== '' ||
-      passwordData.confirmPassword !== '';
+    const hasChanges =
+      formData.password.current_password !== '' ||
+      formData.password.new_password !== '' ||
+      formData.password.confirm_password !== '';
 
     setHasPasswordChanges(hasChanges);
-  }, [passwordData]);
+  }, [formData.password]);
 
   // Check for preference changes
   useEffect(() => {
     setHasPreferenceChanges(true);
-  }, [preferences]);
+  }, [formData.preferences]);
 
   // Calculate password strength
   useEffect(() => {
-    if (passwordData.newPassword) {
+    if (formData.password.new_password) {
       let strength = 0;
-      const password = passwordData.newPassword;
+      const password = formData.password.new_password;
 
       if (password.length >= 8) strength += 25;
       if (/[a-z]/.test(password)) strength += 25;
@@ -183,128 +439,196 @@ const ProfileSettings = () => {
     } else {
       setPasswordStrength(0);
     }
-  }, [passwordData.newPassword]);
+  }, [formData.password.new_password]);
 
-  // Handle profile input changes
-  const handleProfileChange = (field, value) => {
-    setProfileData(prev => ({ ...prev, [field]: value }));
-  };
+  // Handle form data changes - similar to Settings.jsx
+  const handleFormChange = (field, value) => {
+    const sanitizedValue = sanitizeInput(value);
+    setFormData(prev => {
+      const keys = field.split('.');
+      const newData = { ...prev };
+      let current = newData;
 
-  // Handle password input changes
-  const handlePasswordChange = (field, value) => {
-    setPasswordData(prev => ({ ...prev, [field]: value }));
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!current[keys[i]]) {
+          current[keys[i]] = {};
+        }
+        current = current[keys[i]];
+      }
+
+      current[keys[keys.length - 1]] = sanitizedValue;
+      return newData;
+    });
   };
 
   // Handle preference changes
   const handlePreferenceChange = (category, setting, value) => {
-    setPreferences(prev => ({
+    setFormData(prev => ({
       ...prev,
+      preferences: {
+        ...prev.preferences,
+        notifications: {
+          ...prev.preferences.notifications,
       [category]: {
-        ...prev[category],
+            ...prev.preferences.notifications[category],
         [setting]: value
+          }
+        }
       }
     }));
   };
 
   // Handle general preference changes
   const handleGeneralPreferenceChange = (field, value) => {
-    setPreferences(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        [field]: value
+      }
+    }));
   };
 
   // Save profile changes
-  const handleSaveProfile = async () => {
-    setIsLoading(true);
+  const handleSaveProfile = async (values) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      setLoading('saveProfile', true);
+      announce('Menyimpan perubahan profil...');
+
+      const updatedProfile = await profileService.updateProfile(values.profile);
+
+      // Update auth context
+      updateUser(updatedProfile);
+
       // Reset changes flag
       setHasProfileChanges(false);
-      
+
       // Show success message
-      alert('Profil berhasil diperbarui!');
+      toast({
+        title: 'Berhasil',
+        description: 'Profil berhasil diperbarui!',
+        variant: 'default'
+      });
+
+      announce('Profil berhasil diperbarui');
     } catch (error) {
-      alert('Gagal menyimpan profil. Silakan coba lagi.');
+      handleError(error, 'Gagal menyimpan profil. Silakan coba lagi.', toast);
+      announce('Gagal menyimpan profil');
     } finally {
-      setIsLoading(false);
+      setLoading('saveProfile', false);
     }
   };
 
   // Save password changes
-  const handleSavePassword = async () => {
+  const handleSavePassword = async (values) => {
     // Validate password
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setErrors({ confirmPassword: 'Konfirmasi kata sandi tidak cocok' });
+    if (values.password.new_password !== values.password.confirm_password) {
+      setErrors({ confirm_password: 'Konfirmasi kata sandi tidak cocok' });
+      announce('Konfirmasi kata sandi tidak cocok');
       return;
     }
 
     if (passwordStrength < 75) {
-      setErrors({ newPassword: 'Kata sandi terlalu lemah' });
+      setErrors({ new_password: 'Kata sandi terlalu lemah' });
+      announce('Kata sandi terlalu lemah');
       return;
     }
 
-    setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Reset form
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+      setLoading('changePassword', true);
+      announce('Mengubah kata sandi...');
+
+      await profileService.changePassword({
+        current_password: values.password.current_password,
+        new_password: values.password.new_password
       });
-      
+
+      // Reset form
+      setFormData(prev => ({
+        ...prev,
+        password: {
+          current_password: '',
+          new_password: '',
+          confirm_password: ''
+        }
+      }));
+
       // Reset changes flag
       setHasPasswordChanges(false);
-      
+
+      // Clear errors
+      setErrors({});
+
       // Show success message
-      alert('Kata sandi berhasil diubah! Semua sesi lain akan diakhiri.');
-      
+      toast({
+        title: 'Berhasil',
+        description: 'Kata sandi berhasil diubah! Semua sesi lain akan diakhiri.',
+        variant: 'default'
+      });
+
       // Logout all other sessions
       setActiveSessions(prev => prev.filter(session => session.isCurrent));
+
+      announce('Kata sandi berhasil diubah');
     } catch (error) {
-      alert('Gagal mengubah kata sandi. Silakan coba lagi.');
+      handleError(error, 'Gagal mengubah kata sandi. Silakan coba lagi.', toast);
+      announce('Gagal mengubah kata sandi');
     } finally {
-      setIsLoading(false);
+      setLoading('changePassword', false);
     }
   };
 
   // Save preference changes
-  const handleSavePreferences = async () => {
-    setIsLoading(true);
+  const handleSavePreferences = async (values) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      setLoading('savePreferences', true);
+      announce('Menyimpan preferensi...');
+
+      await profileService.updatePreferences(values.preferences);
+
       // Reset changes flag
       setHasPreferenceChanges(false);
-      
+
       // Show success message
-      alert('Preferensi berhasil disimpan!');
+      toast({
+        title: 'Berhasil',
+        description: 'Preferensi berhasil disimpan!',
+        variant: 'default'
+      });
+
+      announce('Preferensi berhasil disimpan');
     } catch (error) {
-      alert('Gagal menyimpan preferensi. Silakan coba lagi.');
+      handleError(error, 'Gagal menyimpan preferensi. Silakan coba lagi.', toast);
+      announce('Gagal menyimpan preferensi');
     } finally {
-      setIsLoading(false);
+      setLoading('savePreferences', false);
     }
   };
 
   // Logout from all other devices
   const handleLogoutAllDevices = async () => {
     if (window.confirm('Anda yakin ingin keluar dari semua perangkat lain? Ini akan mengakhiri semua sesi aktif di perangkat lain.')) {
-      setIsLoading(true);
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+        setLoading('logoutAll', true);
+        announce('Keluar dari semua perangkat lain...');
+
+        await profileService.logoutAllDevices();
+
         // Remove all sessions except current
         setActiveSessions(prev => prev.filter(session => session.isCurrent));
-        
-        alert('Berhasil keluar dari semua perangkat lain!');
+
+        toast({
+          title: 'Berhasil',
+          description: 'Berhasil keluar dari semua perangkat lain!',
+          variant: 'default'
+        });
+
+        announce('Berhasil keluar dari semua perangkat lain');
       } catch (error) {
-        alert('Gagal keluar dari semua perangkat. Silakan coba lagi.');
+        handleError(error, 'Gagal keluar dari semua perangkat. Silakan coba lagi.', toast);
+        announce('Gagal keluar dari semua perangkat');
       } finally {
-        setIsLoading(false);
+        setLoading('logoutAll', false);
       }
     }
   };
@@ -336,6 +660,23 @@ const ProfileSettings = () => {
     });
   };
 
+  // Show loading state while profile is loading
+  if (loadingStates.profile) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
+            <p className="text-gray-600">Kelola profil, keamanan, dan preferensi akun Anda</p>
+          </div>
+        </div>
+        <LoadingWrapper isLoading={true}>
+          <SkeletonCard />
+        </LoadingWrapper>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -365,94 +706,49 @@ const ProfileSettings = () => {
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Informasi Personal
-              </CardTitle>
-              <CardDescription>
-                Kelola data identitas fundamental yang terasosiasi dengan akun admin
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <LoadingWrapper
+            isLoading={loadingStates.profile}
+            loadingComponent={<SkeletonCard />}
+          >
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column - Form */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName" className="text-sm font-medium">
-                        Nama Lengkap *
-                      </Label>
-                      <Input
-                        id="fullName"
-                        value={profileData.fullName}
-                        onChange={(e) => handleProfileChange('fullName', e.target.value)}
-                        placeholder="Masukkan nama lengkap Anda"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-medium">
-                        Alamat Email *
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={profileData.email}
-                        onChange={(e) => handleProfileChange('email', e.target.value)}
-                        placeholder="Masukkan alamat email Anda"
-                      />
-                      {profileData.email !== 'john.doe@company.com' && (
-                        <div className="flex items-center gap-2 text-amber-600 text-sm">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span>Verifikasi Tertunda - Email verifikasi akan dikirim</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm font-medium">
-                        Nomor Telepon
-                      </Label>
-                      <Input
-                        id="phone"
-                        value={profileData.phone}
-                        onChange={(e) => handleProfileChange('phone', e.target.value)}
-                        placeholder="Masukkan nomor telepon Anda"
-                      />
-                      {profileData.phone !== '+62 812-3456-7890' && (
-                        <div className="flex items-center gap-2 text-amber-600 text-sm">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span>Verifikasi Tertunda - OTP akan dikirim</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <Button 
-                      onClick={handleSaveProfile}
-                      disabled={!hasProfileChanges || isLoading}
-                      className="w-full"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
-                    </Button>
-                  </div>
+              <div className="lg:col-span-2">
+                <Form
+                  title="Informasi Personal"
+                  description="Kelola data identitas fundamental yang terasosiasi dengan akun admin"
+                  fields={profileFields}
+                  initialValues={formData}
+                  validationRules={{
+                    'profile.full_name': { required: true, minLength: 2, maxLength: 255 },
+                    'profile.email': { required: true, email: true, maxLength: 255 },
+                    'profile.phone': { maxLength: 20 },
+                    'profile.bio': { maxLength: 1000 },
+                    'profile.timezone': { required: true, maxLength: 50 },
+                    'profile.language': { required: true, maxLength: 10 }
+                  }}
+                  onSubmit={handleSaveProfile}
+                  submitText="Simpan Perubahan"
+                  showProgress={true}
+                  autoSave={false}
+                  loading={loadingStates.saveProfile}
+                />
                 </div>
 
                 {/* Right Column - Avatar */}
                 <div className="space-y-4">
-                  <div className="text-center">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-center">Avatar</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center">
                     <div className="relative inline-block">
                       <Avatar className="w-32 h-32 mx-auto">
-                        <AvatarImage src={profileData.avatarUrl} />
+                        <AvatarImage src={formData.profile.avatar_url} />
                         <AvatarFallback className="text-2xl">
-                          {profileData.fullName.split(' ').map(n => n[0]).join('')}
+                          {formData.profile.full_name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
-                      
+
                       <Button
                         size="sm"
                         variant="outline"
@@ -462,9 +758,17 @@ const ProfileSettings = () => {
                         <Camera className="w-4 h-4" />
                       </Button>
                     </div>
+
+                    <div className="mt-4">
+                      <h3 className="font-medium text-gray-900">
+                        {formData.profile.full_name || 'Nama Lengkap'}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {formData.profile.email || 'email@example.com'}
+                      </p>
                   </div>
 
-                  <div className="text-center space-y-2">
+                    <div className="text-center space-y-2 mt-4">
                     <p className="text-sm font-medium">Foto Profil</p>
                     <p className="text-xs text-gray-500">
                       JPG/PNG, maks 2MB
@@ -478,7 +782,7 @@ const ProfileSettings = () => {
                         <Camera className="w-4 h-4 mr-2" />
                         Unggah Foto Baru
                       </Button>
-                      {profileData.avatarUrl && (
+                        {formData.profile.avatar_url && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -488,133 +792,37 @@ const ProfileSettings = () => {
                           Hapus Foto
                         </Button>
                       )}
-                    </div>
-                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+              </div>
+            </div>
+          </LoadingWrapper>
         </TabsContent>
 
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-6 mt-6">
-          {/* Password Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5" />
-                Manajemen Kata Sandi & Keamanan
-              </CardTitle>
-              <CardDescription>
-                Antarmuka yang aman dan jelas untuk mengelola kredensial login dan sesi akun
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <form onSubmit={(e) => { e.preventDefault(); handleSavePassword(); }} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword" className="text-sm font-medium">
-                    Kata Sandi Saat Ini *
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="currentPassword"
-                      type={showPassword ? 'text' : 'password'}
-                      value={passwordData.currentPassword}
-                      onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                      placeholder="Masukkan kata sandi saat ini"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword" className="text-sm font-medium">
-                    Kata Sandi Baru *
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="newPassword"
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={passwordData.newPassword}
-                      onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                      placeholder="Masukkan kata sandi baru"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                    >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                  
-                  {/* Password Strength Indicator */}
-                  {passwordData.newPassword && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Kekuatan Kata Sandi:</span>
-                        <span className={passwordStrength < 75 ? 'text-red-600' : 'text-green-600'}>
-                          {getPasswordStrengthText()}
-                        </span>
-                      </div>
-                      <Progress value={passwordStrength} className="h-2">
-                        <div className={`h-full transition-all duration-300 ${getPasswordStrengthColor()}`} />
-                      </Progress>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                    Konfirmasi Kata Sandi Baru *
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                      placeholder="Konfirmasi kata sandi baru"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="text-sm text-red-600">{errors.confirmPassword}</p>
-                  )}
-                </div>
-
-                <div className="pt-4">
-                  <Button 
-                    type="submit"
-                    disabled={!hasPasswordChanges || isLoading}
-                    className="w-full"
-                  >
-                    <Key className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Mengubah...' : 'Ubah Kata Sandi'}
-                  </Button>
-                </div>
-              </form>
+          <LoadingWrapper
+            isLoading={loadingStates.profile}
+            loadingComponent={<SkeletonCard />}
+          >
+            <Form
+              title="Manajemen Kata Sandi & Keamanan"
+              description="Antarmuka yang aman dan jelas untuk mengelola kredensial login dan sesi akun"
+              fields={passwordFields}
+              initialValues={formData}
+              validationRules={{
+                'password.current_password': { required: true, minLength: 6 },
+                'password.new_password': { required: true, minLength: 8 },
+                'password.confirm_password': { required: true, minLength: 8 }
+              }}
+              onSubmit={handleSavePassword}
+              submitText="Ubah Kata Sandi"
+              showProgress={true}
+              autoSave={false}
+              loading={loadingStates.changePassword}
+            />
 
               <Separator />
 
@@ -626,10 +834,10 @@ const ProfileSettings = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleLogoutAllDevices}
-                    disabled={activeSessions.length <= 1}
+                  disabled={activeSessions.length <= 1 || loadingStates.logoutAll}
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    Keluar dari Semua Perangkat Lain
+                  {loadingStates.logoutAll ? 'Keluar...' : 'Keluar dari Semua Perangkat Lain'}
                   </Button>
                 </div>
 
@@ -650,7 +858,7 @@ const ProfileSettings = () => {
                           <Badge variant="secondary">Sesi Aktif</Badge>
                         )}
                       </div>
-                      
+
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <DeviceIcon className="w-4 h-4 text-gray-500" />
@@ -671,157 +879,31 @@ const ProfileSettings = () => {
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </LoadingWrapper>
         </TabsContent>
 
         {/* Preferences Tab */}
         <TabsContent value="preferences" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Preferensi Antarmuka & Notifikasi
-              </CardTitle>
-              <CardDescription>
-                Sesuaikan lingkungan kerja Anda di dalam platform sesuai preferensi pribadi
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              {/* Display Settings */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Palette className="w-5 h-5" />
-                  Pengaturan Tampilan
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="language" className="text-sm font-medium">
-                      Bahasa / Language
-                    </Label>
-                    <Select 
-                      value={preferences.language} 
-                      onValueChange={(value) => handleGeneralPreferenceChange('language', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="id">Bahasa Indonesia</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500">
-                      Perubahan akan langsung diterapkan setelah disimpan
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Tema</Label>
-                    <div className="flex gap-3">
-                      {[
-                        { value: 'light', label: 'Terang', icon: '☀️' },
-                        { value: 'dark', label: 'Gelap', icon: '🌙' },
-                        { value: 'auto', label: 'Otomatis', icon: '🔄' }
-                      ].map((theme) => (
-                        <div key={theme.value} className="flex items-center space-x-2">
-                          <input
-                            type="radio"
-                            id={theme.value}
-                            name="theme"
-                            value={theme.value}
-                            checked={preferences.theme === theme.value}
-                            onChange={(e) => handleGeneralPreferenceChange('theme', e.target.value)}
-                            className="w-4 h-4 text-blue-600"
-                          />
-                          <Label htmlFor={theme.value} className="text-sm cursor-pointer">
-                            <span className="mr-2">{theme.icon}</span>
-                            {theme.label}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Notification Settings */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Bell className="w-5 h-5" />
-                  Pengaturan Notifikasi
-                </h3>
-                
-                <div className="space-y-6">
-                  {/* Email Notifications */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium text-gray-700">Notifikasi Email</h4>
-                    <div className="space-y-3">
-                      {[
-                        { key: 'weeklyReport', label: 'Kirim ringkasan laporan performa mingguan' },
-                        { key: 'billing', label: 'Kirim notifikasi tagihan (faktur terbit, pembayaran berhasil/gagal)' },
-                        { key: 'securityAlerts', label: 'Kirim lansiran keamanan penting (login dari perangkat baru)' }
-                      ].map((setting) => (
-                        <div key={setting.key} className="flex items-center justify-between">
-                          <Label htmlFor={setting.key} className="text-sm cursor-pointer">
-                            {setting.label}
-                          </Label>
-                          <Switch
-                            id={setting.key}
-                            checked={preferences.notifications.email[setting.key]}
-                            onCheckedChange={(checked) => 
-                              handlePreferenceChange('email', setting.key, checked)
-                            }
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* In-App Notifications */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium text-gray-700">Notifikasi Dalam Aplikasi</h4>
-                    <div className="space-y-3">
-                      {[
-                        { key: 'newTeamMember', label: 'Tampilkan notifikasi saat pengguna baru berhasil bergabung dengan tim' },
-                        { key: 'integrationStatus', label: 'Tampilkan notifikasi saat integrasi penting (WhatsApp) terputus' }
-                      ].map((setting) => (
-                        <div key={setting.key} className="flex items-center justify-between">
-                          <Label htmlFor={setting.key} className="text-sm cursor-pointer">
-                            {setting.label}
-                          </Label>
-                          <Switch
-                            id={setting.key}
-                            checked={preferences.notifications.inApp[setting.key]}
-                            onCheckedChange={(checked) => 
-                              handlePreferenceChange('inApp', setting.key, checked)
-                            }
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Save Preferences */}
-              <div className="pt-4">
-                <Button 
-                  onClick={handleSavePreferences}
-                  disabled={!hasPreferenceChanges || isLoading}
-                  className="w-full"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Menyimpan...' : 'Simpan Preferensi'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <LoadingWrapper
+            isLoading={loadingStates.profile}
+            loadingComponent={<SkeletonCard />}
+          >
+            <Form
+              title="Preferensi Antarmuka & Notifikasi"
+              description="Sesuaikan lingkungan kerja Anda di dalam platform sesuai preferensi pribadi"
+              fields={preferencesFields}
+              initialValues={formData}
+              validationRules={{
+                'preferences.language': { required: true, maxLength: 10 },
+                'preferences.theme': { required: true, maxLength: 10 }
+              }}
+              onSubmit={handleSavePreferences}
+              submitText="Simpan Preferensi"
+              showProgress={true}
+              autoSave={false}
+              loading={loadingStates.savePreferences}
+            />
+          </LoadingWrapper>
         </TabsContent>
       </Tabs>
 
@@ -857,4 +939,4 @@ const ProfileSettings = () => {
   );
 };
 
-export default ProfileSettings;
+export default withErrorHandling(ProfileSettings);
