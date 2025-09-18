@@ -81,6 +81,34 @@ const Form = ({
   // Debounced values for auto-save
   const debouncedValues = useDebounce(values, autoSaveDelay);
 
+  // Helper function to get nested value
+  const getNestedValue = useCallback((obj, path) => {
+    const value = path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : '';
+    }, obj);
+
+    // Convert null/undefined to empty string for form inputs
+    return value === null || value === undefined ? '' : value;
+  }, []);
+
+  // Helper function to set nested value
+  const setNestedValue = useCallback((obj, path, value) => {
+    const keys = path.split('.');
+    const result = { ...obj };
+    let current = result;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) {
+        current[keys[i]] = {};
+      }
+      current = current[keys[i]];
+    }
+
+    // Convert empty string to null for storage, but keep empty string for form inputs
+    current[keys[keys.length - 1]] = value === '' ? null : value;
+    return result;
+  }, []);
+
   // Auto-save effect
   useEffect(() => {
     if (autoSave && Object.keys(debouncedValues).length > 0 && lastSaved !== null) {
@@ -94,60 +122,63 @@ const Form = ({
     const rules = validationRules[fieldName] || {};
     const fieldErrors = [];
 
+    // Get the actual value (handle nested paths)
+    const actualValue = typeof value === 'string' ? value : getNestedValue(values, fieldName);
+
     // Required validation
-    if (rules.required && (!value || value.toString().trim() === '')) {
+    if (rules.required && (!actualValue || actualValue.toString().trim() === '')) {
       fieldErrors.push(`${field?.label || fieldName} is required`);
     }
 
-    if (value && value.toString().trim() !== '') {
+    if (actualValue && actualValue.toString().trim() !== '') {
       // Type-specific validation
       switch (field?.type) {
         case 'email':
-          if (!validateInput.email(value)) {
+          if (!validateInput.email(actualValue)) {
             fieldErrors.push('Please enter a valid email address');
           }
           break;
         case 'password':
-          if (!validateInput.password(value)) {
+          if (!validateInput.password(actualValue)) {
             fieldErrors.push('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
           }
           break;
         case 'tel':
-          if (!validateInput.phoneNumber(value)) {
+          if (!validateInput.phoneNumber(actualValue)) {
             fieldErrors.push('Please enter a valid phone number');
           }
           break;
         case 'url':
-          if (!validateInput.url(value)) {
+          if (!validateInput.url(actualValue)) {
             fieldErrors.push('Please enter a valid URL');
           }
           break;
       }
 
       // Length validation
-      if (rules.minLength && value.length < rules.minLength) {
+      if (rules.minLength && actualValue.length < rules.minLength) {
         fieldErrors.push(`Minimum length is ${rules.minLength} characters`);
       }
 
-      if (rules.maxLength && value.length > rules.maxLength) {
+      if (rules.maxLength && actualValue.length > rules.maxLength) {
         fieldErrors.push(`Maximum length is ${rules.maxLength} characters`);
       }
 
       // Pattern validation
-      if (rules.pattern && !rules.pattern.test(value)) {
+      if (rules.pattern && !rules.pattern.test(actualValue)) {
         fieldErrors.push(rules.patternMessage || 'Invalid format');
       }
 
       // Custom validation
       if (rules.custom && typeof rules.custom === 'function') {
-        const customError = rules.custom(value, values);
+        const customError = rules.custom(actualValue, values);
         if (customError) {
           fieldErrors.push(customError);
         }
       }
 
       // Security validation
-      if (!validateInput.noScriptTags(value)) {
+      if (!validateInput.noScriptTags(actualValue)) {
         fieldErrors.push('Invalid characters detected');
       }
     }
@@ -161,7 +192,8 @@ const Form = ({
     let isValid = true;
 
     fields.forEach(field => {
-      const fieldErrors = validateField(field.name, values[field.name]);
+      const fieldValue = getNestedValue(values, field.name);
+      const fieldErrors = validateField(field.name, fieldValue);
       if (fieldErrors.length > 0) {
         newErrors[field.name] = fieldErrors[0]; // Show first error only
         isValid = false;
@@ -170,16 +202,15 @@ const Form = ({
 
     setErrors(newErrors);
     return isValid;
-  }, [fields, values, validateField]);
+  }, [fields, values, validateField, getNestedValue]);
 
   // Handle field change
   const handleFieldChange = useCallback((fieldName, value) => {
-    const sanitizedValue = typeof value === 'string' ? sanitizeInput(value) : value;
+    // Convert null/undefined to empty string for form inputs
+    const cleanValue = value === null || value === undefined ? '' : value;
+    const sanitizedValue = typeof cleanValue === 'string' ? sanitizeInput(cleanValue) : cleanValue;
 
-    setValues(prev => ({
-      ...prev,
-      [fieldName]: sanitizedValue
-    }));
+    setValues(prev => setNestedValue(prev, fieldName, sanitizedValue));
 
     setTouched(prev => ({
       ...prev,
@@ -194,7 +225,7 @@ const Form = ({
         [fieldName]: fieldErrors.length > 0 ? fieldErrors[0] : undefined
       }));
     }
-  }, [touched, validateField]);
+  }, [touched, validateField, setNestedValue]);
 
   // Handle field blur
   const handleFieldBlur = useCallback((fieldName) => {
@@ -287,17 +318,17 @@ const Form = ({
 
     const requiredFields = fields.filter(field => validationRules[field.name]?.required);
     const completedFields = requiredFields.filter(field => {
-      const value = values[field.name];
+      const value = getNestedValue(values, field.name);
       return value && value.toString().trim() !== '';
     });
 
     return requiredFields.length > 0 ? (completedFields.length / requiredFields.length) * 100 : 0;
-  }, [fields, values, validationRules, showProgress]);
+  }, [fields, values, validationRules, showProgress, getNestedValue]);
 
   // Render field
   const renderField = useCallback((field) => {
     const fieldError = errors[field.name];
-    const fieldValue = values[field.name] || '';
+    const fieldValue = getNestedValue(values, field.name);
 
     const commonProps = {
       name: field.name,
