@@ -1,11 +1,27 @@
 /* eslint-disable no-console */
-import { BaseApiService } from '@/api/BaseApiService';
+import { authService } from './AuthService';
 import { handleError } from '@/utils/errorHandler';
 
-class ProfileService extends BaseApiService {
+class ProfileService {
   constructor() {
-    super();
-    this.baseURL = '/api/v1';
+    this.authService = authService;
+  }
+
+  /**
+   * Helper method to make API calls using AuthService
+   */
+  async _makeApiCall(method, endpoint, data = null, config = {}) {
+    try {
+      const response = await this.authService.api.request({
+        method,
+        url: `/api/v1${endpoint}`,
+        data,
+        ...config
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -13,21 +29,17 @@ class ProfileService extends BaseApiService {
    */
   async getCurrentProfile() {
     try {
-      // Use the /auth/me endpoint
-      const response = await this.get('/auth/me');
+      // Use AuthService to get current user
+      const userData = await this.authService.getCurrentUser();
 
-      // BaseApiService wraps response in { success, data, status, headers }
-      if (!response || !response.success) {
-        throw new Error(response?.error || 'No data received from server');
+      if (!userData) {
+        throw new Error('No user data received from AuthService');
       }
 
-      // Return the data, handling both response.data.data and response.data structures
-      return response.data.data || response.data;
+      return userData;
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Error getting current profile:', error);
-        console.error('Response:', error.response?.data);
-        console.error('Status:', error.response?.status);
       }
       throw handleError(error);
     }
@@ -38,14 +50,12 @@ class ProfileService extends BaseApiService {
    */
   async updateProfile(profileData) {
     try {
-      const response = await this.put('/me/profile', profileData);
+      const response = await this._makeApiCall('PUT', '/me/profile', profileData);
 
-      // BaseApiService wraps response in { success, data, status, headers }
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');
       }
 
-      // Return the data, handling both response.data.data and response.data structures
       return response.data.data || response.data;
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -60,9 +70,8 @@ class ProfileService extends BaseApiService {
    */
   async changePassword(passwordData) {
     try {
-      const response = await this.post('/auth/change-password', passwordData);
+      const response = await this._makeApiCall('POST', '/auth/change-password', passwordData);
 
-      // BaseApiService wraps response in { success, data, status, headers }
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');
       }
@@ -84,18 +93,16 @@ class ProfileService extends BaseApiService {
       const formData = new FormData();
       formData.append('avatar', file);
 
-      const response = await this.post('/me/avatar', formData, {
+      const response = await this._makeApiCall('POST', '/me/avatar', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      // BaseApiService wraps response in { success, data, status, headers }
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');
       }
 
-      // Return the data, handling both response.data.data and response.data structures
       return response.data.data || response.data;
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -110,9 +117,8 @@ class ProfileService extends BaseApiService {
    */
   async deleteAvatar() {
     try {
-      const response = await this.delete('/me/avatar');
+      const response = await this._makeApiCall('DELETE', '/me/avatar');
 
-      // BaseApiService wraps response in { success, data, status, headers }
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');
       }
@@ -132,9 +138,8 @@ class ProfileService extends BaseApiService {
    */
   async logoutAllDevices() {
     try {
-      const response = await this.post('/auth/logout-all');
+      const response = await this._makeApiCall('POST', '/auth/logout-all');
 
-      // BaseApiService wraps response in { success, data, status, headers }
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');
       }
@@ -154,9 +159,8 @@ class ProfileService extends BaseApiService {
    */
   async validateEmail(email) {
     try {
-      const response = await this.post('/users/check-email', { email });
+      const response = await this._makeApiCall('POST', '/users/check-email', { email });
 
-      // BaseApiService wraps response in { success, data, status, headers }
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');
       }
@@ -175,9 +179,8 @@ class ProfileService extends BaseApiService {
    */
   async validatePhone(phone) {
     try {
-      const response = await this.post('/users/check-phone', { phone });
+      const response = await this._makeApiCall('POST', '/users/check-phone', { phone });
 
-      // BaseApiService wraps response in { success, data, status, headers }
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');
       }
