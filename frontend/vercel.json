@@ -1,5 +1,5 @@
 {
-  "name": "chatbot-saas",
+  "name": "chatbot-app",
   "version": 2,
   "builds": [
     {
@@ -12,21 +12,17 @@
   ],
   "routes": [
     {
-      "src": "/chatbot-saas/(.*)",
-      "dest": "/chatbot-saas/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     },
     {
-      "src": "/chatbot-saas/assets/(.*)",
-      "dest": "/chatbot-saas/assets/$1"
-    },
-    {
-      "src": "/chatbot-saas/(.*)",
-      "dest": "/chatbot-saas/index.html"
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
     }
   ],
   "headers": [
     {
-      "source": "/chatbot-saas/(.*)",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",
@@ -47,7 +43,7 @@
       ]
     },
     {
-      "source": "/chatbot-saas/assets/(.*)",
+      "source": "/assets/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -57,7 +53,7 @@
     }
   ],
   "env": {
-    "VITE_BASE_URL": "/chatbot-saas/",
+    "VITE_BASE_URL": "/",
     "VITE_API_BASE_URL": "http://100.81.120.54:9999"
   }
 }

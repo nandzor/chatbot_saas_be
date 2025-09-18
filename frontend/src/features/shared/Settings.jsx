@@ -72,14 +72,15 @@ import TeamTab from './TeamTab';
 import SecurityTab from './SecurityTab';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import organizationManagementService from '@/services/OrganizationManagementService';
-import { AuthContext } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const Settings = () => {
   const { announce } = useAnnouncement();
   const { focusRef, setFocus } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
-  const { user, organization } = useContext(AuthContext);
+  const { user } = useAuth();
+  const organization = user?.organization || user?.currentOrganization || null;
 
   // Get organization ID from context or URL params
   const organizationId = organization?.id || user?.organization_id;

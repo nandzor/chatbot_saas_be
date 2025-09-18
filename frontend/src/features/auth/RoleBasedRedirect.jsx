@@ -14,18 +14,20 @@ const RoleBasedRedirect = () => {
   }
 
   // If not authenticated, redirect to login
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/auth/login" replace />;
   }
 
   // Redirect based on user role
-  switch (user?.role) {
+  switch (user.role) {
     case 'super_admin':
       return <Navigate to="/superadmin" replace />;
     case 'org_admin':
       return <Navigate to="/dashboard" replace />;
     case 'agent':
       return <Navigate to="/agent" replace />;
+    case 'customer':
+      return <Navigate to="/customer" replace />;
     default:
       // If role is not recognized, redirect to login
       return <Navigate to="/auth/login" replace />;

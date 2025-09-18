@@ -260,8 +260,8 @@ const useClientSettings = () => {
       notifyOnUserRegistration: true,
       notifyOnSuspiciousActivity: true,
       notifyOnSystemMaintenance: true,
-      emailFromAddress: 'noreply@chatbot-saas.com',
-      emailFromName: 'ChatBot SaaS',
+      emailFromAddress: 'noreply@chatbot-app.com',
+      emailFromName: 'ChatBot App',
       enableSmsNotifications: false,
       smsProvider: 'twilio'
     },

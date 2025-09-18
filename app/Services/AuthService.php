@@ -55,8 +55,8 @@ class AuthService extends BaseService
         // Check rate limiting
         $this->checkRateLimit($request);
 
-        // Find user
-        $user = User::where('email', $email)
+        // Find user (case-insensitive email lookup)
+        $user = User::whereRaw('LOWER(email) = LOWER(?)', [$email])
                    ->whereNull('deleted_at')
                    ->first();
 
@@ -283,7 +283,6 @@ class AuthService extends BaseService
     protected function isUserActive(User $user): bool
     {
         return $user->status === 'active' &&
-               $user->is_email_verified &&
                is_null($user->deleted_at);
     }
 

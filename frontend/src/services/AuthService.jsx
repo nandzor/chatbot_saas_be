@@ -3,7 +3,7 @@ import axios from 'axios';
 class AuthService {
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL,
+      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -184,8 +184,13 @@ class AuthService {
    * Get current user information
    */
   async getCurrentUser() {
-    const response = await this.api.get('/auth/me');
-    return response.data.data;
+    try {
+      const response = await this.api.get('/auth/me');
+      return response.data.data;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      throw error;
+    }
   }
 
   /**
@@ -256,13 +261,15 @@ class AuthService {
     const jwtToken = localStorage.getItem('jwt_token');
     const sanctumToken = localStorage.getItem('sanctum_token');
     const tokenExpiresAt = localStorage.getItem('token_expires_at');
+    const savedUser = localStorage.getItem('chatbot_user');
 
-    if (!jwtToken && !sanctumToken) {
+    // Must have at least one token and user data
+    if ((!jwtToken && !sanctumToken) || !savedUser) {
       return false;
     }
 
     // Check if JWT token is expired
-    if (tokenExpiresAt && new Date(tokenExpiresAt) <= new Date()) {
+    if (jwtToken && tokenExpiresAt && new Date(tokenExpiresAt) <= new Date()) {
       // JWT expired, but Sanctum might still be valid
       return !!sanctumToken;
     }
@@ -293,7 +300,7 @@ class AuthService {
       return {
         status: 'healthy',
         auth_method: response.data.data?.auth_method || 'unknown',
-        user: response.data.data?.user,
+        user: response.data.data,
         timestamp: new Date().toISOString()
       };
     } catch (error) {

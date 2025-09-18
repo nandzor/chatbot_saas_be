@@ -10,13 +10,13 @@ export const APP_CONFIG = {
   description: 'AI-powered chatbot platform for businesses',
 
   // Environment
-  environment: process.env.NODE_ENV || 'development',
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
+  environment: import.meta.env.MODE || 'development',
+  isDevelopment: import.meta.env.MODE === 'development',
+  isProduction: import.meta.env.MODE === 'production',
 
   // API Configuration
   api: {
-    baseUrl: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api',
     version: 'v1',
     timeout: 30000,
     retryAttempts: 3,
@@ -84,7 +84,7 @@ export const APP_CONFIG = {
     enableErrorTracking: true,
     enablePerformanceTracking: true,
     enableUserTracking: true,
-    logLevel: process.env.NODE_ENV === 'production' ? 'error' : 'debug'
+    logLevel: import.meta.env.MODE === 'production' ? 'error' : 'debug'
   }
 };
 

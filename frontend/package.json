@@ -15,8 +15,8 @@
     "lint": "eslint . --ext js,jsx,ts,tsx",
     "lint:fix": "eslint . --ext js,jsx,ts,tsx --fix",
     "type-check": "tsc --noEmit",
-    "deploy:staging": "npm run build:staging && echo '🚀 Staging build complete! Deploy to: /chatbot-saas/'",
-    "deploy:prod": "npm run build:prod && echo '🚀 Production build complete! Deploy to: /chatbot-saas/'"
+    "deploy:staging": "npm run build:staging && echo '🚀 Staging build complete! Deploy to: /'",
+    "deploy:prod": "npm run build:prod && echo '🚀 Production build complete! Deploy to: /'"
   },
   "dependencies": {
     "axios": "^1.11.0",

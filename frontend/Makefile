@@ -69,7 +69,7 @@ deploy-full:
 # Docker commands
 docker-build:
 	@echo "🐳 Building Docker image..."
-	docker build -t chatbot-saas .
+	docker build -t chatbot-app .
 
 docker-run:
 	@echo "🐳 Running Docker container..."
@@ -120,7 +120,7 @@ start:
 # Health check
 health:
 	@echo "🏥 Checking application health..."
-	curl -f http://localhost:8080/chatbot-saas/ || echo "❌ Application is not healthy"
+	curl -f http://localhost:8080/ || echo "❌ Application is not healthy"
 
 # Show configuration
 config:
@@ -146,7 +146,7 @@ restore:
 # Monitor
 monitor:
 	@echo "📊 Monitoring application..."
-	watch -n 5 'curl -s http://localhost:8080/chatbot-saas/ | head -c 100'
+	watch -n 5 'curl -s http://localhost:8080/ | head -c 100'
 
 # Security check
 security-check:

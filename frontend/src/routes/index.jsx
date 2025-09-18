@@ -84,6 +84,9 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     errorElement: <NotFound />,
     children: [
+      // Default redirect - will be handled by RoleBasedRedirect
+      { index: true, element: <RoleBasedRedirect /> },
+
       // Auth Routes
       {
         path: '/auth',
@@ -268,9 +271,6 @@ export const router = createBrowserRouter([
       // Error Routes
       { path: '/unauthorized', element: <Unauthorized /> },
       { path: '/server-error', element: <ServerError /> },
-
-      // Default redirect - will be handled by RoleBasedRedirect
-      { index: true, element: <RoleBasedRedirect /> },
     ],
   },
 ]);

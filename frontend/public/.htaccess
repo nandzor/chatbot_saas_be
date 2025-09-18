@@ -5,7 +5,7 @@
 RewriteEngine On
 
 # Set base path for the application
-RewriteBase /chatbot-saas/
+RewriteBase /
 
 # Handle static assets (CSS, JS, images, etc.)
 RewriteCond %{REQUEST_FILENAME} -f

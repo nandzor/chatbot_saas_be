@@ -76,21 +76,45 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-        if (savedUser) {
-          const userData = JSON.parse(savedUser);
+        // First check if we have valid tokens
+        if (authService.isAuthenticated()) {
+          // Try to validate with API
+          try {
+            const userData = await authService.getCurrentUser();
+            if (userData) {
+              setUser(userData);
+              setIsAuthenticated(true);
+              setError(null);
+            } else {
+              throw new Error('No user data from API');
+            }
+          } catch (apiError) {
+            console.warn('⚠️ API validation failed, checking local storage');
 
-          // Validate user data structure
-          if (userData && userData.id && userData.username && userData.role) {
-            setUser(userData);
-            setIsAuthenticated(true);
-          } else {
-            console.warn('⚠️ Invalid user data structure, clearing storage');
-            localStorage.removeItem(STORAGE_KEYS.USER);
+            // Fallback to local storage
+            const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
+            if (savedUser) {
+              const userData = JSON.parse(savedUser);
+              if (userData && userData.id && userData.role) {
+                setUser(userData);
+                setIsAuthenticated(true);
+              } else {
+                throw new Error('Invalid user data in storage');
+              }
+            } else {
+              throw new Error('No user data in storage');
+            }
           }
+        } else {
+          // No valid tokens, ensure clean state
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (error) {
+        console.error('⚠️ Error initializing auth:', error);
         localStorage.removeItem(STORAGE_KEYS.USER);
+        setUser(null);
+        setIsAuthenticated(false);
         setError('Failed to restore user session');
       } finally {
         setIsLoading(false);
@@ -229,6 +253,8 @@ export const AuthProvider = ({ children }) => {
     try {
       // Check if user has valid tokens
       if (!authService.isAuthenticated()) {
+        setUser(null);
+        setIsAuthenticated(false);
         return false;
       }
 
@@ -270,8 +296,12 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
+      // If we get here, authentication failed
+      setUser(null);
+      setIsAuthenticated(false);
       return false;
     } catch (error) {
+      console.error('⚠️ Error checking auth:', error);
       logout();
       return false;
     }

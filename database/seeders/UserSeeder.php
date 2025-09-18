@@ -92,7 +92,7 @@ class UserSeeder extends Seeder
                     'knowledge_articles.delete' => true,
                     'analytics.view' => true,
                     'billing.view' => true,
-                    'reports.view' => true
+                    'reports.view' => true,
                 ];
             case 'agent':
                 return [
