@@ -13,22 +13,12 @@ class UserManagementService {
   getOrganizationId() {
     const user = this.authService.getCurrentUserSync();
 
-    if (import.meta.env.DEV) {
-      console.log('UserManagementService - User data:', user);
-      console.log('UserManagementService - organization_id:', user?.organization_id);
-      console.log('UserManagementService - organization:', user?.organization);
-    }
-
     // Try multiple possible organization ID fields
     const organizationId = user?.organization_id ||
                           user?.organization?.id ||
                           user?.organization_id ||
                           user?.org_id ||
                           user?.organizationId;
-
-    if (import.meta.env.DEV) {
-      console.log('UserManagementService - Final organization ID:', organizationId);
-    }
 
     return organizationId;
   }
@@ -63,25 +53,12 @@ class UserManagementService {
 
     const fullUrl = `/v1/organizations/${organizationId}${endpoint}`;
 
-    if (import.meta.env.DEV) {
-      console.log('UserManagementService - Making API call:', {
-        method,
-        url: fullUrl,
-        data,
-        config
-      });
-    }
-
     const response = await this.authService.api.request({
       method,
       url: fullUrl,
       data,
       ...config
     });
-
-    if (import.meta.env.DEV) {
-      console.log('UserManagementService - Raw response:', response);
-    }
 
     return response.data;
   }
@@ -92,16 +69,7 @@ class UserManagementService {
    */
   async getUsers(params = {}) {
     try {
-      if (import.meta.env.DEV) {
-        console.log('UserManagementService - getUsers params:', params);
-        console.log('UserManagementService - organization ID:', this.getOrganizationId());
-      }
-
       const response = await this._makeApiCall('GET', '/users', null, { params });
-
-      if (import.meta.env.DEV) {
-        console.log('UserManagementService - API response:', response);
-      }
 
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');

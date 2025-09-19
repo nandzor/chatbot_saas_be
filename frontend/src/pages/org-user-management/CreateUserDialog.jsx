@@ -16,8 +16,6 @@ import {
   Label,
   Select,
   SelectItem,
-  Alert,
-  AlertDescription,
   Card,
   CardContent,
   CardDescription,
@@ -36,7 +34,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@/utils/errorHandler';
-import { sanitizeInput, validateInput } from '@/utils/securityUtils';
+import { sanitizeInput } from '@/utils/securityUtils';
 import UserManagementService from '@/services/UserManagementService';
 
 const userManagementService = new UserManagementService();
@@ -147,7 +145,7 @@ const CreateUserDialog = ({ open, onOpenChange, onUserCreated }) => {
         throw new Error(response.message || 'Failed to create user');
       }
     } catch (err) {
-      const errorResult = handleError(err, {
+      handleError(err, {
         context: 'Create User',
         showToast: true
       });
@@ -163,134 +161,164 @@ const CreateUserDialog = ({ open, onOpenChange, onUserCreated }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <User className="h-5 w-5 mr-2" />
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100">
+          <DialogTitle className="flex items-center text-xl font-semibold text-gray-900">
+            <User className="h-5 w-5 mr-3 text-blue-600" />
             Create New User
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-gray-600 mt-1">
             Add a new user to your organization. All fields are required.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="px-6 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Full Name */}
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name *</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="full_name" className="text-sm font-semibold text-gray-700 block">
+                Full Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
                 onChange={(e) => handleInputChange('full_name', e.target.value)}
                 placeholder="Enter full name"
-                className={errors.full_name ? 'border-red-500' : ''}
+                className={`h-12 px-4 text-sm ${errors.full_name ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'focus:border-blue-500 focus:ring-blue-200'}`}
               />
               {errors.full_name && (
-                <p className="text-sm text-red-600">{errors.full_name}</p>
+                <p className="text-xs text-red-600 flex items-center mt-1">
+                  <AlertCircle className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                  {errors.full_name}
+                </p>
               )}
             </div>
 
             {/* Username */}
-            <div className="space-y-2">
-              <Label htmlFor="username">Username *</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="username" className="text-sm font-semibold text-gray-700 block">
+                Username <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="username"
                 value={formData.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
                 placeholder="Enter username"
-                className={errors.username ? 'border-red-500' : ''}
+                className={`h-12 px-4 text-sm ${errors.username ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'focus:border-blue-500 focus:ring-blue-200'}`}
               />
               {errors.username && (
-                <p className="text-sm text-red-600">{errors.username}</p>
+                <p className="text-xs text-red-600 flex items-center mt-1">
+                  <AlertCircle className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                  {errors.username}
+                </p>
               )}
             </div>
 
             {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="email" className="text-sm font-semibold text-gray-700 block">
+                Email <span className="text-red-500">*</span>
+              </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   placeholder="Enter email address"
-                  className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
+                  className={`h-12 pl-12 pr-4 text-sm ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'focus:border-blue-500 focus:ring-blue-200'}`}
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-red-600">{errors.email}</p>
+                <p className="text-xs text-red-600 flex items-center mt-1">
+                  <AlertCircle className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                  {errors.email}
+                </p>
               )}
             </div>
 
             {/* Role */}
-            <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="role" className="text-sm font-semibold text-gray-700 block">
+                Role <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) => handleInputChange('role', value)}
               >
                 <SelectItem value="agent">Agent</SelectItem>
                 <SelectItem value="user">User</SelectItem>
+                <SelectItem value="org_admin">Admin</SelectItem>
               </Select>
             </div>
 
             {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="password" className="text-sm font-semibold text-gray-700 block">
+                Password <span className="text-red-500">*</span>
+              </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   placeholder="Enter password"
-                  className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                  className={`h-12 pl-12 pr-14 text-sm ${errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'focus:border-blue-500 focus:ring-blue-200'}`}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100 rounded-md"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4 text-gray-500" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </Button>
               </div>
               {errors.password && (
-                <p className="text-sm text-red-600">{errors.password}</p>
+                <p className="text-xs text-red-600 flex items-center mt-1">
+                  <AlertCircle className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                  {errors.password}
+                </p>
               )}
             </div>
 
             {/* Confirm Password */}
-            <div className="space-y-2">
-              <Label htmlFor="confirm_password">Confirm Password *</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="confirm_password" className="text-sm font-semibold text-gray-700 block">
+                Confirm Password <span className="text-red-500">*</span>
+              </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="confirm_password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.confirm_password}
                   onChange={(e) => handleInputChange('confirm_password', e.target.value)}
                   placeholder="Confirm password"
-                  className={`pl-10 ${errors.confirm_password ? 'border-red-500' : ''}`}
+                  className={`h-12 pl-12 pr-4 text-sm ${errors.confirm_password ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'focus:border-blue-500 focus:ring-blue-200'}`}
                 />
               </div>
               {errors.confirm_password && (
-                <p className="text-sm text-red-600">{errors.confirm_password}</p>
+                <p className="text-xs text-red-600 flex items-center mt-1">
+                  <AlertCircle className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                  {errors.confirm_password}
+                </p>
               )}
             </div>
 
             {/* Status */}
-            <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="status" className="text-sm font-semibold text-gray-700 block">
+                Status <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) => handleInputChange('status', value)}
@@ -303,53 +331,65 @@ const CreateUserDialog = ({ open, onOpenChange, onUserCreated }) => {
           </div>
 
           {/* Password Requirements */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Password Requirements</CardTitle>
-              <CardDescription className="text-xs">
-                Password must meet the following criteria:
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li className="flex items-center">
-                  <CheckCircle className="h-3 w-3 mr-2 text-green-500" />
-                  At least 8 characters long
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-3 w-3 mr-2 text-green-500" />
-                  Contains uppercase and lowercase letters
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-3 w-3 mr-2 text-green-500" />
-                  Contains at least one number
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+          <div className="mt-8">
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm">
+              <CardHeader className="px-5 py-4 pb-3">
+                <CardTitle className="text-sm font-semibold text-blue-900 flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-2 text-blue-600" />
+                  Password Requirements
+                </CardTitle>
+                <CardDescription className="text-xs text-blue-700 mt-1">
+                  Password must meet the following criteria:
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-5 pt-0 pb-4">
+                <ul className="text-xs text-blue-700 space-y-2.5">
+                  <li className="flex items-start">
+                    <CheckCircle className="h-3.5 w-3.5 mr-2.5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>At least 8 characters long</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-3.5 w-3.5 mr-2.5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Contains uppercase and lowercase letters</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-3.5 w-3.5 mr-2.5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Contains at least one number</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <User className="h-4 w-4 mr-2" />
-                  Create User
-                </>
-              )}
-            </Button>
+          <DialogFooter className="px-0 pt-8 pb-0 border-t border-gray-100 mt-8">
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={loading}
+                className="w-full sm:w-32 h-11 text-sm font-medium"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full sm:w-40 h-11 text-sm font-medium bg-blue-600 hover:bg-blue-700"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <User className="h-4 w-4 mr-2" />
+                    Create User
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

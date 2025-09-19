@@ -24,11 +24,6 @@ class AuthService {
         const jwtToken = localStorage.getItem('jwt_token');
         const sanctumToken = localStorage.getItem('sanctum_token');
 
-        if (import.meta.env.DEV) {
-          console.log('AuthService - Request interceptor - JWT token:', jwtToken ? 'present' : 'missing');
-          console.log('AuthService - Request interceptor - Sanctum token:', sanctumToken ? 'present' : 'missing');
-          console.log('AuthService - Request interceptor - URL:', config.url);
-        }
 
         // Add JWT token to Authorization header
         if (jwtToken) {
@@ -48,16 +43,9 @@ class AuthService {
     // Response interceptor - handle token refresh
     this.api.interceptors.response.use(
       (response) => {
-        if (import.meta.env.DEV) {
-          console.log('AuthService - Response interceptor - Success:', response.status, response.config.url);
-        }
         return response;
       },
       async (error) => {
-        if (import.meta.env.DEV) {
-          console.log('AuthService - Response interceptor - Error:', error.response?.status, error.config?.url);
-          console.log('AuthService - Response interceptor - Error data:', error.response?.data);
-        }
         const originalRequest = error.config;
 
         // If 401 and not already retrying
@@ -202,19 +190,12 @@ class AuthService {
   getCurrentUserSync() {
     try {
       const savedUser = localStorage.getItem('chatbot_user');
-      if (import.meta.env.DEV) {
-        console.log('AuthService - getCurrentUserSync - savedUser from localStorage:', savedUser);
-      }
       if (savedUser) {
         const parsedUser = JSON.parse(savedUser);
-        if (import.meta.env.DEV) {
-          console.log('AuthService - getCurrentUserSync - parsed user:', parsedUser);
-        }
         return parsedUser;
       }
       return null;
     } catch (error) {
-      console.error('Error getting user from localStorage:', error);
       return null;
     }
   }
@@ -248,7 +229,6 @@ class AuthService {
       const response = await this.api.get('/auth/me');
       return response.data.data;
     } catch (error) {
-      console.error('Error getting current user:', error);
       throw error;
     }
   }
@@ -286,7 +266,7 @@ class AuthService {
       localStorage.setItem('sanctum_token', tokens.sanctum_token);
     }
 
-    // Store auth method for debugging
+    // Store auth method
     if (tokens.auth_method) {
       localStorage.setItem('auth_method', tokens.auth_method);
     }
