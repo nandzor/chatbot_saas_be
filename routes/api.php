@@ -545,6 +545,7 @@ Route::prefix('v1')->group(function () {
                 Route::middleware(['permission:organizations.update'])->put('/', [OrganizationController::class, 'update']);
                 Route::middleware(['permission:organizations.delete'])->delete('/', [OrganizationController::class, 'destroy']);
                 Route::get('/users', [OrganizationController::class, 'users']);
+                Route::get('/users/{userId}', [OrganizationController::class, 'showUser']);
                 Route::middleware(['permission:organizations.manage_users'])->post('/users', [OrganizationController::class, 'addUser']);
                 Route::middleware(['permission:organizations.manage_users'])->put('/users/{userId}', [OrganizationController::class, 'updateUser']);
                 Route::middleware(['permission:organizations.manage_users'])->patch('/users/{userId}', [OrganizationController::class, 'updateUser']);
@@ -554,6 +555,7 @@ Route::prefix('v1')->group(function () {
 
                 // Advanced individual operations
                 Route::get('/activity-logs', [OrganizationController::class, 'activityLogs']);
+                Route::get('/statistics', [OrganizationController::class, 'getOrganizationStatistics']);
                 Route::get('/health', [OrganizationController::class, 'health']);
                 Route::get('/analytics', [OrganizationController::class, 'analytics']);
                 Route::get('/metrics', [OrganizationController::class, 'metrics']);

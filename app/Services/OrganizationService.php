@@ -309,6 +309,9 @@ class OrganizationService extends BaseService
     public function getOrganizationStatistics(): array
     {
         return Cache::remember('organization_statistics', 3600, function () {
+            // Get current organization ID from request
+            $organizationId = request()->route('organization');
+
             return [
                 'total_organizations' => $this->getModel()->count(),
                 'active_organizations' => $this->getModel()->where('status', 'active')->count(),
@@ -336,9 +339,101 @@ class OrganizationService extends BaseService
                     ->selectRaw('subscription_status, COUNT(*) as count')
                     ->groupBy('subscription_status')
                     ->pluck('count', 'subscription_status')
-                    ->toArray()
+                    ->toArray(),
+                // Add activities and sessions data for current organization
+                'total_activities' => $organizationId ? \App\Models\AuditLog::where('organization_id', $organizationId)->count() : 0,
+                'active_sessions' => $organizationId ? \App\Models\UserSession::whereHas('user', function($query) use ($organizationId) {
+                    $query->where('organization_id', $organizationId);
+                })->where('is_active', true)->where('expires_at', '>', now())->count() : 0
             ];
         });
+    }
+
+    /**
+     * Get user activity data
+     */
+    private function getUserActivity(string $userId): array
+    {
+        try {
+            $activities = \App\Models\AuditLog::where('user_id', $userId)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'action' => $log->action,
+                        'description' => $log->description,
+                        'resource_type' => $log->resource_type,
+                        'resource_name' => $log->resource_name,
+                        'ip_address' => $log->ip_address,
+                        'user_agent' => $log->user_agent,
+                        'created_at' => $log->created_at,
+                        'severity' => $log->severity,
+                        'changes' => $log->changes
+                    ];
+                });
+            return [
+                'recent_activities' => $activities,
+                'total_activities' => \App\Models\AuditLog::where('user_id', $userId)->count(),
+                'last_activity' => \App\Models\AuditLog::where('user_id', $userId)
+                    ->orderBy('created_at', 'desc')
+                    ->first()?->created_at
+            ];
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get user activity', [
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'recent_activities' => [],
+                'total_activities' => 0,
+                'last_activity' => null
+            ];
+        }
+    }
+
+    /**
+     * Get user sessions data
+     */
+    private function getUserSessions(string $userId): array
+    {
+        try {
+            $sessions = \App\Models\UserSession::where('user_id', $userId)
+                ->where('is_active', true)
+                ->where('expires_at', '>', now())
+                ->orderBy('last_activity_at', 'desc')
+                ->get()
+                ->map(function ($session) {
+                    return [
+                        'id' => $session->id,
+                        'session_token' => substr($session->session_token, 0, 8) . '...', // Masked token
+                        'ip_address' => $session->ip_address,
+                        'user_agent' => $session->user_agent,
+                        'device_info' => $session->device_info,
+                        'location_info' => $session->location_info,
+                        'last_activity_at' => $session->last_activity_at,
+                        'expires_at' => $session->expires_at,
+                        'is_active' => $session->is_active,
+                        'created_at' => $session->created_at
+                    ];
+                });
+            return [
+                'active_sessions' => $sessions,
+                'total_sessions' => $sessions->count(),
+                'last_session' => $sessions->first()['last_activity_at'] ?? null
+            ];
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get user sessions', [
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'active_sessions' => [],
+                'total_sessions' => 0,
+                'last_session' => null
+            ];
+        }
     }
 
     /**
@@ -397,7 +492,11 @@ class OrganizationService extends BaseService
 
             $users = $query->paginate($perPage, ['*'], 'page', $page);
 
-            $data = $users->map(function ($user) {
+            $data = $users->map(function ($user) use ($id) {
+                // Get user activity and sessions
+                $activity = $this->getUserActivity($user->id);
+                $sessions = $this->getUserSessions($user->id);
+
                 return [
                     'id' => $user->id,
                     'name' => $user->full_name,
@@ -405,7 +504,9 @@ class OrganizationService extends BaseService
                     'role' => $user->role ?? 'No Role',
                     'status' => $user->status,
                     'last_login' => $user->last_login_at,
-                    'created_at' => $user->created_at
+                    'created_at' => $user->created_at,
+                    'activity' => $activity,
+                    'sessions' => $sessions
                 ];
             })->toArray();
 
@@ -438,6 +539,39 @@ class OrganizationService extends BaseService
                     'to' => 0,
                 ]
             ];
+        }
+    }
+
+    /**
+     * Get individual user in organization
+     */
+    public function getOrganizationUser(string $organizationId, string $userId): ?User
+    {
+        try {
+            $organization = $this->getOrganizationById($organizationId);
+
+            if (!$organization) {
+                return null;
+            }
+
+            $user = User::where('id', $userId)
+                ->where('organization_id', $organizationId)
+                ->with(['organization', 'roles.permissions'])
+                ->first();
+
+            if (!$user) {
+                return null;
+            }
+
+            return $user;
+        } catch (\Exception $e) {
+            Log::error('Failed to get organization user', [
+                'organization_id' => $organizationId,
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+
+            return null;
         }
     }
 

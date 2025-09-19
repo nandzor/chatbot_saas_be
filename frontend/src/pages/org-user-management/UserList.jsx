@@ -63,7 +63,9 @@ import {
   Download,
   RefreshCw,
   Shield,
-  Clock
+  Clock,
+  Activity,
+  Monitor
 } from 'lucide-react';
 import CreateUserDialog from './CreateUserDialog';
 import EditUserDialog from './EditUserDialog';
@@ -298,16 +300,28 @@ const UserList = React.memo(() => {
       key: 'status',
       title: 'Status',
       sortable: true,
-      render: (value) => (
-        <Badge variant={value === 'active' ? 'default' : 'destructive'}>
-          {value === 'active' ? (
-            <CheckCircle className="w-3 h-3 mr-1" />
-          ) : (
-            <XCircle className="w-3 h-3 mr-1" />
-          )}
-          {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Unknown'}
-        </Badge>
-      )
+      render: (value) => {
+        const getStatusConfig = (status) => {
+          switch (status) {
+            case 'active':
+              return { variant: 'default', icon: <CheckCircle className="w-3 h-3 mr-1" />, className: 'bg-green-100 text-green-700' };
+            case 'suspended':
+              return { variant: 'destructive', icon: <XCircle className="w-3 h-3 mr-1" />, className: 'bg-red-100 text-red-700' };
+            case 'pending':
+              return { variant: 'outline', icon: <Clock className="w-3 h-3 mr-1" />, className: 'bg-yellow-100 text-yellow-700' };
+            default:
+              return { variant: 'secondary', icon: <XCircle className="w-3 h-3 mr-1" />, className: 'bg-gray-100 text-gray-700' };
+          }
+        };
+
+        const config = getStatusConfig(value);
+        return (
+          <Badge variant={config.variant} className={config.className}>
+            {config.icon}
+            {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Unknown'}
+          </Badge>
+        );
+      }
     },
     {
       key: 'last_login',
@@ -319,6 +333,23 @@ const UserList = React.memo(() => {
           <span className="text-sm text-gray-500">
             {value ? new Date(value).toLocaleDateString() : 'Never'}
           </span>
+        </div>
+      )
+    },
+    {
+      key: 'activity_sessions',
+      title: 'Activity & Sessions',
+      sortable: false,
+      render: (value, user) => (
+        <div className="flex items-center space-x-4 text-xs text-gray-500">
+          <div className="flex items-center space-x-1">
+            <Activity className="w-3 h-3" />
+            <span>{user.activity?.total_activities || 0}</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <Monitor className="w-3 h-3" />
+            <span>{user.sessions?.total_sessions || 0}</span>
+          </div>
         </div>
       )
     },
@@ -446,8 +477,8 @@ const UserList = React.memo(() => {
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Statistics Cards - 6 cards in 1 row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -476,13 +507,13 @@ const UserList = React.memo(() => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Suspended Users</CardTitle>
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statistics.inactive}</div>
+            <div className="text-2xl font-bold">{statistics.suspended}</div>
             <p className="text-xs text-muted-foreground">
-              Inactive users
+              Users with suspended status
             </p>
           </CardContent>
         </Card>
@@ -496,6 +527,36 @@ const UserList = React.memo(() => {
             <div className="text-2xl font-bold">{statistics.admins}</div>
             <p className="text-xs text-muted-foreground">
               Users with admin access
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Activities</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.reduce((total, user) => total + (user.activity?.total_activities || 0), 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              All user activities across organization
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
+            <Monitor className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.reduce((total, user) => total + (user.sessions?.total_sessions || 0), 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Currently active user sessions
             </p>
           </CardContent>
         </Card>
@@ -541,7 +602,7 @@ const UserList = React.memo(() => {
               >
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
               </Select>
             </div>

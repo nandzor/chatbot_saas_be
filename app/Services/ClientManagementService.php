@@ -1004,6 +1004,37 @@ class ClientManagementService
     }
 
     /**
+     * Get individual user in organization
+     *
+     * @param string $organizationId Organization ID
+     * @param string $userId User ID
+     * @return User|null User model or null if not found
+     */
+    public function getOrganizationUser(string $organizationId, string $userId): ?User
+    {
+        try {
+            $user = User::where('id', $userId)
+                ->where('organization_id', $organizationId)
+                ->with(['organization', 'roles.permissions'])
+                ->first();
+
+            if (!$user) {
+                return null;
+            }
+
+            return $user;
+        } catch (\Exception $e) {
+            Log::error('Failed to get organization user', [
+                'organization_id' => $organizationId,
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
      * Get organization activity logs with filtering and pagination
      *
      * @param string $id Organization ID

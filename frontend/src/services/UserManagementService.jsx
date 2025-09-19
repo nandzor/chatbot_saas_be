@@ -433,6 +433,7 @@ class UserManagementService {
       throw handleError(error);
     }
   }
+
 }
 
 export default UserManagementService;

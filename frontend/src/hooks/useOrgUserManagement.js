@@ -26,7 +26,7 @@ export const useOrgUserManagement = () => {
   const [statistics, setStatistics] = useState({
     total: 0,
     active: 0,
-    inactive: 0,
+    suspended: 0,
     admins: 0
   });
 
@@ -70,7 +70,7 @@ export const useOrgUserManagement = () => {
         const stats = {
           total: response.data?.pagination?.total || 0,
           active: usersData.filter(u => u.status === 'active').length || 0,
-          inactive: usersData.filter(u => u.status === 'inactive').length || 0,
+          suspended: usersData.filter(u => u.status === 'suspended').length || 0,
           admins: usersData.filter(u => u.role === 'org_admin').length || 0
         };
         setStatistics(stats);
@@ -215,6 +215,7 @@ export const useOrgUserManagement = () => {
     }
   }, []);
 
+
   // Update filters
   const updateFilters = useCallback((newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
@@ -239,6 +240,7 @@ export const useOrgUserManagement = () => {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
 
   // Debounced search effect
   useEffect(() => {

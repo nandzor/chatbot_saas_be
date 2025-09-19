@@ -230,6 +230,169 @@ class OrganizationController extends BaseApiController
     }
 
     /**
+     * Get individual user in organization
+     *
+     * Super Admin: Can get user from any organization
+     * Organization Users: Can get user from their own organization
+     */
+    public function showUser(Request $request, string $id, string $userId): JsonResponse
+    {
+        try {
+            $isSuperAdmin = $this->isSuperAdmin();
+            $isOrganizationAdmin = $request->get('is_organization_admin', false);
+
+            // Ensure organization admin can only access users from their own organization
+            if (!$isSuperAdmin && $isOrganizationAdmin) {
+                $userOrganizationId = $request->get('user_organization_id');
+                if ($userOrganizationId != $id) {
+                    return $this->errorResponse(
+                        'Akses ditolak. Anda hanya dapat mengakses user organisasi Anda sendiri',
+                        403
+                    );
+                }
+            }
+
+            if ($isSuperAdmin) {
+                $user = $this->clientManagementService->getOrganizationUser($id, $userId);
+                $message = 'Detail user organisasi berhasil diambil (Admin View)';
+            } else {
+                $user = $this->organizationService->getOrganizationUser($id, $userId);
+                $message = 'Detail user organisasi berhasil diambil';
+            }
+
+            if (!$user) {
+                return $this->errorResponse(
+                    'User tidak ditemukan dalam organisasi ini',
+                    404
+                );
+            }
+
+            // Get user activity and sessions
+            $activity = $this->getUserActivity($userId);
+            $sessions = $this->getUserSessions($userId);
+
+            $this->logApiAction('organization_user_viewed', [
+                'organization_id' => $id,
+                'user_id' => $userId,
+                'viewed_by' => $this->getCurrentUser()?->id,
+                'is_super_admin' => $isSuperAdmin
+            ]);
+
+            // Create response data with additional attributes
+            $userResource = new \App\Http\Resources\User\UserResource($user);
+            $responseData = $userResource->toArray(request());
+            $responseData['activity'] = $activity;
+            $responseData['sessions'] = $sessions;
+
+            return $this->successResponseWithLog(
+                'organization_user_viewed',
+                $message,
+                $responseData
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'organization_user_view_error',
+                'Gagal mengambil detail user organisasi',
+                $e->getMessage(),
+                500,
+                'ORGANIZATION_USER_VIEW_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Get user activity data
+     */
+    private function getUserActivity(string $userId): array
+    {
+        try {
+            // Get recent activity logs for the user
+            $activities = \App\Models\AuditLog::where('user_id', $userId)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'action' => $log->action,
+                        'description' => $log->description,
+                        'resource_type' => $log->resource_type,
+                        'resource_name' => $log->resource_name,
+                        'ip_address' => $log->ip_address,
+                        'user_agent' => $log->user_agent,
+                        'created_at' => $log->created_at,
+                        'severity' => $log->severity,
+                        'changes' => $log->changes
+                    ];
+                });
+
+            return [
+                'recent_activities' => $activities,
+                'total_activities' => \App\Models\AuditLog::where('user_id', $userId)->count(),
+                'last_activity' => \App\Models\AuditLog::where('user_id', $userId)
+                    ->orderBy('created_at', 'desc')
+                    ->first()?->created_at
+            ];
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get user activity', [
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'recent_activities' => [],
+                'total_activities' => 0,
+                'last_activity' => null
+            ];
+        }
+    }
+
+    /**
+     * Get user sessions data
+     */
+    private function getUserSessions(string $userId): array
+    {
+        try {
+            // Get active user sessions
+            $sessions = \App\Models\UserSession::where('user_id', $userId)
+                ->where('is_active', true)
+                ->where('expires_at', '>', now())
+                ->orderBy('last_activity_at', 'desc')
+                ->get()
+                ->map(function ($session) {
+                    return [
+                        'id' => $session->id,
+                        'session_token' => substr($session->session_token, 0, 8) . '...', // Masked token
+                        'ip_address' => $session->ip_address,
+                        'user_agent' => $session->user_agent,
+                        'device_info' => $session->device_info,
+                        'location_info' => $session->location_info,
+                        'last_activity_at' => $session->last_activity_at,
+                        'expires_at' => $session->expires_at,
+                        'is_active' => $session->is_active,
+                        'created_at' => $session->created_at
+                    ];
+                });
+
+            return [
+                'active_sessions' => $sessions,
+                'total_sessions' => $sessions->count(),
+                'last_session' => $sessions->first()['last_activity_at'] ?? null
+            ];
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get user sessions', [
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'active_sessions' => [],
+                'total_sessions' => 0,
+                'last_session' => null
+            ];
+        }
+    }
+
+    /**
      * Add user to organization
      *
      * Super Admin: Can add user to any organization
@@ -324,7 +487,7 @@ class OrganizationController extends BaseApiController
 
             return $this->successResponse($result['message'], $result['data']);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return $this->errorResponse('Validation failed', 422, $e->errors());
+            return $this->validationErrorResponse($e->errors());
         } catch (\Exception $e) {
             return $this->handleException($e, 'updating organization user', [
                 'id' => $id,
@@ -411,6 +574,56 @@ class OrganizationController extends BaseApiController
     public function getStatistics(): JsonResponse
     {
         return $this->handleOrganizationStatistics();
+    }
+
+    /**
+     * Get organization-specific statistics
+     */
+    public function getOrganizationStatistics(Request $request, string $id): JsonResponse
+    {
+        try {
+            $isSuperAdmin = $this->isSuperAdmin();
+            $isOrganizationAdmin = $request->get('is_organization_admin', false);
+
+            if (!$isSuperAdmin && $isOrganizationAdmin) {
+                $userOrganizationId = $request->get('user_organization_id');
+                if ($userOrganizationId != $id) {
+                    return $this->errorResponse(
+                        'Akses ditolak. Anda hanya dapat mengakses statistik organisasi Anda sendiri',
+                        403
+                    );
+                }
+            }
+
+            if ($isSuperAdmin) {
+                $statistics = $this->clientManagementService->getStatistics();
+                $message = 'Statistik organisasi berhasil diambil (Admin View)';
+            } else {
+                $statistics = $this->organizationService->getOrganizationStatistics();
+                $message = 'Statistik organisasi berhasil diambil';
+            }
+
+            $this->logApiAction('organization_statistics_viewed', [
+                'organization_id' => $id,
+                'viewed_by' => $this->getCurrentUser()?->id,
+                'is_super_admin' => $isSuperAdmin
+            ]);
+
+            return $this->successResponseWithLog(
+                'organization_statistics_viewed',
+                $message,
+                $statistics
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'organization_statistics_error',
+                'Gagal mengambil statistik organisasi',
+                $e->getMessage(),
+                500,
+                'ORGANIZATION_STATISTICS_ERROR'
+            );
+        }
     }
 
     /**

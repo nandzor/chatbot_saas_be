@@ -69,10 +69,10 @@ const ViewUserDetailsDialog = ({ open, onOpenChange, user, onEdit, onDelete, onT
       setLoading(true);
       const response = await userManagementService.getUserById(user.id);
 
-      if (response.success) {
-        setUserDetails(response.data);
+      if (response) {
+        setUserDetails(response);
       } else {
-        throw new Error(response.message || 'Failed to load user details');
+        throw new Error('Failed to load user details');
       }
     } catch (err) {
       handleError(err, { context: 'Load User Details' });
@@ -286,16 +286,78 @@ const ViewUserDetailsDialog = ({ open, onOpenChange, user, onEdit, onDelete, onT
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">Recent Activity</CardTitle>
-                  <CardDescription>User activity and actions</CardDescription>
+                  <CardDescription>
+                    {displayUser?.activity?.total_activities || 0} total activities
+                    {displayUser?.activity?.last_activity && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        • Last activity: {formatDate(displayUser.activity.last_activity)}
+                      </span>
+                    )}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8">
-                    <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Activity Log</h3>
-                    <p className="text-muted-foreground">
-                      Activity tracking will be available soon
-                    </p>
-                  </div>
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="text-sm text-muted-foreground mt-2">Loading activities...</p>
+                    </div>
+                  ) : displayUser?.activity?.recent_activities?.length > 0 ? (
+                    <div className="space-y-3">
+                      {displayUser.activity.recent_activities.map((activity, index) => (
+                        <div key={activity.id || index} className="flex items-start space-x-3 p-3 border rounded-lg">
+                          <div className="flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                              <Activity className="h-4 w-4 text-blue-600" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900">
+                                {activity.description || activity.action}
+                              </p>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(activity.created_at)}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-center space-x-4 text-xs text-muted-foreground">
+                              <span className="flex items-center">
+                                <Shield className="h-3 w-3 mr-1" />
+                                {activity.action}
+                              </span>
+                              {activity.resource_type && (
+                                <span className="flex items-center">
+                                  <User className="h-3 w-3 mr-1" />
+                                  {activity.resource_type}
+                                </span>
+                              )}
+                              {activity.ip_address && (
+                                <span className="flex items-center">
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  {activity.ip_address}
+                                </span>
+                              )}
+                            </div>
+                            {activity.changes && Object.keys(activity.changes).length > 0 && (
+                              <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                                <p className="font-medium text-gray-700 mb-1">Changes:</p>
+                                <pre className="text-gray-600 whitespace-pre-wrap">
+                                  {JSON.stringify(activity.changes, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Activity</h3>
+                      <p className="text-muted-foreground">
+                        No recent activity found for this user
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -305,32 +367,85 @@ const ViewUserDetailsDialog = ({ open, onOpenChange, user, onEdit, onDelete, onT
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">Active Sessions</CardTitle>
-                  <CardDescription>Current and recent login sessions</CardDescription>
+                  <CardDescription>
+                    {displayUser?.sessions?.total_sessions || 0} active sessions
+                    {displayUser?.sessions?.last_session && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        • Last session: {formatDate(displayUser.sessions.last_session)}
+                      </span>
+                    )}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {/* Mock session data */}
-                    <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                      <Monitor className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Chrome on Windows</p>
-                        <p className="text-xs text-muted-foreground">
-                          Current session • Last active: {formatDate(displayUser.last_active_at)}
-                        </p>
-                      </div>
-                      <Badge variant="default">Current</Badge>
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="text-sm text-muted-foreground mt-2">Loading sessions...</p>
                     </div>
-                    <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                      <Smartphone className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Safari on iPhone</p>
-                        <p className="text-xs text-muted-foreground">
-                          Last active: {formatDate(displayUser.last_active_at)}
-                        </p>
-                      </div>
-                      <Badge variant="outline">Active</Badge>
+                  ) : displayUser?.sessions?.active_sessions?.length > 0 ? (
+                    <div className="space-y-3">
+                      {displayUser.sessions.active_sessions.map((session, index) => (
+                        <div key={session.id || index} className="flex items-start space-x-3 p-3 border rounded-lg">
+                          <div className="flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                              {session.device_info?.device === 'Desktop' ? (
+                                <Monitor className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Smartphone className="h-4 w-4 text-green-600" />
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900">
+                                {session.device_info?.browser || 'Unknown Browser'} on {session.device_info?.os || 'Unknown OS'}
+                              </p>
+                              <Badge variant={session.is_active ? "default" : "outline"}>
+                                {session.is_active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                            <div className="mt-1 space-y-1">
+                              <p className="text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3 inline mr-1" />
+                                Last active: {formatDate(session.last_activity_at)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                <MapPin className="h-3 w-3 inline mr-1" />
+                                IP: {session.ip_address}
+                                {session.location_info?.city && session.location_info?.country && (
+                                  <span className="ml-1">
+                                    • {session.location_info.city}, {session.location_info.country}
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                <Shield className="h-3 w-3 inline mr-1" />
+                                Token: {session.session_token}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3 inline mr-1" />
+                                Expires: {formatDate(session.expires_at)}
+                              </p>
+                            </div>
+                            {session.user_agent && (
+                              <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                                <p className="font-medium text-gray-700 mb-1">User Agent:</p>
+                                <p className="text-gray-600 break-all">{session.user_agent}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Monitor className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Active Sessions</h3>
+                      <p className="text-muted-foreground">
+                        No active sessions found for this user
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
