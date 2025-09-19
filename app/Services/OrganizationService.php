@@ -459,7 +459,7 @@ class OrganizationService extends BaseService
             }
 
             $query = User::where('organization_id', $id)
-                ->select(['id', 'full_name', 'email', 'status', 'last_login_at', 'created_at']);
+                ->select(['id', 'full_name', 'email', 'role', 'status', 'last_login_at', 'created_at']);
 
             // Apply search filter
             if (array_key_exists('search', $params) && $params['search'] !== null && !empty(trim($params['search']))) {
