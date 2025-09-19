@@ -84,7 +84,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error retrieving knowledge base item', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to retrieve knowledge base item', 500);
@@ -117,7 +118,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error retrieving knowledge base item by slug', [
                 'slug' => $slug,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to retrieve knowledge base item', 500);
@@ -169,7 +171,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error updating knowledge base item', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to update knowledge base item', 500);
@@ -199,7 +202,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error deleting knowledge base item', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to delete knowledge base item', 500);
@@ -340,7 +344,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error retrieving related items', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to retrieve related items', 500);
@@ -366,7 +371,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error publishing knowledge base item', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to publish knowledge base item', 500);
@@ -393,7 +399,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error approving knowledge base item', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to approve knowledge base item', 500);
@@ -425,7 +432,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error rejecting knowledge base item', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to reject knowledge base item', 500);
@@ -446,13 +454,13 @@ class KnowledgeBaseController extends BaseApiController
             return $this->successResponse(
                 'Item marked as helpful successfully',
                 null
-
             );
         } catch (\Exception $e) {
             Log::error('Error marking item as helpful', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to mark item as helpful', 500);
@@ -478,7 +486,8 @@ class KnowledgeBaseController extends BaseApiController
             Log::error('Error marking item as not helpful', [
                 'item_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $this->getCurrentUser()?->id
+                'user_id' => $this->getCurrentUser()?->id,
+                'organization_id' => $this->getCurrentUser()?->organization_id
             ]);
 
             return $this->errorResponse('Failed to mark item as not helpful', 500);
@@ -554,4 +563,5 @@ class KnowledgeBaseController extends BaseApiController
 
         return $filters;
     }
+
 }

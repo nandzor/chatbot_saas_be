@@ -112,8 +112,12 @@ class KnowledgeBaseService extends BaseService
             $query->with($relations);
         }
 
-        return $query->where('organization_id', $this->getCurrentOrganizationId())
-                    ->find($id);
+        // Apply organization filter for non-super admins
+        if (Auth::user()->role !== 'super_admin') {
+            $query->where('organization_id', $this->getCurrentOrganizationId());
+        }
+
+        return $query->find($id);
     }
 
     /**
@@ -127,9 +131,12 @@ class KnowledgeBaseService extends BaseService
             $query->with($relations);
         }
 
-        return $query->where('organization_id', $this->getCurrentOrganizationId())
-                    ->where('slug', $slug)
-                    ->first();
+        // Apply organization filter for non-super admins
+        if (Auth::user()->role !== 'super_admin') {
+            $query->where('organization_id', $this->getCurrentOrganizationId());
+        }
+
+        return $query->where('slug', $slug)->first();
     }
 
     /**
@@ -690,6 +697,11 @@ class KnowledgeBaseService extends BaseService
             return true;
         }
 
+        // Validate organization access first
+        if (!$this->validateOrganizationAccess($item->organization_id)) {
+            return false;
+        }
+
         // Author can edit their own items
         if ($item->author_id === $user->id) {
             return true;
@@ -709,6 +721,11 @@ class KnowledgeBaseService extends BaseService
         // Super admin can delete anything
         if ($user->isSuperAdmin()) {
             return true;
+        }
+
+        // Validate organization access first
+        if (!$this->validateOrganizationAccess($item->organization_id)) {
+            return false;
         }
 
         // Author can delete their own items
@@ -732,6 +749,11 @@ class KnowledgeBaseService extends BaseService
             return true;
         }
 
+        // Validate organization access first
+        if (!$this->validateOrganizationAccess($item->organization_id)) {
+            return false;
+        }
+
         // Check if user has publish permission
         return $user->hasPermission('knowledge.publish');
     }
@@ -746,6 +768,11 @@ class KnowledgeBaseService extends BaseService
         // Super admin can approve anything
         if ($user->isSuperAdmin()) {
             return true;
+        }
+
+        // Validate organization access first
+        if (!$this->validateOrganizationAccess($item->organization_id)) {
+            return false;
         }
 
         // Check if user has approve permission
@@ -783,6 +810,31 @@ class KnowledgeBaseService extends BaseService
     protected function getCurrentUser(): User
     {
         return Auth::user();
+    }
+
+    /**
+     * Validate organization access for knowledge base items.
+     */
+    protected function validateOrganizationAccess(?string $itemOrganizationId): bool
+    {
+        $user = $this->getCurrentUser();
+
+        if (!$user) {
+            return false;
+        }
+
+        // Super admin can access all organizations
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // User must belong to an organization
+        if (!$user->organization_id) {
+            return false;
+        }
+
+        // User can only access items from their own organization
+        return $user->organization_id === $itemOrganizationId;
     }
 
     /**

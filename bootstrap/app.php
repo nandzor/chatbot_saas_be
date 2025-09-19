@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'organization.management' => \App\Http\Middleware\OrganizationManagementMiddleware::class,
             'super.admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
             'waha.organization' => \App\Http\Middleware\WahaOrganizationMiddleware::class,
+            'knowledge-base.org-access' => \App\Http\Middleware\KnowledgeBaseOrganizationAccessMiddleware::class,
             'throttle.auth' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':5,1',
             'throttle.refresh' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':10,1',
             'throttle.validation' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':20,1',
