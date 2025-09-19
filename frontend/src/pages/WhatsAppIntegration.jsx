@@ -231,34 +231,6 @@ const WhatsAppIntegration = () => {
             Akses cepat ke fitur-fitur utama WhatsApp Integration
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button
-              variant="outline"
-              className="h-20 flex flex-col items-center gap-2"
-              onClick={() => setActiveTab('sessions')}
-            >
-              <Settings className="w-6 h-6" />
-              <span>Kelola Sesi</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-20 flex flex-col items-center gap-2"
-              onClick={() => setActiveTab('messages')}
-            >
-              <Send className="w-6 h-6" />
-              <span>Kirim Pesan</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-20 flex flex-col items-center gap-2"
-              onClick={() => setShowQRConnector(true)}
-            >
-              <QrCode className="w-6 h-6" />
-              <span>Hubungkan Baru</span>
-            </Button>
-          </div>
-        </CardContent>
       </Card>
 
       {/* Main Content Tabs */}

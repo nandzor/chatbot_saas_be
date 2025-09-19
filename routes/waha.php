@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('waha')->middleware(['auth:sanctum', 'waha.organization'])->group(function () {
+Route::prefix('waha')->middleware(['unified.auth', 'waha.organization'])->group(function () {
     // Connection test route
     Route::get('/test', [WahaController::class, 'testConnection']);
 

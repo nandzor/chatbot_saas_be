@@ -142,16 +142,16 @@ class WahaService extends BaseHttpClient
             return $this->getMockSessionStart();
         }
 
-        $data = array_merge([
+        $data = [
             'name' => $sessionId,
-            'config' => array_merge([
+            'config' => [
                 'webhook' => $config['webhook'] ?? '',
                 'webhook_by_events' => $config['webhook_by_events'] ?? false,
                 'events' => $config['events'] ?? ['message', 'session.status'],
                 'reject_calls' => $config['reject_calls'] ?? false,
                 'mark_online_on_chat' => $config['mark_online_on_chat'] ?? true,
-            ], $config)
-        ], $config);
+            ]
+        ];
 
         $response = $this->post("/api/sessions/{$sessionId}/start", $data);
         return $this->handleResponse($response, 'start session');

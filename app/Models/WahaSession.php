@@ -86,6 +86,7 @@ class WahaSession extends Model
         'waha_instance_url',
         'waha_api_key',
         'phone_number',
+        'instance_id',
         'business_name',
         'business_description',
         'business_category',
@@ -102,7 +103,6 @@ class WahaSession extends Model
         'is_connected',
         'connection_state',
         'webhook_url',
-        'webhook_events',
         'webhook_secret',
         'features',
         'rate_limits',
@@ -127,7 +127,6 @@ class WahaSession extends Model
         'last_seen_at' => 'datetime',
         'battery_level' => 'integer',
         'is_connected' => 'boolean',
-        'webhook_events' => 'array',
         'features' => 'array',
         'rate_limits' => 'array',
         'last_health_check' => 'datetime',
@@ -216,9 +215,6 @@ class WahaSession extends Model
             }
             if (empty($session->rate_limits)) {
                 $session->rate_limits = self::DEFAULT_RATE_LIMITS;
-            }
-            if (empty($session->webhook_events)) {
-                $session->webhook_events = [self::WEBHOOK_MESSAGE, self::WEBHOOK_STATE_CHANGE];
             }
         });
     }
@@ -597,7 +593,7 @@ class WahaSession extends Model
     {
         return [
             'url' => $this->webhook_url,
-            'events' => $this->webhook_events,
+            'events' => ['message', 'session.status'],
             'secret' => $this->webhook_secret ? '***' : null,
         ];
     }

@@ -71,8 +71,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
       setError(null);
       setProgress(10);
 
-      // Generate unique session ID
-      const newSessionId = `whatsapp-${Date.now()}`;
+      // Use 'default' as session ID for WAHA Core compatibility
+      const newSessionId = 'default';
       setSessionId(newSessionId);
 
       // Create and start session

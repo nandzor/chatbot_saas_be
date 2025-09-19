@@ -378,33 +378,101 @@ class WahaSyncService
      */
     public function createSessionForOrganization(string $organizationId, string $sessionName, array $config = []): WahaSession
     {
-        // Start session in WAHA server
-        $result = $this->wahaService->startSession($sessionName, $config);
+        // Check if session already exists locally
+        $existingSession = WahaSession::where('organization_id', $organizationId)
+            ->where('session_name', $sessionName)
+            ->first();
 
-        if (!($result['success'] ?? false)) {
-            throw new Exception('Failed to start session in WAHA server');
+        if ($existingSession) {
+            // Update existing session
+            $existingSession->update([
+                'business_name' => $config['business_name'] ?? $existingSession->business_name,
+                'business_description' => $config['business_description'] ?? $existingSession->business_description,
+                'business_category' => $config['business_category'] ?? $existingSession->business_category,
+                'business_website' => $config['business_website'] ?? $existingSession->business_website,
+                'business_email' => $config['business_email'] ?? $existingSession->business_email,
+                'status' => 'connecting',
+                'is_authenticated' => false,
+                'is_connected' => false,
+                'health_status' => 'unknown',
+            ]);
+            return $existingSession;
         }
 
-        // Create local session record
-        return WahaSession::create([
-            'organization_id' => $organizationId,
+        // Check if session exists in WAHA server first
+        $wahaSessions = $this->wahaService->getSessions();
+        $sessionExists = false;
+
+        Log::info('Checking WAHA sessions', [
             'session_name' => $sessionName,
-            'phone_number' => $config['phone_number'] ?? null,
-            'business_name' => $config['business_name'] ?? null,
-            'business_description' => $config['business_description'] ?? null,
-            'business_category' => $config['business_category'] ?? null,
-            'business_website' => $config['business_website'] ?? null,
-            'business_email' => $config['business_email'] ?? null,
-            'status' => 'connecting',
-            'is_authenticated' => false,
-            'is_connected' => false,
-            'health_status' => 'unknown',
-            'error_count' => 0,
-            'total_messages_sent' => 0,
-            'total_messages_received' => 0,
-            'total_media_sent' => 0,
-            'total_media_received' => 0,
+            'waha_sessions' => $wahaSessions
         ]);
+
+        if (isset($wahaSessions['success']) && $wahaSessions['success']) {
+            $sessions = $wahaSessions['data'] ?? [];
+            foreach ($sessions as $session) {
+                if (($session['name'] ?? '') === $sessionName) {
+                    $sessionExists = true;
+                    break;
+                }
+            }
+        } else {
+            // If no success flag, check if it's a direct array
+            if (is_array($wahaSessions)) {
+                foreach ($wahaSessions as $session) {
+                    if (($session['name'] ?? '') === $sessionName) {
+                        $sessionExists = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        Log::info('Session exists check', [
+            'session_name' => $sessionName,
+            'session_exists' => $sessionExists
+        ]);
+
+        // Only start session if it doesn't exist
+        if (!$sessionExists) {
+            $result = $this->wahaService->startSession($sessionName, $config);
+            if (!($result['success'] ?? false)) {
+                throw new Exception('Failed to start session in WAHA server');
+            }
+        }
+
+        // Get default channel config
+        $channelConfig = \App\Models\ChannelConfig::first();
+        if (!$channelConfig) {
+            throw new Exception('No channel config found');
+        }
+
+        // Create or update local session record
+        return WahaSession::updateOrCreate(
+            [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+            ],
+            [
+                'channel_config_id' => $channelConfig->id,
+                'phone_number' => $config['phone_number'] ?? '',
+                'instance_id' => $sessionName,
+                'business_name' => $config['business_name'] ?? null,
+                'business_description' => $config['business_description'] ?? null,
+                'business_category' => $config['business_category'] ?? null,
+                'business_website' => $config['business_website'] ?? null,
+                'business_email' => $config['business_email'] ?? null,
+                'status' => 'connecting',
+                'is_authenticated' => false,
+                'is_connected' => false,
+                'health_status' => 'unknown',
+                'error_count' => 0,
+                'total_messages_sent' => 0,
+                'total_messages_received' => 0,
+                'total_media_sent' => 0,
+                'total_media_received' => 0,
+            ]
+        );
     }
 
     /**

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -6,8 +6,6 @@ import {
   CardHeader,
   CardTitle,
   Button,
-  Input,
-  Label,
   Badge,
   Alert,
   AlertDescription,
@@ -16,18 +14,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-  Progress,
-  Separator
+  TableRow
 } from '@/components/ui';
 import {
-  Plus,
   Play,
   Square,
   Trash2,
@@ -36,13 +30,8 @@ import {
   CheckCircle,
   AlertTriangle,
   Clock,
-  Smartphone,
-  Settings,
-  Eye,
-  EyeOff,
-  MoreVertical
+  Smartphone
 } from 'lucide-react';
-import { wahaApi } from '@/services/wahaService';
 import { useWahaSessions } from '@/hooks/useWahaSessions';
 import toast from 'react-hot-toast';
 
@@ -51,43 +40,20 @@ const WahaSessionManager = () => {
     sessions,
     loading,
     error,
-    connectedSessions,
-    readySessions,
-    errorSessions,
-    createSession,
     startSession,
     stopSession,
     deleteSession,
-    getSessionStatus,
     checkSessionConnection,
     startMonitoring,
-    stopMonitoring,
     getQrCode,
     loadSessions
   } = useWahaSessions();
 
   const [showQRDialog, setShowQRDialog] = useState(false);
-  const [selectedSession, setSelectedSession] = useState(null);
-  const [newSessionId, setNewSessionId] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [qrCode, setQrCode] = useState('');
   const [isLoadingQR, setIsLoadingQR] = useState(false);
   const [refreshingSessions, setRefreshingSessions] = useState(new Set());
 
-  const handleCreateSession = async () => {
-    if (!newSessionId.trim()) {
-      toast.error('Session ID wajib diisi');
-      return;
-    }
-
-    try {
-      await createSession(newSessionId.trim());
-      setNewSessionId('');
-      setShowCreateDialog(false);
-    } catch (error) {
-      // Error already handled in hook
-    }
-  };
 
   const handleStartSession = async (sessionId) => {
     try {
@@ -120,7 +86,6 @@ const WahaSessionManager = () => {
 
   const handleShowQR = async (sessionId) => {
     try {
-      setSelectedSession(sessionId);
       setIsLoadingQR(true);
       const response = await getQrCode(sessionId);
       setQrCode(response.data?.qr || '');
@@ -271,18 +236,14 @@ const WahaSessionManager = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header dengan tombol buat sesi */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Kelola Sesi WAHA</h2>
+          <h2 className="text-2xl font-bold">WAHA Sessions</h2>
           <p className="text-muted-foreground">
-            Kelola koneksi WhatsApp melalui WAHA (WhatsApp HTTP API)
+            WhatsApp HTTP API Management
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Buat Sesi Baru
-        </Button>
       </div>
 
       {/* Error Alert */}
@@ -294,57 +255,6 @@ const WahaSessionManager = () => {
           </AlertDescription>
         </Alert>
       )}
-
-      {/* Statistik Sesi */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-blue-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Sesi</p>
-                <p className="text-2xl font-bold">{sessions.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Terhubung</p>
-                <p className="text-2xl font-bold text-green-600">{connectedSessions.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-yellow-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Siap</p>
-                <p className="text-2xl font-bold text-yellow-600">{readySessions.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Error</p>
-                <p className="text-2xl font-bold text-red-600">{errorSessions.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Tabel Sesi */}
       <Card>
@@ -358,14 +268,10 @@ const WahaSessionManager = () => {
           {sessions.length === 0 ? (
             <div className="text-center py-8">
               <Smartphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Belum ada sesi WAHA</h3>
-              <p className="text-muted-foreground mb-4">
-                Buat sesi baru untuk mulai menggunakan WhatsApp API
+              <h3 className="text-lg font-medium mb-2">No WAHA Sessions</h3>
+              <p className="text-muted-foreground">
+                No WhatsApp sessions available
               </p>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Buat Sesi Pertama
-              </Button>
             </div>
           ) : (
             <Table>
@@ -407,44 +313,6 @@ const WahaSessionManager = () => {
         </CardContent>
       </Card>
 
-      {/* Dialog Buat Sesi Baru */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Buat Sesi WAHA Baru</DialogTitle>
-            <DialogDescription>
-              Masukkan ID unik untuk sesi WhatsApp baru. ID ini akan digunakan untuk mengidentifikasi sesi.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="sessionId">Session ID</Label>
-              <Input
-                id="sessionId"
-                value={newSessionId}
-                onChange={(e) => setNewSessionId(e.target.value)}
-                placeholder="contoh: whatsapp-session-1"
-                className="mt-1"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                Batal
-              </Button>
-              <Button onClick={handleCreateSession} disabled={loading}>
-                {loading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Membuat...
-                  </>
-                ) : (
-                  'Buat Sesi'
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog QR Code */}
       <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>

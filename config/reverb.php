@@ -72,7 +72,7 @@ return [
     'auth' => [
         'guard' => env('REVERB_AUTH_GUARD', 'web'),
         'middleware' => [
-            'auth:sanctum',
+            'unified.auth',
         ],
     ],
 

@@ -449,7 +449,31 @@ class WahaController extends BaseApiController
                 return $this->handleResourceNotFound('WAHA session', $sessionId);
             }
 
-            $qrCode = $this->wahaService->getQrCode($sessionId);
+            // Check if session is already connected
+            if ($localSession->is_connected && $localSession->is_authenticated) {
+                return $this->successResponse('Session is already connected', [
+                    'connected' => true,
+                    'status' => $localSession->status,
+                    'phone_number' => $localSession->phone_number,
+                    'message' => 'QR code is not needed as session is already connected'
+                ]);
+            }
+
+            // Try to get QR code from WAHA server
+            try {
+                $qrCode = $this->wahaService->getQrCode($sessionId);
+            } catch (Exception $e) {
+                // If QR code is not available (404), return appropriate message
+                if (str_contains($e->getMessage(), '404') || str_contains($e->getMessage(), 'Not found')) {
+                    return $this->successResponse('QR code not available', [
+                        'connected' => false,
+                        'status' => $localSession->status,
+                        'message' => 'QR code is not available. Session may be in connecting state or QR code endpoint is not supported.',
+                        'qr_code' => null
+                    ]);
+                }
+                throw $e;
+            }
 
             $this->logApiAction('get_waha_qr_code', [
                 'session_id' => $sessionId,
