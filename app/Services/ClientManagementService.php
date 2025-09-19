@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\UserRole;
-use App\Models\OrganizationRole;
 use App\Models\AuditLog;
 use App\Events\OrganizationCreated;
 use App\Events\OrganizationUpdated;
@@ -2519,7 +2518,7 @@ class ClientManagementService
                 // Update user role
                 $userRole = UserRole::where('user_id', $userId)->first();
                 if ($userRole) {
-                    $role = OrganizationRole::where('slug', $data['role'])
+                    $role = \App\Models\Role::where('code', $data['role'])
                         ->where('organization_id', $organizationId)
                         ->first();
 
@@ -2624,7 +2623,7 @@ class ClientManagementService
             $userId = \Illuminate\Support\Str::uuid()->toString();
             $now = now();
 
-            \DB::table('users')->insert([
+            DB::table('users')->insert([
                 'id' => $userId,
                 'organization_id' => $organizationId,
                 'full_name' => $userData['full_name'],
@@ -2706,7 +2705,7 @@ class ClientManagementService
                     'scope' => 'organization',
                     'scope_context' => json_encode(['organization_id' => $organization->id]),
                     'effective_from' => now(),
-                    'assigned_by' => auth()->id(),
+                    'assigned_by' => \Illuminate\Support\Facades\Auth::id(),
                     'assigned_reason' => 'User created with role assignment'
                 ]);
             }
@@ -2775,7 +2774,7 @@ class ClientManagementService
             $user->update(['organization_id' => $organizationId]);
 
             // Add user role
-            $orgRole = OrganizationRole::where('slug', $role)
+            $orgRole = \App\Models\Role::where('code', $role)
                 ->where('organization_id', $organizationId)
                 ->first();
 
@@ -2867,7 +2866,7 @@ class ClientManagementService
 
             // Add user role
             if (isset($userData['role'])) {
-                $orgRole = OrganizationRole::where('slug', $userData['role'])
+                $orgRole = \App\Models\Role::where('code', $userData['role'])
                     ->where('organization_id', $organizationId)
                     ->first();
 

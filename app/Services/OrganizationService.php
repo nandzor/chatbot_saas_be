@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\UserRole;
-use App\Models\OrganizationRole;
 use Illuminate\Support\Str;
 use App\Models\Organization;
 use Illuminate\Http\Request;
@@ -600,7 +599,7 @@ class OrganizationService extends BaseService
             $userId = \Illuminate\Support\Str::uuid()->toString();
             $now = now();
 
-            \DB::table('users')->insert([
+            DB::table('users')->insert([
                 'id' => $userId,
                 'organization_id' => $organizationId,
                 'full_name' => $userData['full_name'],
@@ -711,7 +710,7 @@ class OrganizationService extends BaseService
     private function assignRoleToUser(string $userId, string $roleId, string $organizationId): void
     {
         try {
-            \DB::table('user_roles')->insert([
+            DB::table('user_roles')->insert([
                 'id' => \Illuminate\Support\Str::uuid(),
                 'user_id' => $userId,
                 'role_id' => $roleId,
@@ -720,7 +719,7 @@ class OrganizationService extends BaseService
                 'scope' => 'organization',
                 'scope_context' => json_encode(['organization_id' => $organizationId]),
                 'effective_from' => now(),
-                'assigned_by' => auth()->id(),
+                'assigned_by' => \Illuminate\Support\Facades\Auth::id(),
                 'assigned_reason' => 'User created with role assignment',
                 'created_at' => now(),
                 'updated_at' => now()
@@ -842,16 +841,16 @@ class OrganizationService extends BaseService
                 'role' => $userData['role'] ?? 'member'
             ]);
 
-            // Add user role
+            // Add user role using Global RBAC
             if (isset($userData['role'])) {
-                $orgRole = OrganizationRole::where('slug', $userData['role'])
+                $role = \App\Models\Role::where('code', $userData['role'])
                     ->where('organization_id', $organizationId)
                     ->first();
 
-                if ($orgRole) {
+                if ($role) {
                     UserRole::create([
                         'user_id' => $user->id,
-                        'role_id' => $orgRole->id
+                        'role_id' => $role->id
                     ]);
                 }
             }
@@ -2504,42 +2503,36 @@ class OrganizationService extends BaseService
     }
 
     /**
-     * Get organization roles
+     * Get organization roles using Global RBAC
      */
     public function getOrganizationRoles(string $organizationId): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
-        $roles = DB::table('organization_roles')
-            ->where('organization_id', $organizationId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
+        $roles = \App\Models\Role::where('organization_id', $organizationId)
+            ->where('status', 'active')
+            ->orderBy('level', 'desc')
             ->get();
 
         $result = [];
         foreach ($roles as $role) {
             // Get user count for this role
-            $userCount = DB::table('user_roles')
-                ->where('role_id', $role->id)
-                ->count();
+            $userCount = UserRole::where('role_id', $role->id)->count();
 
             // Get permissions for this role
-            $permissions = DB::table('organization_role_permissions')
-                ->join('organization_permissions', 'organization_role_permissions.permission_id', '=', 'organization_permissions.id')
-                ->where('organization_role_permissions.role_id', $role->id)
-                ->pluck('organization_permissions.slug')
-                ->toArray();
+            $permissions = $role->permissions()->pluck('code')->toArray();
 
             $result[] = [
                 'id' => $role->id,
                 'name' => $role->name,
-                'slug' => $role->slug,
+                'code' => $role->code,
                 'description' => $role->description,
                 'permissions' => $permissions,
                 'userCount' => $userCount,
-                'isSystem' => $role->is_system,
-                'isActive' => $role->is_active,
-                'sortOrder' => $role->sort_order,
+                'isSystem' => $role->is_system_role,
+                'isActive' => $role->status === 'active',
+                'level' => $role->level,
+                'scope' => $role->scope,
                 'createdAt' => $role->created_at,
                 'updatedAt' => $role->updated_at
             ];
@@ -2549,15 +2542,14 @@ class OrganizationService extends BaseService
     }
 
     /**
-     * Save role permissions
+     * Save role permissions using Global RBAC
      */
     public function saveRolePermissions(string $organizationId, string $roleId, array $permissions): array
     {
         $organization = $this->getModel()->findOrFail($organizationId);
 
         // Validate role exists and belongs to organization
-        $role = DB::table('organization_roles')
-            ->where('id', $roleId)
+        $role = \App\Models\Role::where('id', $roleId)
             ->where('organization_id', $organizationId)
             ->first();
 
@@ -2566,31 +2558,13 @@ class OrganizationService extends BaseService
         }
 
         // Get permission IDs
-        $permissionIds = DB::table('organization_permissions')
-            ->where('organization_id', $organizationId)
-            ->whereIn('slug', $permissions)
+        $permissionIds = \App\Models\Permission::where('organization_id', $organizationId)
+            ->whereIn('code', $permissions)
             ->pluck('id')
             ->toArray();
 
-        // Delete existing role permissions
-        DB::table('organization_role_permissions')
-            ->where('role_id', $roleId)
-            ->delete();
-
-        // Insert new role permissions
-        $rolePermissions = [];
-        foreach ($permissionIds as $permissionId) {
-            $rolePermissions[] = [
-                'role_id' => $roleId,
-                'permission_id' => $permissionId,
-                'created_at' => now(),
-                'updated_at' => now()
-            ];
-        }
-
-        if (!empty($rolePermissions)) {
-            DB::table('organization_role_permissions')->insert($rolePermissions);
-        }
+        // Sync role permissions
+        $role->permissions()->sync($permissionIds);
 
         return [
             'success' => true,
@@ -2609,8 +2583,7 @@ class OrganizationService extends BaseService
 
         // Validate all roles exist and belong to organization
         $roleIds = array_keys($rolePermissions);
-        $existingRoles = DB::table('organization_roles')
-            ->where('organization_id', $organizationId)
+        $existingRoles = \App\Models\Role::where('organization_id', $organizationId)
             ->whereIn('id', $roleIds)
             ->pluck('id')
             ->toArray();
@@ -2619,40 +2592,18 @@ class OrganizationService extends BaseService
             throw new \Exception('One or more roles not found or do not belong to organization');
         }
 
-        // Get all permission IDs for the organization
-        $allPermissions = DB::table('organization_permissions')
-            ->where('organization_id', $organizationId)
-            ->pluck('id', 'slug')
-            ->toArray();
-
         // Process each role's permissions
         foreach ($rolePermissions as $roleId => $permissions) {
-            // Get permission IDs for this role
-            $permissionIds = [];
-            foreach ($permissions as $permissionSlug) {
-                if (isset($allPermissions[$permissionSlug])) {
-                    $permissionIds[] = $allPermissions[$permissionSlug];
-                }
-            }
+            $role = \App\Models\Role::find($roleId);
+            if ($role) {
+                // Get permission IDs for this role
+                $permissionIds = \App\Models\Permission::where('organization_id', $organizationId)
+                    ->whereIn('code', $permissions)
+                    ->pluck('id')
+                    ->toArray();
 
-            // Delete existing role permissions
-            DB::table('organization_role_permissions')
-                ->where('role_id', $roleId)
-                ->delete();
-
-            // Insert new role permissions
-            $rolePermissionsData = [];
-            foreach ($permissionIds as $permissionId) {
-                $rolePermissionsData[] = [
-                    'role_id' => $roleId,
-                    'permission_id' => $permissionId,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
-            }
-
-            if (!empty($rolePermissionsData)) {
-                DB::table('organization_role_permissions')->insert($rolePermissionsData);
+                // Sync role permissions
+                $role->permissions()->sync($permissionIds);
             }
         }
 
@@ -3405,7 +3356,7 @@ class OrganizationService extends BaseService
             if (isset($data['role'])) {
                 $userRole = UserRole::where('user_id', $userId)->first();
                 if ($userRole) {
-                    $role = OrganizationRole::where('slug', $data['role'])
+                    $role = \App\Models\Role::where('code', $data['role'])
                         ->where('organization_id', $organizationId)
                         ->first();
 
@@ -3437,7 +3388,7 @@ class OrganizationService extends BaseService
             Log::info('Organization user updated', [
                 'organization_id' => $organizationId,
                 'user_id' => $userId,
-                'updated_by' => auth()->id(),
+                'updated_by' => \Illuminate\Support\Facades\Auth::id(),
                 'updated_fields' => array_keys($data)
             ]);
 

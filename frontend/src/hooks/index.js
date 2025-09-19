@@ -15,7 +15,6 @@ export * from './useClientAnalytics';
 export * from './useClientSettings';
 export * from './useOrganizationManagement';
 export * from './useOrganizationAnalytics';
-export * from './useOrganizationPermissions';
 export * from './useOrganizationSettings';
 export * from './useOrganizationUsers';
 export * from './useUserManagement';

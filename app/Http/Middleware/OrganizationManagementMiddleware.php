@@ -88,9 +88,9 @@ class OrganizationManagementMiddleware
 
         // Fallback: Check if user has superadmin role
         $superAdminRole = DB::table('user_roles')
-            ->join('organization_roles', 'user_roles.role_id', '=', 'organization_roles.id')
+            ->join('roles', 'user_roles.role_id', '=', 'roles.id')
             ->where('user_roles.user_id', $user->id)
-            ->where('organization_roles.slug', 'superadmin')
+            ->where('roles.code', 'superadmin')
             ->first();
 
         return $superAdminRole !== null;

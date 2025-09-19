@@ -32,7 +32,6 @@ import CreateOrganizationDialog from '@/components/organization/CreateOrganizati
 import EditOrganizationDialog from '@/components/organization/EditOrganizationDialog';
 import OrganizationDetailsModal from '@/components/organization/OrganizationDetailsModal';
 import OrganizationUsersDialog from '@/components/organization/OrganizationUsersDialog';
-import OrganizationPermissionsDialog from '@/components/organization/OrganizationPermissionsDialog';
 import OrganizationSettingsDialog from '@/components/organization/OrganizationSettingsDialog';
 import OrganizationQuickActions from '@/components/organization/OrganizationQuickActions';
 import OrganizationAnalytics from '@/components/organization/OrganizationAnalytics';
@@ -572,17 +571,6 @@ const OrganizationManagement = () => {
         loading={loading}
       />
 
-      {/* Organization Permissions Dialog */}
-      <OrganizationPermissionsDialog
-        isOpen={showPermissionsDialog}
-        onClose={() => {
-          setShowPermissionsDialog(false);
-          setSelectedOrganization(null);
-        }}
-        organization={selectedOrganization}
-        onSavePermissions={handleSavePermissions}
-        loading={loading}
-      />
 
       {/* Organization Settings Dialog */}
       <OrganizationSettingsDialog

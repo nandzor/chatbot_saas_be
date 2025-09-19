@@ -1,488 +1,483 @@
-# 🚀 Chatbot SaaS API Documentation
+# Organization Management API Documentation
 
-## 📋 Overview
+## Overview
+This document provides comprehensive documentation for the Organization Management API endpoints. All endpoints require authentication and are designed to manage organizations, users, roles, permissions, analytics, and settings.
 
-This document provides comprehensive documentation for the Chatbot SaaS API, including all endpoints, authentication, request/response formats, and examples.
-
-## 🔐 Authentication
-
-The API uses a unified authentication system with JWT + Sanctum + Refresh Token strategy.
-
-### Authentication Headers
-
-```http
-Authorization: Bearer {jwt_token}
-X-API-Token: {sanctum_token}
-X-Refresh-Token: {refresh_token}
+## Base URL
+```
+http://localhost:9000/api/v1
 ```
 
-### Authentication Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login` | User login |
-| POST | `/api/auth/register` | User registration |
-| POST | `/api/auth/logout` | User logout |
-| POST | `/api/auth/refresh` | Refresh token |
-| POST | `/api/auth/forgot-password` | Forgot password |
-| POST | `/api/auth/reset-password` | Reset password |
-| GET | `/api/auth/me` | Get current user |
-| PUT | `/api/auth/profile` | Update profile |
-
-## 🏢 Organization Management
-
-### Organization Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/organizations` | List organizations |
-| POST | `/api/organizations` | Create organization |
-| GET | `/api/organizations/{id}` | Get organization |
-| PUT | `/api/organizations/{id}` | Update organization |
-| DELETE | `/api/organizations/{id}` | Delete organization |
-
-### Example: Create Organization
-
-```http
-POST /api/organizations
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "name": "Acme Corporation",
-    "email": "contact@acme.com",
-    "phone": "+1234567890",
-    "address": "123 Main St, City, State 12345",
-    "website": "https://acme.com",
-    "industry": "Technology",
-    "size": "medium"
-}
+## Authentication
+All API endpoints require a valid Bearer token in the Authorization header:
+```
+Authorization: Bearer {your_token}
 ```
 
-### Example: Update Organization
+## Organization Management Endpoints
 
-```http
-PUT /api/organizations/1
-Content-Type: application/json
-Authorization: Bearer {token}
+### 1. Get Organization Analytics
+**Endpoint:** `GET /organizations/{organization}/analytics`
 
-{
-    "name": "Acme Corporation Updated",
-    "email": "newcontact@acme.com",
-    "phone": "+1234567890",
-    "address": "456 New St, City, State 12345"
-}
-```
+**Description:** Retrieve analytics data for a specific organization including growth metrics, trends, and performance data.
 
-## 💳 Payment Management
+**Parameters:**
+- `organization` (string, required): Organization UUID
+- `time_range` (string, optional): Time range for analytics (7d, 30d, 90d, 1y). Default: 30d
 
-### Payment Transaction Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/payment-transactions` | List payment transactions |
-| POST | `/api/payment-transactions` | Create payment transaction |
-| GET | `/api/payment-transactions/{id}` | Get payment transaction |
-| PUT | `/api/payment-transactions/{id}` | Update payment transaction |
-| DELETE | `/api/payment-transactions/{id}` | Delete payment transaction |
-| POST | `/api/payment-transactions/{id}/refund` | Refund transaction |
-| POST | `/api/payment-transactions/bulk-refund` | Bulk refund transactions |
-| GET | `/api/payment-transactions/export` | Export transactions |
-
-### Example: Create Payment Transaction
-
-```http
-POST /api/payment-transactions
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "organization_id": 1,
-    "subscription_id": 1,
-    "amount": 99.99,
-    "currency": "USD",
-    "gateway": "stripe",
-    "payment_method": "credit_card",
-    "description": "Monthly subscription payment"
-}
-```
-
-### Example: Refund Transaction
-
-```http
-POST /api/payment-transactions/1/refund
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "amount": 99.99,
-    "reason": "Customer request",
-    "refund_type": "full"
-}
-```
-
-## 📊 Subscription Management
-
-### Subscription Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/subscriptions` | List subscriptions |
-| POST | `/api/subscriptions` | Create subscription |
-| GET | `/api/subscriptions/{id}` | Get subscription |
-| PUT | `/api/subscriptions/{id}` | Update subscription |
-| DELETE | `/api/subscriptions/{id}` | Delete subscription |
-| POST | `/api/subscriptions/{id}/upgrade` | Upgrade subscription |
-| POST | `/api/subscriptions/{id}/downgrade` | Downgrade subscription |
-| POST | `/api/subscriptions/{id}/cancel` | Cancel subscription |
-
-### Example: Create Subscription
-
-```http
-POST /api/subscriptions
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "organization_id": 1,
-    "subscription_plan_id": 1,
-    "billing_cycle": "monthly",
-    "status": "active",
-    "start_date": "2024-01-01",
-    "end_date": "2024-12-31"
-}
-```
-
-### Example: Upgrade Subscription
-
-```http
-POST /api/subscriptions/1/upgrade
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "new_plan_id": 2,
-    "upgrade_date": "2024-01-15",
-    "proration": true
-}
-```
-
-## 📋 Subscription Plans
-
-### Subscription Plan Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/subscription-plans` | List subscription plans |
-| POST | `/api/subscription-plans` | Create subscription plan |
-| GET | `/api/subscription-plans/{id}` | Get subscription plan |
-| PUT | `/api/subscription-plans/{id}` | Update subscription plan |
-| DELETE | `/api/subscription-plans/{id}` | Delete subscription plan |
-| GET | `/api/subscription-plans/compare` | Compare plans |
-| GET | `/api/subscription-plans/recommendations` | Get plan recommendations |
-
-### Example: Create Subscription Plan
-
-```http
-POST /api/subscription-plans
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "name": "Professional Plan",
-    "description": "Professional plan for growing businesses",
-    "price": 99.99,
-    "currency": "USD",
-    "billing_cycle": "monthly",
-    "features": {
-        "max_users": 50,
-        "max_chatbots": 10,
-        "api_calls": 10000,
-        "storage": "10GB"
-    },
-    "is_active": true
-}
-```
-
-## 🧾 Billing Invoices
-
-### Billing Invoice Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/billing-invoices` | List billing invoices |
-| POST | `/api/billing-invoices` | Create billing invoice |
-| GET | `/api/billing-invoices/{id}` | Get billing invoice |
-| PUT | `/api/billing-invoices/{id}` | Update billing invoice |
-| PATCH | `/api/billing-invoices/{id}/mark-paid` | Mark invoice as paid |
-| PATCH | `/api/billing-invoices/{id}/mark-overdue` | Mark invoice as overdue |
-| PATCH | `/api/billing-invoices/{id}/cancel` | Cancel invoice |
-| GET | `/api/billing-invoices/organization/{id}` | Get organization invoices |
-| GET | `/api/billing-invoices/subscription/{id}` | Get subscription invoices |
-| GET | `/api/billing-invoices/overdue/list` | Get overdue invoices |
-| GET | `/api/billing-invoices/upcoming/list` | Get upcoming invoices |
-| GET | `/api/billing-invoices/statistics/summary` | Get invoice statistics |
-
-### Example: Create Billing Invoice
-
-```http
-POST /api/billing-invoices
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "organization_id": 1,
-    "subscription_id": 1,
-    "total_amount": 99.99,
-    "currency": "USD",
-    "billing_cycle": "monthly",
-    "due_date": "2024-02-01",
-    "period_start": "2024-01-01",
-    "period_end": "2024-01-31"
-}
-```
-
-### Example: Mark Invoice as Paid
-
-```http
-PATCH /api/billing-invoices/1/mark-paid
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "paid_date": "2024-01-15",
-    "payment_method": "stripe",
-    "payment_reference": "pi_1234567890"
-}
-```
-
-## 👥 User Management
-
-### User Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users` | List users |
-| POST | `/api/users` | Create user |
-| GET | `/api/users/{id}` | Get user |
-| PUT | `/api/users/{id}` | Update user |
-| DELETE | `/api/users/{id}` | Delete user |
-| GET | `/api/users/{id}/profile` | Get user profile |
-| PUT | `/api/users/{id}/profile` | Update user profile |
-
-### Example: Create User
-
-```http
-POST /api/users
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "first_name": "John",
-    "last_name": "Doe",
-    "email": "john.doe@example.com",
-    "username": "johndoe",
-    "password": "securepassword123",
-    "role": "user",
-    "organization_id": 1
-}
-```
-
-## 🔍 Health Check & Monitoring
-
-### Health Check Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health/basic` | Basic health check |
-| GET | `/api/health/detailed` | Detailed health check |
-| GET | `/api/health/metrics` | System metrics |
-
-### Example: Basic Health Check
-
-```http
-GET /api/health/basic
-```
-
-Response:
+**Response:**
 ```json
 {
-    "success": true,
-    "message": "Application is healthy",
-    "data": {
-        "status": "healthy",
+  "success": true,
+  "data": {
+    "growth": {
+      "users": 15.2,
+      "conversations": 8.7,
+      "revenue": 12.5
+    },
+    "trends": {
+      "users": [
+        {"date": "2024-01-01", "value": 100},
+        {"date": "2024-01-02", "value": 105}
+      ],
+      "conversations": [...],
+      "revenue": [...]
+    },
+    "metrics": {
+      "totalUsers": 150,
+      "activeUsers": 120,
+      "totalConversations": 2500,
+      "totalRevenue": 15000,
+      "avgResponseTime": 2.5,
+      "satisfactionScore": 4.2
+    },
+    "topFeatures": [
+      {
+        "name": "Chatbot Integration",
+        "usage": 85,
+        "growth": 12.5
+      }
+    ],
+    "activityLog": [
+      {
+        "id": 1,
+        "action": "User Created",
+        "user": "John Doe",
         "timestamp": "2024-01-15T10:30:00Z",
-        "version": "1.0.0",
-        "environment": "production"
-    }
+        "details": "New user added to organization"
+      }
+    ]
+  }
 }
 ```
 
-## 📝 Request/Response Format
+### 2. Get Organization Settings
+**Endpoint:** `GET /organizations/{organization}/settings`
 
-### Standard Response Format
+**Description:** Retrieve all settings for a specific organization.
 
-All API responses follow this standard format:
+**Parameters:**
+- `organization` (string, required): Organization UUID
 
+**Response:**
 ```json
 {
-    "success": true,
-    "message": "Operation completed successfully",
-    "data": {
-        // Response data here
+  "success": true,
+  "data": {
+    "general": {
+      "name": "Acme Corporation",
+      "displayName": "Acme Corp",
+      "email": "contact@acme.com",
+      "phone": "+1-555-0123",
+      "website": "https://acme.com",
+      "taxId": "TAX123456",
+      "address": "123 Main St, City, State 12345",
+      "description": "Leading technology company",
+      "logo": "https://acme.com/logo.png",
+      "timezone": "UTC",
+      "locale": "en",
+      "currency": "USD"
     },
-    "meta": {
-        "pagination": {
-            "current_page": 1,
-            "per_page": 15,
-            "total": 100,
-            "last_page": 7
-        }
-    }
-}
-```
-
-### Error Response Format
-
-```json
-{
-    "success": false,
-    "message": "Error message",
-    "error": "ERROR_CODE",
-    "errors": {
-        "field_name": ["Validation error message"]
-    }
-}
-```
-
-## 🔒 Rate Limiting
-
-The API implements rate limiting to ensure fair usage:
-
-- **Authentication endpoints**: 5 requests per minute
-- **General API endpoints**: 60 requests per minute
-- **Webhook endpoints**: 100 requests per minute
-- **Subscription endpoints**: 30 requests per minute
-
-Rate limit headers are included in responses:
-- `X-RateLimit-Limit`: Maximum requests allowed
-- `X-RateLimit-Remaining`: Remaining requests
-- `X-RateLimit-Reset`: Time when limit resets
-
-## 📊 Pagination
-
-List endpoints support pagination with these parameters:
-
-- `page`: Page number (default: 1)
-- `per_page`: Items per page (default: 15, max: 100)
-
-Example:
-```http
-GET /api/organizations?page=2&per_page=20
-```
-
-## 🔍 Filtering & Search
-
-Many endpoints support filtering and search:
-
-- `search`: Search term
-- `filter[field]`: Filter by specific field
-- `sort`: Sort field
-- `order`: Sort order (asc/desc)
-
-Example:
-```http
-GET /api/payment-transactions?search=stripe&filter[status]=completed&sort=created_at&order=desc
-```
-
-## 🚨 Error Codes
-
-| Code | Description |
-|------|-------------|
-| 400 | Bad Request |
-| 401 | Unauthorized |
-| 403 | Forbidden |
-| 404 | Not Found |
-| 422 | Validation Error |
-| 429 | Too Many Requests |
-| 500 | Internal Server Error |
-
-## 📚 SDKs & Libraries
-
-### JavaScript/Node.js
-
-```javascript
-const api = new ChatbotSaaSAPI({
-    baseURL: 'https://api.chatbotsaas.com',
-    token: 'your-jwt-token'
-});
-
-// Create organization
-const organization = await api.organizations.create({
-    name: 'Acme Corp',
-    email: 'contact@acme.com'
-});
-```
-
-### PHP
-
-```php
-$api = new ChatbotSaaSAPI([
-    'base_url' => 'https://api.chatbotsaas.com',
-    'token' => 'your-jwt-token'
-]);
-
-// Create organization
-$organization = $api->organizations()->create([
-    'name' => 'Acme Corp',
-    'email' => 'contact@acme.com'
-]);
-```
-
-## 🔧 Webhooks
-
-The API supports webhooks for real-time notifications:
-
-### Webhook Events
-
-- `payment.completed`
-- `payment.failed`
-- `subscription.created`
-- `subscription.updated`
-- `subscription.cancelled`
-- `invoice.generated`
-- `invoice.overdue`
-
-### Webhook Payload
-
-```json
-{
-    "event": "payment.completed",
-    "data": {
-        "id": 123,
-        "amount": 99.99,
-        "currency": "USD",
-        "status": "completed"
+    "system": {
+      "status": "active",
+      "businessType": "corporation",
+      "industry": "technology",
+      "companySize": "medium",
+      "foundedYear": 2020,
+      "employeeCount": 150,
+      "annualRevenue": 5000000,
+      "socialMedia": {
+        "twitter": "@acme",
+        "linkedin": "acme-corp"
+      }
     },
-    "timestamp": "2024-01-15T10:30:00Z"
+    "api": {
+      "apiKey": "sk_...",
+      "webhookUrl": "https://acme.com/webhook",
+      "webhookSecret": "whsec_...",
+      "rateLimit": 1000,
+      "allowedOrigins": ["https://acme.com"],
+      "enableApiAccess": true,
+      "enableWebhooks": true
+    },
+    "subscription": {
+      "plan": "professional",
+      "billingCycle": "monthly",
+      "status": "active",
+      "startDate": "2024-01-01T00:00:00Z",
+      "endDate": "2024-12-31T23:59:59Z",
+      "autoRenew": true,
+      "features": ["chatbot", "analytics", "api"],
+      "limits": {
+        "users": 1000,
+        "conversations": 10000
+      }
+    },
+    "security": {
+      "twoFactorAuth": true,
+      "ssoEnabled": false,
+      "ssoProvider": null,
+      "passwordPolicy": {
+        "minLength": 8,
+        "requireUppercase": true,
+        "requireNumbers": true
+      },
+      "sessionTimeout": 30,
+      "ipWhitelist": [],
+      "allowedDomains": ["acme.com"]
+    },
+    "notifications": {
+      "email": {
+        "enabled": true,
+        "types": ["user_created", "subscription_expired"]
+      },
+      "push": {
+        "enabled": false
+      },
+      "webhook": {
+        "enabled": true,
+        "events": ["user.created", "subscription.expired"]
+      }
+    },
+    "features": {
+      "chatbot": {
+        "enabled": true,
+        "maxBots": 10
+      },
+      "analytics": {
+        "enabled": true,
+        "retentionDays": 365
+      },
+      "integrations": {
+        "enabled": true,
+        "available": ["slack", "teams"]
+      },
+      "customBranding": {
+        "enabled": true,
+        "allowCustomLogo": true
+      }
+    }
+  }
 }
 ```
 
-## 📞 Support
+### 3. Update Organization Settings
+**Endpoint:** `PUT /organizations/{organization}/settings`
+
+**Description:** Update organization settings. Only provided fields will be updated.
+
+**Parameters:**
+- `organization` (string, required): Organization UUID
+
+**Request Body:**
+```json
+{
+  "general": {
+    "name": "Updated Organization Name",
+    "email": "newemail@acme.com"
+  },
+  "api": {
+    "rateLimit": 2000,
+    "enableApiAccess": true
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Organization settings updated successfully",
+  "data": {
+    // Updated settings object
+  }
+}
+```
+
+### 4. Test Webhook
+**Endpoint:** `POST /organizations/{organization}/webhook/test`
+
+**Description:** Test webhook URL by sending a test payload.
+
+**Parameters:**
+- `organization` (string, required): Organization UUID
+
+**Request Body:**
+```json
+{
+  "webhookUrl": "https://acme.com/webhook"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "url": "https://acme.com/webhook",
+  "response_time": 150,
+  "status_code": 200,
+  "message": "Webhook test successful",
+  "payload": {
+    "event": "webhook.test",
+    "organization_id": "6a41536f-26a8-4738-a901-0fe248724648",
+    "organization_name": "Acme Corporation",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "data": {
+      "message": "This is a test webhook from Acme Corporation",
+      "test_id": "unique_id",
+      "version": "1.0"
+    }
+  }
+}
+```
+
+### 5. Get Organization Roles
+**Endpoint:** `GET /organizations/{organization}/roles`
+
+**Description:** Retrieve all roles for a specific organization.
+
+**Parameters:**
+- `organization` (string, required): Organization UUID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Organization Admin",
+      "slug": "organization_admin",
+      "description": "Full access to organization settings and user management",
+      "permissions": [
+        "users.view",
+        "users.create",
+        "users.update",
+        "users.delete",
+        "organization.view",
+        "organization.update"
+      ],
+      "userCount": 2,
+      "isSystem": true,
+      "isActive": true,
+      "sortOrder": 0,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+### 6. Update Role Permissions
+**Endpoint:** `PUT /organizations/{organization}/roles/{roleId}/permissions`
+
+**Description:** Update permissions for a specific role.
+
+**Parameters:**
+- `organization` (string, required): Organization UUID
+- `roleId` (integer, required): Role ID
+
+**Request Body:**
+```json
+{
+  "permissions": [
+    "users.view",
+    "users.create",
+    "users.update",
+    "organization.view"
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "roleId": 1,
+  "permissions": [
+    "users.view",
+    "users.create",
+    "users.update",
+    "organization.view"
+  ],
+  "message": "Role permissions saved successfully"
+}
+```
+
+### 7. Update All Permissions
+**Endpoint:** `PUT /organizations/{organization}/permissions`
+
+**Description:** Update permissions for multiple roles at once.
+
+**Parameters:**
+- `organization` (string, required): Organization UUID
+
+**Request Body:**
+```json
+{
+  "1": [
+    "users.view",
+    "users.create",
+    "users.update"
+  ],
+  "2": [
+    "users.view",
+    "organization.view"
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "rolePermissions": {
+    "1": ["users.view", "users.create", "users.update"],
+    "2": ["users.view", "organization.view"]
+  },
+  "message": "All permissions saved successfully"
+}
+```
+
+### 8. Get Organization Users
+**Endpoint:** `GET /organizations/{organization}/users`
+
+**Description:** Retrieve users for a specific organization with pagination and filtering.
+
+**Parameters:**
+- `organization` (string, required): Organization UUID
+- `page` (integer, optional): Page number. Default: 1
+- `limit` (integer, optional): Items per page. Default: 10
+- `search` (string, optional): Search term for name or email
+- `role` (string, optional): Filter by role slug
+- `status` (string, optional): Filter by user status
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "organization": {
+      "id": "6a41536f-26a8-4738-a901-0fe248724648",
+      "name": "Acme Corporation",
+      "org_code": "ACME001"
+    },
+    "users": [
+      {
+        "id": "91544318-0dce-4652-a15c-ef36735499dc",
+        "name": "John Doe",
+        "email": "john@acme.com",
+        "role": "Organization Admin",
+        "roleSlug": "organization_admin",
+        "status": "active",
+        "lastLogin": "2024-01-15T10:30:00Z",
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    ],
+    "total_users": 25,
+    "pagination": {
+      "current_page": 1,
+      "per_page": 10,
+      "total": 25,
+      "last_page": 3
+    }
+  }
+}
+```
+
+## Error Responses
+
+All endpoints return standardized error responses:
+
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "error_code": "ERROR_CODE",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "request_id": "req_unique_id",
+  "debug": {
+    "exception": "ExceptionClass",
+    "message": "Detailed error message",
+    "file": "/path/to/file.php",
+    "line": 123,
+    "trace": "Stack trace..."
+  }
+}
+```
+
+## Common Error Codes
+
+- `UNAUTHORIZED`: Authentication required
+- `FORBIDDEN`: Access denied
+- `VALIDATION_ERROR`: Request validation failed
+- `RESOURCE_NOT_FOUND`: Requested resource not found
+- `INTERNAL_SERVER_ERROR`: Internal server error
+
+## Rate Limiting
+
+API endpoints are rate limited to prevent abuse:
+- **Analytics endpoints**: 100 requests per minute
+- **Settings endpoints**: 50 requests per minute
+- **User management**: 200 requests per minute
+- **Role/Permission management**: 100 requests per minute
+
+## Caching
+
+Responses are cached for performance:
+- **Analytics data**: 5 minutes
+- **Settings data**: 10 minutes
+- **Roles/Permissions**: 15 minutes
+- **User data**: 2 minutes
+
+Cache headers are included in responses:
+- `X-Cache`: HIT/MISS
+- `X-Cache-Key`: Cache key used
+- `X-Cache-Duration`: Cache duration in seconds
+
+## Performance Monitoring
+
+All API requests are logged for monitoring:
+- Request/response times
+- Error rates
+- User activity
+- Organization usage patterns
+
+Logs are available in: `storage/logs/organization.log`
+
+## Security
+
+- All endpoints require authentication
+- Role-based access control (RBAC)
+- Input validation and sanitization
+- SQL injection prevention
+- XSS protection
+- Rate limiting
+- Audit logging
+
+## Support
 
 For API support and questions:
-
-- **Email**: api-support@chatbotsaas.com
-- **Documentation**: https://docs.chatbotsaas.com
-- **Status Page**: https://status.chatbotsaas.com
-
-## 🔄 Changelog
-
-### Version 1.0.0 (2024-01-15)
-- Initial API release
-- Organization management
-- Payment processing
-- Subscription management
-- Billing invoices
-- User management
-- Health monitoring
+- Email: api-support@chatbot-saas.com
+- Documentation: https://docs.chatbot-saas.com
+- Status Page: https://status.chatbot-saas.com
