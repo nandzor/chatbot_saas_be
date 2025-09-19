@@ -581,6 +581,8 @@ class OrganizationService extends BaseService
     public function createOrganizationUser(string $organizationId, array $userData): array
     {
         try {
+            DB::beginTransaction();
+
             // Check if organization exists
             $organization = \App\Models\Organization::find($organizationId);
             if (!$organization) {
@@ -589,6 +591,10 @@ class OrganizationService extends BaseService
                     'message' => 'Organization not found'
                 ];
             }
+
+            // Get or create role
+            $roleCode = $userData['role'] ?? 'agent';
+            $role = $this->getOrCreateRole($organizationId, $roleCode);
 
             // Create user using DB::table to avoid Eloquent overhead
             $userId = \Illuminate\Support\Str::uuid()->toString();
@@ -601,7 +607,7 @@ class OrganizationService extends BaseService
                 'email' => $userData['email'],
                 'username' => $userData['username'] ?? $this->generateUsername($userData['email']),
                 'password_hash' => \Illuminate\Support\Facades\Hash::make($userData['password_hash']),
-                'role' => $userData['role'] ?? 'agent',
+                'role' => $roleCode, // Use role code from roles table
                 'status' => $userData['status'] ?? 'active',
                 'phone' => $userData['phone'] ?? null,
                 'bio' => $userData['bio'] ?? null,
@@ -613,6 +619,11 @@ class OrganizationService extends BaseService
                 'updated_at' => $now
             ]);
 
+            // Assign role to user in user_roles table
+            $this->assignRoleToUser($userId, $role->id, $organizationId);
+
+            DB::commit();
+
             // Get the created user
             $user = \App\Models\User::find($userId);
 
@@ -622,6 +633,7 @@ class OrganizationService extends BaseService
                 'data' => $user
             ];
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Failed to create organization user', [
                 'organization_id' => $organizationId,
                 'user_data' => $userData,
@@ -653,73 +665,76 @@ class OrganizationService extends BaseService
     }
 
     /**
-     * Assign role to user using RBAC
+     * Get or create role for organization
      */
-    private function assignRoleToUser(User $user, $organization, string $roleCode = 'agent'): void
+    private function getOrCreateRole(string $organizationId, string $roleCode): \App\Models\Role
     {
-        try {
-            // Find role by code in organization
-            $role = \App\Models\Role::where('code', $roleCode)
-                ->where('organization_id', $organization->id)
-                ->first();
+        // Find existing role
+        $role = \App\Models\Role::where('code', $roleCode)
+            ->where('organization_id', $organizationId)
+            ->first();
 
-            if (!$role) {
-                // Create default role if not exists
-                $role = $this->createDefaultRole($organization, $roleCode);
-            }
-
-            if ($role) {
-                // Assign role to user using RBAC
-                $role->assignToUser($user, [
-                    'is_active' => true,
-                    'is_primary' => true,
-                    'scope' => 'organization',
-                    'scope_context' => json_encode(['organization_id' => $organization->id]),
-                    'effective_from' => now(),
-                    'assigned_by' => auth()->id(),
-                    'assigned_reason' => 'User created with role assignment'
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to assign role to user', [
-                'user_id' => $user->id,
-                'role_code' => $roleCode,
-                'organization_id' => $organization->id,
-                'error' => $e->getMessage()
-            ]);
+        if (!$role) {
+            // Create default role if not exists
+            $role = $this->createDefaultRole($organizationId, $roleCode);
         }
+
+        return $role;
     }
 
     /**
      * Create default role for organization
      */
-    private function createDefaultRole($organization, string $roleCode): ?\App\Models\Role
+    private function createDefaultRole(string $organizationId, string $roleCode): \App\Models\Role
+    {
+        $roleData = [
+            'id' => \Illuminate\Support\Str::uuid(),
+            'organization_id' => $organizationId,
+            'name' => ucfirst(str_replace('_', ' ', $roleCode)),
+            'code' => $roleCode,
+            'description' => "Default {$roleCode} role for organization",
+            'is_system_role' => false,
+            'is_default' => true,
+            'level' => $roleCode === 'org_admin' ? 100 : ($roleCode === 'agent' ? 50 : 10),
+            'scope' => 'organization',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now()
+        ];
+
+        return \App\Models\Role::create($roleData);
+    }
+
+    /**
+     * Assign role to user in user_roles table
+     */
+    private function assignRoleToUser(string $userId, string $roleId, string $organizationId): void
     {
         try {
-            $roleData = [
-                'organization_id' => $organization->id,
-                'name' => ucfirst($roleCode),
-                'code' => $roleCode,
-                'description' => "Default {$roleCode} role for organization",
-                'is_system_role' => false,
-                'is_default' => true,
-                'level' => $roleCode === 'org_admin' ? 100 : 50,
-                'max_users' => null,
-                'current_users' => 0,
+            \DB::table('user_roles')->insert([
+                'id' => \Illuminate\Support\Str::uuid(),
+                'user_id' => $userId,
+                'role_id' => $roleId,
                 'is_active' => true,
-                'metadata' => []
-            ];
-
-            return \App\Models\Role::create($roleData);
+                'is_primary' => true,
+                'scope' => 'organization',
+                'scope_context' => json_encode(['organization_id' => $organizationId]),
+                'effective_from' => now(),
+                'assigned_by' => auth()->id(),
+                'assigned_reason' => 'User created with role assignment',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
         } catch (\Exception $e) {
-            Log::error('Failed to create default role', [
-                'organization_id' => $organization->id,
-                'role_code' => $roleCode,
+            Log::error('Failed to assign role to user', [
+                'user_id' => $userId,
+                'role_id' => $roleId,
+                'organization_id' => $organizationId,
                 'error' => $e->getMessage()
             ]);
-            return null;
         }
     }
+
 
     /**
      * Add user to organization
