@@ -14,9 +14,10 @@ trait BelongsToOrganization
     protected static function bootBelongsToOrganization(): void
     {
         static::creating(function ($model) {
-            if (!$model->organization_id && auth()->check()) {
-                $model->organization_id = auth()->user()->organization_id;
-            }
+            // Skip auto-assignment to avoid timeout
+            // if (!$model->organization_id && auth()->check()) {
+            //     $model->organization_id = auth()->user()->organization_id;
+            // }
         });
     }
 

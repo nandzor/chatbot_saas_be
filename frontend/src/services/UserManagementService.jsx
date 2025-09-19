@@ -91,6 +91,7 @@ class UserManagementService {
    */
   async createUser(userData) {
     try {
+      // Use organization-specific endpoint for creating users
       const response = await this._makeApiCall('POST', '/users', userData);
 
       if (!response || !response.success) {

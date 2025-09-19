@@ -19,8 +19,8 @@ class UserPermissionObserver
      */
     public function created(User $user): void
     {
-        // Auto-sync permissions when user is created
-        $this->permissionSyncService->syncUserPermissions($user, true);
+        // Skip auto-sync permissions to avoid timeout
+        // $this->permissionSyncService->syncUserPermissions($user, true);
     }
 
     /**

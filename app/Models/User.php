@@ -167,7 +167,7 @@ class User extends Authenticatable implements JWTSubject
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'user_roles')
-                    ->withPivot(['is_active', 'is_primary', 'scope', 'scope_context', 'effective_from', 'effective_until'])
+                    ->withPivot(['is_active', 'is_primary'])
                     ->withTimestamps();
     }
 

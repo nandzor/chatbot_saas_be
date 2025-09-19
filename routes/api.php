@@ -546,7 +546,8 @@ Route::prefix('v1')->group(function () {
                 Route::middleware(['permission:organizations.delete'])->delete('/', [OrganizationController::class, 'destroy']);
                 Route::get('/users', [OrganizationController::class, 'users']);
                 Route::get('/users/{userId}', [OrganizationController::class, 'showUser']);
-                Route::middleware(['permission:organizations.manage_users'])->post('/users', [OrganizationController::class, 'addUser']);
+                Route::middleware(['permission:organizations.manage_users'])->post('/users', [OrganizationController::class, 'createUser']);
+                Route::middleware(['permission:organizations.manage_users'])->post('/users/add', [OrganizationController::class, 'addUser']);
                 Route::middleware(['permission:organizations.manage_users'])->put('/users/{userId}', [OrganizationController::class, 'updateUser']);
                 Route::middleware(['permission:organizations.manage_users'])->patch('/users/{userId}', [OrganizationController::class, 'updateUser']);
                 Route::middleware(['permission:organizations.manage_users'])->patch('/users/{userId}/toggle-status', [OrganizationController::class, 'toggleUserStatus']);

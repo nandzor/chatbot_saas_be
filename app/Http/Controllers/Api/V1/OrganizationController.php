@@ -426,6 +426,88 @@ class OrganizationController extends BaseApiController
     }
 
     /**
+     * Create new user in organization
+     *
+     * Super Admin: Can create user in any organization
+     * Organization Users: Can create user in their own organization
+     */
+    public function createUser(Request $request, string $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'full_name' => 'required|string|max:255|min:2',
+                'email' => 'required|email|max:255|unique:users,email',
+                'username' => 'sometimes|string|max:50|min:3|unique:users,username|regex:/^[a-zA-Z0-9_]+$/',
+                'password_hash' => 'required|string|confirmed|min:8',
+                'role' => 'sometimes|string|in:org_admin,agent,viewer',
+                'status' => 'sometimes|string|in:active,inactive,suspended',
+                'phone' => 'sometimes|nullable|string|max:20',
+                'bio' => 'sometimes|nullable|string|max:1000',
+                'timezone' => 'sometimes|nullable|string|max:50',
+                'language' => 'sometimes|nullable|string|max:10'
+            ]);
+
+            $isSuperAdmin = $this->isSuperAdmin();
+            $isOrganizationAdmin = $request->get('is_organization_admin', false);
+
+            // Ensure organization admin can only create users in their own organization
+            if (!$isSuperAdmin && $isOrganizationAdmin) {
+                $userOrganizationId = $request->get('user_organization_id');
+                if ($userOrganizationId != $id) {
+                    return $this->errorResponse(
+                        'Akses ditolak. Anda hanya dapat membuat user di organisasi Anda sendiri',
+                        403
+                    );
+                }
+            }
+
+            // Prepare user data
+            $userData = $request->only([
+                'full_name', 'email', 'username', 'password_hash', 'role', 'status',
+                'phone', 'bio', 'timezone', 'language'
+            ]);
+            $userData['organization_id'] = $id;
+            $userData['role'] = $userData['role'] ?? 'agent';
+            $userData['status'] = $userData['status'] ?? 'active';
+
+            if ($isSuperAdmin) {
+                $result = $this->clientManagementService->createOrganizationUser($id, $userData);
+            } else {
+                $result = $this->organizationService->createOrganizationUser($id, $userData);
+            }
+
+            if (!$result || !$result['success']) {
+                return $this->errorResponse($result['message'] ?? 'Gagal membuat user', 400);
+            }
+
+            $this->logApiAction('organization_user_created', [
+                'organization_id' => $id,
+                'user_id' => $result['data']['id'],
+                'created_by' => $this->getCurrentUser()?->id,
+                'is_super_admin' => $isSuperAdmin
+            ]);
+
+            return $this->successResponseWithLog(
+                'organization_user_created',
+                'User berhasil dibuat dalam organisasi',
+                $result['data'],
+                201
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'organization_user_creation_error',
+                'Gagal membuat user dalam organisasi',
+                $e->getMessage(),
+                500,
+                'ORGANIZATION_USER_CREATION_ERROR'
+            );
+        }
+    }
+
+    /**
      * Remove user from organization
      *
      * Super Admin: Can remove user from any organization

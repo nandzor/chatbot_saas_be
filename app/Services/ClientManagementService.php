@@ -2534,14 +2534,15 @@ class ClientManagementService
             }
 
             if (isset($data['permissions'])) {
-                // Update user permissions
-                $user->permissions()->sync($data['permissions']);
+                // Update user permissions (stored as array field)
+                $user->permissions = $data['permissions'];
+                $user->save();
             }
 
             return [
                 'success' => true,
                 'message' => 'User updated successfully',
-                'data' => $user->fresh(['roles', 'permissions'])
+                'data' => $user->fresh(['roles'])
             ];
         } catch (\Exception $e) {
             Log::error('Failed to update organization user', [
@@ -2601,6 +2602,152 @@ class ClientManagementService
                 'success' => false,
                 'message' => 'Failed to update user status'
             ];
+        }
+    }
+
+    /**
+     * Create new user in organization
+     */
+    public function createOrganizationUser(string $organizationId, array $userData): array
+    {
+        try {
+            // Check if organization exists
+            $organization = Organization::find($organizationId);
+            if (!$organization) {
+                return [
+                    'success' => false,
+                    'message' => 'Organization not found'
+                ];
+            }
+
+            // Create user using DB::table to avoid Eloquent overhead
+            $userId = \Illuminate\Support\Str::uuid()->toString();
+            $now = now();
+
+            \DB::table('users')->insert([
+                'id' => $userId,
+                'organization_id' => $organizationId,
+                'full_name' => $userData['full_name'],
+                'email' => $userData['email'],
+                'username' => $userData['username'] ?? $this->generateUsername($userData['email']),
+                'password_hash' => \Illuminate\Support\Facades\Hash::make($userData['password_hash']),
+                'role' => $userData['role'] ?? 'agent',
+                'status' => $userData['status'] ?? 'active',
+                'phone' => $userData['phone'] ?? null,
+                'bio' => $userData['bio'] ?? null,
+                'is_email_verified' => false,
+                'is_phone_verified' => false,
+                'two_factor_enabled' => false,
+                'permissions' => json_encode([]),
+                'created_at' => $now,
+                'updated_at' => $now
+            ]);
+
+            // Get the created user
+            $user = User::find($userId);
+
+            return [
+                'success' => true,
+                'message' => 'User created successfully',
+                'data' => $user
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to create organization user', [
+                'organization_id' => $organizationId,
+                'user_data' => $userData,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to create user: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generate username from email
+     */
+    private function generateUsername(string $email): string
+    {
+        $baseUsername = strtolower(explode('@', $email)[0]);
+        $username = $baseUsername;
+        $counter = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $baseUsername . '_' . $counter;
+            $counter++;
+        }
+
+        return $username;
+    }
+
+    /**
+     * Assign role to user using RBAC
+     */
+    private function assignRoleToUser(User $user, $organization, string $roleCode = 'agent'): void
+    {
+        try {
+            // Find role by code in organization
+            $role = \App\Models\Role::where('code', $roleCode)
+                ->where('organization_id', $organization->id)
+                ->first();
+
+            if (!$role) {
+                // Create default role if not exists
+                $role = $this->createDefaultRole($organization, $roleCode);
+            }
+
+            if ($role) {
+                // Assign role to user using RBAC
+                $role->assignToUser($user, [
+                    'is_active' => true,
+                    'is_primary' => true,
+                    'scope' => 'organization',
+                    'scope_context' => json_encode(['organization_id' => $organization->id]),
+                    'effective_from' => now(),
+                    'assigned_by' => auth()->id(),
+                    'assigned_reason' => 'User created with role assignment'
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to assign role to user', [
+                'user_id' => $user->id,
+                'role_code' => $roleCode,
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Create default role for organization
+     */
+    private function createDefaultRole($organization, string $roleCode): ?\App\Models\Role
+    {
+        try {
+            $roleData = [
+                'organization_id' => $organization->id,
+                'name' => ucfirst($roleCode),
+                'code' => $roleCode,
+                'description' => "Default {$roleCode} role for organization",
+                'is_system_role' => false,
+                'is_default' => true,
+                'level' => $roleCode === 'org_admin' ? 100 : 50,
+                'max_users' => null,
+                'current_users' => 0,
+                'is_active' => true,
+                'metadata' => []
+            ];
+
+            return \App\Models\Role::create($roleData);
+        } catch (\Exception $e) {
+            Log::error('Failed to create default role', [
+                'organization_id' => $organization->id,
+                'role_code' => $roleCode,
+                'error' => $e->getMessage()
+            ]);
+            return null;
         }
     }
 
@@ -2741,7 +2888,7 @@ class ClientManagementService
             return [
                 'success' => true,
                 'message' => 'User added successfully',
-                'data' => $user->fresh(['roles', 'permissions'])
+                'data' => $user->fresh(['roles'])
             ];
         } catch (\Exception $e) {
             DB::rollBack();
