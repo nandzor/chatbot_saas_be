@@ -19,6 +19,7 @@ export { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './Table';
 export { default as Textarea } from './Textarea';
 export { default as Separator } from './Separator';
+export { ScrollArea } from './ScrollArea';
 export { default as Toaster } from './Toaster';
 export { useToast } from './use-toast';
 export { Avatar, AvatarFallback, AvatarImage } from './Avatar';

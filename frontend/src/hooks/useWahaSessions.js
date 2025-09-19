@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { wahaService } from '@/services/WahaService';
+import { wahaApi } from '@/services/wahaService';
 import { handleError } from '@/utils/errorHandler';
 import toast from 'react-hot-toast';
 
@@ -14,8 +14,23 @@ export const useWahaSessions = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await wahaService.getSessions();
-      setSessions(response.data || response || []);
+      const response = await wahaApi.getSessions();
+      if (response.success) {
+        // Ensure sessions is always an array
+        const sessionsData = response.data;
+        if (Array.isArray(sessionsData)) {
+          setSessions(sessionsData);
+        } else if (sessionsData && Array.isArray(sessionsData.sessions)) {
+          setSessions(sessionsData.sessions);
+        } else if (sessionsData && Array.isArray(sessionsData.data)) {
+          setSessions(sessionsData.data);
+        } else {
+          console.warn('Unexpected sessions data format:', sessionsData);
+          setSessions([]);
+        }
+      } else {
+        throw new Error(response.error || 'Gagal memuat sesi');
+      }
     } catch (err) {
       const errorMessage = handleError(err);
       setError(errorMessage);
@@ -26,24 +41,34 @@ export const useWahaSessions = () => {
   }, []);
 
   // Create new session
-  const createSession = useCallback(async (sessionId) => {
+  const createSession = useCallback(async (sessionId, config = {}) => {
     try {
       setLoading(true);
       setError(null);
 
-      const result = await wahaService.createSession(sessionId);
+      const result = await wahaApi.createSession(sessionId, config);
 
-      // Add to sessions list
-      setSessions(prev => [...prev, {
-        id: sessionId,
-        status: 'ready',
-        qrCode: result.qrCode,
-        createdAt: new Date(),
-        connected: false
-      }]);
+      if (result.success) {
+        // Add to sessions list
+        setSessions(prev => Array.isArray(prev) ? [...prev, {
+          id: sessionId,
+          status: 'ready',
+          qrCode: result.data?.qr || '',
+          createdAt: new Date(),
+          connected: false
+        }] : [{
+          id: sessionId,
+          status: 'ready',
+          qrCode: result.data?.qr || '',
+          createdAt: new Date(),
+          connected: false
+        }]);
 
-      toast.success('Sesi WAHA berhasil dibuat');
-      return result;
+        toast.success('Sesi WAHA berhasil dibuat');
+        return result;
+      } else {
+        throw new Error(result.error || 'Gagal membuat sesi');
+      }
     } catch (err) {
       const errorMessage = handleError(err);
       setError(errorMessage);
@@ -55,22 +80,29 @@ export const useWahaSessions = () => {
   }, []);
 
   // Start session
-  const startSession = useCallback(async (sessionId) => {
+  const startSession = useCallback(async (sessionId, config = {}) => {
     try {
       setLoading(true);
-      const result = await wahaService.startSession(sessionId);
+      setError(null);
 
-      // Update session status
-      setSessions(prev => prev.map(session =>
-        session.id === sessionId
-          ? { ...session, status: 'starting', lastUpdated: new Date() }
-          : session
-      ));
+      const result = await wahaApi.startSession(sessionId, config);
 
-      toast.success('Sesi WAHA dimulai');
-      return result;
+      if (result.success) {
+        // Update session status
+        setSessions(prev => Array.isArray(prev) ? prev.map(session =>
+          session.id === sessionId
+            ? { ...session, status: 'starting', connected: false }
+            : session
+        ) : []);
+
+        toast.success('Sesi WAHA berhasil dimulai');
+        return result;
+      } else {
+        throw new Error(result.error || 'Gagal memulai sesi');
+      }
     } catch (err) {
       const errorMessage = handleError(err);
+      setError(errorMessage);
       toast.error(`Gagal memulai sesi WAHA: ${errorMessage.message}`);
       throw err;
     } finally {
@@ -82,26 +114,29 @@ export const useWahaSessions = () => {
   const stopSession = useCallback(async (sessionId) => {
     try {
       setLoading(true);
-      const result = await wahaService.stopSession(sessionId);
+      setError(null);
 
-      // Update session status
-      setSessions(prev => prev.map(session =>
-        session.id === sessionId
-          ? { ...session, status: 'stopped', connected: false, lastUpdated: new Date() }
-          : session
-      ));
+      const result = await wahaApi.stopSession(sessionId);
 
-      // Stop monitoring this session
-      setMonitoringSessions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(sessionId);
-        return newSet;
-      });
+      if (result.success) {
+        // Update session status
+        setSessions(prev => Array.isArray(prev) ? prev.map(session =>
+          session.id === sessionId
+            ? { ...session, status: 'stopped', connected: false }
+            : session
+        ) : []);
 
-      toast.success('Sesi WAHA dihentikan');
-      return result;
+        // Stop monitoring this session
+        stopMonitoring(sessionId);
+
+        toast.success('Sesi WAHA berhasil dihentikan');
+        return result;
+      } else {
+        throw new Error(result.error || 'Gagal menghentikan sesi');
+      }
     } catch (err) {
       const errorMessage = handleError(err);
+      setError(errorMessage);
       toast.error(`Gagal menghentikan sesi WAHA: ${errorMessage.message}`);
       throw err;
     } finally {
@@ -113,22 +148,25 @@ export const useWahaSessions = () => {
   const deleteSession = useCallback(async (sessionId) => {
     try {
       setLoading(true);
-      const result = await wahaService.deleteSession(sessionId);
+      setError(null);
 
-      // Remove from sessions list
-      setSessions(prev => prev.filter(session => session.id !== sessionId));
+      const result = await wahaApi.deleteSession(sessionId);
 
-      // Stop monitoring this session
-      setMonitoringSessions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(sessionId);
-        return newSet;
-      });
+      if (result.success) {
+        // Remove from sessions list
+        setSessions(prev => Array.isArray(prev) ? prev.filter(session => session.id !== sessionId) : []);
 
-      toast.success('Sesi WAHA dihapus');
-      return result;
+        // Stop monitoring this session
+        stopMonitoring(sessionId);
+
+        toast.success('Sesi WAHA berhasil dihapus');
+        return result;
+      } else {
+        throw new Error(result.error || 'Gagal menghapus sesi');
+      }
     } catch (err) {
       const errorMessage = handleError(err);
+      setError(errorMessage);
       toast.error(`Gagal menghapus sesi WAHA: ${errorMessage.message}`);
       throw err;
     } finally {
@@ -139,79 +177,31 @@ export const useWahaSessions = () => {
   // Get session status
   const getSessionStatus = useCallback(async (sessionId) => {
     try {
-      const result = await wahaService.getSessionStatus(sessionId);
-
-      // Update session in list
-      setSessions(prev => prev.map(session =>
-        session.id === sessionId
-          ? { ...session, status: result.status || result.data?.status, lastUpdated: new Date() }
-          : session
-      ));
-
+      const result = await wahaApi.getSessionStatus(sessionId);
       return result;
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Error getting session status:', err);
-      }
+      const errorMessage = handleError(err);
+      toast.error(`Gagal mendapatkan status sesi: ${errorMessage.message}`);
       throw err;
     }
   }, []);
 
-  // Check if session is connected
+  // Check session connection
   const checkSessionConnection = useCallback(async (sessionId) => {
     try {
-      const result = await wahaService.isSessionConnected(sessionId);
-      const isConnected = result.connected || result.data?.connected;
-
-      // Update session connection status
-      setSessions(prev => prev.map(session =>
-        session.id === sessionId
-          ? { ...session, connected: isConnected, lastUpdated: new Date() }
-          : session
-      ));
-
-      return isConnected;
+      const result = await wahaApi.isSessionConnected(sessionId);
+      return result;
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Error checking session connection:', err);
-      }
-      return false;
+      const errorMessage = handleError(err);
+      toast.error(`Gagal mengecek koneksi sesi: ${errorMessage.message}`);
+      throw err;
     }
   }, []);
 
   // Start monitoring session
   const startMonitoring = useCallback((sessionId) => {
-    if (monitoringSessions.has(sessionId)) {
-      return; // Already monitoring
-    }
-
-    setMonitoringSessions(prev => new Set(prev).add(sessionId));
-
-    const stopMonitoring = wahaService.monitorSession(sessionId, (status) => {
-      setSessions(prev => prev.map(session =>
-        session.id === sessionId
-          ? {
-              ...session,
-              status: status.status,
-              connected: status.connected,
-              lastUpdated: status.timestamp,
-              error: status.error
-            }
-          : session
-      ));
-
-      if (status.connected) {
-        toast.success(`Sesi ${sessionId} berhasil terhubung`);
-        setMonitoringSessions(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(sessionId);
-          return newSet;
-        });
-      }
-    });
-
-    return stopMonitoring;
-  }, [monitoringSessions]);
+    setMonitoringSessions(prev => new Set([...prev, sessionId]));
+  }, []);
 
   // Stop monitoring session
   const stopMonitoring = useCallback((sessionId) => {
@@ -222,36 +212,22 @@ export const useWahaSessions = () => {
     });
   }, []);
 
-  // Get QR code for session
+  // Get QR Code
   const getQrCode = useCallback(async (sessionId) => {
     try {
-      const result = await wahaService.getQrCode(sessionId);
-
-      // Update session with QR code
-      setSessions(prev => prev.map(session =>
-        session.id === sessionId
-          ? { ...session, qrCode: result.qrCode || result.data?.qrCode, lastUpdated: new Date() }
-          : session
-      ));
-
+      const result = await wahaApi.getQrCode(sessionId);
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mendapatkan QR code: ${errorMessage.message}`);
+      toast.error(`Gagal mendapatkan QR Code: ${errorMessage.message}`);
       throw err;
     }
   }, []);
 
   // Send message
-  const sendMessage = useCallback(async (sessionId, messageData) => {
+  const sendMessage = useCallback(async (sessionId, to, text) => {
     try {
-      // Format phone number
-      if (messageData.to) {
-        messageData.to = wahaService.formatPhoneNumber(messageData.to);
-      }
-
-      const result = await wahaService.sendTextMessage(sessionId, messageData);
-      toast.success('Pesan berhasil dikirim');
+      const result = await wahaApi.sendTextMessage(sessionId, to, text);
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
@@ -261,19 +237,13 @@ export const useWahaSessions = () => {
   }, []);
 
   // Send media message
-  const sendMediaMessage = useCallback(async (sessionId, messageData) => {
+  const sendMediaMessage = useCallback(async (sessionId, to, mediaUrl, caption = '') => {
     try {
-      // Format phone number
-      if (messageData.to) {
-        messageData.to = wahaService.formatPhoneNumber(messageData.to);
-      }
-
-      const result = await wahaService.sendMediaMessage(sessionId, messageData);
-      toast.success('Media berhasil dikirim');
+      const result = await wahaApi.sendMediaMessage(sessionId, to, mediaUrl, caption);
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mengirim media: ${errorMessage.message}`);
+      toast.error(`Gagal mengirim pesan media: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -281,12 +251,11 @@ export const useWahaSessions = () => {
   // Get messages
   const getMessages = useCallback(async (sessionId, params = {}) => {
     try {
-      const result = await wahaService.getMessages(sessionId, params);
+      const result = await wahaApi.getMessages(sessionId, params);
       return result;
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Error getting messages:', err);
-      }
+      const errorMessage = handleError(err);
+      toast.error(`Gagal mendapatkan pesan: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -294,12 +263,11 @@ export const useWahaSessions = () => {
   // Get contacts
   const getContacts = useCallback(async (sessionId) => {
     try {
-      const result = await wahaService.getContacts(sessionId);
+      const result = await wahaApi.getContacts(sessionId);
       return result;
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Error getting contacts:', err);
-      }
+      const errorMessage = handleError(err);
+      toast.error(`Gagal mendapatkan kontak: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -307,39 +275,35 @@ export const useWahaSessions = () => {
   // Get groups
   const getGroups = useCallback(async (sessionId) => {
     try {
-      const result = await wahaService.getGroups(sessionId);
+      const result = await wahaApi.getGroups(sessionId);
       return result;
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Error getting groups:', err);
-      }
+      const errorMessage = handleError(err);
+      toast.error(`Gagal mendapatkan grup: ${errorMessage.message}`);
       throw err;
     }
   }, []);
 
-  // Get session statistics
+  // Get session stats
   const getSessionStats = useCallback(async (sessionId) => {
     try {
-      const result = await wahaService.getSessionStats(sessionId);
+      const result = await wahaApi.getSessionStats(sessionId);
       return result;
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Error getting session stats:', err);
-      }
+      const errorMessage = handleError(err);
+      toast.error(`Gagal mendapatkan statistik sesi: ${errorMessage.message}`);
       throw err;
     }
   }, []);
 
   // Bulk start sessions
-  const bulkStartSessions = useCallback(async (sessionIds) => {
+  const bulkStartSessions = useCallback(async (sessionIds, config = {}) => {
     try {
-      const results = await wahaService.bulkStartSessions(sessionIds);
-      const successCount = results.filter(r => r.success).length;
-      toast.success(`${successCount} dari ${sessionIds.length} sesi berhasil dimulai`);
-      return results;
+      const result = await wahaApi.bulkStartSessions(sessionIds, config);
+      return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal memulai sesi: ${errorMessage.message}`);
+      toast.error(`Gagal memulai sesi secara massal: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -347,25 +311,23 @@ export const useWahaSessions = () => {
   // Bulk stop sessions
   const bulkStopSessions = useCallback(async (sessionIds) => {
     try {
-      const results = await wahaService.bulkStopSessions(sessionIds);
-      const successCount = results.filter(r => r.success).length;
-      toast.success(`${successCount} dari ${sessionIds.length} sesi berhasil dihentikan`);
-      return results;
+      const result = await wahaApi.bulkStopSessions(sessionIds);
+      return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal menghentikan sesi: ${errorMessage.message}`);
+      toast.error(`Gagal menghentikan sesi secara massal: ${errorMessage.message}`);
       throw err;
     }
   }, []);
 
   // Validate phone number
   const validatePhoneNumber = useCallback((phoneNumber) => {
-    return wahaService.validatePhoneNumber(phoneNumber);
+    return wahaApi.validatePhoneNumber(phoneNumber);
   }, []);
 
   // Format phone number
   const formatPhoneNumber = useCallback((phoneNumber) => {
-    return wahaService.formatPhoneNumber(phoneNumber);
+    return wahaApi.formatPhoneNumber(phoneNumber);
   }, []);
 
   // Load sessions on mount
@@ -412,8 +374,8 @@ export const useWahaSessions = () => {
     formatPhoneNumber,
 
     // Computed
-    connectedSessions: sessions.filter(session => session.connected),
-    readySessions: sessions.filter(session => session.status === 'ready'),
-    errorSessions: sessions.filter(session => session.status === 'error'),
+    connectedSessions: Array.isArray(sessions) ? sessions.filter(session => session.connected) : [],
+    readySessions: Array.isArray(sessions) ? sessions.filter(session => session.status === 'ready') : [],
+    errorSessions: Array.isArray(sessions) ? sessions.filter(session => session.status === 'error') : [],
   };
 };

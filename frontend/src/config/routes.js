@@ -22,7 +22,8 @@ export const ROUTES = {
     MAIN: '/dashboard',
     OVERVIEW: '/dashboard/overview',
     ANALYTICS: '/dashboard/analytics',
-    REPORTS: '/dashboard/reports'
+    REPORTS: '/dashboard/reports',
+    WHATSAPP: '/dashboard/whatsapp'
   },
 
   // SuperAdmin Routes
