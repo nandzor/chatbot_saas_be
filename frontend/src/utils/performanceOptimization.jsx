@@ -138,13 +138,16 @@ export const useVirtualScroll = ({
 }) => {
   const [scrollTop, setScrollTop] = React.useState(0);
 
+  // Ensure items is an array
+  const safeItems = Array.isArray(items) ? items : [];
+
   const visibleCount = Math.ceil(containerHeight / itemHeight);
   const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
-  const endIndex = Math.min(items.length, startIndex + visibleCount + 2 * overscan);
+  const endIndex = Math.min(safeItems.length, startIndex + visibleCount + 2 * overscan);
 
-  const visibleItems = items.slice(startIndex, endIndex);
+  const visibleItems = safeItems.slice(startIndex, endIndex);
   const offsetY = startIndex * itemHeight;
-  const totalHeight = items.length * itemHeight;
+  const totalHeight = safeItems.length * itemHeight;
 
   const handleScroll = useCallback((e) => {
     setScrollTop(e.target.scrollTop);

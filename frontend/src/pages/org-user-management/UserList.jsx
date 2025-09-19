@@ -140,8 +140,19 @@ const UserList = React.memo(() => {
 
       const response = await userManagementService.getUsers(params);
 
+      if (import.meta.env.DEV) {
+        console.log('UserList - API Response:', response);
+        console.log('UserList - Response data type:', typeof response.data);
+        console.log('UserList - Response data is array:', Array.isArray(response.data));
+        console.log('UserList - Response success:', response.success);
+        console.log('UserList - Response message:', response.message);
+        console.log('UserList - Response error:', response.error);
+      }
+
       if (response.success) {
-        setUsers(response.data || []);
+        // Ensure response.data is an array
+        const usersData = Array.isArray(response.data) ? response.data : [];
+        setUsers(usersData);
 
         // Update pagination from response
         if (response.pagination) {
@@ -157,9 +168,9 @@ const UserList = React.memo(() => {
         // Update statistics
         const stats = {
           total: response.pagination?.total || 0,
-          active: response.data?.filter(u => u.status === 'active').length || 0,
-          inactive: response.data?.filter(u => u.status === 'inactive').length || 0,
-          admins: response.data?.filter(u => u.role === 'org_admin').length || 0
+          active: usersData.filter(u => u.status === 'active').length || 0,
+          inactive: usersData.filter(u => u.status === 'inactive').length || 0,
+          admins: usersData.filter(u => u.role === 'org_admin').length || 0
         };
         setStatistics(stats);
 
@@ -168,6 +179,11 @@ const UserList = React.memo(() => {
         throw new Error(response.message || 'Failed to load users');
       }
     } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('UserList - Error in loadUsers:', err);
+        console.error('UserList - Error message:', err.message);
+        console.error('UserList - Error stack:', err.stack);
+      }
       const errorResult = handleError(err, {
         context: 'User Management Data Loading',
         showToast: true
@@ -667,14 +683,6 @@ const UserList = React.memo(() => {
         />
       )}
 
-      {/* Debug pagination state */}
-      {import.meta.env.DEV && (
-        <div className="p-2 bg-gray-100 text-xs">
-          <strong>Debug Pagination:</strong> Current: {pagination.currentPage},
-          Total: {pagination.total}, LastPage: {pagination.lastPage},
-          PerPage: {pagination.perPage}
-        </div>
-      )}
 
       {/* Users Table */}
       <DataTable
@@ -745,6 +753,8 @@ const UserList = React.memo(() => {
     </div>
   );
 });
+
+UserList.displayName = 'UserList';
 
 export default withErrorHandling(UserList, {
   context: 'User List Page'

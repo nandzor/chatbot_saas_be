@@ -23,7 +23,7 @@ import Automations from '@/pages/automations/Automations';
 import Settings from '@/pages/settings/Settings';
 import ProfileSettings from '@/features/shared/ProfileSettings';
 import WhatsAppIntegration from '@/pages/WhatsAppIntegration';
-import UserList from '@/pages/user-management/UserList';
+import UserList from '@/pages/org-user-management/UserList';
 
 // Role Management Pages
 import RoleList from '@/pages/roles/RoleList';

@@ -63,6 +63,9 @@ const DataTable = ({
   selectAll = false,
   onSelectAll = null
 }) => {
+  // Ensure data is always an array
+  const safeData = Array.isArray(data) ? data : [];
+
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [selectedRow, setSelectedRow] = useState(null);
@@ -97,18 +100,18 @@ const DataTable = ({
 
   // Filter data based on search
   const filteredData = useMemo(() => {
-    if (!debouncedSearch) return data;
+    if (!debouncedSearch) return safeData;
 
     const sanitizedQuery = sanitizeInput(debouncedSearch.toLowerCase());
 
-    return data.filter(row =>
+    return safeData.filter(row =>
       columns.some(column => {
         const cellValue = row[column.key];
         if (cellValue == null) return false;
         return String(cellValue).toLowerCase().includes(sanitizedQuery);
       })
     );
-  }, [data, debouncedSearch, columns]);
+  }, [safeData, debouncedSearch, columns]);
 
   // Sort data
   const sortedData = useMemo(() => {

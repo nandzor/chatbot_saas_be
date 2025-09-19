@@ -61,12 +61,28 @@ class UserManagementService {
       }
     }
 
+    const fullUrl = `/v1/organizations/${organizationId}${endpoint}`;
+
+    if (import.meta.env.DEV) {
+      console.log('UserManagementService - Making API call:', {
+        method,
+        url: fullUrl,
+        data,
+        config
+      });
+    }
+
     const response = await this.authService.api.request({
       method,
-      url: `/v1/organizations/${organizationId}${endpoint}`,
+      url: fullUrl,
       data,
       ...config
     });
+
+    if (import.meta.env.DEV) {
+      console.log('UserManagementService - Raw response:', response);
+    }
+
     return response.data;
   }
 
@@ -76,13 +92,23 @@ class UserManagementService {
    */
   async getUsers(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/users', params);
+      if (import.meta.env.DEV) {
+        console.log('UserManagementService - getUsers params:', params);
+        console.log('UserManagementService - organization ID:', this.getOrganizationId());
+      }
+
+      const response = await this._makeApiCall('GET', '/users', null, { params });
+
+      if (import.meta.env.DEV) {
+        console.log('UserManagementService - API response:', response);
+      }
 
       if (!response || !response.success) {
         throw new Error(response?.error || 'No data received from server');
       }
 
-      return response.data || [];
+      // Return the complete response including pagination data
+      return response;
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Error getting users:', error);
@@ -247,7 +273,7 @@ class UserManagementService {
 
     // Only include allowed fields
     allowedFields.forEach(field => {
-      if (userData.hasOwnProperty(field) && userData[field] !== undefined) {
+      if (Object.prototype.hasOwnProperty.call(userData, field) && userData[field] !== undefined) {
         sanitized[field] = userData[field];
       }
     });
