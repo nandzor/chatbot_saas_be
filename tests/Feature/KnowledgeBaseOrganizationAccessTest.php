@@ -35,12 +35,12 @@ class KnowledgeBaseOrganizationAccessTest extends TestCase
         // Create users for each organization
         $this->user1 = User::factory()->create([
             'organization_id' => $this->organization1->id,
-            'role' => 'admin'
+            'role' => 'org_admin'
         ]);
 
         $this->user2 = User::factory()->create([
             'organization_id' => $this->organization2->id,
-            'role' => 'admin'
+            'role' => 'org_admin'
         ]);
 
         // Create super admin

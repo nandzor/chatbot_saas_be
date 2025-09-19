@@ -668,7 +668,7 @@ Route::prefix('v1')->group(function () {
         // ====================================================================
 
         Route::prefix('knowledge-base')
-            ->middleware(['permission:knowledge.view', 'organization', 'knowledge-base.org-access'])
+            ->middleware(['permission:knowledge_articles.read', 'organization', 'knowledge-base.org-access'])
             ->group(function () {
 
             // Basic CRUD operations
