@@ -191,6 +191,12 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('start WAHA session');
             }
 
+            // Check if session already exists and is working
+            $existingSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
+            if ($existingSession && $existingSession->is_connected && $existingSession->is_authenticated) {
+                return $this->errorResponse('Session is already running and connected', 409);
+            }
+
             $config = $request->validate([
                 'webhook' => 'nullable|string|url',
                 'webhook_by_events' => 'boolean',

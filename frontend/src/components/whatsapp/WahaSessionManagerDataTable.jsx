@@ -355,13 +355,25 @@ const WahaSessionManager = () => {
       icon: Play,
       label: 'Start Session',
       onClick: (session) => handleStartSession(session.id),
-      className: 'text-green-600 hover:text-green-700'
+      className: 'text-green-600 hover:text-green-700',
+      disabled: (session) => {
+        // Disable start button if session is already working/connected
+        const isWorking = session.status === 'working' || session.status === 'WORKING';
+        const isConnected = session.is_connected && session.is_authenticated;
+        return isWorking || isConnected;
+      }
     },
     {
       icon: Square,
       label: 'Stop Session',
       onClick: (session) => handleStopSession(session.id),
-      className: 'text-red-600 hover:text-red-700'
+      className: 'text-red-600 hover:text-red-700',
+      disabled: (session) => {
+        // Disable stop button if session is not running
+        const isWorking = session.status === 'working' || session.status === 'WORKING';
+        const isConnected = session.is_connected && session.is_authenticated;
+        return !isWorking && !isConnected;
+      }
     },
     {
       icon: Trash2,
