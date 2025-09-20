@@ -1,7 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { wahaApi } from '@/services/wahaService';
 import { handleError } from '@/utils/errorHandler';
 import toast from 'react-hot-toast';
+
+// Constants
+const ERROR_MESSAGES = {
+  LOAD_SESSIONS: 'Gagal memuat sesi WAHA',
+  CREATE_SESSION: 'Gagal membuat sesi',
+  START_SESSION: 'Gagal memulai sesi',
+  STOP_SESSION: 'Gagal menghentikan sesi',
+  DELETE_SESSION: 'Gagal menghapus sesi',
+  GET_STATUS: 'Gagal mendapatkan status sesi',
+  GET_QR: 'Gagal mendapatkan QR code',
+  SEND_MESSAGE: 'Gagal mengirim pesan',
+  GET_MESSAGES: 'Gagal mendapatkan pesan',
+  GET_CONTACTS: 'Gagal mendapatkan kontak',
+  GET_GROUPS: 'Gagal mendapatkan grup',
+  GET_STATS: 'Gagal mendapatkan statistik sesi'
+};
+
 
 export const useWahaSessions = () => {
   const [sessions, setSessions] = useState([]);
@@ -43,7 +60,7 @@ export const useWahaSessions = () => {
       } else if (organizationError.type === 'auth_error') {
         toast.error('Sesi Anda telah berakhir. Silakan login kembali.');
       } else {
-        toast.error(`Gagal memuat sesi WAHA: ${organizationError.message}`);
+        toast.error(`${ERROR_MESSAGES.LOAD_SESSIONS}: ${organizationError.message}`);
       }
     } finally {
       setLoading(false);
@@ -99,7 +116,7 @@ export const useWahaSessions = () => {
       if (organizationError.type === 'organization_error') {
         toast.error('Anda harus menjadi anggota organization untuk membuat sesi WAHA');
       } else {
-        toast.error(`Gagal membuat sesi WAHA: ${organizationError.message}`);
+        toast.error(`${ERROR_MESSAGES.CREATE_SESSION}: ${organizationError.message}`);
       }
       throw err;
     } finally {
@@ -131,7 +148,7 @@ export const useWahaSessions = () => {
     } catch (err) {
       const errorMessage = handleError(err);
       setError(errorMessage);
-      toast.error(`Gagal memulai sesi WAHA: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.START_SESSION}: ${errorMessage.message}`);
       throw err;
     } finally {
       setLoading(false);
@@ -179,7 +196,7 @@ export const useWahaSessions = () => {
     } catch (err) {
       const errorMessage = handleError(err);
       setError(errorMessage);
-      toast.error(`Gagal menghentikan sesi WAHA: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.STOP_SESSION}: ${errorMessage.message}`);
       throw err;
     } finally {
       setLoading(false);
@@ -209,7 +226,7 @@ export const useWahaSessions = () => {
     } catch (err) {
       const errorMessage = handleError(err);
       setError(errorMessage);
-      toast.error(`Gagal menghapus sesi WAHA: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.DELETE_SESSION}: ${errorMessage.message}`);
       throw err;
     } finally {
       setLoading(false);
@@ -223,7 +240,7 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mendapatkan status sesi: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.GET_STATUS}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -235,7 +252,7 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mengecek koneksi sesi: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.GET_STATUS}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -247,7 +264,7 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mendapatkan QR Code: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.GET_QR}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -259,7 +276,7 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mengirim pesan: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.SEND_MESSAGE}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -271,7 +288,7 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mengirim pesan media: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.SEND_MESSAGE}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -283,7 +300,7 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mendapatkan pesan: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.GET_MESSAGES}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -295,7 +312,7 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mendapatkan kontak: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.GET_CONTACTS}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -307,7 +324,7 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mendapatkan grup: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.GET_GROUPS}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
@@ -319,44 +336,11 @@ export const useWahaSessions = () => {
       return result;
     } catch (err) {
       const errorMessage = handleError(err);
-      toast.error(`Gagal mendapatkan statistik sesi: ${errorMessage.message}`);
+      toast.error(`${ERROR_MESSAGES.GET_STATS}: ${errorMessage.message}`);
       throw err;
     }
   }, []);
 
-  // Bulk start sessions
-  const bulkStartSessions = useCallback(async (sessionIds, config = {}) => {
-    try {
-      const result = await wahaApi.bulkStartSessions(sessionIds, config);
-      return result;
-    } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Gagal memulai sesi secara massal: ${errorMessage.message}`);
-      throw err;
-    }
-  }, []);
-
-  // Bulk stop sessions
-  const bulkStopSessions = useCallback(async (sessionIds) => {
-    try {
-      const result = await wahaApi.bulkStopSessions(sessionIds);
-      return result;
-    } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Gagal menghentikan sesi secara massal: ${errorMessage.message}`);
-      throw err;
-    }
-  }, []);
-
-  // Validate phone number
-  const validatePhoneNumber = useCallback((phoneNumber) => {
-    return wahaApi.validatePhoneNumber(phoneNumber);
-  }, []);
-
-  // Format phone number
-  const formatPhoneNumber = useCallback((phoneNumber) => {
-    return wahaApi.formatPhoneNumber(phoneNumber);
-  }, []);
 
   // Load sessions on mount
   useEffect(() => {
@@ -372,46 +356,6 @@ export const useWahaSessions = () => {
     };
   }, [monitoringSessions, stopMonitoring]);
 
-  // Get session statistics
-  const getSessionStatistics = useCallback((sessionId) => {
-    const session = sessions.find(s => s.id === sessionId);
-    if (!session) return null;
-    return wahaApi.getSessionStatistics(session);
-  }, [sessions]);
-
-  // Check if session is healthy
-  const isSessionHealthy = useCallback((sessionId) => {
-    const session = sessions.find(s => s.id === sessionId);
-    if (!session) return false;
-    return wahaApi.isSessionHealthy(session);
-  }, [sessions]);
-
-  // Get session status badge
-  const getSessionStatusBadge = useCallback((sessionId) => {
-    const session = sessions.find(s => s.id === sessionId);
-    if (!session) return { variant: 'outline', text: 'Tidak Diketahui' };
-    return wahaApi.getSessionStatusBadge(session);
-  }, [sessions]);
-
-  // Get organization context
-  const getOrganizationContext = useCallback(() => {
-    if (sessions.length > 0) {
-      return wahaApi.getOrganizationFromSession(sessions[0]);
-    }
-    return null;
-  }, [sessions]);
-
-  // Filter sessions by health status
-  const getHealthySessions = useCallback(() => {
-    return Array.isArray(sessions) ? sessions.filter(session => wahaApi.isSessionHealthy(session)) : [];
-  }, [sessions]);
-
-  // Filter sessions by organization
-  const getSessionsByOrganization = useCallback((organizationId) => {
-    return Array.isArray(sessions) ? sessions.filter(session =>
-      wahaApi.isSessionOwnedByOrganization(session, organizationId)
-    ) : [];
-  }, [sessions]);
 
   return {
     // State
@@ -437,23 +381,19 @@ export const useWahaSessions = () => {
     getContacts,
     getGroups,
     getSessionStats,
-    bulkStartSessions,
-    bulkStopSessions,
-    validatePhoneNumber,
-    formatPhoneNumber,
 
-    // Enhanced Actions
-    getSessionStatistics,
-    isSessionHealthy,
-    getSessionStatusBadge,
-    getOrganizationContext,
-    getHealthySessions,
-    getSessionsByOrganization,
-
-    // Computed
-    connectedSessions: Array.isArray(sessions) ? sessions.filter(session => session.is_connected) : [],
-    readySessions: Array.isArray(sessions) ? sessions.filter(session => session.status === 'ready') : [],
-    errorSessions: Array.isArray(sessions) ? sessions.filter(session => session.status === 'error') : [],
-    healthySessions: getHealthySessions(),
+    // Computed - memoized for performance
+    connectedSessions: useMemo(() =>
+      Array.isArray(sessions) ? sessions.filter(session => session.is_connected) : [],
+      [sessions]
+    ),
+    readySessions: useMemo(() =>
+      Array.isArray(sessions) ? sessions.filter(session => session.status === 'ready') : [],
+      [sessions]
+    ),
+    errorSessions: useMemo(() =>
+      Array.isArray(sessions) ? sessions.filter(session => session.status === 'error') : [],
+      [sessions]
+    ),
   };
 };

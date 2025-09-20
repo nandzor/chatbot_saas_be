@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Tabs,
   TabsContent,
@@ -9,120 +9,35 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Alert,
-  AlertDescription,
   Badge,
-  Button,
-  Progress
+  Button
 } from '@/components/ui';
 import {
   MessageSquare,
   Settings,
   BarChart3,
   Smartphone,
-  AlertTriangle,
-  CheckCircle,
   Clock,
   RefreshCw,
-  Users,
-  Send,
-  QrCode,
   Activity,
   Zap,
   Shield,
   Globe
 } from 'lucide-react';
-import WahaSessionManager from '@/components/whatsapp/WahaSessionManager';
+import WahaSessionManager from '@/components/whatsapp/WahaSessionManagerDataTable';
 import WhatsAppQRConnector from '@/features/shared/WhatsAppQRConnector';
-import { useWahaSessions } from '@/hooks/useWahaSessions';
-import { wahaApi } from '@/services/wahaService';
-import toast from 'react-hot-toast';
 
 const WhatsAppIntegration = () => {
-  const {
-    connectedSessions,
-    readySessions,
-    errorSessions,
-    sessions,
-    loading,
-    loadSessions
-  } = useWahaSessions();
-
   const [activeTab, setActiveTab] = useState('sessions');
   const [showQRConnector, setShowQRConnector] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('unknown');
-  const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  // Auto-refresh sessions every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadSessions();
-      setLastUpdate(new Date());
-    }, 30000);
 
-    return () => clearInterval(interval);
-  }, [loadSessions]);
-
-  // Test WAHA connection on mount
-  useEffect(() => {
-    testWahaConnection();
-  }, []);
-
-  const testWahaConnection = async () => {
-    try {
-      const response = await wahaApi.testConnection();
-      if (response.success) {
-        setConnectionStatus('connected');
-      } else {
-        setConnectionStatus('error');
-      }
-    } catch (error) {
-      setConnectionStatus('error');
-    }
-  };
-
-  const handleQRSuccess = (inboxData) => {
-    toast.success(`Inbox "${inboxData.name}" berhasil dibuat!`);
+  const handleQRSuccess = (_inboxData) => {
     setShowQRConnector(false);
-    loadSessions(); // Refresh sessions
   };
 
-  const getStatusSummary = () => {
-    const total = sessions.length;
-    const connected = connectedSessions.length;
-    const ready = readySessions.length;
-    const error = errorSessions.length;
 
-    return { total, connected, ready, error };
-  };
 
-  const getConnectionStatusBadge = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return (
-          <Badge variant="success" className="flex items-center gap-1">
-            <CheckCircle className="w-3 h-3" />
-            WAHA Terhubung
-          </Badge>
-        );
-      case 'error':
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3" />
-            WAHA Error
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            Mengecek...
-          </Badge>
-        );
-    }
-  };
-
-  const status = getStatusSummary();
 
   return (
     <div className="space-y-6">
@@ -138,7 +53,6 @@ const WhatsAppIntegration = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {getConnectionStatusBadge()}
           <Button
             onClick={() => setShowQRConnector(true)}
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -149,75 +63,7 @@ const WhatsAppIntegration = () => {
         </div>
       </div>
 
-      {/* Status Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-blue-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Sesi</p>
-                <p className="text-2xl font-bold">{status.total}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Terhubung</p>
-                <p className="text-2xl font-bold text-green-600">{status.connected}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-yellow-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Siap</p>
-                <p className="text-2xl font-bold text-yellow-600">{status.ready}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Error</p>
-                <p className="text-2xl font-bold text-red-600">{status.error}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* WAHA Connection Status */}
-      {connectionStatus === 'error' && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            WAHA server tidak dapat diakses. Pastikan server WAHA berjalan dan konfigurasi benar.
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={testWahaConnection}
-              className="ml-2"
-            >
-              <RefreshCw className="w-3 h-3 mr-1" />
-              Coba Lagi
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Quick Actions */}
       <Card>
@@ -366,7 +212,7 @@ const WhatsAppIntegration = () => {
             </div>
             <div className="flex items-center gap-1">
               <RefreshCw className="w-3 h-3" />
-              <span>Terakhir update: {lastUpdate.toLocaleTimeString('id-ID')}</span>
+              <span>Terakhir update: {new Date().toLocaleTimeString('id-ID')}</span>
             </div>
           </div>
         </CardContent>
