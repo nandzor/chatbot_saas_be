@@ -11,9 +11,11 @@ class ProfileService {
    * Helper method to make API calls using AuthService
    */
   async _makeApiCall(method, endpoint, data = null, config = {}) {
+    // Auth endpoints don't use /v1 prefix, other endpoints do
+    const url = endpoint.startsWith('/auth/') ? endpoint : `/v1${endpoint}`;
     const response = await this.authService.api.request({
       method,
-      url: `/v1${endpoint}`,
+      url,
       data,
       ...config
     });
