@@ -121,6 +121,9 @@ class WahaController extends BaseApiController
             $validatedData['config']['metadata']['organization.name'] = $organization->name;
             $validatedData['config']['metadata']['organization.code'] = $organization->org_code;
 
+            // Flatten nested metadata objects to string key-value pairs for WAHA API compatibility
+            $validatedData['config']['metadata'] = $this->flattenMetadata($validatedData['config']['metadata']);
+
             // Create session in 3rd party WAHA instance
             $result = $this->wahaService->createSession($validatedData);
 
@@ -153,7 +156,7 @@ class WahaController extends BaseApiController
                 ]);
             }
 
-            return $this->errorResponse('Failed to create session in 3rd party WAHA', 500, $result);
+            return $this->errorResponse('Failed to create session in 3rd party WAHA', 500);
         } catch (Exception $e) {
             Log::error('Failed to create WAHA session', [
                 'organization_id' => $this->getCurrentOrganization()?->id,
@@ -732,5 +735,31 @@ class WahaController extends BaseApiController
             ]);
             return $this->errorResponse('Failed to retrieve session health', 500);
         }
+    }
+
+    /**
+     * Flatten nested metadata objects to string key-value pairs for WAHA API compatibility
+     *
+     * @param array $metadata The metadata array to flatten
+     * @return array Flattened metadata with string values only
+     */
+    private function flattenMetadata(array $metadata): array
+    {
+        $flattened = [];
+
+        foreach ($metadata as $key => $value) {
+            if (is_array($value)) {
+                // Recursively flatten nested arrays
+                $nested = $this->flattenMetadata($value);
+                foreach ($nested as $nestedKey => $nestedValue) {
+                    $flattened["{$key}.{$nestedKey}"] = (string) $nestedValue;
+                }
+            } else {
+                // Convert all values to strings
+                $flattened[$key] = (string) $value;
+            }
+        }
+
+        return $flattened;
     }
 }
