@@ -124,28 +124,31 @@ const WahaSessionManager = () => {
       await startSession(sessionId);
       startMonitoring(sessionId);
       toast.success(TOAST_MESSAGES.SESSION_STARTED);
+      await loadSessions(); // Refresh sessions after starting
     } catch (error) {
       // Error already handled in hook
     }
-  }, [startSession, startMonitoring]);
+  }, [startSession, startMonitoring, loadSessions]);
 
   const handleStopSession = useCallback(async (sessionId) => {
     try {
       await stopSession(sessionId);
       toast.success(TOAST_MESSAGES.SESSION_STOPPED);
+      await loadSessions(); // Refresh sessions after stopping
     } catch (error) {
       // Error already handled in hook
     }
-  }, [stopSession]);
+  }, [stopSession, loadSessions]);
 
   const handleDeleteSession = useCallback(async (sessionId) => {
     try {
       await deleteSession(sessionId);
       toast.success(TOAST_MESSAGES.SESSION_DELETED);
+      await loadSessions(); // Refresh sessions after deletion
     } catch (error) {
       // Error already handled in hook
     }
-  }, [deleteSession]);
+  }, [deleteSession, loadSessions]);
 
   const handleShowQR = useCallback(async (sessionId) => {
     try {
@@ -382,7 +385,7 @@ const WahaSessionManager = () => {
     {
       icon: Trash2,
       label: 'Delete Session',
-      onClick: (session) => handleDeleteSession(session.id),
+      onClick: (session) => handleDeleteSession(session.session_name || session.name),
       className: 'text-red-600 hover:text-red-700'
     }
   ], [handleShowQR, handleStartSession, handleStopSession, handleDeleteSession]);

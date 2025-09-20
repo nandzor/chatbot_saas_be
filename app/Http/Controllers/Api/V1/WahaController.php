@@ -606,7 +606,7 @@ class WahaController extends BaseApiController
     /**
      * Delete session
      */
-    public function deleteSession(string $sessionId): JsonResponse
+    public function deleteSession(string $sessionName): JsonResponse
     {
         try {
             // Get current organization
@@ -616,14 +616,14 @@ class WahaController extends BaseApiController
             }
 
             // Use sync service to delete session with organization validation
-            $success = $this->wahaSyncService->deleteSessionForOrganization($organization->id, $sessionId);
+            $success = $this->wahaSyncService->deleteSessionForOrganization($organization->id, $sessionName);
 
             if (!$success) {
-                return $this->handleResourceNotFound('WAHA session', $sessionId);
+                return $this->handleResourceNotFound('WAHA session', $sessionName);
             }
 
             $this->logApiAction('delete_waha_session', [
-                'session_id' => $sessionId,
+                'session_name' => $sessionName,
                 'organization_id' => $organization->id,
             ]);
 

@@ -387,9 +387,21 @@ class WahaSyncService
      */
     public function verifySessionAccess(string $organizationId, string $sessionName): ?WahaSession
     {
-        return WahaSession::where('session_name', $sessionName)
+        Log::info('Verifying session access by name', [
+            'organization_id' => $organizationId,
+            'session_name' => $sessionName
+        ]);
+
+        $session = WahaSession::where('session_name', $sessionName)
             ->where('organization_id', $organizationId)
             ->first();
+
+        Log::info('Session verification result by name', [
+            'found' => $session !== null,
+            'session_id' => $session ? $session->id : null
+        ]);
+
+        return $session;
     }
 
     /**
@@ -397,9 +409,21 @@ class WahaSyncService
      */
     public function verifySessionAccessById(string $organizationId, string $sessionId): ?WahaSession
     {
-        return WahaSession::where('id', $sessionId)
+        Log::info('Verifying session access by ID', [
+            'organization_id' => $organizationId,
+            'session_id' => $sessionId
+        ]);
+
+        $session = WahaSession::where('id', $sessionId)
             ->where('organization_id', $organizationId)
             ->first();
+
+        Log::info('Session verification result', [
+            'found' => $session !== null,
+            'session_name' => $session ? $session->session_name : null
+        ]);
+
+        return $session;
     }
 
     /**
@@ -639,15 +663,27 @@ class WahaSyncService
             return false;
         }
 
-        // Delete from WAHA server
+        // Delete from WAHA server using session name
         $result = $this->wahaService->deleteSession($sessionName);
 
-        if ($result['success'] ?? false) {
+        // For DELETE operations, WAHA server returns empty response on success (HTTP 200)
+        // Check if the result is not an error (no exception thrown means success)
+        if (is_array($result) && !isset($result['error'])) {
             // Delete local record
             $localSession->delete();
+            Log::info('Session deleted successfully', [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'local_session_id' => $localSession->id
+            ]);
             return true;
         }
 
+        Log::warning('Failed to delete session from WAHA server', [
+            'organization_id' => $organizationId,
+            'session_name' => $sessionName,
+            'result' => $result
+        ]);
         return false;
     }
 

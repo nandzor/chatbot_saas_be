@@ -25,7 +25,7 @@ Route::prefix('waha')->middleware(['unified.auth', 'waha.organization'])->group(
     Route::post('/sessions/{sessionId}/stop', [WahaController::class, 'stopSession']);
     Route::get('/sessions/{sessionId}/status', [WahaController::class, 'getSessionStatus']);
     Route::get('/sessions/{sessionId}/info', [WahaController::class, 'getSessionInfo']);
-    Route::delete('/sessions/{sessionId}', [WahaController::class, 'deleteSession']);
+    Route::delete('/sessions/{sessionName}', [WahaController::class, 'deleteSession']);
     Route::get('/sessions/{sessionId}/qr', [WahaController::class, 'getQrCode']);
 
     // Message routes
