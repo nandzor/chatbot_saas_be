@@ -3,12 +3,12 @@
  * Tabel data dengan semua optimizations dan best practices
  */
 
-import React, { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import {
   useDebounce,
   useVirtualScroll,
   withPerformanceOptimization,
-  LazyComponent
+  // LazyComponent
 } from '@/utils/performanceOptimization';
 import {
   useKeyboardNavigation,
@@ -71,7 +71,7 @@ const DataTable = ({
   const [selectedRow, setSelectedRow] = useState(null);
 
   const { announce } = useAnnouncement();
-  const { setLoading, isLoading } = useLoadingStates();
+  const { isLoading } = useLoadingStates();
 
   // Handle individual item selection
   const handleItemSelect = useCallback((item, checked) => {
@@ -274,11 +274,22 @@ const DataTable = ({
               {actions.length > 0 && (
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end space-x-2">
+                    {/* {console.log('DataTable rendering actions:', actions.length, 'for row:', row)} */}
                     {actions.map((action, actionIndex) => {
                       const Icon = action.icon;
                       const isDisabled = typeof action.disabled === 'function'
                         ? action.disabled(row)
                         : action.disabled || false;
+
+
+                      // If customComponent is provided, render it instead of default button
+                      if (action.customComponent) {
+                        return (
+                          <div key={actionIndex} className="flex items-center">
+                            {action.customComponent(row)}
+                          </div>
+                        );
+                      }
 
                       return (
                         <button

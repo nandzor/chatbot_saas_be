@@ -5,8 +5,24 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig(({ command, mode }) => {
   const isProduction = command === 'build' || mode === 'production';
 
+  // Force development mode for dev server
+  if (command === 'serve') {
+    process.env.NODE_ENV = 'development';
+  }
+
   return {
-    plugins: [react()],
+    mode: isProduction ? 'production' : 'development',
+    plugins: [react({
+      // Ensure React is properly configured for development/production
+      jsxRuntime: 'automatic',
+      jsxImportSource: 'react',
+      fastRefresh: !isProduction,
+      babel: {
+        plugins: isProduction ? [
+          ['transform-remove-console', { exclude: ['error', 'warn'] }]
+        ] : []
+      }
+    })],
     base: '/',
     resolve: {
       alias: {
@@ -37,6 +53,7 @@ export default defineConfig(({ command, mode }) => {
     build: {
       outDir: 'dist',
       sourcemap: !isProduction,
+      minify: isProduction ? 'esbuild' : false,
       rollupOptions: {
         output: {
           manualChunks: {
@@ -56,6 +73,8 @@ export default defineConfig(({ command, mode }) => {
     },
     define: {
       __DEV__: !isProduction,
+      'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
+      'process.env.REACT_APP_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
     },
   };
 });

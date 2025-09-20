@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useWahaSessions } from '@/hooks/useWahaSessions';
 import WhatsAppQRConnector from '@/features/shared/WhatsAppQRConnector';
+import WhatsAppChatDialog from './WhatsAppChatDialog';
 import toast from 'react-hot-toast';
 
 // Constants
@@ -340,7 +341,8 @@ const WahaSessionManager = () => {
   ], [getHealthStatusIcon, getConnectionIcon, formatSessionStats, getStatusBadge]);
 
   // Define actions for DataTable - memoized for performance
-  const actions = useMemo(() => [
+  const actions = useMemo(() => {
+    const actionsList = [
     {
       icon: QrCode,
       label: 'Show QR Code',
@@ -369,7 +371,7 @@ const WahaSessionManager = () => {
       icon: Square,
       label: 'Stop Session',
       onClick: (session) => handleStopSession(session.id),
-      className: 'text-red-600 hover:text-red-700',
+      className: 'text-orange-600 hover:text-orange-700',
       disabled: (session) => {
         // Disable stop button if session is not running
         const isWorking = session.status === 'working' || session.status === 'WORKING';
@@ -378,19 +380,48 @@ const WahaSessionManager = () => {
       }
     },
     {
+      icon: MessageSquare,
+      label: 'Open Chat',
+      onClick: () => {}, // Will be handled by WhatsAppChatDialog
+      className: 'text-green-600 hover:text-green-700',
+      disabled: (session) => {
+        // Only enable chat for connected sessions
+        const isConnected = session.is_connected && session.is_authenticated;
+        return !isConnected;
+      },
+      customComponent: (session) => (
+        <WhatsAppChatDialog
+          sessionId={session.id}
+          sessionName={session.name || session.session_name}
+          isConnected={session.is_connected && session.is_authenticated}
+          phoneNumber={session.phone_number}
+          onSendMessage={async (_sessionId, _message) => {
+            // Mock send message function
+            toast.success('Message sent successfully!');
+          }}
+          onLoadMessages={async (_sessionId) => {
+            // Mock load messages function
+            // Load messages logic will be implemented here
+          }}
+        />
+      )
+    },
+    {
       icon: Trash2,
       label: 'Delete Session',
       onClick: (session) => handleDeleteSession(session.session_name || session.name),
       className: 'text-red-600 hover:text-red-700'
     }
-  ], [handleShowQR, handleStartSession, handleStopSession, handleDeleteSession]);
+  ];
+    // console.log('Actions array created with', actionsList.length, 'actions:', actionsList.map(a => a.label));
+    return actionsList;
+  }, [handleShowQR, handleStartSession, handleStopSession, handleDeleteSession]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">WAHA Sessions</h2>
           <p className="text-muted-foreground">
             Kelola sesi WhatsApp HTTP API (WAHA)
           </p>
