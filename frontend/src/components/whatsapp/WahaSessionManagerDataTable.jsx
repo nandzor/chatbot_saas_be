@@ -345,7 +345,13 @@ const WahaSessionManager = () => {
       icon: QrCode,
       label: 'Show QR Code',
       onClick: (session) => handleShowQR(session.id),
-      className: 'text-blue-600 hover:text-blue-700'
+      className: 'text-blue-600 hover:text-blue-700',
+      disabled: (session) => {
+        // Disable QR button if session is already connected
+        const isWorking = session.status === 'working' || session.status === 'WORKING';
+        const isConnected = session.is_connected && session.is_authenticated;
+        return isWorking || isConnected;
+      }
     },
     {
       icon: Play,

@@ -276,14 +276,24 @@ const DataTable = ({
                   <div className="flex items-center justify-end space-x-2">
                     {actions.map((action, actionIndex) => {
                       const Icon = action.icon;
+                      const isDisabled = typeof action.disabled === 'function'
+                        ? action.disabled(row)
+                        : action.disabled || false;
+
                       return (
                         <button
                           key={actionIndex}
                           onClick={(e) => {
+                            if (isDisabled) return;
                             e.stopPropagation();
                             action.onClick?.(row);
                           }}
-                          className={`p-2 rounded-md hover:bg-gray-100 transition-colors ${action.className || ''}`}
+                          disabled={isDisabled}
+                          className={`p-2 rounded-md transition-colors ${
+                            isDisabled
+                              ? 'opacity-50 cursor-not-allowed bg-gray-50'
+                              : `hover:bg-gray-100 ${action.className || ''}`
+                          }`}
                           title={action.label}
                         >
                           <Icon className="w-4 h-4" />

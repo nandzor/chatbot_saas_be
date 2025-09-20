@@ -52,6 +52,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
   const [showQRCode, setShowQRCode] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(connectionTimeout);
   const qrRequestRef = useRef(null); // Prevent duplicate QR requests
+  const inboxNameInputRef = useRef(null); // For auto focus
+  const namingSectionRef = useRef(null); // For auto scroll
 
   // Define startConnectionMonitoring function first
   const startConnectionMonitoring = useCallback((sessionId) => {
@@ -214,6 +216,29 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
       setTimeRemaining(connectionTimeout);
     }
   }, [connectionStep, connectionTimeout]);
+
+  // Auto scroll and focus when reaching naming step
+  useEffect(() => {
+    if (connectionStep === 'naming') {
+      // Smooth scroll to naming section
+      if (namingSectionRef.current) {
+        setTimeout(() => {
+          namingSectionRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        }, 300); // Small delay to ensure DOM is ready
+      }
+
+      // Auto focus to input field
+      if (inboxNameInputRef.current) {
+        setTimeout(() => {
+          inboxNameInputRef.current.focus();
+        }, 500); // Delay to ensure scroll completes first
+      }
+    }
+  }, [connectionStep]);
 
   // Cleanup monitoring on unmount
   useEffect(() => {
@@ -637,7 +662,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
           )}
 
           {connectionStep === 'naming' && (
-            <div className="space-y-6">
+            <div ref={namingSectionRef} className="space-y-6">
               <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50">
                 <CardContent className="p-8 text-center">
                   <div className="relative mb-6">
@@ -661,6 +686,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
                         Nama Inbox WhatsApp
                       </Label>
                       <Input
+                        ref={inboxNameInputRef}
                         id="inboxName"
                         value={inboxName}
                         onChange={(e) => setInboxName(e.target.value)}
