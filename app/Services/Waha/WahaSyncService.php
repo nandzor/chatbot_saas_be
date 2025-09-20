@@ -58,8 +58,13 @@ class WahaSyncService
             $updatedCount = 0;
 
             // Process WAHA server sessions
-            // WAHA server returns array directly, not object with 'sessions' property
-            $sessionsToProcess = is_array($wahaSessions) ? $wahaSessions : ($wahaSessions['sessions'] ?? []);
+            // WAHA server returns {success: true, data: [...], message: "..."}
+            $sessionsToProcess = [];
+            if (isset($wahaSessions['data']) && is_array($wahaSessions['data'])) {
+                $sessionsToProcess = $wahaSessions['data'];
+            } elseif (is_array($wahaSessions)) {
+                $sessionsToProcess = $wahaSessions;
+            }
 
             if (is_array($sessionsToProcess)) {
                 foreach ($sessionsToProcess as $wahaSession) {
@@ -248,13 +253,25 @@ class WahaSyncService
      */
     protected function updateLocalSession(WahaSession $localSession, array $wahaData): void
     {
+        $wahaStatus = $wahaData['status'] ?? $localSession->status;
+        $mappedStatus = $this->mapWahaStatus($wahaStatus);
+
         $localSession->update([
             'phone_number' => $wahaData['phone'] ?? $localSession->phone_number,
-            'status' => $this->mapWahaStatus($wahaData['status'] ?? $localSession->status),
-            'is_authenticated' => ($wahaData['status'] ?? '') === 'WORKING',
-            'is_connected' => ($wahaData['status'] ?? '') === 'WORKING',
+            'status' => $mappedStatus,
+            'is_authenticated' => ($wahaStatus === 'WORKING'),
+            'is_connected' => ($wahaStatus === 'WORKING'),
             'health_status' => $this->mapHealthStatus($wahaData),
             'last_health_check' => now(),
+        ]);
+
+        Log::info('Updated local session', [
+            'session_id' => $localSession->id,
+            'session_name' => $localSession->session_name,
+            'waha_status' => $wahaStatus,
+            'mapped_status' => $mappedStatus,
+            'is_connected' => ($wahaStatus === 'WORKING'),
+            'is_authenticated' => ($wahaStatus === 'WORKING'),
         ]);
     }
 
@@ -280,6 +297,7 @@ class WahaSyncService
             'id' => $localSession->id,
             'organization_id' => $localSession->organization_id,
             'session_name' => $localSession->session_name,
+            'status' => $localSession->status, // Use local session status (already mapped)
             'phone_number' => $localSession->phone_number,
             'business_name' => $localSession->business_name,
             'business_description' => $localSession->business_description,
@@ -308,11 +326,12 @@ class WahaSyncService
     {
         return match (strtoupper($wahaStatus)) {
             'WORKING' => 'working',
-            'NOT_WORKING' => 'not_working',
+            'NOT_WORKING' => 'disconnected',
             'STARTING' => 'connecting',
+            'SCAN_QR_CODE' => 'connecting', // QR scan is part of connecting process
             'STOPPED' => 'disconnected',
             'FAILED' => 'error',
-            default => 'unknown',
+            default => 'connecting', // Default to connecting instead of unknown
         };
     }
 
@@ -473,6 +492,109 @@ class WahaSyncService
                 'total_media_received' => 0,
             ]
         );
+    }
+
+    /**
+     * Create or update local session from 3rd party response
+     */
+    public function createOrUpdateLocalSession(string $organizationId, string $sessionName, array $thirdPartyResponse): WahaSession
+    {
+        // Check if session already exists locally
+        $existingSession = WahaSession::where('organization_id', $organizationId)
+            ->where('session_name', $sessionName)
+            ->first();
+
+        if ($existingSession) {
+            // Update existing session with 3rd party data
+            $existingSession->update([
+                'status' => $this->mapWahaStatus($thirdPartyResponse['session']['status'] ?? 'UNKNOWN'),
+                'is_authenticated' => ($thirdPartyResponse['session']['status'] ?? '') === 'WORKING',
+                'is_connected' => ($thirdPartyResponse['session']['status'] ?? '') === 'WORKING',
+                'is_ready' => ($thirdPartyResponse['session']['status'] ?? '') === 'WORKING',
+                'health_status' => $this->mapHealthStatus($thirdPartyResponse),
+                'last_health_check' => now(),
+                'metadata' => array_merge($existingSession->metadata ?? [], [
+                    'last_sync_at' => now()->toISOString(),
+                    'sync_source' => '3rd_party_create_response',
+                    'third_party_response' => $thirdPartyResponse,
+                    'created_via_api' => true
+                ])
+            ]);
+            return $existingSession;
+        }
+
+        // Get existing channel config for this organization
+        $channelConfig = \App\Models\ChannelConfig::where('organization_id', $organizationId)->first();
+        if (!$channelConfig) {
+            throw new Exception('No channel config found for organization');
+        }
+
+        // Create new session from 3rd party response
+        $sessionData = [
+            'organization_id' => $organizationId,
+            'channel_config_id' => $channelConfig->id, // Use existing channel config
+            'session_name' => $sessionName,
+            'phone_number' => '+628123456' . substr($sessionName, -4), // Unique phone number based on session name
+            'instance_id' => $sessionName,
+            'status' => $this->mapWahaStatus($thirdPartyResponse['session']['status'] ?? 'UNKNOWN'),
+            'is_authenticated' => ($thirdPartyResponse['session']['status'] ?? '') === 'WORKING',
+            'is_connected' => ($thirdPartyResponse['session']['status'] ?? '') === 'WORKING',
+            'is_ready' => ($thirdPartyResponse['session']['status'] ?? '') === 'WORKING',
+            'health_status' => $this->mapHealthStatus($thirdPartyResponse),
+            'last_health_check' => now(),
+            'error_count' => 0,
+            'has_business_features' => false,
+            'features' => [
+                'media_upload' => true,
+                'group_messaging' => true,
+                'broadcast_messaging' => true,
+                'webhook_support' => true,
+                'qr_code_auth' => true
+            ],
+            'rate_limits' => [
+                'messages_per_minute' => 60,
+                'messages_per_hour' => 1000,
+                'media_per_hour' => 100
+            ],
+            'total_messages_sent' => 0,
+            'total_messages_received' => 0,
+            'total_media_sent' => 0,
+            'total_media_received' => 0,
+            'total_contacts' => 0,
+            'total_groups' => 0,
+            'session_config' => [
+                'webhook_url' => null,
+                'webhook_events' => ['message', 'status', 'qr'],
+                'auto_reply' => false,
+                'business_hours' => [
+                    'enabled' => false,
+                    'timezone' => 'Asia/Jakarta'
+                ]
+            ],
+            'webhook_config' => [
+                'enabled' => false,
+                'url' => null,
+                'events' => ['message', 'status'],
+                'secret' => null
+            ],
+            'metadata' => [
+                'created_by' => 'api',
+                'purpose' => 'Session created via 3rd party API',
+                'sync_with_3rd_party' => true,
+                'third_party_response' => $thirdPartyResponse,
+                'created_via_api' => true,
+                'created_at' => now()->toISOString()
+            ],
+            'status_type' => 'active'
+        ];
+
+        Log::info('Creating new local session from 3rd party response', [
+            'organization_id' => $organizationId,
+            'session_name' => $sessionName,
+            'session_data' => $sessionData
+        ]);
+
+        return WahaSession::create($sessionData);
     }
 
     /**

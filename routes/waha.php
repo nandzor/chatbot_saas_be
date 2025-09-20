@@ -20,6 +20,7 @@ Route::prefix('waha')->middleware(['unified.auth', 'waha.organization'])->group(
 
     // Session management routes
     Route::get('/sessions', [WahaController::class, 'getSessions']);
+    Route::post('/sessions/create', [WahaController::class, 'createSession']);
     Route::post('/sessions/{sessionId}/start', [WahaController::class, 'startSession']);
     Route::post('/sessions/{sessionId}/stop', [WahaController::class, 'stopSession']);
     Route::get('/sessions/{sessionId}/status', [WahaController::class, 'getSessionStatus']);

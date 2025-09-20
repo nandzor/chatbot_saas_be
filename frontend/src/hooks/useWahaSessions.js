@@ -68,7 +68,7 @@ export const useWahaSessions = () => {
           session_name: result.data.session_name || sessionId,
           status: result.data.status || 'connecting',
           organization_id: result.data.organization_id,
-          phone_number: config.phone_number,
+          phone_number: config.phone_number || '+6281234567890',
           business_name: config.business_name,
           business_description: config.business_description,
           business_category: config.business_category,

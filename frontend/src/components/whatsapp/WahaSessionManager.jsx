@@ -40,6 +40,7 @@ const WahaSessionManager = () => {
     sessions,
     loading,
     error,
+    createSession,
     startSession,
     stopSession,
     deleteSession,
@@ -53,7 +54,41 @@ const WahaSessionManager = () => {
   const [qrCode, setQrCode] = useState('');
   const [isLoadingQR, setIsLoadingQR] = useState(false);
   const [refreshingSessions, setRefreshingSessions] = useState(new Set());
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
 
+  const handleCreateSession = async () => {
+    try {
+      setIsCreatingSession(true);
+      await createSession('default-xxx', {
+        metadata: {
+          'user.id': '123',
+          'user.email': 'email@example.com'
+        },
+        proxy: null,
+        debug: false,
+        noweb: {
+          store: {
+            enabled: true,
+            fullSync: false
+          }
+        },
+        webhooks: [
+          {
+            url: 'https://webhook.site/11111111-1111-1111-1111-11111111',
+            events: ['message', 'session.status'],
+            hmac: null,
+            retries: null,
+            customHeaders: null
+          }
+        ]
+      });
+      await loadSessions(); // Refresh sessions after creation
+    } catch (error) {
+      // Error already handled in hook
+    } finally {
+      setIsCreatingSession(false);
+    }
+  };
 
   const handleStartSession = async (sessionId) => {
     try {
@@ -115,9 +150,10 @@ const WahaSessionManager = () => {
 
   const getStatusBadge = (session) => {
     const status = session.status || 'unknown';
-    const isConnected = session.connected || false;
+    const isConnected = session.is_connected || session.connected || false;
+    const isAuthenticated = session.is_authenticated || false;
 
-    if (isConnected) {
+    if (isConnected && isAuthenticated) {
       return <Badge variant="success" className="flex items-center gap-1">
         <CheckCircle className="w-3 h-3" />
         Terhubung
@@ -125,15 +161,30 @@ const WahaSessionManager = () => {
     }
 
     switch (status) {
-      case 'ready':
+      case 'working':
+        return <Badge variant="success" className="flex items-center gap-1">
+          <CheckCircle className="w-3 h-3" />
+          Bekerja
+        </Badge>;
+      case 'connecting':
+        return <Badge variant="warning" className="flex items-center gap-1">
+          <RefreshCw className="w-3 h-3 animate-spin" />
+          Menghubungkan
+        </Badge>;
+      case 'disconnected':
         return <Badge variant="secondary" className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
-          Siap
+          Terputus
         </Badge>;
       case 'error':
         return <Badge variant="destructive" className="flex items-center gap-1">
           <AlertTriangle className="w-3 h-3" />
           Error
+        </Badge>;
+      case 'ready':
+        return <Badge variant="secondary" className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          Siap
         </Badge>;
       case 'starting':
         return <Badge variant="outline" className="flex items-center gap-1">
@@ -146,14 +197,29 @@ const WahaSessionManager = () => {
   };
 
   const getActionButtons = (session, index = 0) => {
-    const isConnected = session.connected || false;
+    const isConnected = session.is_connected || session.connected || false;
+    const isAuthenticated = session.is_authenticated || false;
     const status = session.status || 'unknown';
     const isRefreshing = refreshingSessions.has(session.id);
     const sessionKey = session.id || `session-${index}`;
 
     return (
       <div className="flex items-center gap-2">
-        {!isConnected && status === 'ready' && (
+        {status === 'connecting' && (
+          <Button
+            key={`qr-${sessionKey}`}
+            size="sm"
+            variant="outline"
+            onClick={() => handleShowQR(session.id)}
+            disabled={isLoadingQR}
+            className="flex items-center gap-1"
+          >
+            <QrCode className="w-3 h-3" />
+            QR Code
+          </Button>
+        )}
+
+        {!isConnected && (status === 'ready' || status === 'disconnected') && (
           <Button
             key={`start-${sessionKey}`}
             size="sm"
@@ -177,20 +243,6 @@ const WahaSessionManager = () => {
           >
             <Square className="w-3 h-3" />
             Hentikan
-          </Button>
-        )}
-
-        {status === 'ready' && !isConnected && (
-          <Button
-            key={`qr-${sessionKey}`}
-            size="sm"
-            variant="outline"
-            onClick={() => handleShowQR(session.id)}
-            disabled={isLoadingQR}
-            className="flex items-center gap-1"
-          >
-            <QrCode className="w-3 h-3" />
-            QR Code
           </Button>
         )}
 
@@ -244,6 +296,18 @@ const WahaSessionManager = () => {
             WhatsApp HTTP API Management
           </p>
         </div>
+        <Button
+          onClick={handleCreateSession}
+          disabled={isCreatingSession || loading}
+          className="flex items-center gap-2"
+        >
+          {isCreatingSession ? (
+            <RefreshCw className="w-4 h-4 animate-spin" />
+          ) : (
+            <Smartphone className="w-4 h-4" />
+          )}
+          {isCreatingSession ? 'Membuat...' : 'Buat Session'}
+        </Button>
       </div>
 
       {/* Error Alert */}
@@ -277,7 +341,8 @@ const WahaSessionManager = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Session ID</TableHead>
+                  <TableHead>Session Name</TableHead>
+                  <TableHead>Phone Number</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Dibuat</TableHead>
                   <TableHead>Terakhir Update</TableHead>
@@ -290,17 +355,22 @@ const WahaSessionManager = () => {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <Smartphone className="w-4 h-4 text-muted-foreground" />
-                        {session.id}
+                        {session.session_name || session.name || session.id}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-muted-foreground">
+                        {session.phone_number || '-'}
                       </div>
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(session)}
                     </TableCell>
                     <TableCell>
-                      {session.createdAt ? new Date(session.createdAt).toLocaleString('id-ID') : '-'}
+                      {session.created_at ? new Date(session.created_at).toLocaleString('id-ID') : '-'}
                     </TableCell>
                     <TableCell>
-                      {session.updatedAt ? new Date(session.updatedAt).toLocaleString('id-ID') : '-'}
+                      {session.updated_at ? new Date(session.updated_at).toLocaleString('id-ID') : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       {getActionButtons(session, index)}

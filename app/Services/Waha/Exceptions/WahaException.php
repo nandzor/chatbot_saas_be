@@ -40,4 +40,14 @@ class WahaException extends HttpClientException
     {
         return new self("Rate limit exceeded", 429);
     }
+
+    public static function blockedPhoneNumber(string $phoneNumber): self
+    {
+        return new self("Phone number '{$phoneNumber}' is blocked", 403);
+    }
+
+    public static function unauthorizedPhoneNumber(string $phoneNumber): self
+    {
+        return new self("Phone number '{$phoneNumber}' is not authorized", 403);
+    }
 }

@@ -53,10 +53,30 @@ export class WahaApiService extends BaseApiService {
   }
 
   /**
-   * Membuat sesi baru (alias untuk startSession)
+   * Membuat sesi baru menggunakan endpoint /sessions/create
    */
   async createSession(sessionId, config = {}) {
-    return this.startSession(sessionId, config);
+    const response = await this.post('/sessions/create', {
+      name: sessionId,
+      start: true,
+      config: config
+    });
+
+    // Enhanced response format with organization context
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: {
+          ...response.data,
+          local_session_id: response.data.local_session_id,
+          organization_id: response.data.organization_id,
+          session_name: response.data.session_name || sessionId,
+          status: response.data.status || 'connecting',
+        }
+      };
+    }
+
+    return response;
   }
 
   /**

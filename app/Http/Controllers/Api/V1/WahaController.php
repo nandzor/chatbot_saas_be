@@ -68,6 +68,103 @@ class WahaController extends BaseApiController
     }
 
     /**
+     * Create a new session in 3rd party WAHA instance
+     */
+    public function createSession(Request $request): JsonResponse
+    {
+        try {
+            // Get current organization
+            $organization = $this->getCurrentOrganization();
+            if (!$organization) {
+                return $this->handleUnauthorizedAccess('create WAHA session');
+            }
+
+            // Validate the request payload
+            $validatedData = $request->validate([
+                'name' => 'nullable|string|max:255', // Made nullable since we'll generate it
+                'start' => 'boolean',
+                'config' => 'nullable|array',
+                'config.metadata' => 'nullable|array',
+                'config.metadata.user.id' => 'nullable|string',
+                'config.metadata.user.email' => 'nullable|email',
+                'config.proxy' => 'nullable|string',
+                'config.debug' => 'boolean',
+                'config.noweb' => 'nullable|array',
+                'config.noweb.store' => 'nullable|array',
+                'config.noweb.store.enabled' => 'boolean',
+                'config.noweb.store.fullSync' => 'boolean',
+                'config.webhooks' => 'nullable|array',
+                'config.webhooks.*.url' => 'nullable|url',
+                'config.webhooks.*.events' => 'nullable|array',
+                'config.webhooks.*.hmac' => 'nullable|string',
+                'config.webhooks.*.retries' => 'nullable|integer',
+                'config.webhooks.*.customHeaders' => 'nullable|array',
+            ]);
+
+            // Generate session name with organization ID prefix for local storage
+            $orgIdPrefix = substr($organization->id, 0, 7); // Get first 7 characters of organization ID
+            $localSessionName = $validatedData['name'] ?? "default-{$orgIdPrefix}";
+
+            // For WAHA Core, we must use 'default' as session name
+            $validatedData['name'] = 'default';
+
+            // Add organization metadata to the config
+            if (!isset($validatedData['config'])) {
+                $validatedData['config'] = [];
+            }
+            if (!isset($validatedData['config']['metadata'])) {
+                $validatedData['config']['metadata'] = [];
+            }
+
+            // Add organization information to metadata
+            $validatedData['config']['metadata']['organization.id'] = $organization->id;
+            $validatedData['config']['metadata']['organization.name'] = $organization->name;
+            $validatedData['config']['metadata']['organization.code'] = $organization->org_code;
+
+            // Create session in 3rd party WAHA instance
+            $result = $this->wahaService->createSession($validatedData);
+
+            // Check if result is successful (either has 'success' field or has session data)
+            $isSuccess = ($result['success'] ?? false) || isset($result['name']) || isset($result['session']);
+
+            if ($isSuccess) {
+                // Create or update local session record with enhanced session name
+                $localSession = $this->wahaSyncService->createOrUpdateLocalSession(
+                    $organization->id,
+                    $localSessionName,
+                    $result
+                );
+
+                $this->logApiAction('create_waha_session', [
+                    'session_name' => $localSessionName,
+                    'waha_session_name' => $validatedData['name'], // 'default' for WAHA
+                    'organization_id' => $organization->id,
+                    'local_session_id' => $localSession->id,
+                    'third_party_response' => $result,
+                ]);
+
+                return $this->successResponse('Session created successfully', [
+                    'local_session_id' => $localSession->id,
+                    'organization_id' => $organization->id,
+                    'session_name' => $localSessionName,
+                    'waha_session_name' => $validatedData['name'], // 'default' for WAHA
+                    'third_party_response' => $result,
+                    'status' => $localSession->status,
+                ]);
+            }
+
+            return $this->errorResponse('Failed to create session in 3rd party WAHA', 500, $result);
+        } catch (Exception $e) {
+            Log::error('Failed to create WAHA session', [
+                'organization_id' => $this->getCurrentOrganization()?->id,
+                'error' => $e->getMessage(),
+                'request_data' => $request->all()
+            ]);
+            return $this->errorResponse('Failed to create session', 500);
+        }
+    }
+
+    /**
      * Start a new session
      */
     public function startSession(Request $request, string $sessionId): JsonResponse

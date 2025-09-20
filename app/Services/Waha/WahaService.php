@@ -4,6 +4,7 @@ namespace App\Services\Waha;
 
 use App\Services\Http\BaseHttpClient;
 use App\Services\Waha\Exceptions\WahaException;
+use App\Services\Waha\MockWahaResponses;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -11,54 +12,140 @@ use Exception;
 
 class WahaService extends BaseHttpClient
 {
+    // Constants
+    private const DEFAULT_BASE_URL = 'http://localhost:3000';
+    private const DEFAULT_TIMEOUT = 30;
+    private const DEFAULT_RETRY_ATTEMPTS = 3;
+    private const DEFAULT_RETRY_DELAY = 1000;
+    private const DEFAULT_MAX_RETRY_DELAY = 10000;
+    private const CONNECTION_TEST_TIMEOUT = 2;
+    private const CONNECTION_TEST_CONNECT_TIMEOUT = 1;
+
+    // HTTP Status Codes
+    private const HTTP_BAD_REQUEST = 400;
+    private const HTTP_UNAUTHORIZED = 401;
+    private const HTTP_FORBIDDEN = 403;
+    private const HTTP_NOT_FOUND = 404;
+    private const HTTP_CONFLICT = 409;
+    private const HTTP_UNPROCESSABLE_ENTITY = 422;
+    private const HTTP_TOO_MANY_REQUESTS = 429;
+    private const HTTP_INTERNAL_SERVER_ERROR = 500;
+    private const HTTP_BAD_GATEWAY = 502;
+    private const HTTP_SERVICE_UNAVAILABLE = 503;
+
+    // Session Statuses
+    private const STATUS_WORKING = 'WORKING';
+    private const STATUS_STARTING = 'STARTING';
+    private const STATUS_SCAN_QR_CODE = 'SCAN_QR_CODE';
+
+    // API Endpoints
+    private const ENDPOINT_SESSIONS = '/api/sessions';
+    private const ENDPOINT_SESSION_INFO = '/api/sessions/%s';
+    private const ENDPOINT_SESSION_START = '/api/sessions/%s/start';
+    private const ENDPOINT_SESSION_STOP = '/api/sessions/%s/stop';
+    private const ENDPOINT_SESSION_STATUS = '/api/sessions/%s/status';
+    private const ENDPOINT_SEND_TEXT = '/api/sessions/%s/sendText';
+    private const ENDPOINT_SEND_MEDIA = '/api/sessions/%s/sendMedia';
+    private const ENDPOINT_MESSAGES = '/api/sessions/%s/messages';
+    private const ENDPOINT_CONTACTS = '/api/sessions/%s/contacts';
+    private const ENDPOINT_GROUPS = '/api/sessions/%s/groups';
+    private const ENDPOINT_QR_CODE = '/api/sessions/%s/qr';
+
     protected string $apiKey;
     protected bool $mockResponses = false;
+    protected MockWahaResponses $mockResponsesHandler;
 
     public function __construct(array $config = [])
     {
+        // Merge with default configuration from config/waha.php
+        $mergedConfig = $this->mergeWithDefaultConfig($config);
+
+        $this->initializeProperties($mergedConfig);
+        $this->validateConfig($mergedConfig);
+
+        $normalizedBaseUrl = $this->normalizeBaseUrl($mergedConfig['base_url'] ?? self::DEFAULT_BASE_URL);
+        $httpConfig = $this->buildHttpConfig($mergedConfig);
+
+        parent::__construct($normalizedBaseUrl, $httpConfig);
+    }
+
+    /**
+     * Merge provided config with default configuration from config/waha.php
+     *
+     * @param array $config Provided configuration
+     * @return array Merged configuration
+     */
+    private function mergeWithDefaultConfig(array $config): array
+    {
+        $defaultConfig = config('waha', []);
+
+        return [
+            'base_url' => $config['base_url'] ?? $defaultConfig['server']['base_url'] ?? self::DEFAULT_BASE_URL,
+            'api_key' => $config['api_key'] ?? $defaultConfig['server']['api_key'] ?? '',
+            'timeout' => $config['timeout'] ?? $defaultConfig['server']['timeout'] ?? self::DEFAULT_TIMEOUT,
+            'retry_attempts' => $config['retry_attempts'] ?? $defaultConfig['http']['retry_attempts'] ?? self::DEFAULT_RETRY_ATTEMPTS,
+            'retry_delay' => $config['retry_delay'] ?? $defaultConfig['http']['retry_delay'] ?? self::DEFAULT_RETRY_DELAY,
+            'max_retry_delay' => $config['max_retry_delay'] ?? $defaultConfig['http']['max_retry_delay'] ?? self::DEFAULT_MAX_RETRY_DELAY,
+            'exponential_backoff' => $config['exponential_backoff'] ?? $defaultConfig['http']['exponential_backoff'] ?? true,
+            'log_requests' => $config['log_requests'] ?? $defaultConfig['http']['log_requests'] ?? true,
+            'log_responses' => $config['log_responses'] ?? $defaultConfig['http']['log_responses'] ?? true,
+            'mock_responses' => $config['mock_responses'] ?? $defaultConfig['testing']['mock_responses'] ?? false,
+        ];
+    }
+
+    /**
+     * Initialize class properties from configuration
+     */
+    private function initializeProperties(array $config): void
+    {
         $this->apiKey = $config['api_key'] ?? '';
         $this->mockResponses = $config['mock_responses'] ?? false;
+        $this->mockResponsesHandler = new MockWahaResponses();
+    }
 
-        // Validate configuration
-        $this->validateConfig($config);
+    /**
+     * Build HTTP client configuration
+     */
+    private function buildHttpConfig(array $config): array
+    {
+        return [
+            'headers' => $this->buildHeaders(),
+            'timeout' => $config['timeout'] ?? self::DEFAULT_TIMEOUT,
+            'retry_attempts' => $config['retry_attempts'] ?? self::DEFAULT_RETRY_ATTEMPTS,
+            'retry_delay' => $config['retry_delay'] ?? self::DEFAULT_RETRY_DELAY,
+            'max_retry_delay' => $config['max_retry_delay'] ?? self::DEFAULT_MAX_RETRY_DELAY,
+            'exponential_backoff' => $config['exponential_backoff'] ?? true,
+            'log_requests' => $config['log_requests'] ?? true,
+            'log_responses' => $config['log_responses'] ?? true,
+        ];
+    }
 
-        $headers = [
+    /**
+     * Build default headers for HTTP requests
+     */
+    private function buildHeaders(): array
+    {
+        return [
             'X-API-Key' => $this->apiKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
-
-        // Normalize base URL
-        $rawBaseUrl = $config['base_url'] ?? 'http://localhost:3000';
-        $normalizedBaseUrl = $this->normalizeBaseUrl($rawBaseUrl);
-
-        parent::__construct($normalizedBaseUrl, [
-            'headers' => $headers,
-            'timeout' => $config['timeout'] ?? 30,
-            'retry_attempts' => $config['retry_attempts'] ?? 3,
-            'retry_delay' => $config['retry_delay'] ?? 1000,
-            'max_retry_delay' => $config['max_retry_delay'] ?? 10000,
-            'exponential_backoff' => $config['exponential_backoff'] ?? true,
-            'log_requests' => $config['log_requests'] ?? true,
-            'log_responses' => $config['log_responses'] ?? true,
-        ]);
-
-        // Service initialized silently
     }
+
+    // ========================================
+    // CONNECTION & CONFIGURATION METHODS
+    // ========================================
 
     /**
      * Test WAHA server connection
+     *
+     * @return array{success: bool, message: string, base_url: string, status?: int, error?: string, mock_mode: bool}
      */
     public function testConnection(): array
     {
         try {
             if ($this->mockResponses) {
-                return [
-                    'success' => true,
-                    'message' => 'WAHA service is in mock mode',
-                    'base_url' => $this->baseUrl,
-                    'mock_mode' => true,
-                ];
+                return $this->mockResponsesHandler->getConnectionTest();
             }
 
             // Basic configuration validation first
@@ -72,8 +159,8 @@ class WahaService extends BaseHttpClient
 
             // Try a simple connectivity test with very short timeout
             try {
-                $response = Http::timeout(2)
-                    ->connectTimeout(1)
+                $response = Http::timeout(self::CONNECTION_TEST_TIMEOUT)
+                    ->connectTimeout(self::CONNECTION_TEST_CONNECT_TIMEOUT)
                     ->withHeaders($this->defaultHeaders)
                     ->get($this->baseUrl . '/');
 
@@ -120,41 +207,295 @@ class WahaService extends BaseHttpClient
         }
     }
 
+    // ========================================
+    // SESSION MANAGEMENT METHODS
+    // ========================================
+
     /**
-     * Get all sessions
+     * Get all sessions from WAHA server
+     *
+     * @return array{success: bool, data: array, message: string}
      */
     public function getSessions(): array
     {
         if ($this->mockResponses) {
-            return $this->getMockSessions();
+            return $this->mockResponsesHandler->getSessions();
         }
 
-        $response = $this->get('/api/sessions');
-        return $this->handleResponse($response, 'get sessions');
+        $response = $this->get(self::ENDPOINT_SESSIONS);
+        $data = $this->handleResponse($response, 'get sessions');
+
+        return $this->normalizeSessionsResponse($data);
+    }
+
+    /**
+     * Normalize sessions response format
+     */
+    private function normalizeSessionsResponse(array $data): array
+    {
+        // Handle different response formats
+        if (is_array($data) && !isset($data['data']) && !isset($data['sessions'])) {
+            // Direct array response
+            return [
+                'success' => true,
+                'data' => $data,
+                'message' => 'Sessions retrieved successfully'
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Create a new session in 3rd party WAHA instance
+     *
+     * @param array{name: string, start?: bool, config?: array} $sessionData
+     * @return array{success: bool, message: string, session: array}
+     * @throws WahaException
+     */
+    public function createSession(array $sessionData): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getSessionCreate();
+        }
+
+        $sessionName = $sessionData['name'];
+        $start = $sessionData['start'] ?? true;
+        $config = $sessionData['config'] ?? [];
+
+        Log::info('Creating WAHA session in 3rd party', [
+            'session_name' => $sessionName,
+            'start' => $start,
+            'config' => $config
+        ]);
+
+        try {
+            $response = $this->post(self::ENDPOINT_SESSIONS, $this->buildSessionData($sessionName, $start, $config));
+
+            if ($response->successful()) {
+                return $this->handleSuccessfulSessionCreation($response, $sessionName);
+            }
+
+            return $this->handleSessionCreationError($response, $sessionName);
+        } catch (\App\Services\Waha\Exceptions\WahaException $e) {
+            $this->logSessionError('Failed to create WAHA session', $sessionName, $e->getMessage());
+            throw $e;
+        } catch (Exception $e) {
+            $this->logSessionError('Failed to create WAHA session', $sessionName, $e->getMessage());
+            throw $e;
+        }
+    }
+
+    // ========================================
+    // DATA BUILDER METHODS
+    // ========================================
+
+    /**
+     * Build session data for API request
+     *
+     * @param string $sessionName Name of the session
+     * @param bool $start Whether to start the session immediately
+     * @param array $config Session configuration
+     * @return array Formatted session data for API
+     */
+    private function buildSessionData(string $sessionName, bool $start, array $config): array
+    {
+        return [
+            'name' => $sessionName,
+            'start' => $start,
+            'config' => $config
+        ];
+    }
+
+    // ========================================
+    // RESPONSE HANDLER METHODS
+    // ========================================
+
+    /**
+     * Handle successful session creation response
+     *
+     * @param Response $response HTTP response from session creation
+     * @param string $sessionName Name of the created session
+     * @return array Formatted success response
+     */
+    private function handleSuccessfulSessionCreation(Response $response, string $sessionName): array
+    {
+        $result = $response->json() ?? [];
+
+        Log::info('Session created successfully', [
+            'session_name' => $sessionName,
+            'status' => $result['status'] ?? 'unknown'
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Session created successfully',
+            'session' => $result
+        ];
+    }
+
+    /**
+     * Handle session creation error response
+     */
+    private function handleSessionCreationError(Response $response, string $sessionName): array
+    {
+        $statusCode = $response->status();
+        $errorData = $response->json() ?? [];
+        $errorMessage = $errorData['message'] ?? $response->body() ?? 'Unknown error';
+
+        // If session already exists (422), get session info instead
+        if ($statusCode === self::HTTP_UNPROCESSABLE_ENTITY && strpos($errorMessage, 'already exists') !== false) {
+            return $this->handleExistingSession($sessionName, $errorMessage);
+        }
+
+        // For other errors, use handleResponse to throw proper exception
+        // This will throw an exception, so we don't need to return anything
+        $this->handleResponse($response, 'create session');
+
+        // This line should never be reached due to exception above
+        throw new WahaException("Unexpected error in session creation", $statusCode, $errorData);
+    }
+
+    /**
+     * Handle existing session scenario
+     */
+    private function handleExistingSession(string $sessionName, string $errorMessage): array
+    {
+        Log::info('Session already exists, getting session info', [
+            'session_name' => $sessionName,
+            'error' => $errorMessage
+        ]);
+
+        try {
+            $sessionInfo = $this->getSessionInfo($sessionName);
+            return [
+                'success' => true,
+                'message' => 'Session already exists',
+                'session' => $sessionInfo
+            ];
+        } catch (Exception $getInfoError) {
+            Log::error('Failed to get existing session info', [
+                'session_name' => $sessionName,
+                'error' => $getInfoError->getMessage()
+            ]);
+            throw new \App\Services\Waha\Exceptions\WahaException("WAHA API error (422): {$errorMessage}. Operation: create session", self::HTTP_UNPROCESSABLE_ENTITY, []);
+        }
+    }
+
+    /**
+     * Log session-related errors
+     */
+    private function logSessionError(string $message, string $sessionName, string $error): void
+    {
+        Log::error($message, [
+            'session_name' => $sessionName,
+            'error' => $error
+        ]);
     }
 
     /**
      * Start a new session
+     *
+     * @param string $sessionId The session ID to start
+     * @param array{webhook?: string, webhook_by_events?: bool, events?: array, reject_calls?: bool, mark_online_on_chat?: bool} $config Session configuration
+     * @return array{success: bool, message: string, session: array}
+     * @throws WahaException
      */
     public function startSession(string $sessionId, array $config = []): array
     {
         if ($this->mockResponses) {
-            return $this->getMockSessionStart();
+            return $this->mockResponsesHandler->getSessionStart();
         }
 
-        $data = [
+        try {
+            $response = $this->post(
+                sprintf(self::ENDPOINT_SESSION_START, $sessionId),
+                $this->buildStartSessionData($sessionId, $config)
+            );
+            return $this->handleResponse($response, 'start session');
+        } catch (\App\Services\Waha\Exceptions\WahaException $e) {
+            return $this->handleSessionAlreadyStarted($sessionId, $e);
+        } catch (Exception $e) {
+            return $this->handleSessionAlreadyStarted($sessionId, $e);
+        }
+    }
+
+    /**
+     * Build start session data
+     */
+    private function buildStartSessionData(string $sessionId, array $config): array
+    {
+        $defaultSessionConfig = $this->getDefaultSessionConfig();
+
+        return [
             'name' => $sessionId,
-            'config' => [
-                'webhook' => $config['webhook'] ?? '',
-                'webhook_by_events' => $config['webhook_by_events'] ?? false,
-                'events' => $config['events'] ?? ['message', 'session.status'],
-                'reject_calls' => $config['reject_calls'] ?? false,
-                'mark_online_on_chat' => $config['mark_online_on_chat'] ?? true,
+            'config' => array_merge($defaultSessionConfig, [
+                'webhook' => $config['webhook'] ?? $defaultSessionConfig['webhook'] ?? '',
+                'webhook_by_events' => $config['webhook_by_events'] ?? $defaultSessionConfig['webhook_by_events'] ?? false,
+                'events' => $config['events'] ?? $defaultSessionConfig['events'] ?? ['message', 'session.status'],
+                'reject_calls' => $config['reject_calls'] ?? $defaultSessionConfig['reject_calls'] ?? false,
+                'mark_online_on_chat' => $config['mark_online_on_chat'] ?? $defaultSessionConfig['mark_online_on_chat'] ?? true,
+            ])
+        ];
+    }
+
+    /**
+     * Get default session configuration from config/waha.php
+     *
+     * @return array Default session configuration
+     */
+    private function getDefaultSessionConfig(): array
+    {
+        $wahaConfig = config('waha', []);
+        return $wahaConfig['sessions']['default_config'] ?? [
+            'webhook' => '',
+            'webhook_by_events' => false,
+            'events' => ['message', 'session.status'],
+            'reject_calls' => false,
+            'mark_online_on_chat' => true,
+        ];
+    }
+
+    /**
+     * Handle session already started scenario
+     */
+    private function handleSessionAlreadyStarted(string $sessionId, Exception $e): array
+    {
+        if (strpos($e->getMessage(), 'already started') !== false || $e->getCode() === self::HTTP_UNPROCESSABLE_ENTITY) {
+            Log::info('Session already started or invalid format, getting session info', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+
+            try {
+                $sessionInfo = $this->getSessionInfo($sessionId);
+                return [
+                    'success' => true,
+                    'message' => 'Session already started',
+                    'session' => $sessionInfo
+                ];
+            } catch (Exception $infoException) {
+                return $this->createBasicSessionResponse($sessionId);
+            }
+        }
+
+        throw $e;
+    }
+
+    /**
+     * Create basic session response when info cannot be retrieved
+     */
+    private function createBasicSessionResponse(string $sessionId): array
+    {
+        return [
+            'success' => true,
+            'message' => 'Session already started',
+            'session' => [
+                'id' => $sessionId,
+                'name' => $sessionId,
+                'status' => self::STATUS_STARTING,
             ]
         ];
-
-        $response = $this->post("/api/sessions/{$sessionId}/start", $data);
-        return $this->handleResponse($response, 'start session');
     }
 
     /**
@@ -163,10 +504,10 @@ class WahaService extends BaseHttpClient
     public function stopSession(string $sessionId): array
     {
         if ($this->mockResponses) {
-            return $this->getMockSessionStop();
+            return $this->mockResponsesHandler->getSessionStop();
         }
 
-        $response = $this->post("/api/sessions/{$sessionId}/stop");
+        $response = $this->post(sprintf(self::ENDPOINT_SESSION_STOP, $sessionId));
         return $this->handleResponse($response, 'stop session');
     }
 
@@ -176,30 +517,38 @@ class WahaService extends BaseHttpClient
     public function getSessionStatus(string $sessionId): array
     {
         if ($this->mockResponses) {
-            return $this->getMockSessionStatus();
+            return $this->mockResponsesHandler->getSessionStatus();
         }
 
-        $response = $this->get("/api/sessions/{$sessionId}/status");
+        $response = $this->get(sprintf(self::ENDPOINT_SESSION_STATUS, $sessionId));
         return $this->handleResponse($response, 'get session status');
     }
 
+    // ========================================
+    // MESSAGING METHODS
+    // ========================================
+
     /**
-     * Send a text message
+     * Send a text message via WAHA session
+     *
+     * @param string $sessionId The session ID to send message from
+     * @param string $to Phone number in international format (e.g., +1234567890)
+     * @param string $text Message text content
+     * @return array{success: bool, messageId: string, timestamp: int}
+     * @throws WahaException
      */
     public function sendTextMessage(string $sessionId, string $to, string $text): array
     {
         if ($this->mockResponses) {
-            return $this->getMockMessageSent();
+            return $this->mockResponsesHandler->getMessageSent();
         }
 
         $this->validatePhoneNumber($to);
 
-        $data = [
-            'to' => $to,
-            'text' => $text,
-        ];
-
-        $response = $this->post("/api/sessions/{$sessionId}/sendText", $data);
+        $response = $this->post(
+            sprintf(self::ENDPOINT_SEND_TEXT, $sessionId),
+            $this->buildTextMessageData($to, $text)
+        );
         return $this->handleResponse($response, 'send text message');
     }
 
@@ -209,31 +558,54 @@ class WahaService extends BaseHttpClient
     public function sendMediaMessage(string $sessionId, string $to, string $mediaUrl, string $caption = ''): array
     {
         if ($this->mockResponses) {
-            return $this->getMockMessageSent();
+            return $this->mockResponsesHandler->getMessageSent();
         }
 
         $this->validatePhoneNumber($to);
 
-        $data = [
+        $response = $this->post(
+            sprintf(self::ENDPOINT_SEND_MEDIA, $sessionId),
+            $this->buildMediaMessageData($to, $mediaUrl, $caption)
+        );
+        return $this->handleResponse($response, 'send media message');
+    }
+
+    /**
+     * Build text message data
+     */
+    private function buildTextMessageData(string $to, string $text): array
+    {
+        return [
+            'to' => $to,
+            'text' => $text,
+        ];
+    }
+
+    /**
+     * Build media message data
+     */
+    private function buildMediaMessageData(string $to, string $mediaUrl, string $caption): array
+    {
+        return [
             'to' => $to,
             'media' => $mediaUrl,
             'caption' => $caption,
         ];
-
-        $response = $this->post("/api/sessions/{$sessionId}/sendMedia", $data);
-        return $this->handleResponse($response, 'send media message');
     }
 
     /**
      * Get messages
      */
-    public function getMessages(string $sessionId, int $limit = 50, int $page = 1): array
+    public function getMessages(string $sessionId, int $limit = null, int $page = 1): array
     {
         if ($this->mockResponses) {
-            return $this->getMockMessages();
+            return $this->mockResponsesHandler->getMessages();
         }
 
-        $response = $this->get("/api/sessions/{$sessionId}/messages", [
+        // Use default limit from config if not provided
+        $limit = $limit ?? $this->getDefaultMessageLimit();
+
+        $response = $this->get(sprintf(self::ENDPOINT_MESSAGES, $sessionId), [
             'limit' => $limit,
             'page' => $page,
         ]);
@@ -242,15 +614,26 @@ class WahaService extends BaseHttpClient
     }
 
     /**
+     * Get default message limit from config/waha.php
+     *
+     * @return int Default message limit
+     */
+    private function getDefaultMessageLimit(): int
+    {
+        $wahaConfig = config('waha', []);
+        return $wahaConfig['messages']['default_limit'] ?? 50;
+    }
+
+    /**
      * Get contacts
      */
     public function getContacts(string $sessionId): array
     {
         if ($this->mockResponses) {
-            return $this->getMockContacts();
+            return $this->mockResponsesHandler->getContacts();
         }
 
-        $response = $this->get("/api/sessions/{$sessionId}/contacts");
+        $response = $this->get(sprintf(self::ENDPOINT_CONTACTS, $sessionId));
         return $this->handleResponse($response, 'get contacts');
     }
 
@@ -260,10 +643,10 @@ class WahaService extends BaseHttpClient
     public function getGroups(string $sessionId): array
     {
         if ($this->mockResponses) {
-            return $this->getMockGroups();
+            return $this->mockResponsesHandler->getGroups();
         }
 
-        $response = $this->get("/api/sessions/{$sessionId}/groups");
+        $response = $this->get(sprintf(self::ENDPOINT_GROUPS, $sessionId));
         return $this->handleResponse($response, 'get groups');
     }
 
@@ -273,10 +656,10 @@ class WahaService extends BaseHttpClient
     public function getQrCode(string $sessionId): array
     {
         if ($this->mockResponses) {
-            return $this->getMockQrCode();
+            return $this->mockResponsesHandler->getQrCode();
         }
 
-        $response = $this->get("/api/sessions/{$sessionId}/qr");
+        $response = $this->get(sprintf(self::ENDPOINT_QR_CODE, $sessionId));
         return $this->handleResponse($response, 'get QR code');
     }
 
@@ -286,10 +669,10 @@ class WahaService extends BaseHttpClient
     public function deleteSession(string $sessionId): array
     {
         if ($this->mockResponses) {
-            return $this->getMockSessionDeleted();
+            return $this->mockResponsesHandler->getSessionDeleted();
         }
 
-        $response = $this->delete("/api/sessions/{$sessionId}");
+        $response = $this->delete(sprintf(self::ENDPOINT_SESSION_INFO, $sessionId));
         return $this->handleResponse($response, 'delete session');
     }
 
@@ -299,146 +682,91 @@ class WahaService extends BaseHttpClient
     public function getSessionInfo(string $sessionId): array
     {
         if ($this->mockResponses) {
-            return $this->getMockSessionInfo();
+            return $this->mockResponsesHandler->getSessionInfo();
         }
 
-        $response = $this->get("/api/sessions/{$sessionId}");
+        $response = $this->get(sprintf(self::ENDPOINT_SESSION_INFO, $sessionId));
         return $this->handleResponse($response, 'get session info');
     }
 
-    // Mock responses for testing
-    private function getMockSessions(): array
+
+    // ========================================
+    // SESSION STATUS & HEALTH METHODS
+    // ========================================
+
+    /**
+     * Check if session exists and is connected
+     *
+     * @param string $sessionId The session ID to check
+     * @return bool True if session is connected and working
+     */
+    public function isSessionConnected(string $sessionId): bool
     {
-        return [
-            'sessions' => [
-                [
-                    'id' => 'test-session',
-                    'status' => 'WORKING',
-                    'created_at' => now()->toISOString(),
-                ]
-            ]
-        ];
+        try {
+            $status = $this->getSessionStatus($sessionId);
+            return isset($status['status']) && $status['status'] === self::STATUS_WORKING;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
-    private function getMockSessionStart(): array
+    /**
+     * Get comprehensive session health status
+     *
+     * @param string $sessionId The session ID to check
+     * @return array{connected: bool, battery?: int, plugged?: bool, phone?: string, last_seen?: string, error?: string}
+     */
+    public function getSessionHealth(string $sessionId): array
     {
-        return [
-            'success' => true,
-            'message' => 'Session started successfully',
-            'session' => [
-                'id' => 'test-session',
-                'status' => 'STARTING',
-            ]
-        ];
+        try {
+            $status = $this->getSessionStatus($sessionId);
+            return $this->buildHealthStatus($status);
+        } catch (Exception $e) {
+            return $this->buildErrorHealthStatus($e);
+        }
     }
 
-    private function getMockSessionStop(): array
+    /**
+     * Build health status from session status data
+     *
+     * @param array $status Session status data from WAHA
+     * @return array{connected: bool, battery: int, plugged: bool, phone: string|null, last_seen: string}
+     */
+    private function buildHealthStatus(array $status): array
     {
         return [
-            'success' => true,
-            'message' => 'Session stopped successfully',
-        ];
-    }
-
-    private function getMockSessionStatus(): array
-    {
-        return [
-            'status' => 'WORKING',
-            'phone' => '+1234567890',
-            'battery' => 85,
-            'plugged' => true,
-        ];
-    }
-
-    private function getMockMessageSent(): array
-    {
-        return [
-            'success' => true,
-            'messageId' => 'mock-message-id-' . uniqid(),
-            'timestamp' => now()->timestamp,
-        ];
-    }
-
-    private function getMockMessages(): array
-    {
-        return [
-            'messages' => [
-                [
-                    'id' => 'mock-message-1',
-                    'from' => '+1234567890',
-                    'to' => '+0987654321',
-                    'text' => 'Hello, this is a test message',
-                    'timestamp' => now()->timestamp,
-                    'type' => 'text',
-                ]
-            ],
-            'pagination' => [
-                'page' => 1,
-                'limit' => 50,
-                'total' => 1,
-            ]
-        ];
-    }
-
-    private function getMockContacts(): array
-    {
-        return [
-            'contacts' => [
-                [
-                    'id' => '+1234567890',
-                    'name' => 'Test Contact',
-                    'isGroup' => false,
-                    'isUser' => false,
-                ]
-            ]
-        ];
-    }
-
-    private function getMockGroups(): array
-    {
-        return [
-            'groups' => [
-                [
-                    'id' => 'test-group-id',
-                    'name' => 'Test Group',
-                    'isGroup' => true,
-                    'participants' => ['+1234567890', '+0987654321'],
-                ]
-            ]
-        ];
-    }
-
-    private function getMockQrCode(): array
-    {
-        return [
-            'qr' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
-            'expires' => now()->addMinutes(5)->timestamp,
-        ];
-    }
-
-    private function getMockSessionDeleted(): array
-    {
-        return [
-            'success' => true,
-            'message' => 'Session deleted successfully',
-        ];
-    }
-
-    private function getMockSessionInfo(): array
-    {
-        return [
-            'id' => 'test-session',
-            'status' => 'WORKING',
-            'phone' => '+1234567890',
-            'battery' => 85,
-            'plugged' => true,
-            'created_at' => now()->toISOString(),
-            'updated_at' => now()->toISOString(),
+            'connected' => $status['status'] === self::STATUS_WORKING,
+            'battery' => $status['battery'] ?? 0,
+            'plugged' => $status['plugged'] ?? false,
+            'phone' => $status['phone'] ?? null,
+            'last_seen' => now()->toISOString(),
         ];
     }
 
     /**
-     * Validate phone number format
+     * Build error health status when session check fails
+     *
+     * @param Exception $e The exception that occurred
+     * @return array{connected: bool, error: string, last_seen: null}
+     */
+    private function buildErrorHealthStatus(Exception $e): array
+    {
+        return [
+            'connected' => false,
+            'error' => $e->getMessage(),
+            'last_seen' => null,
+        ];
+    }
+
+    // ========================================
+    // VALIDATION METHODS
+    // ========================================
+
+    /**
+     * Validate phone number format for international standards
+     *
+     * @param string $phoneNumber Phone number to validate
+     * @throws WahaException If phone number format is invalid
      */
     private function validatePhoneNumber(string $phoneNumber): void
     {
@@ -449,50 +777,59 @@ class WahaService extends BaseHttpClient
         if (!preg_match('/^\+[1-9]\d{9,14}$/', $cleaned)) {
             throw WahaException::invalidPhoneNumber($phoneNumber);
         }
+
+        // Check security configuration
+        $this->validatePhoneNumberSecurity($phoneNumber);
     }
 
     /**
-     * Check if session exists and is connected
+     * Validate phone number against security configuration
+     *
+     * @param string $phoneNumber Phone number to validate
+     * @throws WahaException If phone number is blocked or not allowed
      */
-    public function isSessionConnected(string $sessionId): bool
+    private function validatePhoneNumberSecurity(string $phoneNumber): void
     {
-        try {
-            $status = $this->getSessionStatus($sessionId);
-            return isset($status['status']) && $status['status'] === 'WORKING';
-        } catch (Exception $e) {
-            return false;
+        $wahaConfig = config('waha', []);
+        $securityConfig = $wahaConfig['security'] ?? [];
+
+        // Check if phone number is blocked
+        $blockedNumbers = $securityConfig['blocked_phone_numbers'] ?? [];
+        if (in_array($phoneNumber, $blockedNumbers)) {
+            throw WahaException::blockedPhoneNumber($phoneNumber);
+        }
+
+        // Check if phone number is in allowed list (if configured)
+        $allowedNumbers = $securityConfig['allowed_phone_numbers'] ?? [];
+        if (!empty($allowedNumbers) && !in_array($phoneNumber, $allowedNumbers)) {
+            throw WahaException::unauthorizedPhoneNumber($phoneNumber);
         }
     }
 
-    /**
-     * Get session health status
-     */
-    public function getSessionHealth(string $sessionId): array
-    {
-        try {
-            $status = $this->getSessionStatus($sessionId);
-            return [
-                'connected' => $status['status'] === 'WORKING',
-                'battery' => $status['battery'] ?? 0,
-                'plugged' => $status['plugged'] ?? false,
-                'phone' => $status['phone'] ?? null,
-                'last_seen' => now()->toISOString(),
-            ];
-        } catch (Exception $e) {
-            return [
-                'connected' => false,
-                'error' => $e->getMessage(),
-                'last_seen' => null,
-            ];
-        }
-    }
+    // ========================================
+    // CONFIGURATION & VALIDATION METHODS
+    // ========================================
 
     /**
      * Validate WAHA service configuration
+     *
+     * @param array $config Configuration array to validate
+     * @throws WahaException If configuration is invalid
      */
     protected function validateConfig(array $config): void
     {
-        // Validate base URL
+        $this->validateBaseUrl($config);
+        $this->validateTimeout($config);
+        $this->validateRetryAttempts($config);
+        $this->validateRetryDelay($config);
+        $this->warnAboutMissingApiKey($config);
+    }
+
+    /**
+     * Validate base URL configuration
+     */
+    private function validateBaseUrl(array $config): void
+    {
         if (empty($config['base_url'])) {
             throw new WahaException('WAHA base URL is required');
         }
@@ -500,23 +837,43 @@ class WahaService extends BaseHttpClient
         if (!filter_var($config['base_url'], FILTER_VALIDATE_URL)) {
             throw new WahaException('Invalid WAHA base URL format');
         }
+    }
 
-        // Validate timeout
+    /**
+     * Validate timeout configuration
+     */
+    private function validateTimeout(array $config): void
+    {
         if (isset($config['timeout']) && (!is_numeric($config['timeout']) || $config['timeout'] <= 0)) {
             throw new WahaException('WAHA timeout must be a positive number');
         }
+    }
 
-        // Validate retry attempts
+    /**
+     * Validate retry attempts configuration
+     */
+    private function validateRetryAttempts(array $config): void
+    {
         if (isset($config['retry_attempts']) && (!is_numeric($config['retry_attempts']) || $config['retry_attempts'] < 0)) {
             throw new WahaException('WAHA retry attempts must be a non-negative number');
         }
+    }
 
-        // Validate retry delay
+    /**
+     * Validate retry delay configuration
+     */
+    private function validateRetryDelay(array $config): void
+    {
         if (isset($config['retry_delay']) && (!is_numeric($config['retry_delay']) || $config['retry_delay'] < 0)) {
             throw new WahaException('WAHA retry delay must be a non-negative number');
         }
+    }
 
-        // Warn if API key is missing in non-mock mode
+    /**
+     * Warn about missing API key in non-mock mode
+     */
+    private function warnAboutMissingApiKey(array $config): void
+    {
         if (empty($this->apiKey) && !$this->mockResponses) {
             Log::warning('WAHA API key is missing - some operations may fail', [
                 'base_url' => $config['base_url'],
@@ -525,8 +882,15 @@ class WahaService extends BaseHttpClient
         }
     }
 
+    // ========================================
+    // UTILITY & HELPER METHODS
+    // ========================================
+
     /**
      * Normalize base URL to ensure proper format
+     *
+     * @param string $baseUrl Raw base URL to normalize
+     * @return string Normalized base URL with protocol
      */
     protected function normalizeBaseUrl(string $baseUrl): string
     {
@@ -543,6 +907,11 @@ class WahaService extends BaseHttpClient
 
     /**
      * Enhanced error handling for WAHA specific errors
+     *
+     * @param Response $response HTTP response to handle
+     * @param string $operation Operation name for error context
+     * @return array Response data if successful
+     * @throws WahaException If response indicates an error
      */
     protected function handleResponse(Response $response, string $operation = 'request'): array
     {
@@ -556,16 +925,16 @@ class WahaService extends BaseHttpClient
 
         // Map WAHA specific error codes
         $wahaErrorMessages = [
-            400 => 'Bad request - Invalid parameters provided',
-            401 => 'Unauthorized - Invalid API key or session',
-            403 => 'Forbidden - Access denied',
-            404 => 'Not found - Session or resource not found',
-            409 => 'Conflict - Session already exists or is in use',
-            422 => 'Unprocessable entity - Invalid data format',
-            429 => 'Too many requests - Rate limit exceeded',
-            500 => 'Internal server error - WAHA server error',
-            502 => 'Bad gateway - WAHA server unavailable',
-            503 => 'Service unavailable - WAHA server overloaded',
+            self::HTTP_BAD_REQUEST => 'Bad request - Invalid parameters provided',
+            self::HTTP_UNAUTHORIZED => 'Unauthorized - Invalid API key or session',
+            self::HTTP_FORBIDDEN => 'Forbidden - Access denied',
+            self::HTTP_NOT_FOUND => 'Not found - Session or resource not found',
+            self::HTTP_CONFLICT => 'Conflict - Session already exists or is in use',
+            self::HTTP_UNPROCESSABLE_ENTITY => 'Unprocessable entity - Invalid data format',
+            self::HTTP_TOO_MANY_REQUESTS => 'Too many requests - Rate limit exceeded',
+            self::HTTP_INTERNAL_SERVER_ERROR => 'Internal server error - WAHA server error',
+            self::HTTP_BAD_GATEWAY => 'Bad gateway - WAHA server unavailable',
+            self::HTTP_SERVICE_UNAVAILABLE => 'Service unavailable - WAHA server overloaded',
         ];
 
         $mappedMessage = $wahaErrorMessages[$statusCode] ?? "HTTP error {$statusCode}";
