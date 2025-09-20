@@ -15,22 +15,19 @@ export const useWahaSessions = () => {
       setLoading(true);
       setError(null);
       const response = await wahaApi.getSessions();
+
       if (response.success) {
         // Enhanced response format with organization context
         const sessionsData = response.data;
+
         if (sessionsData && Array.isArray(sessionsData.sessions)) {
           // Format sessions for display
           const formattedSessions = sessionsData.sessions.map(session =>
             wahaApi.formatSessionForDisplay(session)
           );
-          setSessions(formattedSessions);
 
-          // Log organization context
-          console.log('Sessions loaded for organization:', sessionsData.organization_id);
-          console.log('Total sessions:', sessionsData.total);
-          console.log('Created:', sessionsData.created, 'Updated:', sessionsData.updated);
+          setSessions(formattedSessions);
         } else {
-          console.warn('Unexpected sessions data format:', sessionsData);
           setSessions([]);
         }
       } else {
@@ -141,6 +138,20 @@ export const useWahaSessions = () => {
     }
   }, []);
 
+  // Start monitoring session
+  const startMonitoring = useCallback((sessionId) => {
+    setMonitoringSessions(prev => new Set([...prev, sessionId]));
+  }, []);
+
+  // Stop monitoring session
+  const stopMonitoring = useCallback((sessionId) => {
+    setMonitoringSessions(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sessionId);
+      return newSet;
+    });
+  }, []);
+
   // Stop session
   const stopSession = useCallback(async (sessionId) => {
     try {
@@ -173,7 +184,7 @@ export const useWahaSessions = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stopMonitoring]);
 
   // Delete session
   const deleteSession = useCallback(async (sessionId) => {
@@ -203,7 +214,7 @@ export const useWahaSessions = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stopMonitoring]);
 
   // Get session status
   const getSessionStatus = useCallback(async (sessionId) => {
@@ -227,20 +238,6 @@ export const useWahaSessions = () => {
       toast.error(`Gagal mengecek koneksi sesi: ${errorMessage.message}`);
       throw err;
     }
-  }, []);
-
-  // Start monitoring session
-  const startMonitoring = useCallback((sessionId) => {
-    setMonitoringSessions(prev => new Set([...prev, sessionId]));
-  }, []);
-
-  // Stop monitoring session
-  const stopMonitoring = useCallback((sessionId) => {
-    setMonitoringSessions(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(sessionId);
-      return newSet;
-    });
   }, []);
 
   // Get QR Code

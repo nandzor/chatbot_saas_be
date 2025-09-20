@@ -1,12 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Button,
-  Badge,
   Input,
   Label,
   Alert,
@@ -31,8 +25,7 @@ import {
   Clock,
   Zap,
   Download,
-  Copy,
-  ExternalLink
+  Copy
 } from 'lucide-react';
 import { wahaApi } from '@/services/wahaService';
 import { handleError } from '@/utils/errorHandler';
@@ -43,95 +36,25 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
   const [qrCode, setQrCode] = useState('');
   const [inboxName, setInboxName] = useState('');
   const [sessionId, setSessionId] = useState('');
-  const [connectionTimeout, setConnectionTimeout] = useState(120); // 2 minutes
+  const [connectionTimeout] = useState(120); // 2 minutes
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [monitoringInterval, setMonitoringInterval] = useState(null);
   const [progress, setProgress] = useState(0);
 
-  // Initialize WAHA session and get QR code
-  useEffect(() => {
-    if (connectionStep === 'initializing') {
-      initializeWahaSession();
-    }
-  }, [connectionStep]);
-
-  // Cleanup monitoring on unmount
-  useEffect(() => {
-    return () => {
-      if (monitoringInterval) {
-        clearInterval(monitoringInterval);
-      }
-    };
-  }, [monitoringInterval]);
-
-  const initializeWahaSession = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      setProgress(10);
-
-      // Use 'default' as session ID for WAHA Core compatibility
-      const newSessionId = 'default';
-      setSessionId(newSessionId);
-
-      // Create and start session
-      const response = await wahaApi.createSession(newSessionId, {
-        webhook_by_events: false,
-        events: ['message', 'session.status'],
-        reject_calls: false,
-        mark_online_on_chat: true,
-      });
-
-      if (response.success) {
-        setProgress(30);
-        setConnectionStep('qr-ready');
-
-        // Get QR code
-        await getQRCode(newSessionId);
-      } else {
-        throw new Error(response.error || 'Gagal membuat sesi WAHA');
-      }
-    } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage.message || 'Gagal menginisialisasi sesi WAHA');
-      setConnectionStep('error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getQRCode = async (sessionId) => {
-    try {
-      setProgress(50);
-      const response = await wahaApi.getQrCode(sessionId);
-
-      if (response.success && response.data?.qr) {
-        setQrCode(response.data.qr);
-        setConnectionStep('scanning');
-        setProgress(70);
-
-        // Start monitoring connection status
-        startConnectionMonitoring(sessionId);
-      } else {
-        throw new Error('QR Code tidak tersedia');
-      }
-    } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage.message || 'Gagal mendapatkan QR Code');
-      setConnectionStep('error');
-    }
-  };
-
-  const startConnectionMonitoring = (sessionId) => {
+  // Define startConnectionMonitoring function first
+  const startConnectionMonitoring = useCallback((sessionId) => {
     const interval = setInterval(async () => {
       try {
         const statusResponse = await wahaApi.getSessionStatus(sessionId);
 
         if (statusResponse.success) {
           const status = statusResponse.data?.status;
+          const isConnected = statusResponse.data?.is_connected;
+          const isAuthenticated = statusResponse.data?.is_authenticated;
 
-          if (status === 'WORKING' || status === 'CONNECTED') {
+          // Check for connected status (WAHA Plus format)
+          if (status === 'WORKING' || status === 'CONNECTED' || (isConnected && isAuthenticated)) {
             setProgress(90);
             setConnectionStep('connected');
             clearInterval(interval);
@@ -142,12 +65,12 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
               setConnectionStep('naming');
               setProgress(100);
             }, 2000);
-          } else if (status === 'FAILED' || status === 'STOPPED') {
+          } else if (status === 'FAILED' || status === 'STOPPED' || status === 'error') {
             throw new Error('Koneksi gagal');
           }
+          // Continue monitoring for other statuses like 'connecting', 'SCAN_QR_CODE', etc.
         }
       } catch (err) {
-        console.error('Monitoring error:', err);
         setError('Gagal memantau status koneksi');
         clearInterval(interval);
         setMonitoringInterval(null);
@@ -166,7 +89,99 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
         setConnectionStep('error');
       }
     }, connectionTimeout * 1000);
-  };
+  }, [connectionStep, connectionTimeout]);
+
+  // Initialize WAHA session and get QR code
+  useEffect(() => {
+    if (connectionStep === 'initializing') {
+      const initializeSession = async () => {
+        try {
+          setIsLoading(true);
+          setError(null);
+          setProgress(10);
+
+          // Generate unique session ID for WAHA Plus compatibility
+          const timestamp = Date.now();
+          const newSessionId = `whatsapp-connector-${timestamp}`;
+          setSessionId(newSessionId);
+
+          // Create and start session
+          const response = await wahaApi.createSession(newSessionId, {
+            metadata: {
+              'user.id': 'frontend-user',
+              'user.email': 'user@frontend.com'
+            },
+            webhook_by_events: false,
+            events: ['message', 'session.status'],
+            reject_calls: false,
+            mark_online_on_chat: true,
+            debug: true,
+          });
+
+          if (response.success) {
+            setProgress(30);
+            setConnectionStep('qr-ready');
+
+            // Get QR code directly here to avoid circular dependency
+            try {
+              setProgress(50);
+              const qrResponse = await wahaApi.getQrCode(newSessionId);
+
+              if (qrResponse.success && qrResponse.data) {
+                let qrCodeData = '';
+
+                // Handle the new base64 QR code format
+                if (qrResponse.data.data) {
+                  // New format: base64 encoded image data
+                  qrCodeData = `data:${qrResponse.data.mimetype || 'image/png'};base64,${qrResponse.data.data}`;
+                } else if (qrResponse.data.qr_code) {
+                  // Fallback: direct QR code data
+                  qrCodeData = qrResponse.data.qr_code;
+                } else if (qrResponse.data.qr) {
+                  // Legacy format
+                  qrCodeData = qrResponse.data.qr;
+                } else {
+                  throw new Error('QR Code data not available');
+                }
+
+                setQrCode(qrCodeData);
+                setConnectionStep('scanning');
+                setProgress(70);
+
+                // Start monitoring connection status
+                startConnectionMonitoring(newSessionId);
+              } else {
+                throw new Error('QR Code tidak tersedia');
+              }
+            } catch (qrErr) {
+              const errorMessage = handleError(qrErr);
+              setError(errorMessage.message || 'Gagal mendapatkan QR Code');
+              setConnectionStep('error');
+            }
+          } else {
+            throw new Error(response.error || 'Gagal membuat sesi WAHA');
+          }
+        } catch (err) {
+          const errorMessage = handleError(err);
+          setError(errorMessage.message || 'Gagal menginisialisasi sesi WAHA');
+          setConnectionStep('error');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      initializeSession();
+    }
+  }, [connectionStep, startConnectionMonitoring]);
+
+  // Cleanup monitoring on unmount
+  useEffect(() => {
+    return () => {
+      if (monitoringInterval) {
+        clearInterval(monitoringInterval);
+      }
+    };
+  }, [monitoringInterval]);
 
   const handleComplete = async () => {
     if (!inboxName.trim()) {
@@ -221,7 +236,9 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
 
     // Stop session if not completed
     if (sessionId && connectionStep !== 'completed') {
-      wahaApi.stopSession(sessionId).catch(console.error);
+      wahaApi.stopSession(sessionId).catch(() => {
+        // Ignore errors when stopping session
+      });
     }
 
     if (onClose) {
@@ -380,7 +397,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
                 <ol className="text-sm text-muted-foreground space-y-1">
                   <li>1. Buka WhatsApp di ponsel Anda</li>
                   <li>2. Ketuk Menu (⋮) → Perangkat Tertaut</li>
-                  <li>3. Ketuk "Tautkan Perangkat"</li>
+                  <li>3. Ketuk &quot;Tautkan Perangkat&quot;</li>
                   <li>4. Pindai QR Code di atas</li>
                 </ol>
               </div>
@@ -447,7 +464,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
               <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">Setup Berhasil!</h3>
               <p className="text-muted-foreground mb-4">
-                Inbox WhatsApp "{inboxName}" telah siap digunakan
+                Inbox WhatsApp &quot;{inboxName}&quot; telah siap digunakan
               </p>
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-green-800">

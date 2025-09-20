@@ -62,7 +62,8 @@ return [
     'webhooks' => [
         'verify_signature' => env('WAHA_VERIFY_WEBHOOK_SIGNATURE', true),
         'allowed_ips' => explode(',', env('WAHA_ALLOWED_IPS', '127.0.0.1,::1')),
-        'rate_limit' => env('WAHA_WEBHOOK_RATE_LIMIT', 100),
+        'rate_limit' => env('WAHA_WEBHOOK_RATE_LIMIT', 1000),
+        'default_url' => env('WAHA_DEFAULT_WEBHOOK_URL', ''),
     ],
 
     // Notification Configuration

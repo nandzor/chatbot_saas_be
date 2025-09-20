@@ -33,7 +33,6 @@ import {
   Globe
 } from 'lucide-react';
 import WahaSessionManager from '@/components/whatsapp/WahaSessionManager';
-import WhatsAppMessageManager from '@/components/whatsapp/WhatsAppMessageManager';
 import WhatsAppQRConnector from '@/features/shared/WhatsAppQRConnector';
 import { useWahaSessions } from '@/hooks/useWahaSessions';
 import { wahaApi } from '@/services/wahaService';
@@ -235,14 +234,10 @@ const WhatsAppIntegration = () => {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="sessions" className="flex items-center">
             <Settings className="h-4 w-4 mr-2" />
             Kelola Sesi
-          </TabsTrigger>
-          <TabsTrigger value="messages" className="flex items-center">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Kirim Pesan
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center">
             <BarChart3 className="h-4 w-4 mr-2" />
@@ -253,11 +248,6 @@ const WhatsAppIntegration = () => {
         {/* Sessions Tab */}
         <TabsContent value="sessions">
           <WahaSessionManager />
-        </TabsContent>
-
-        {/* Messages Tab */}
-        <TabsContent value="messages">
-          <WhatsAppMessageManager />
         </TabsContent>
 
         {/* Analytics Tab */}

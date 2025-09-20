@@ -427,15 +427,20 @@ export class WahaApiService extends BaseApiService {
   formatSessionForDisplay(session) {
     return {
       id: session.id,
+      session_name: session.session_name || session.name,
       name: session.session_name || session.name,
       status: session.status,
       phone_number: session.phone_number,
       business_name: session.business_name,
+      business_description: session.business_description,
+      business_category: session.business_category,
+      business_website: session.business_website,
+      business_email: session.business_email,
       is_connected: session.is_connected,
       is_authenticated: session.is_authenticated,
       health_status: session.health_status,
       last_health_check: session.last_health_check,
-      error_count: session.error_count,
+      error_count: session.error_count || 0,
       last_error: session.last_error,
       total_messages_sent: session.total_messages_sent || 0,
       total_messages_received: session.total_messages_received || 0,
@@ -443,6 +448,8 @@ export class WahaApiService extends BaseApiService {
       total_media_received: session.total_media_received || 0,
       created_at: session.created_at,
       updated_at: session.updated_at,
+      organization_id: session.organization_id,
+      config: session.config,
       organization: this.getOrganizationFromSession(session),
     };
   }

@@ -69,6 +69,7 @@ class WahaController extends BaseApiController
 
     /**
      * Create a new session in 3rd party WAHA instance
+     * Enhanced to work without frontend payload - uses sensible defaults
      */
     public function createSession(Request $request): JsonResponse
     {
@@ -79,7 +80,15 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('create WAHA session');
             }
 
-            // Validate the request payload
+            // Check if request has any data, if not use defaults
+            $hasPayload = $request->hasAny(['name', 'start', 'config']) || !empty($request->all());
+
+            if (!$hasPayload) {
+                // Create session with automatic defaults - no frontend payload needed
+                return $this->createSessionWithDefaults($organization);
+            }
+
+            // Validate the request payload if provided
             $validatedData = $request->validate([
                 'name' => 'nullable|string|max:255', // Made nullable since we'll generate it
                 'start' => 'boolean',
@@ -764,6 +773,118 @@ class WahaController extends BaseApiController
         }
 
         return $flattened;
+    }
+
+    /**
+     * Create session with automatic defaults - no frontend payload required
+     *
+     * @param object $organization The organization object
+     * @return JsonResponse
+     */
+    private function createSessionWithDefaults($organization): JsonResponse
+    {
+        try {
+            // Generate unique session name
+            $localSessionName = $this->generateUuidSessionName($organization->id);
+            $wahaSessionName = $localSessionName;
+
+            // Build session data with sensible defaults
+            $sessionData = [
+                'name' => $wahaSessionName,
+                'start' => true, // Auto-start the session
+                'config' => $this->getDefaultSessionConfig($organization)
+            ];
+
+            Log::info('Creating WAHA session with automatic defaults', [
+                'organization_id' => $organization->id,
+                'session_name' => $localSessionName,
+                'auto_start' => true
+            ]);
+
+            // Create session in 3rd party WAHA instance
+            $result = $this->wahaService->createSession($sessionData);
+
+            // Check if result is successful
+            $isSuccess = ($result['success'] ?? false) || isset($result['name']) || isset($result['session']);
+
+            if ($isSuccess) {
+                // Create or update local session record
+                $localSession = $this->wahaSyncService->createOrUpdateLocalSession(
+                    $organization->id,
+                    $localSessionName,
+                    $result
+                );
+
+                $this->logApiAction('create_waha_session_auto', [
+                    'session_name' => $localSessionName,
+                    'waha_session_name' => $wahaSessionName,
+                    'organization_id' => $organization->id,
+                    'local_session_id' => $localSession->id,
+                    'auto_created' => true,
+                    'third_party_response' => $result,
+                ]);
+
+                return $this->successResponse('Session created successfully with automatic defaults', [
+                    'local_session_id' => $localSession->id,
+                    'organization_id' => $organization->id,
+                    'session_name' => $localSessionName,
+                    'waha_session_name' => $wahaSessionName,
+                    'auto_created' => true,
+                    'status' => $localSession->status,
+                    'third_party_response' => $result,
+                ]);
+            }
+
+            return $this->errorResponse('Failed to create session in 3rd party WAHA', 500);
+        } catch (Exception $e) {
+            Log::error('Failed to create WAHA session with defaults', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to create session with defaults', 500);
+        }
+    }
+
+    /**
+     * Get default session configuration for automatic session creation
+     *
+     * @param object $organization The organization object
+     * @return array Default session configuration
+     */
+    private function getDefaultSessionConfig($organization): array
+    {
+        return [
+            'metadata' => $this->flattenMetadata([
+                'organization.id' => $organization->id,
+                'organization.name' => $organization->name,
+                'organization.code' => $organization->org_code,
+                'user.id' => 'system-auto',
+                'user.email' => 'system@auto.com',
+                'created_by' => 'backend-auto',
+                'created_at' => now()->toISOString(),
+            ]),
+            'webhook_by_events' => false,
+            'events' => ['message', 'session.status'],
+            'reject_calls' => false,
+            'mark_online_on_chat' => true,
+            'debug' => true,
+            'proxy' => null,
+            'noweb' => [
+                'store' => [
+                    'enabled' => true,
+                    'fullSync' => false
+                ]
+            ],
+            'webhooks' => [
+                [
+                    'url' => config('waha.webhooks.default_url', ''),
+                    'events' => ['message', 'session.status'],
+                    'hmac' => null,
+                    'retries' => 3,
+                    'customHeaders' => null
+                ]
+            ]
+        ];
     }
 
     /**

@@ -27,6 +27,12 @@ export class BaseApiService {
         ...config
       });
 
+      // Check if response has success field (our API format)
+      if (response.data && typeof response.data.success !== 'undefined') {
+        return response.data; // Return the API response as-is
+      }
+
+      // Fallback for non-standard responses
       return {
         success: true,
         data: response.data,
