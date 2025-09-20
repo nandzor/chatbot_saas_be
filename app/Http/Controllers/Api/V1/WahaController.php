@@ -556,7 +556,7 @@ class WahaController extends BaseApiController
             }
 
             // Verify session belongs to current organization
-            $localSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
+            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
             if (!$localSession) {
                 return $this->handleResourceNotFound('WAHA session', $sessionId);
             }
@@ -573,7 +573,7 @@ class WahaController extends BaseApiController
 
             // Try to get QR code from WAHA server
             try {
-                $qrCode = $this->wahaService->getQrCode($sessionId);
+                $qrCode = $this->wahaService->getQrCode($localSession->session_name);
             } catch (Exception $e) {
                 // If QR code is not available (404), return appropriate message
                 if (str_contains($e->getMessage(), '404') || str_contains($e->getMessage(), 'Not found')) {

@@ -11,7 +11,10 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  Card,
+  CardContent,
+  Badge
 } from '@/components/ui';
 import {
   QrCode,
@@ -25,7 +28,12 @@ import {
   Clock,
   Zap,
   Download,
-  Copy
+  Copy,
+  Smartphone as PhoneIcon,
+  ArrowRight,
+  Sparkles,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { wahaApi } from '@/services/wahaService';
 import { handleError } from '@/utils/errorHandler';
@@ -41,6 +49,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
   const [error, setError] = useState(null);
   const [monitoringInterval, setMonitoringInterval] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(connectionTimeout);
 
   // Define startConnectionMonitoring function first
   const startConnectionMonitoring = useCallback((sessionId) => {
@@ -173,6 +183,25 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
       initializeSession();
     }
   }, [connectionStep, startConnectionMonitoring]);
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (connectionStep === 'scanning') {
+      const timer = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } else {
+      setTimeRemaining(connectionTimeout);
+    }
+  }, [connectionStep, connectionTimeout]);
 
   // Cleanup monitoring on unmount
   useEffect(() => {
@@ -324,28 +353,90 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
     }
   };
 
+  // Step configuration for progress indicator
+  const steps = [
+    { id: 'initializing', label: 'Inisialisasi', icon: RefreshCw, completed: ['qr-ready', 'scanning', 'connected', 'naming', 'completed'].includes(connectionStep) },
+    { id: 'qr-ready', label: 'QR Code', icon: QrCode, completed: ['scanning', 'connected', 'naming', 'completed'].includes(connectionStep) },
+    { id: 'scanning', label: 'Pindai', icon: Smartphone, completed: ['connected', 'naming', 'completed'].includes(connectionStep) },
+    { id: 'connected', label: 'Terhubung', icon: CheckCircle, completed: ['naming', 'completed'].includes(connectionStep) },
+    { id: 'naming', label: 'Konfigurasi', icon: MessageSquare, completed: connectionStep === 'completed' },
+    { id: 'completed', label: 'Selesai', icon: CheckCircle, completed: connectionStep === 'completed' }
+  ];
+
+  // const currentStepIndex = steps.findIndex(step => step.id === connectionStep);
+
   return (
     <Dialog open={true} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            {getStepIcon()}
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="text-center pb-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-full blur-xl opacity-20"></div>
+            <div className="relative bg-white rounded-full p-4 w-20 h-20 mx-auto mb-4 shadow-lg">
+              {getStepIcon()}
+            </div>
+          </div>
+          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
             {getStepTitle()}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-lg text-muted-foreground">
             {getStepDescription()}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progress</span>
-              <span>{progress}%</span>
+        <div className="space-y-8">
+          {/* Step Progress Indicator */}
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                const isActive = step.id === connectionStep;
+                const isCompleted = step.completed;
+
+                return (
+                  <div key={step.id} className="flex flex-col items-center relative">
+                    <div className={`
+                      w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300
+                      ${isCompleted ? 'bg-green-500 text-white shadow-lg' :
+                        isActive ? 'bg-blue-500 text-white shadow-lg animate-pulse' :
+                        'bg-gray-200 text-gray-500'}
+                    `}>
+                      <Icon className={`w-5 h-5 ${isActive && !isCompleted ? 'animate-spin' : ''}`} />
+                    </div>
+                    <span className={`text-xs mt-2 font-medium ${
+                      isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {step.label}
+                    </span>
+                    {index < steps.length - 1 && (
+                      <div className={`
+                        absolute top-6 left-12 w-full h-0.5 transition-all duration-300
+                        ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}
+                      `} style={{ width: 'calc(100% - 3rem)' }} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <Progress value={progress} className="w-full" />
           </div>
+
+          {/* Enhanced Progress Bar */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Progress Koneksi</span>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                    {progress}%
+                  </Badge>
+                </div>
+                <Progress value={progress} className="w-full h-3" />
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Mulai</span>
+                  <span>Koneksi WhatsApp</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Error Display */}
           {error && (
@@ -369,132 +460,293 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
           )}
 
           {connectionStep === 'qr-ready' && (
-            <div className="text-center py-8">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <QrCode className="w-6 h-6 text-blue-600" />
-                <span className="text-lg font-medium">QR Code Siap</span>
-              </div>
-              <p className="text-muted-foreground mb-4">
-                Klik tombol di bawah untuk melihat QR Code
-              </p>
-              <Button onClick={() => setConnectionStep('scanning')} className="flex items-center gap-2">
-                <QrCode className="w-4 h-4" />
-                Tampilkan QR Code
-              </Button>
-            </div>
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-green-50">
+              <CardContent className="p-8 text-center">
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-green-400 rounded-full blur-2xl opacity-30"></div>
+                  <div className="relative bg-white rounded-full p-6 w-24 h-24 mx-auto shadow-lg">
+                    <QrCode className="w-12 h-12 text-blue-600" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">QR Code Siap!</h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  QR Code telah berhasil dibuat. Klik tombol di bawah untuk melihat dan memindai QR Code dengan WhatsApp Anda.
+                </p>
+                <Button
+                  onClick={() => {
+                    setConnectionStep('scanning');
+                    setShowQRCode(true);
+                  }}
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                  size="lg"
+                >
+                  <Eye className="w-5 h-5" />
+                  Tampilkan QR Code
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
           {(connectionStep === 'scanning' || connectionStep === 'connected') && qrCode && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="p-4 bg-white rounded-lg border inline-block">
-                  <img src={qrCode} alt="QR Code" className="w-64 h-64" />
-                </div>
-              </div>
+            <div className="space-y-6">
+              {/* QR Code Display */}
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-gray-50">
+                <CardContent className="p-8">
+                  <div className="text-center">
+                    <div className="relative inline-block">
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-400 rounded-2xl blur-xl opacity-20"></div>
+                      <div className="relative bg-white p-6 rounded-2xl shadow-2xl border-4 border-gray-100">
+                        <img
+                          src={qrCode}
+                          alt="WhatsApp QR Code"
+                          className="w-72 h-72 mx-auto rounded-lg shadow-lg"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium">Cara Menghubungkan:</p>
-                <ol className="text-sm text-muted-foreground space-y-1">
-                  <li>1. Buka WhatsApp di ponsel Anda</li>
-                  <li>2. Ketuk Menu (⋮) → Perangkat Tertaut</li>
-                  <li>3. Ketuk &quot;Tautkan Perangkat&quot;</li>
-                  <li>4. Pindai QR Code di atas</li>
-                </ol>
-              </div>
+              {/* Instructions */}
+              <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-green-50">
+                <CardContent className="p-6">
+                  <div className="text-center mb-6">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <PhoneIcon className="w-6 h-6 text-blue-600" />
+                      <h3 className="text-lg font-bold text-gray-800">Cara Menghubungkan WhatsApp</h3>
+                    </div>
+                  </div>
 
-              <div className="flex justify-center gap-2">
-                <Button variant="outline" size="sm" onClick={copyQRCode}>
-                  <Copy className="w-4 h-4 mr-2" />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-blue-600 font-bold text-sm">1</span>
+                        </div>
+                        <p className="text-sm text-gray-700">Buka WhatsApp di ponsel Anda</p>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-blue-600 font-bold text-sm">2</span>
+                        </div>
+                        <p className="text-sm text-gray-700">Ketuk Menu (⋮) → Perangkat Tertaut</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-green-600 font-bold text-sm">3</span>
+                        </div>
+                        <p className="text-sm text-gray-700">Ketuk &quot;Tautkan Perangkat&quot;</p>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-green-600 font-bold text-sm">4</span>
+                        </div>
+                        <p className="text-sm text-gray-700">Pindai QR Code di atas</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex justify-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={copyQRCode}
+                  className="flex items-center gap-2 border-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
+                >
+                  <Copy className="w-4 h-4" />
                   Salin URL
                 </Button>
-                <Button variant="outline" size="sm" onClick={downloadQRCode}>
-                  <Download className="w-4 h-4 mr-2" />
+                <Button
+                  variant="outline"
+                  onClick={downloadQRCode}
+                  className="flex items-center gap-2 border-2 hover:bg-green-50 hover:border-green-300 transition-all duration-300"
+                >
+                  <Download className="w-4 h-4" />
                   Download
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowQRCode(!showQRCode)}
+                  className="flex items-center gap-2 border-2 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+                >
+                  {showQRCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showQRCode ? 'Sembunyikan' : 'Tampilkan'}
                 </Button>
               </div>
 
+              {/* Connection Status */}
               {connectionStep === 'scanning' && (
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span>Menunggu koneksi... ({connectionTimeout}s)</span>
-                  </div>
-                </div>
+                <Card className="border-0 shadow-lg bg-gradient-to-r from-yellow-50 to-orange-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                      <Clock className="w-5 h-5 text-yellow-600" />
+                      <span className="text-yellow-800 font-medium">
+                        Menunggu koneksi... ({timeRemaining}s tersisa)
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {connectionStep === 'connected' && (
+                <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="text-green-800 font-medium">
+                        WhatsApp berhasil terhubung! 🎉
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           )}
 
           {connectionStep === 'naming' && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">WhatsApp Berhasil Terhubung!</h3>
-                <p className="text-muted-foreground">
-                  Berikan nama untuk inbox WhatsApp ini
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="inboxName">Nama Inbox</Label>
-                <Input
-                  id="inboxName"
-                  value={inboxName}
-                  onChange={(e) => setInboxName(e.target.value)}
-                  placeholder="Contoh: Customer Service, Sales Team, dll."
-                  className="mt-1"
-                />
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-green-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-green-800">Keamanan Terjamin</h4>
-                    <p className="text-sm text-green-700 mt-1">
-                      Koneksi WhatsApp Anda aman dan terenkripsi. Data tidak akan disimpan di server kami.
-                    </p>
+            <div className="space-y-6">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50">
+                <CardContent className="p-8 text-center">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-2xl opacity-30"></div>
+                    <div className="relative bg-white rounded-full p-6 w-24 h-24 mx-auto shadow-lg">
+                      <CheckCircle className="w-12 h-12 text-green-600" />
+                    </div>
                   </div>
-                </div>
-              </div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-2">WhatsApp Berhasil Terhubung! 🎉</h3>
+                  <p className="text-gray-600 mb-6">
+                    Sekarang berikan nama untuk inbox WhatsApp ini agar mudah dikenali
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="inboxName" className="text-base font-semibold text-gray-700">
+                        Nama Inbox WhatsApp
+                      </Label>
+                      <Input
+                        id="inboxName"
+                        value={inboxName}
+                        onChange={(e) => setInboxName(e.target.value)}
+                        placeholder="Contoh: Customer Service, Sales Team, Support, dll."
+                        className="mt-2 h-12 text-lg border-2 focus:border-green-500 focus:ring-green-500"
+                      />
+                      <p className="text-sm text-gray-500 mt-2">
+                        Nama ini akan membantu Anda mengidentifikasi inbox WhatsApp di dashboard
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-green-100 rounded-full p-3 flex-shrink-0">
+                      <Shield className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-green-800 text-lg mb-2">Keamanan Terjamin</h4>
+                      <p className="text-green-700 leading-relaxed">
+                        Koneksi WhatsApp Anda aman dan terenkripsi end-to-end. Data pribadi tidak akan disimpan di server kami.
+                        Semua komunikasi dilindungi dengan standar keamanan tertinggi.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
           {connectionStep === 'completed' && (
-            <div className="text-center py-8">
-              <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Setup Berhasil!</h3>
-              <p className="text-muted-foreground mb-4">
-                Inbox WhatsApp &quot;{inboxName}&quot; telah siap digunakan
-              </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 text-green-800">
-                  <Zap className="w-4 h-4" />
-                  <span className="font-medium">Siap untuk mengirim pesan!</span>
-                </div>
-              </div>
+            <div className="space-y-6">
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50">
+                <CardContent className="p-8 text-center">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-3xl opacity-30"></div>
+                    <div className="relative bg-white rounded-full p-8 w-32 h-32 mx-auto shadow-2xl">
+                      <CheckCircle className="w-16 h-16 text-green-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-800 mb-3">Setup Berhasil! 🎉</h3>
+                  <p className="text-lg text-gray-600 mb-6">
+                    Inbox WhatsApp <span className="font-bold text-green-600">&quot;{inboxName}&quot;</span> telah siap digunakan
+                  </p>
+
+                  <div className="grid md:grid-cols-3 gap-4 mt-8">
+                    <div className="bg-white rounded-lg p-4 shadow-sm border border-green-200">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Zap className="w-6 h-6 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Siap Digunakan</h4>
+                      <p className="text-sm text-gray-600">Inbox siap untuk mengirim dan menerima pesan</p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-200">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <MessageSquare className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Auto Reply</h4>
+                      <p className="text-sm text-gray-600">Sistem dapat merespons pesan secara otomatis</p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 shadow-sm border border-purple-200">
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Sparkles className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 mb-1">AI Powered</h4>
+                      <p className="text-sm text-gray-600">Dilengkapi dengan kecerdasan buatan</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
           {connectionStep === 'error' && (
-            <div className="text-center py-8">
-              <AlertTriangle className="w-16 h-16 text-red-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Koneksi Gagal</h3>
-              <p className="text-muted-foreground mb-4">
-                Terjadi kesalahan saat menghubungkan WhatsApp
-              </p>
-              <Button onClick={handleRetry} className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" />
-                Coba Lagi
-              </Button>
-            </div>
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-orange-50">
+              <CardContent className="p-8 text-center">
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-orange-400 rounded-full blur-2xl opacity-30"></div>
+                  <div className="relative bg-white rounded-full p-6 w-24 h-24 mx-auto shadow-lg">
+                    <AlertTriangle className="w-12 h-12 text-red-600" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Koneksi Gagal</h3>
+                <p className="text-gray-600 mb-6">
+                  Terjadi kesalahan saat menghubungkan WhatsApp. Silakan coba lagi.
+                </p>
+                <Button
+                  onClick={handleRetry}
+                  className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                  size="lg"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Coba Lagi
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
-          <Separator />
+          <Separator className="my-6" />
 
-          {/* Action Buttons */}
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={handleClose}>
-              <X className="w-4 h-4 mr-2" />
+          {/* Enhanced Action Buttons */}
+          <div className="flex justify-between items-center">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="flex items-center gap-2 border-2 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+            >
+              <X className="w-4 h-4" />
               Batal
             </Button>
 
@@ -502,19 +754,31 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
               <Button
                 onClick={handleComplete}
                 disabled={isLoading || !inboxName.trim()}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                size="lg"
               >
                 {isLoading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-5 h-5 animate-spin" />
                     Menyelesaikan...
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="w-5 h-5" />
                     Selesai
                   </>
                 )}
+              </Button>
+            )}
+
+            {connectionStep === 'completed' && (
+              <Button
+                onClick={handleClose}
+                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                size="lg"
+              >
+                <CheckCircle className="w-5 h-5" />
+                Tutup
               </Button>
             )}
           </div>

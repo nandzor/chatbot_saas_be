@@ -383,11 +383,21 @@ class WahaSyncService
     }
 
     /**
-     * Verify session belongs to organization
+     * Verify session belongs to organization by session name
      */
     public function verifySessionAccess(string $organizationId, string $sessionName): ?WahaSession
     {
         return WahaSession::where('session_name', $sessionName)
+            ->where('organization_id', $organizationId)
+            ->first();
+    }
+
+    /**
+     * Verify session belongs to organization by UUID
+     */
+    public function verifySessionAccessById(string $organizationId, string $sessionId): ?WahaSession
+    {
+        return WahaSession::where('id', $sessionId)
             ->where('organization_id', $organizationId)
             ->first();
     }

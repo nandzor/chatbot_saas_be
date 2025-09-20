@@ -52,15 +52,6 @@ const WhatsAppIntegration = () => {
             Kelola koneksi WhatsApp menggunakan WAHA (WhatsApp HTTP API)
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setShowQRConnector(true)}
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Smartphone className="w-4 h-4 mr-2" />
-            Hubungkan WhatsApp
-          </Button>
-        </div>
       </div>
 
 
