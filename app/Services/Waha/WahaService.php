@@ -49,7 +49,7 @@ class WahaService extends BaseHttpClient
     private const ENDPOINT_MESSAGES = '/api/sessions/%s/messages';
     private const ENDPOINT_CONTACTS = '/api/sessions/%s/contacts';
     private const ENDPOINT_GROUPS = '/api/sessions/%s/groups';
-    private const ENDPOINT_QR_CODE = '/api/sessions/%s/qr';
+    private const ENDPOINT_QR_CODE = '/api/%s/auth/qr?format=image';
 
     protected string $apiKey;
     protected bool $mockResponses = false;
@@ -659,8 +659,36 @@ class WahaService extends BaseHttpClient
             return $this->mockResponsesHandler->getQrCode();
         }
 
-        $response = $this->get(sprintf(self::ENDPOINT_QR_CODE, $sessionId));
-        return $this->handleResponse($response, 'get QR code');
+        try {
+            $response = $this->get(sprintf(self::ENDPOINT_QR_CODE, $sessionId));
+
+            if ($response->successful()) {
+                // Check if response is an image
+                $contentType = $response->header('Content-Type');
+                if (str_contains($contentType, 'image/')) {
+                    // Return base64 encoded image data
+                    $imageData = base64_encode($response->body());
+                    return [
+                        'success' => true,
+                        'message' => 'QR code retrieved successfully',
+                        'qr_code' => $imageData,
+                        'format' => 'base64',
+                        'content_type' => $contentType
+                    ];
+                } else {
+                    // Handle JSON response
+                    return $this->handleResponse($response, 'get QR code');
+                }
+            } else {
+                return $this->handleResponse($response, 'get QR code');
+            }
+        } catch (Exception $e) {
+            Log::error('Failed to get QR code', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
 
     /**

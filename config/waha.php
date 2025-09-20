@@ -14,8 +14,8 @@ return [
 
     // WAHA Server Configuration
     'server' => [
-        'base_url' => env('WAHA_BASE_URL', 'http://localhost:3000'),
-        'api_key' => env('WAHA_API_KEY', ''),
+        'base_url' => env('WAHA_BASE_URL', 'http://100.67.69.8:3000'),
+        'api_key' => env('WAHA_API_KEY', 'bambang@123'),
         'timeout' => env('WAHA_TIMEOUT', 30),
     ],
 

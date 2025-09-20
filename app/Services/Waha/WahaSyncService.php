@@ -534,7 +534,7 @@ class WahaSyncService
             'organization_id' => $organizationId,
             'channel_config_id' => $channelConfig->id, // Use existing channel config
             'session_name' => $sessionName,
-            'phone_number' => '+628123456' . substr($sessionName, -4), // Unique phone number based on session name
+            'phone_number' => $this->generateUniquePhoneNumber($sessionName), // Unique phone number based on session name
             'instance_id' => $sessionName,
             'status' => $this->mapWahaStatus($thirdPartyResponse['session']['status'] ?? 'UNKNOWN'),
             'is_authenticated' => ($thirdPartyResponse['session']['status'] ?? '') === 'WORKING',
@@ -639,5 +639,28 @@ class WahaSyncService
         }
 
         return false;
+    }
+
+    /**
+     * Generate a unique phone number based on session name
+     *
+     * @param string $sessionName The session name
+     * @return string Unique phone number
+     */
+    private function generateUniquePhoneNumber(string $sessionName): string
+    {
+        // Create a hash of the session name to ensure uniqueness
+        $hash = substr(md5($sessionName), 0, 4);
+
+        // Convert hash to numeric format for phone number
+        $numericHash = '';
+        for ($i = 0; $i < strlen($hash); $i++) {
+            $numericHash .= ord($hash[$i]) % 10;
+        }
+
+        // Ensure we have at least 4 digits
+        $numericHash = str_pad($numericHash, 4, '0', STR_PAD_RIGHT);
+
+        return '+628123456' . $numericHash;
     }
 }

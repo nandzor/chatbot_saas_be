@@ -101,12 +101,15 @@ class WahaController extends BaseApiController
                 'config.webhooks.*.customHeaders' => 'nullable|array',
             ]);
 
-            // Generate session name with organization ID prefix for local storage
-            $orgIdPrefix = substr($organization->id, 0, 7); // Get first 7 characters of organization ID
-            $localSessionName = $validatedData['name'] ?? "default-{$orgIdPrefix}";
+            // Generate session name using UUID for better uniqueness
+            $localSessionName = isset($validatedData['name']) ? $validatedData['name'] : $this->generateUuidSessionName($organization->id);
 
-            // For WAHA Core, we must use 'default' as session name
-            $validatedData['name'] = 'default';
+            // For WAHA Plus, we can use the actual session name (not forced to 'default')
+            // Keep the original session name for WAHA Plus compatibility
+            $wahaSessionName = isset($validatedData['name']) ? $validatedData['name'] : $localSessionName;
+
+            // Ensure the 'name' key is always present for WahaService
+            $validatedData['name'] = $wahaSessionName;
 
             // Add organization metadata to the config
             if (!isset($validatedData['config'])) {
@@ -140,7 +143,7 @@ class WahaController extends BaseApiController
 
                 $this->logApiAction('create_waha_session', [
                     'session_name' => $localSessionName,
-                    'waha_session_name' => $validatedData['name'], // 'default' for WAHA
+                    'waha_session_name' => $wahaSessionName, // Actual session name for WAHA Plus
                     'organization_id' => $organization->id,
                     'local_session_id' => $localSession->id,
                     'third_party_response' => $result,
@@ -150,7 +153,7 @@ class WahaController extends BaseApiController
                     'local_session_id' => $localSession->id,
                     'organization_id' => $organization->id,
                     'session_name' => $localSessionName,
-                    'waha_session_name' => $validatedData['name'], // 'default' for WAHA
+                    'waha_session_name' => $wahaSessionName, // Actual session name for WAHA Plus
                     'third_party_response' => $result,
                     'status' => $localSession->status,
                 ]);
@@ -761,5 +764,24 @@ class WahaController extends BaseApiController
         }
 
         return $flattened;
+    }
+
+    /**
+     * Generate a unique session name using UUID
+     *
+     * @param string $organizationId The organization ID
+     * @param string|null $customName Optional custom name prefix
+     * @return string Generated session name with UUID
+     */
+    private function generateUuidSessionName(string $organizationId, ?string $customName = null): string
+    {
+        $sessionUuid = \Illuminate\Support\Str::uuid()->toString();
+        $orgIdPrefix = substr($organizationId, 0, 7); // Get first 7 characters of organization ID
+
+        if ($customName) {
+            return "{$customName}-{$orgIdPrefix}-{$sessionUuid}";
+        }
+
+        return "session-{$orgIdPrefix}-{$sessionUuid}";
     }
 }
