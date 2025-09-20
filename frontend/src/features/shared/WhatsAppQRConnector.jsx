@@ -39,7 +39,7 @@ import { wahaApi } from '@/services/wahaService';
 import { handleError } from '@/utils/errorHandler';
 import toast from 'react-hot-toast';
 
-const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
+const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId }) => {
   const [connectionStep, setConnectionStep] = useState('initializing'); // initializing, qr-ready, scanning, connected, naming, completed
   const [qrCode, setQrCode] = useState('');
   const [inboxName, setInboxName] = useState('');
@@ -110,66 +110,68 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
           setError(null);
           setProgress(10);
 
-          // Generate unique session ID for WAHA Plus compatibility
-          const timestamp = Date.now();
-          const newSessionId = `whatsapp-connector-${timestamp}`;
+          // Use provided session ID or generate new one
+          const newSessionId = providedSessionId || `whatsapp-connector-${Date.now()}`;
           setSessionId(newSessionId);
 
-          // Create and start session
-          const response = await wahaApi.createSession(newSessionId, {
-            metadata: {
-              'user.id': 'frontend-user',
-              'user.email': 'user@frontend.com'
-            },
-            webhook_by_events: false,
-            events: ['message', 'session.status'],
-            reject_calls: false,
-            mark_online_on_chat: true,
-            debug: true,
-          });
+          // Only create session if not provided
+          if (!providedSessionId) {
+            // Create and start session
+            const response = await wahaApi.createSession(newSessionId, {
+              metadata: {
+                'user.id': 'frontend-user',
+                'user.email': 'user@frontend.com'
+              },
+              webhook_by_events: false,
+              events: ['message', 'session.status'],
+              reject_calls: false,
+              mark_online_on_chat: true,
+              debug: true,
+            });
 
-          if (response.success) {
-            setProgress(30);
-            setConnectionStep('qr-ready');
-
-            // Get QR code directly here to avoid circular dependency
-            try {
-              setProgress(50);
-              const qrResponse = await wahaApi.getQrCode(newSessionId);
-
-              if (qrResponse.success && qrResponse.data) {
-                let qrCodeData = '';
-
-                // Handle the new base64 QR code format
-                if (qrResponse.data.data) {
-                  // New format: base64 encoded image data
-                  qrCodeData = `data:${qrResponse.data.mimetype || 'image/png'};base64,${qrResponse.data.data}`;
-                } else if (qrResponse.data.qr_code) {
-                  // Fallback: direct QR code data
-                  qrCodeData = qrResponse.data.qr_code;
-                } else if (qrResponse.data.qr) {
-                  // Legacy format
-                  qrCodeData = qrResponse.data.qr;
-                } else {
-                  throw new Error('QR Code data not available');
-                }
-
-                setQrCode(qrCodeData);
-                setConnectionStep('scanning');
-                setProgress(70);
-
-                // Start monitoring connection status
-                startConnectionMonitoring(newSessionId);
-              } else {
-                throw new Error('QR Code tidak tersedia');
-              }
-            } catch (qrErr) {
-              const errorMessage = handleError(qrErr);
-              setError(errorMessage.message || 'Gagal mendapatkan QR Code');
-              setConnectionStep('error');
+            if (!response.success) {
+              throw new Error(response.error || 'Gagal membuat sesi WAHA');
             }
-          } else {
-            throw new Error(response.error || 'Gagal membuat sesi WAHA');
+          }
+
+          setProgress(30);
+          setConnectionStep('qr-ready');
+
+          // Get QR code directly here to avoid circular dependency
+          try {
+            setProgress(50);
+            const qrResponse = await wahaApi.getQrCode(newSessionId);
+
+            if (qrResponse.success && qrResponse.data) {
+              let qrCodeData = '';
+
+              // Handle the new base64 QR code format
+              if (qrResponse.data.data) {
+                // New format: base64 encoded image data
+                qrCodeData = `data:${qrResponse.data.mimetype || 'image/png'};base64,${qrResponse.data.data}`;
+              } else if (qrResponse.data.qr_code) {
+                // Fallback: direct QR code data
+                qrCodeData = qrResponse.data.qr_code;
+              } else if (qrResponse.data.qr) {
+                // Legacy format
+                qrCodeData = qrResponse.data.qr;
+              } else {
+                throw new Error('QR Code data not available');
+              }
+
+              setQrCode(qrCodeData);
+              setConnectionStep('scanning');
+              setProgress(70);
+
+              // Start monitoring connection status
+              startConnectionMonitoring(newSessionId);
+            } else {
+              throw new Error('QR Code tidak tersedia');
+            }
+          } catch (qrErr) {
+            const errorMessage = handleError(qrErr);
+            setError(errorMessage.message || 'Gagal mendapatkan QR Code');
+            setConnectionStep('error');
           }
         } catch (err) {
           const errorMessage = handleError(err);
@@ -182,7 +184,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
 
       initializeSession();
     }
-  }, [connectionStep, startConnectionMonitoring]);
+  }, [connectionStep, startConnectionMonitoring, providedSessionId]);
 
   // Timer countdown effect
   useEffect(() => {

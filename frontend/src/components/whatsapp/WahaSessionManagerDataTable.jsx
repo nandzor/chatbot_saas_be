@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -24,7 +24,8 @@ import {
   MessageSquare,
   Heart,
   Wifi,
-  WifiOff
+  WifiOff,
+  MessageCircle
 } from 'lucide-react';
 import { useWahaSessions } from '@/hooks/useWahaSessions';
 import WhatsAppQRConnector from '@/features/shared/WhatsAppQRConnector';
@@ -72,45 +73,38 @@ const WahaSessionManager = () => {
 
   const [showQRConnector, setShowQRConnector] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [createdSessionId, setCreatedSessionId] = useState(null);
+  const isCreatingRef = useRef(false);
 
-  const handleCreateSession = async () => {
+  const handleCreateSession = useCallback(async () => {
+
+    // Simple protection using ref - prevents multiple calls
+    if (isCreatingRef.current) {
+      return;
+    }
+
     try {
+      isCreatingRef.current = true;
       setIsCreatingSession(true);
 
       // Generate a unique session name with timestamp
       const timestamp = Date.now();
-      const sessionName = `session-${timestamp}`;
+      const sessionName = `whatsapp-connector-${timestamp}`;
 
-      await createSession(sessionName, {
-        metadata: {
-          'user.id': 'frontend-user',
-          'user.email': 'user@frontend.com'
-        },
-        proxy: null,
-        debug: true,
-        noweb: {
-          store: {
-            enabled: true,
-            fullSync: false
-          }
-        },
-        webhooks: [
-          {
-            url: 'https://webhook.site/11111111-1111-1111-1111-11111111',
-            events: ['message', 'session.status'],
-            hmac: null,
-            retries: null,
-            customHeaders: null
-          }
-        ]
-      });
+      await createSession(sessionName);
+
+      // Store the session ID and show QR connector
+      setCreatedSessionId(sessionName);
+      setShowQRConnector(true);
+
       await loadSessions(); // Refresh sessions after creation
     } catch (error) {
       // Error already handled in hook
     } finally {
+      isCreatingRef.current = false;
       setIsCreatingSession(false);
     }
-  };
+  }, [createSession, loadSessions]);
 
   const handleStartSession = useCallback(async (sessionId) => {
     try {
@@ -149,10 +143,12 @@ const WahaSessionManager = () => {
 
   const handleQRConnectorClose = useCallback(() => {
     setShowQRConnector(false);
+    setCreatedSessionId(null);
   }, []);
 
   const handleQRConnectorSuccess = useCallback(async (inboxData) => {
     setShowQRConnector(false);
+    setCreatedSessionId(null);
     await loadSessions(); // Refresh sessions after successful connection
     toast.success(`Inbox "${inboxData.name}" berhasil dibuat!`);
   }, [loadSessions]);
@@ -406,8 +402,10 @@ const WahaSessionManager = () => {
           <Button
             onClick={handleCreateSession}
             disabled={isCreatingSession || loading}
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {isCreatingSession ? 'Creating...' : 'Create Session'}
+            <MessageCircle className="w-4 h-4 mr-2" />
+            {isCreatingSession ? 'Membuat...' : 'Hubungkan WhatsApp'}
           </Button>
         </div>
       </div>
@@ -516,6 +514,7 @@ const WahaSessionManager = () => {
         <WhatsAppQRConnector
           onClose={handleQRConnectorClose}
           onSuccess={handleQRConnectorSuccess}
+          sessionId={createdSessionId}
         />
       )}
     </div>
