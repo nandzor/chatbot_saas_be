@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Button,
   Input,
@@ -51,6 +51,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
   const [progress, setProgress] = useState(0);
   const [showQRCode, setShowQRCode] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(connectionTimeout);
+  const qrRequestRef = useRef(null); // Prevent duplicate QR requests
 
   // Define startConnectionMonitoring function first
   const startConnectionMonitoring = useCallback((sessionId) => {
@@ -140,6 +141,13 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
           // Get QR code directly here to avoid circular dependency
           try {
             setProgress(50);
+
+            // Prevent duplicate QR requests (React StrictMode protection)
+            if (qrRequestRef.current) {
+              return;
+            }
+
+            qrRequestRef.current = true;
             const qrResponse = await wahaApi.getQrCode(newSessionId);
 
             if (qrResponse.success && qrResponse.data) {
@@ -172,6 +180,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
             const errorMessage = handleError(qrErr);
             setError(errorMessage.message || 'Gagal mendapatkan QR Code');
             setConnectionStep('error');
+          } finally {
+            qrRequestRef.current = false; // Reset QR request flag
           }
         } catch (err) {
           const errorMessage = handleError(err);
@@ -211,6 +221,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
       if (monitoringInterval) {
         clearInterval(monitoringInterval);
       }
+      // Reset QR request flag on unmount
+      qrRequestRef.current = false;
     };
   }, [monitoringInterval]);
 
