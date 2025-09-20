@@ -213,7 +213,7 @@ class WahaSyncService
             'organization_id' => $organizationId,
             'channel_config_id' => '00000000-0000-0000-0000-000000000000', // Default channel config
             'session_name' => $sessionName,
-            'phone_number' => $wahaData['phone'] ?? null,
+            'phone_number' => $this->extractPhoneNumber($wahaData),
             'instance_id' => $sessionName, // Use session name as instance ID
             'status' => $this->mapWahaStatus($wahaData['status'] ?? 'UNKNOWN'),
             'is_authenticated' => ($wahaData['status'] ?? '') === 'WORKING',
@@ -256,8 +256,11 @@ class WahaSyncService
         $wahaStatus = $wahaData['status'] ?? $localSession->status;
         $mappedStatus = $this->mapWahaStatus($wahaStatus);
 
+        // Extract phone number from WAHA response
+        $phoneNumber = $this->extractPhoneNumber($wahaData);
+
         $localSession->update([
-            'phone_number' => $wahaData['phone'] ?? $localSession->phone_number,
+            'phone_number' => $phoneNumber ?? $localSession->phone_number,
             'status' => $mappedStatus,
             'is_authenticated' => ($wahaStatus === 'WORKING'),
             'is_connected' => ($wahaStatus === 'WORKING'),
@@ -272,7 +275,61 @@ class WahaSyncService
             'mapped_status' => $mappedStatus,
             'is_connected' => ($wahaStatus === 'WORKING'),
             'is_authenticated' => ($wahaStatus === 'WORKING'),
+            'phone_number' => $phoneNumber,
         ]);
+    }
+
+    /**
+     * Extract phone number from WAHA response data
+     *
+     * @param array $wahaData The WAHA response data
+     * @return string|null The formatted phone number or null if not found
+     */
+    protected function extractPhoneNumber(array $wahaData): ?string
+    {
+        // Try to get phone number from me.id field (WAHA Plus format)
+        if (isset($wahaData['me']['id'])) {
+            $meId = $wahaData['me']['id'];
+
+            // Extract phone number from format like "6285123945816@c.us"
+            if (str_contains($meId, '@c.us')) {
+                $phoneNumber = str_replace('@c.us', '', $meId);
+
+                // Add + prefix if not present
+                if (!str_starts_with($phoneNumber, '+')) {
+                    $phoneNumber = '+' . $phoneNumber;
+                }
+
+                Log::info('Extracted phone number from me.id', [
+                    'me_id' => $meId,
+                    'extracted_phone' => $phoneNumber
+                ]);
+
+                return $phoneNumber;
+            }
+        }
+
+        // Fallback to legacy phone field
+        if (isset($wahaData['phone'])) {
+            $phoneNumber = $wahaData['phone'];
+
+            // Ensure proper formatting
+            if (!str_starts_with($phoneNumber, '+')) {
+                $phoneNumber = '+' . $phoneNumber;
+            }
+
+            Log::info('Extracted phone number from phone field', [
+                'phone' => $phoneNumber
+            ]);
+
+            return $phoneNumber;
+        }
+
+        Log::info('No phone number found in WAHA data', [
+            'waha_data_keys' => array_keys($wahaData)
+        ]);
+
+        return null;
     }
 
     /**

@@ -556,7 +556,7 @@ class WahaController extends BaseApiController
             }
 
             // Verify session belongs to current organization
-            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
+            $localSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
             if (!$localSession) {
                 return $this->handleResourceNotFound('WAHA session', $sessionId);
             }
@@ -632,7 +632,7 @@ class WahaController extends BaseApiController
             ]);
         } catch (Exception $e) {
             Log::error('Failed to delete WAHA session', [
-                'session_id' => $sessionId,
+                'session_name' => $sessionName,
                 'organization_id' => $this->getCurrentOrganization()?->id,
                 'error' => $e->getMessage()
             ]);

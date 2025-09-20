@@ -8,12 +8,7 @@ import {
   Button,
   Badge,
   Alert,
-  AlertDescription,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
+  AlertDescription
 } from '@/components/ui';
 import DataTable from '@/components/ui/DataTable';
 import {
@@ -32,6 +27,7 @@ import {
   WifiOff
 } from 'lucide-react';
 import { useWahaSessions } from '@/hooks/useWahaSessions';
+import WhatsAppQRConnector from '@/features/shared/WhatsAppQRConnector';
 import toast from 'react-hot-toast';
 
 // Constants
@@ -71,13 +67,10 @@ const WahaSessionManager = () => {
     stopSession,
     deleteSession,
     startMonitoring,
-    getQrCode,
     loadSessions
   } = useWahaSessions();
 
-  const [showQRDialog, setShowQRDialog] = useState(false);
-  const [qrCode, setQrCode] = useState('');
-  const [isLoadingQR, setIsLoadingQR] = useState(false);
+  const [showQRConnector, setShowQRConnector] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   const handleCreateSession = async () => {
@@ -150,31 +143,19 @@ const WahaSessionManager = () => {
     }
   }, [deleteSession, loadSessions]);
 
-  const handleShowQR = useCallback(async (sessionId) => {
-    try {
-      setIsLoadingQR(true);
-      const response = await getQrCode(sessionId);
+  const handleShowQR = useCallback((_sessionId) => {
+    setShowQRConnector(true);
+  }, []);
 
-      if (response.success && response.data) {
-        // Handle base64 QR code data
-        const qrData = response.data.qr_code || response.data.qr || response.data.data;
-        if (qrData) {
-          const qrImageUrl = `data:image/png;base64,${qrData}`;
-          setQrCode(qrImageUrl);
-          setShowQRDialog(true);
-          toast.success(TOAST_MESSAGES.QR_LOADED);
-        } else {
-          throw new Error('QR code not available');
-        }
-      } else {
-        throw new Error(response.message || 'QR code not available');
-      }
-    } catch (error) {
-      toast.error(`${TOAST_MESSAGES.QR_ERROR}: ${error.message}`);
-    } finally {
-      setIsLoadingQR(false);
-    }
-  }, [getQrCode]);
+  const handleQRConnectorClose = useCallback(() => {
+    setShowQRConnector(false);
+  }, []);
+
+  const handleQRConnectorSuccess = useCallback(async (inboxData) => {
+    setShowQRConnector(false);
+    await loadSessions(); // Refresh sessions after successful connection
+    toast.success(`Inbox "${inboxData.name}" berhasil dibuat!`);
+  }, [loadSessions]);
 
   const handleRefreshSessions = useCallback(async () => {
     try {
@@ -518,50 +499,13 @@ const WahaSessionManager = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Dialog QR Code */}
-      <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>QR Code Koneksi WhatsApp</DialogTitle>
-            <DialogDescription>
-              Pindai QR Code ini dengan WhatsApp untuk menghubungkan sesi
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center space-y-4">
-            {isLoadingQR ? (
-              <div className="flex items-center justify-center p-8">
-                <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : qrCode ? (
-              <div className="space-y-4">
-                <img
-                  src={qrCode}
-                  alt="QR Code WhatsApp"
-                  className="w-64 h-64 mx-auto border rounded-lg"
-                />
-                <div className="text-center space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Langkah-langkah:
-                  </p>
-                  <ol className="text-sm text-left space-y-1">
-                    <li>1. Buka WhatsApp di ponsel Anda</li>
-                    <li>2. Ketuk Menu (⋮) atau Pengaturan</li>
-                    <li>3. Pilih &quot;Perangkat Tertaut&quot; atau &quot;Linked Devices&quot;</li>
-                    <li>4. Ketuk &quot;Tautkan Perangkat&quot; atau &quot;Link a Device&quot;</li>
-                    <li>5. Pindai QR Code di atas</li>
-                  </ol>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center p-8">
-                <AlertTriangle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground">QR Code tidak tersedia</p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* WhatsApp QR Connector Dialog */}
+      {showQRConnector && (
+        <WhatsAppQRConnector
+          onClose={handleQRConnectorClose}
+          onSuccess={handleQRConnectorSuccess}
+        />
+      )}
     </div>
   );
 };

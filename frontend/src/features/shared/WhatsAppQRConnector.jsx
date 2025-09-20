@@ -367,51 +367,51 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
 
   return (
     <Dialog open={true} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="text-center pb-6">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-0">
+        <DialogHeader className="text-center px-12 pt-12 pb-10 bg-gradient-to-br from-blue-50/50 to-green-50/50 border-b border-gray-100">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-full blur-xl opacity-20"></div>
-            <div className="relative bg-white rounded-full p-4 w-20 h-20 mx-auto mb-4 shadow-lg">
+            <div className="relative bg-white rounded-full p-8 w-28 h-28 mx-auto mb-8 shadow-xl border-4 border-white">
               {getStepIcon()}
             </div>
           </div>
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+          <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-4">
             {getStepTitle()}
           </DialogTitle>
-          <DialogDescription className="text-lg text-muted-foreground">
+          <DialogDescription className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             {getStepDescription()}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-8">
+        <div className="px-12 py-12 space-y-12">
           {/* Step Progress Indicator */}
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
+          <div className="relative bg-white rounded-3xl p-12 shadow-xl border border-gray-100">
+            <div className="flex items-center justify-between">
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = step.id === connectionStep;
                 const isCompleted = step.completed;
 
                 return (
-                  <div key={step.id} className="flex flex-col items-center relative">
+                  <div key={step.id} className="flex flex-col items-center relative flex-1">
                     <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300
-                      ${isCompleted ? 'bg-green-500 text-white shadow-lg' :
-                        isActive ? 'bg-blue-500 text-white shadow-lg animate-pulse' :
-                        'bg-gray-200 text-gray-500'}
+                      w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl border-4 border-white
+                      ${isCompleted ? 'bg-green-500 text-white shadow-green-200' :
+                        isActive ? 'bg-blue-500 text-white shadow-blue-200 animate-pulse' :
+                        'bg-gray-100 text-gray-400 shadow-gray-100'}
                     `}>
-                      <Icon className={`w-5 h-5 ${isActive && !isCompleted ? 'animate-spin' : ''}`} />
+                      <Icon className={`w-9 h-9 ${isActive && !isCompleted ? 'animate-spin' : ''}`} />
                     </div>
-                    <span className={`text-xs mt-2 font-medium ${
+                    <span className={`text-base mt-6 font-semibold text-center px-3 ${
                       isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
                     }`}>
                       {step.label}
                     </span>
                     {index < steps.length - 1 && (
                       <div className={`
-                        absolute top-6 left-12 w-full h-0.5 transition-all duration-300
+                        absolute top-10 left-20 w-full h-1.5 transition-all duration-300 rounded-full
                         ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}
-                      `} style={{ width: 'calc(100% - 3rem)' }} />
+                      `} style={{ width: 'calc(100% - 5rem)' }} />
                     )}
                   </div>
                 );
@@ -420,17 +420,17 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
           </div>
 
           {/* Enhanced Progress Bar */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              <div className="space-y-3">
+          <Card className="border-0 shadow-xl bg-gradient-to-r from-blue-50 to-green-50">
+            <CardContent className="p-12">
+              <div className="space-y-8">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Progress Koneksi</span>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                  <span className="text-xl font-bold text-gray-800">Progress Koneksi</span>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 px-6 py-3 text-base font-bold">
                     {progress}%
                   </Badge>
                 </div>
-                <Progress value={progress} className="w-full h-3" />
-                <div className="flex justify-between text-xs text-gray-500">
+                <Progress value={progress} className="w-full h-5 bg-gray-200" />
+                <div className="flex justify-between text-base text-gray-600 font-semibold">
                   <span>Mulai</span>
                   <span>Koneksi WhatsApp</span>
                 </div>
@@ -489,104 +489,117 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
           )}
 
           {(connectionStep === 'scanning' || connectionStep === 'connected') && qrCode && (
-            <div className="space-y-6">
+            <div className="space-y-12">
               {/* QR Code Display */}
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-gray-50">
-                <CardContent className="p-8">
+              <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-gray-50">
+                <CardContent className="p-16">
                   <div className="text-center">
                     <div className="relative inline-block">
-                      <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-400 rounded-2xl blur-xl opacity-20"></div>
-                      <div className="relative bg-white p-6 rounded-2xl shadow-2xl border-4 border-gray-100">
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-400 rounded-3xl blur-2xl opacity-30"></div>
+                      <div className="relative bg-white p-12 rounded-3xl shadow-2xl border-8 border-gray-100">
                         <img
                           src={qrCode}
                           alt="WhatsApp QR Code"
-                          className="w-72 h-72 mx-auto rounded-lg shadow-lg"
+                          className="w-96 h-96 mx-auto rounded-2xl shadow-xl"
                         />
                       </div>
+                    </div>
+                    <div className="mt-12">
+                      <h3 className="text-3xl font-bold text-gray-800 mb-4">QR Code WhatsApp</h3>
+                      <p className="text-gray-600 text-xl leading-relaxed">Pindai QR Code ini dengan WhatsApp untuk menghubungkan sesi</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Instructions */}
-              <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-green-50">
-                <CardContent className="p-6">
-                  <div className="text-center mb-6">
-                    <div className="flex items-center justify-center gap-2 mb-3">
-                      <PhoneIcon className="w-6 h-6 text-blue-600" />
-                      <h3 className="text-lg font-bold text-gray-800">Cara Menghubungkan WhatsApp</h3>
+              <Card className="border-0 shadow-xl bg-gradient-to-r from-blue-50 to-green-50">
+                <CardContent className="p-16">
+                  <div className="text-center mb-16">
+                    <div className="flex items-center justify-center gap-4 mb-6">
+                      <PhoneIcon className="w-10 h-10 text-blue-600" />
+                      <h3 className="text-3xl font-bold text-gray-800">Langkah-langkah:</h3>
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-blue-600 font-bold text-sm">1</span>
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                      <div className="flex items-start gap-6 p-8 bg-white rounded-3xl shadow-xl border border-gray-100">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                          <span className="text-blue-600 font-bold text-xl">1</span>
                         </div>
-                        <p className="text-sm text-gray-700">Buka WhatsApp di ponsel Anda</p>
+                        <p className="text-lg text-gray-700 font-semibold leading-relaxed pt-2">Buka WhatsApp di ponsel Anda</p>
                       </div>
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-blue-600 font-bold text-sm">2</span>
+                      <div className="flex items-start gap-6 p-8 bg-white rounded-3xl shadow-xl border border-gray-100">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                          <span className="text-blue-600 font-bold text-xl">2</span>
                         </div>
-                        <p className="text-sm text-gray-700">Ketuk Menu (⋮) → Perangkat Tertaut</p>
+                        <p className="text-lg text-gray-700 font-semibold leading-relaxed pt-2">Ketuk Menu (⋮) atau Pengaturan</p>
                       </div>
                     </div>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-green-600 font-bold text-sm">3</span>
+                    <div className="space-y-6">
+                      <div className="flex items-start gap-6 p-8 bg-white rounded-3xl shadow-xl border border-gray-100">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                          <span className="text-green-600 font-bold text-xl">3</span>
                         </div>
-                        <p className="text-sm text-gray-700">Ketuk &quot;Tautkan Perangkat&quot;</p>
+                        <p className="text-lg text-gray-700 font-semibold leading-relaxed pt-2">Pilih &quot;Perangkat Tertaut&quot; atau &quot;Linked Devices&quot;</p>
                       </div>
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-green-600 font-bold text-sm">4</span>
+                      <div className="flex items-start gap-6 p-8 bg-white rounded-3xl shadow-xl border border-gray-100">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                          <span className="text-green-600 font-bold text-xl">4</span>
                         </div>
-                        <p className="text-sm text-gray-700">Pindai QR Code di atas</p>
+                        <p className="text-lg text-gray-700 font-semibold leading-relaxed pt-2">Ketuk &quot;Tautkan Perangkat&quot; atau &quot;Link a Device&quot;</p>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-12 text-center">
+                    <div className="flex items-center justify-center gap-6 p-10 bg-white rounded-3xl shadow-xl border border-gray-100">
+                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <span className="text-white font-bold text-xl">5</span>
+                      </div>
+                      <p className="text-xl text-gray-700 font-bold leading-relaxed">Pindai QR Code di atas</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Action Buttons */}
-              <div className="flex justify-center gap-3">
+              <div className="flex justify-center gap-6">
                 <Button
                   variant="outline"
                   onClick={copyQRCode}
-                  className="flex items-center gap-2 border-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
+                  className="flex items-center gap-4 border-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 px-8 py-4 rounded-2xl font-bold text-base"
                 >
-                  <Copy className="w-4 h-4" />
+                  <Copy className="w-6 h-6" />
                   Salin URL
                 </Button>
                 <Button
                   variant="outline"
                   onClick={downloadQRCode}
-                  className="flex items-center gap-2 border-2 hover:bg-green-50 hover:border-green-300 transition-all duration-300"
+                  className="flex items-center gap-4 border-2 hover:bg-green-50 hover:border-green-300 transition-all duration-300 px-8 py-4 rounded-2xl font-bold text-base"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-6 h-6" />
                   Download
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowQRCode(!showQRCode)}
-                  className="flex items-center gap-2 border-2 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+                  className="flex items-center gap-4 border-2 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 px-8 py-4 rounded-2xl font-bold text-base"
                 >
-                  {showQRCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showQRCode ? <EyeOff className="w-6 h-6" /> : <Eye className="w-6 h-6" />}
                   {showQRCode ? 'Sembunyikan' : 'Tampilkan'}
                 </Button>
               </div>
 
               {/* Connection Status */}
               {connectionStep === 'scanning' && (
-                <Card className="border-0 shadow-lg bg-gradient-to-r from-yellow-50 to-orange-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-                      <Clock className="w-5 h-5 text-yellow-600" />
-                      <span className="text-yellow-800 font-medium">
+                <Card className="border-0 shadow-xl bg-gradient-to-r from-yellow-50 to-orange-50">
+                  <CardContent className="p-12">
+                    <div className="flex items-center justify-center gap-6">
+                      <div className="w-6 h-6 bg-yellow-500 rounded-full animate-pulse shadow-xl"></div>
+                      <Clock className="w-8 h-8 text-yellow-600" />
+                      <span className="text-yellow-800 font-bold text-xl">
                         Menunggu koneksi... ({timeRemaining}s tersisa)
                       </span>
                     </div>
@@ -595,11 +608,11 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
               )}
 
               {connectionStep === 'connected' && (
-                <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="text-green-800 font-medium">
+                <Card className="border-0 shadow-xl bg-gradient-to-r from-green-50 to-emerald-50">
+                  <CardContent className="p-12">
+                    <div className="flex items-center justify-center gap-6">
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                      <span className="text-green-800 font-bold text-xl">
                         WhatsApp berhasil terhubung! 🎉
                       </span>
                     </div>
@@ -737,16 +750,16 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
             </Card>
           )}
 
-          <Separator className="my-6" />
+          <Separator className="my-12" />
 
           {/* Enhanced Action Buttons */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center px-8 py-10 bg-gray-50/50 rounded-3xl">
             <Button
               variant="outline"
               onClick={handleClose}
-              className="flex items-center gap-2 border-2 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+              className="flex items-center gap-4 border-2 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 px-8 py-4 rounded-2xl font-bold text-base"
             >
-              <X className="w-4 h-4" />
+              <X className="w-6 h-6" />
               Batal
             </Button>
 
@@ -754,17 +767,17 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
               <Button
                 onClick={handleComplete}
                 disabled={isLoading || !inboxName.trim()}
-                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-10 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-base"
                 size="lg"
               >
                 {isLoading ? (
                   <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <RefreshCw className="w-6 h-6 animate-spin" />
                     Menyelesaikan...
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="w-5 h-5" />
+                    <CheckCircle className="w-6 h-6" />
                     Selesai
                   </>
                 )}
@@ -774,10 +787,10 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
             {connectionStep === 'completed' && (
               <Button
                 onClick={handleClose}
-                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                className="flex items-center gap-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-10 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 font-bold text-base"
                 size="lg"
               >
-                <CheckCircle className="w-5 h-5" />
+                <CheckCircle className="w-6 h-6" />
                 Tutup
               </Button>
             )}
@@ -789,3 +802,4 @@ const WhatsAppQRConnector = ({ onClose, onSuccess }) => {
 };
 
 export default WhatsAppQRConnector;
+
