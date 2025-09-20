@@ -228,4 +228,150 @@ class MockWahaResponses
             'mock_mode' => true,
         ];
     }
+
+    /**
+     * Get mock chat list response
+     *
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getChatList(): array
+    {
+        return [
+            'success' => true,
+            'data' => [
+                'chats' => [
+                    [
+                        'id' => '6285123945816@c.us',
+                        'name' => 'John Doe',
+                        'unreadCount' => 2,
+                        'lastMessage' => [
+                            'id' => 'msg_1',
+                            'body' => 'Hello, how are you?',
+                            'timestamp' => now()->subMinutes(5)->toISOString(),
+                            'fromMe' => false,
+                            'type' => 'text'
+                        ],
+                        'isGroup' => false,
+                        'timestamp' => now()->subMinutes(5)->toISOString()
+                    ],
+                    [
+                        'id' => '6285123945817@c.us',
+                        'name' => 'Jane Smith',
+                        'unreadCount' => 0,
+                        'lastMessage' => [
+                            'id' => 'msg_2',
+                            'body' => 'Thanks for the info!',
+                            'timestamp' => now()->subHours(1)->toISOString(),
+                            'fromMe' => true,
+                            'type' => 'text'
+                        ],
+                        'isGroup' => false,
+                        'timestamp' => now()->subHours(1)->toISOString()
+                    ]
+                ],
+                'total' => 2
+            ],
+            'message' => 'Chat list retrieved successfully'
+        ];
+    }
+
+    /**
+     * Get mock chat overview response
+     *
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getChatOverview(): array
+    {
+        return [
+            'success' => true,
+            'data' => [
+                'chats' => [
+                    [
+                        'id' => '6285123945816@c.us',
+                        'name' => 'John Doe',
+                        'unreadCount' => 2,
+                        'lastMessage' => 'Hello, how are you?',
+                        'timestamp' => now()->subMinutes(5)->toISOString(),
+                        'isGroup' => false
+                    ],
+                    [
+                        'id' => '6285123945817@c.us',
+                        'name' => 'Jane Smith',
+                        'unreadCount' => 0,
+                        'lastMessage' => 'Thanks for the info!',
+                        'timestamp' => now()->subHours(1)->toISOString(),
+                        'isGroup' => false
+                    ]
+                ],
+                'total' => 2
+            ],
+            'message' => 'Chat overview retrieved successfully'
+        ];
+    }
+
+    /**
+     * Get mock profile picture response
+     *
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getProfilePicture(): array
+    {
+        return [
+            'success' => true,
+            'data' => [
+                'contactId' => '6285123945816@c.us',
+                'profilePicture' => 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
+                'hasProfilePicture' => true,
+                'url' => 'https://example.com/profile-picture.jpg'
+            ],
+            'message' => 'Profile picture retrieved successfully'
+        ];
+    }
+
+    /**
+     * Get mock chat messages response
+     *
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getChatMessages(): array
+    {
+        return [
+            'success' => true,
+            'data' => [
+                'messages' => [
+                    [
+                        'id' => 'msg_1',
+                        'body' => 'Hello, how are you?',
+                        'timestamp' => now()->subMinutes(10)->toISOString(),
+                        'fromMe' => false,
+                        'type' => 'text',
+                        'status' => 'read'
+                    ],
+                    [
+                        'id' => 'msg_2',
+                        'body' => 'I am doing well, thank you!',
+                        'timestamp' => now()->subMinutes(8)->toISOString(),
+                        'fromMe' => true,
+                        'type' => 'text',
+                        'status' => 'sent'
+                    ],
+                    [
+                        'id' => 'msg_3',
+                        'body' => 'That is great to hear!',
+                        'timestamp' => now()->subMinutes(5)->toISOString(),
+                        'fromMe' => false,
+                        'type' => 'text',
+                        'status' => 'read'
+                    ]
+                ],
+                'pagination' => [
+                    'page' => 1,
+                    'limit' => 50,
+                    'hasMore' => false
+                ],
+                'total' => 3
+            ],
+            'message' => 'Chat messages retrieved successfully'
+        ];
+    }
 }

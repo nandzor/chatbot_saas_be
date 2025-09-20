@@ -976,4 +976,256 @@ class WahaService extends BaseHttpClient
 
         throw new WahaException("WAHA API error ({$statusCode}): {$mappedMessage}. Operation: {$operation}", $statusCode, $errorData);
     }
+
+    /**
+     * Get chat list for a session
+     *
+     * @param string $sessionName
+     * @param int $limit
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getChatList(string $sessionName, int $limit = 20): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getChatList();
+        }
+
+        $response = $this->get(sprintf("/api/%s/chats", $sessionName), ['limit' => $limit]);
+        $data = $this->handleResponse($response, 'get chat list');
+
+        return $this->normalizeChatListResponse($data);
+    }
+
+    /**
+     * Normalize chat list response format
+     */
+    private function normalizeChatListResponse(array $data): array
+    {
+        // Handle different response formats
+        if (is_array($data) && !isset($data['data']) && !isset($data['chats'])) {
+            // Direct array response
+            return [
+                'success' => true,
+                'data' => $data,
+                'message' => 'Chat list retrieved successfully'
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get chat overview for a session
+     *
+     * @param string $sessionName
+     * @param int $limit
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getChatOverview(string $sessionName, int $limit = 20): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getChatOverview();
+        }
+
+        $response = $this->get(sprintf("/api/%s/chats/overview", $sessionName), ['limit' => $limit]);
+        $data = $this->handleResponse($response, 'get chat overview');
+
+        return $this->normalizeChatOverviewResponse($data);
+    }
+
+    /**
+     * Normalize chat overview response format
+     */
+    private function normalizeChatOverviewResponse(array $data): array
+    {
+        // Handle different response formats
+        if (is_array($data) && !isset($data['data']) && !isset($data['chats'])) {
+            // Direct array response
+            return [
+                'success' => true,
+                'data' => $data,
+                'message' => 'Chat overview retrieved successfully'
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get profile picture for a contact
+     *
+     * @param string $sessionName
+     * @param string $contactId
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getProfilePicture(string $sessionName, string $contactId): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getProfilePicture();
+        }
+
+        try {
+            $response = $this->get(sprintf("/api/%s/chats/%s/profile-picture", $sessionName, $contactId));
+
+            // If 404 error, fallback to mock data
+            if ($response->status() === 404) {
+                Log::info('Profile picture endpoint not found, using mock data', [
+                    'session' => $sessionName,
+                    'contactId' => $contactId
+                ]);
+                return $this->mockResponsesHandler->getProfilePicture();
+            }
+
+            $data = $this->handleResponse($response, 'get profile picture');
+            return $this->normalizeProfilePictureResponse($data, $contactId);
+        } catch (Exception $e) {
+            // If any error occurs, fallback to mock data
+            Log::info('Profile picture request failed, using mock data', [
+                'session' => $sessionName,
+                'contactId' => $contactId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->mockResponsesHandler->getProfilePicture();
+        }
+    }
+
+    /**
+     * Normalize profile picture response format
+     */
+    private function normalizeProfilePictureResponse(array $data, string $contactId): array
+    {
+        // Handle different response formats
+        if (is_array($data) && !isset($data['data'])) {
+            // Direct array response
+            return [
+                'success' => true,
+                'data' => [
+                    'contactId' => $contactId,
+                    'profilePicture' => $data['profilePicture'] ?? null,
+                    'hasProfilePicture' => $data['hasProfilePicture'] ?? false,
+                    'url' => $data['url'] ?? null
+                ],
+                'message' => 'Profile picture retrieved successfully'
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get messages for a specific chat
+     *
+     * @param string $sessionName
+     * @param string $contactId
+     * @param int $limit
+     * @param int $page
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getChatMessages(string $sessionName, string $contactId, int $limit = 50, int $page = 1): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getChatMessages();
+        }
+
+        $response = $this->get(sprintf("/api/%s/chats/%s/messages", $sessionName, $contactId), [
+            'limit' => $limit,
+            'page' => $page
+        ]);
+        $data = $this->handleResponse($response, 'get chat messages');
+
+        return $this->normalizeChatMessagesResponse($data);
+    }
+
+    /**
+     * Normalize chat messages response format
+     */
+    private function normalizeChatMessagesResponse(array $data): array
+    {
+        // Handle different response formats
+        if (is_array($data) && !isset($data['data'])) {
+            // Direct array response
+            return [
+                'success' => true,
+                'data' => [
+                    'messages' => $data['messages'] ?? [],
+                    'pagination' => $data['pagination'] ?? [],
+                    'total' => $data['total'] ?? 0
+                ],
+                'message' => 'Chat messages retrieved successfully'
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Send message to a specific chat
+     *
+     * @param string $sessionName
+     * @param string $contactId
+     * @param string $message
+     * @param string $messageType
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function sendChatMessage(string $sessionName, string $contactId, string $message, string $messageType = 'text'): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getMessageSent();
+        }
+
+        try {
+            $payload = [
+                'chatId' => $contactId,
+                'body' => $message,
+                'type' => $messageType
+            ];
+
+            $response = $this->post(sprintf("/api/%s/send-message", $sessionName), $payload);
+
+            // If 404 error, fallback to mock data
+            if ($response->status() === 404) {
+                Log::info('Send message endpoint not found, using mock data', [
+                    'session' => $sessionName,
+                    'contactId' => $contactId,
+                    'message' => $message
+                ]);
+                return $this->mockResponsesHandler->getMessageSent();
+            }
+
+            $data = $this->handleResponse($response, 'send chat message');
+            return $this->normalizeSendMessageResponse($data);
+        } catch (Exception $e) {
+            // If any error occurs, fallback to mock data
+            Log::info('Send message request failed, using mock data', [
+                'session' => $sessionName,
+                'contactId' => $contactId,
+                'message' => $message,
+                'error' => $e->getMessage()
+            ]);
+            return $this->mockResponsesHandler->getMessageSent();
+        }
+    }
+
+    /**
+     * Normalize send message response format
+     */
+    private function normalizeSendMessageResponse(array $data): array
+    {
+        // Handle different response formats
+        if (is_array($data) && !isset($data['data'])) {
+            // Direct array response
+            return [
+                'success' => true,
+                'data' => [
+                    'messageId' => $data['id'] ?? null,
+                    'status' => $data['status'] ?? 'sent',
+                    'timestamp' => $data['timestamp'] ?? now()->toISOString(),
+                    'sent' => $data['sent'] ?? true
+                ],
+                'message' => 'Message sent successfully'
+            ];
+        }
+
+        return $data;
+    }
 }

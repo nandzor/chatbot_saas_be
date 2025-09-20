@@ -911,4 +911,183 @@ class WahaController extends BaseApiController
 
         return "session-{$orgIdPrefix}-{$sessionUuid}";
     }
+
+    /**
+     * Get chat list for a session
+     */
+    public function getChatList(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            $limit = $request->query('limit', 20);
+            $limit = max(1, min(100, (int) $limit)); // Limit between 1-100
+
+            // Get session name from database
+            $session = $this->wahaSyncService->verifySessionAccessById($request->user()->organization_id, $sessionId);
+            if (!$session) {
+                return $this->errorResponse('Session not found', 404);
+            }
+
+            $sessionName = $session->session_name;
+            $result = $this->wahaService->getChatList($sessionName, $limit);
+
+            return $this->successResponse(
+                $result['message'] ?? 'Chat list retrieved successfully',
+                [
+                    'chats' => $result['data']['chats'] ?? [],
+                    'total' => $result['data']['total'] ?? 0,
+                    'limit' => $limit,
+                    'session_id' => $sessionId,
+                    'session_name' => $sessionName
+                ]
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to get chat list', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to get chat list: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get chat overview for a session
+     */
+    public function getChatOverview(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            $limit = $request->query('limit', 20);
+            $limit = max(1, min(100, (int) $limit)); // Limit between 1-100
+
+            // Get session name from database
+            $session = $this->wahaSyncService->verifySessionAccessById($request->user()->organization_id, $sessionId);
+            if (!$session) {
+                return $this->errorResponse('Session not found', 404);
+            }
+
+            $sessionName = $session->session_name;
+            $result = $this->wahaService->getChatOverview($sessionName, $limit);
+
+            return $this->successResponse(
+                $result['message'] ?? 'Chat overview retrieved successfully',
+                [
+                    'chats' => $result['data']['chats'] ?? [],
+                    'total' => $result['data']['total'] ?? 0,
+                    'limit' => $limit,
+                    'session_id' => $sessionId,
+                    'session_name' => $sessionName
+                ]
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to get chat overview', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to get chat overview: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get profile picture for a contact
+     */
+    public function getProfilePicture(Request $request, string $sessionId, string $contactId): JsonResponse
+    {
+        try {
+            // Get session name from database
+            $session = $this->wahaSyncService->verifySessionAccessById($request->user()->organization_id, $sessionId);
+            if (!$session) {
+                return $this->errorResponse('Session not found', 404);
+            }
+
+            $sessionName = $session->session_name;
+            $result = $this->wahaService->getProfilePicture($sessionName, $contactId);
+
+            return $this->successResponse(
+                $result['message'] ?? 'Profile picture retrieved successfully',
+                $result['data'] ?? []
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to get profile picture', [
+                'session_id' => $sessionId,
+                'contact_id' => $contactId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to get profile picture: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get messages for a specific chat
+     */
+    public function getChatMessages(Request $request, string $sessionId, string $contactId): JsonResponse
+    {
+        try {
+            $limit = $request->query('limit', 50);
+            $page = $request->query('page', 1);
+            $limit = max(1, min(100, (int) $limit)); // Limit between 1-100
+            $page = max(1, (int) $page);
+
+            // Get session name from database
+            $session = $this->wahaSyncService->verifySessionAccessById($request->user()->organization_id, $sessionId);
+            if (!$session) {
+                return $this->errorResponse('Session not found', 404);
+            }
+
+            $sessionName = $session->session_name;
+            $result = $this->wahaService->getChatMessages($sessionName, $contactId, $limit, $page);
+
+            return $this->successResponse(
+                $result['message'] ?? 'Chat messages retrieved successfully',
+                $result['data'] ?? []
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to get chat messages', [
+                'session_id' => $sessionId,
+                'contact_id' => $contactId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to get chat messages: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Send message to a specific chat
+     */
+    public function sendChatMessage(Request $request, string $sessionId, string $contactId): JsonResponse
+    {
+        try {
+            $request->validate([
+                'message' => 'required|string|max:4096',
+                'type' => 'sometimes|string|in:text,image,video,audio,document'
+            ]);
+
+            // Get session name from database
+            $session = $this->wahaSyncService->verifySessionAccessById($request->user()->organization_id, $sessionId);
+            if (!$session) {
+                return $this->errorResponse('Session not found', 404);
+            }
+
+            $sessionName = $session->session_name;
+            $message = $request->input('message');
+            $type = $request->input('type', 'text');
+
+            $result = $this->wahaService->sendChatMessage($sessionName, $contactId, $message, $type);
+
+            return $this->successResponse(
+                $result['message'] ?? 'Message sent successfully',
+                $result['data'] ?? []
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to send chat message', [
+                'session_id' => $sessionId,
+                'contact_id' => $contactId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to send chat message: ' . $e->getMessage(), 500);
+        }
+    }
 }

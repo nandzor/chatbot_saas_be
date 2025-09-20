@@ -33,6 +33,13 @@ Route::prefix('waha')->middleware(['unified.auth', 'waha.organization'])->group(
     Route::post('/sessions/{sessionId}/send-media', [WahaController::class, 'sendMediaMessage']);
     Route::get('/sessions/{sessionId}/messages', [WahaController::class, 'getMessages']);
 
+    // Chat list and overview routes
+    Route::get('/sessions/{sessionId}/chats', [WahaController::class, 'getChatList']);
+    Route::get('/sessions/{sessionId}/chats/overview', [WahaController::class, 'getChatOverview']);
+    Route::get('/sessions/{sessionId}/chats/{contactId}/profile-picture', [WahaController::class, 'getProfilePicture']);
+    Route::get('/sessions/{sessionId}/chats/{contactId}/messages', [WahaController::class, 'getChatMessages']);
+    Route::post('/sessions/{sessionId}/chats/{contactId}/send-message', [WahaController::class, 'sendChatMessage']);
+
     // Contact and group routes
     Route::get('/sessions/{sessionId}/contacts', [WahaController::class, 'getContacts']);
     Route::get('/sessions/{sessionId}/groups', [WahaController::class, 'getGroups']);
