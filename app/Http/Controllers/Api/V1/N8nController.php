@@ -24,32 +24,7 @@ class N8nController extends BaseApiController
     public function getWorkflows(): JsonResponse
     {
         try {
-            // Get workflows from N8N
-            $n8nWorkflows = $this->n8nService->getWorkflows();
-
-            $response = [
-                'n8n_workflows' => $n8nWorkflows,
-                'database_workflows' => [],
-                'total_n8n_workflows' => count($n8nWorkflows['data'] ?? []),
-                'total_database_workflows' => 0,
-                'database_status' => 'failed',
-                'database_error' => null
-            ];
-
-            // Try to get workflows from database (with fallback)
-            try {
-                $dbWorkflows = \App\Models\N8nWorkflow::latest()->get();
-                $response['database_workflows'] = $dbWorkflows->map(fn($workflow) => $workflow->summary);
-                $response['total_database_workflows'] = $dbWorkflows->count();
-                $response['database_status'] = 'success';
-            } catch (Exception $dbException) {
-                $response['database_status'] = 'failed';
-                $response['database_error'] = $dbException->getMessage();
-                Log::warning('Failed to retrieve workflows from database', [
-                    'error' => $dbException->getMessage()
-                ]);
-            }
-
+            $response = $this->n8nService->getWorkflowsWithDatabase();
             return $this->successResponse('Workflows retrieved successfully', $response);
         } catch (Exception $e) {
             Log::error('Failed to get N8N workflows', ['error' => $e->getMessage()]);
@@ -102,77 +77,13 @@ class N8nController extends BaseApiController
             $createdBy = auth()->id() ?? \App\Models\User::first()?->id;
             $customName = $workflowData['custom_name'] ?? null;
 
-            // Generate standardized workflow name
-            $standardizedName = \App\Models\N8nWorkflow::generateWorkflowName($organizationId, $customName);
-
-            // Update workflow data with standardized name
-            $workflowData['name'] = $standardizedName;
-
-            // Log the standardization process
-            Log::info('Creating workflow with standardized naming', [
-                'original_name' => $request->input('name'),
-                'custom_name' => $customName,
-                'standardized_name' => $standardizedName,
-                'organization_id' => $organizationId,
-                'created_by' => $createdBy
-            ]);
-
-            // Create workflow in N8N
-            $n8nWorkflow = $this->n8nService->createWorkflow($workflowData);
-
-            // Try to store workflow in database (with fallback)
-            $response = [
-                'n8n_workflow' => $n8nWorkflow,
-                'database_storage' => 'failed',
-                'database_error' => null,
-                'naming_info' => [
-                    'original_name' => $request->input('name'),
-                    'custom_name' => $customName,
-                    'standardized_name' => $standardizedName,
-                    'organization_id' => $organizationId
-                ]
-            ];
-
-            try {
-                // Log the N8N workflow data before processing
-                Log::info('Attempting to store workflow in database', [
-                    'n8n_workflow_id' => $n8nWorkflow['data']['id'] ?? $n8nWorkflow['id'] ?? 'unknown',
-                    'n8n_workflow_name' => $n8nWorkflow['data']['name'] ?? $n8nWorkflow['name'] ?? 'unknown',
-                    'standardized_name' => $standardizedName,
-                    'organization_id' => $organizationId,
-                    'created_by' => $createdBy
-                ]);
-
-                $workflow = \App\Models\N8nWorkflow::createOrUpdateFromN8n(
-                    $n8nWorkflow['data'] ?? $n8nWorkflow,
-                    $organizationId,
-                    $createdBy,
-                    $customName
-                );
-
-                // Log successful creation
-                Log::info('Successfully stored workflow in database', [
-                    'database_id' => $workflow->id,
-                    'workflow_id' => $workflow->workflow_id,
-                    'name' => $workflow->name,
-                    'standardized_name' => $standardizedName,
-                    'created_at' => $workflow->created_at
-                ]);
-
-                $response['database_storage'] = 'success';
-                $response['stored_workflow'] = $workflow->summary;
-                $response['database_id'] = $workflow->id;
-                $response['database_created_at'] = $workflow->created_at;
-            } catch (Exception $dbException) {
-                $response['database_storage'] = 'failed';
-                $response['database_error'] = $dbException->getMessage();
-                Log::error('Failed to store workflow in database', [
-                    'workflow_id' => $n8nWorkflow['data']['id'] ?? $n8nWorkflow['id'] ?? 'unknown',
-                    'standardized_name' => $standardizedName,
-                    'error' => $dbException->getMessage(),
-                    'trace' => $dbException->getTraceAsString()
-                ]);
-            }
+            // Use service to create workflow with database storage
+            $response = $this->n8nService->createWorkflowWithDatabase(
+                $workflowData,
+                $organizationId,
+                $createdBy,
+                $customName
+            );
 
             return $this->successResponse('Workflow created successfully with standardized naming', $response, 201);
         } catch (Exception $e) {
@@ -220,68 +131,20 @@ class N8nController extends BaseApiController
             ]);
 
             $systemMessage = $request->input('system_message');
-            $nodeId = $request->input('node_id', '153caa6f-c7eb-4556-8f62-deed794bb2b7'); // Default AI Agent node ID
+            $nodeId = $request->input('node_id');
 
-            // Get current workflow
-            $workflow = $this->n8nService->getWorkflow($workflowId);
+            // Use service to update system message
+            $result = $this->n8nService->updateSystemMessage($workflowId, $systemMessage, $nodeId);
 
-            // Check if workflow exists (response should have 'id' key)
-            if (!isset($workflow['id']) || $workflow['id'] !== $workflowId) {
-                return $this->errorResponse('Workflow not found', 404);
-            }
+            return $this->successResponse('System message updated successfully', $result);
 
-            $workflowData = $workflow;
-            $nodes = $workflowData['nodes'] ?? [];
-
-            // Find and update the AI Agent node
-            $nodeUpdated = false;
-            foreach ($nodes as &$node) {
-                if ($node['id'] === $nodeId && isset($node['parameters']['options']['systemMessage'])) {
-                    $node['parameters']['options']['systemMessage'] = $systemMessage;
-                    $nodeUpdated = true;
-                    break;
-                }
-            }
-
-            if (!$nodeUpdated) {
-                return $this->errorResponse('AI Agent node not found or systemMessage not found', 404);
-            }
-
-            // Update workflow with modified nodes
-            $updateData = [
-                'name' => $workflowData['name'],
-                'nodes' => $nodes,
-                'connections' => $workflowData['connections'] ?? [],
-                'settings' => $workflowData['settings'] ?? [],
-                'staticData' => $workflowData['staticData'] ?? [],
-                'meta' => $workflowData['meta'] ?? [],
-            ];
-
-            // Clean the payload for N8N API
-            $cleanUpdateData = $this->n8nService->cleanWorkflowPayloadForN8n($updateData);
-            $result = $this->n8nService->updateWorkflow($workflowId, $cleanUpdateData);
-
-            // Check if update was successful (N8N API returns workflow data on success)
-            if (isset($result['id']) && $result['id'] === $workflowId) {
-                // Also update in database
-                $dbWorkflow = \App\Models\N8nWorkflow::where('workflow_id', $workflowId)->first();
-                if ($dbWorkflow) {
-                    $workflowData = $dbWorkflow->workflow_data;
-                    $workflowData['nodes'] = $nodes;
-                    $dbWorkflow->update([
-                        'workflow_data' => $workflowData,
-                        'nodes' => $nodes  // Update nodes field as well
-                    ]);
-                }
-            }
-
-            return $this->successResponse('System message updated successfully', [
+        } catch (\App\Services\N8n\Exceptions\N8nException $e) {
+            Log::error('N8N service error during system message update', [
                 'workflow_id' => $workflowId,
-                'node_id' => $nodeId,
-                'system_message_length' => strlen($systemMessage),
-                'updated_at' => now()
+                'error' => $e->getMessage(),
+                'code' => $e->getCode()
             ]);
-
+            return $this->errorResponse($e->getMessage(), $e->getCode());
         } catch (Exception $e) {
             Log::error('Failed to update system message', [
                 'workflow_id' => $workflowId,
@@ -292,64 +155,49 @@ class N8nController extends BaseApiController
     }
 
     /**
+     * Get webhook URLs for a workflow
+     */
+    public function getWebhookUrls(string $workflowId): JsonResponse
+    {
+        try {
+            // Get workflow from database
+            $workflow = \App\Models\N8nWorkflow::where('workflow_id', $workflowId)->first();
+
+            if (!$workflow) {
+                return $this->errorResponse('Workflow not found', 404);
+            }
+
+            // Use service to extract webhook URLs
+            $webhookData = $this->n8nService->extractWebhookUrls(
+                $workflow->workflow_data,
+                $workflow->workflow_id,
+                $workflow->name,
+                $workflow->is_enabled
+            );
+
+            if (empty($webhookData['webhook_urls'])) {
+                return $this->errorResponse('No webhook nodes found in this workflow', 404);
+            }
+
+            return $this->successResponse('Webhook URLs retrieved successfully', $webhookData);
+
+        } catch (Exception $e) {
+            Log::error('Failed to get webhook URLs', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to get webhook URLs', 500);
+        }
+    }
+
+    /**
      * Delete a workflow
      */
     public function deleteWorkflow(string $workflowId): JsonResponse
     {
         try {
-            // Delete workflow from N8N
-            $result = $this->n8nService->deleteWorkflow($workflowId);
-
-            // Try to delete workflow from database (with fallback)
-            $response = [
-                'n8n_deletion' => $result,
-                'database_deletion' => 'failed',
-                'database_error' => null
-            ];
-
-            try {
-                // Log the deletion attempt
-                Log::info('Attempting to delete workflow from database', [
-                    'workflow_id' => $workflowId
-                ]);
-
-                // Find and delete workflow from database
-                $workflow = \App\Models\N8nWorkflow::where('workflow_id', $workflowId)->first();
-
-                if ($workflow) {
-                    $workflow->delete();
-
-                    // Log successful deletion
-                    Log::info('Successfully deleted workflow from database', [
-                        'database_id' => $workflow->id,
-                        'workflow_id' => $workflow->workflow_id,
-                        'name' => $workflow->name
-                    ]);
-
-                    $response['database_deletion'] = 'success';
-                    $response['deleted_workflow'] = [
-                        'database_id' => $workflow->id,
-                        'workflow_id' => $workflow->workflow_id,
-                        'name' => $workflow->name
-                    ];
-                } else {
-                    $response['database_deletion'] = 'not_found';
-                    $response['database_message'] = 'Workflow not found in database';
-                    Log::info('Workflow not found in database for deletion', [
-                        'workflow_id' => $workflowId
-                    ]);
-                }
-            } catch (Exception $dbException) {
-                $response['database_deletion'] = 'failed';
-                $response['database_error'] = $dbException->getMessage();
-                Log::error('Failed to delete workflow from database', [
-                    'workflow_id' => $workflowId,
-                    'error' => $dbException->getMessage(),
-                    'trace' => $dbException->getTraceAsString()
-                ]);
-            }
-
-            return $this->successResponse('Workflow deleted successfully', $response);
+            $result = $this->n8nService->deleteWorkflowWithDatabase($workflowId);
+            return $this->successResponse('Workflow deleted successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to delete N8N workflow', [
                 'workflow_id' => $workflowId,

@@ -46,6 +46,7 @@ Route::prefix('n8n')->group(function () {
     Route::post('/credentials/{credentialId}/test', [N8nController::class, 'testCredential']);
 
     // Webhook routes
+    Route::get('/workflows/{workflowId}/webhook-urls', [N8nController::class, 'getWebhookUrls']);
     Route::get('/workflows/{workflowId}/webhook/{nodeId}/url', [N8nController::class, 'getWebhookUrl']);
     Route::post('/workflows/{workflowId}/webhook/{nodeId}', [N8nController::class, 'sendWebhook']);
     Route::post('/workflows/{workflowId}/webhook/{nodeId}/test', [N8nController::class, 'testWebhookConnectivity']);
