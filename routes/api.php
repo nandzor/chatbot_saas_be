@@ -24,6 +24,9 @@ use App\Http\Controllers\Api\V1\SystemConfigurationController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\QueueController;
 use App\Http\Controllers\Api\V1\PermissionSyncController;
+use App\Http\Controllers\Api\V1\OrganizationApprovalController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EmailVerificationController;
 
 // Include additional route files
 require_once __DIR__ . '/n8n.php';
@@ -56,6 +59,26 @@ Route::get('/health', function () {
         'environment' => config('app.env'),
     ]);
 });
+
+/**
+ * Organization Self-Registration Endpoint
+ * Public endpoint for organizations to register themselves
+ */
+Route::post('/register-organization', [AuthController::class, 'registerOrganization'])
+    ->name('api.register-organization')
+    ->middleware(['throttle.organization:3,15', 'security.headers', 'input.sanitization']);
+
+/**
+ * Email Verification Endpoints
+ * Public endpoints for organization email verification
+ */
+Route::post('/verify-organization-email', [EmailVerificationController::class, 'verifyOrganizationEmail'])
+    ->name('api.verify-organization-email')
+    ->middleware(['throttle:auth', 'security.headers', 'input.sanitization']);
+
+Route::post('/resend-verification', [EmailVerificationController::class, 'resendVerification'])
+    ->name('api.resend-verification')
+    ->middleware(['throttle:auth', 'security.headers', 'input.sanitization']);
 
 // ============================================================================
 // API V1 ROUTES (Protected Routes)
@@ -606,6 +629,34 @@ Route::prefix('v1')->group(function () {
 
                 // Force password reset
                 Route::post('/force-password-reset', [OrganizationController::class, 'forcePasswordReset']);
+
+                // Organization approval management
+                Route::prefix('organization-approvals')->group(function () {
+                    Route::get('/', [OrganizationApprovalController::class, 'getPendingOrganizations']);
+                    Route::get('/statistics', [OrganizationApprovalController::class, 'getApprovalStatistics']);
+                    Route::post('/{id}/approve', [OrganizationApprovalController::class, 'approveOrganization']);
+                    Route::post('/{id}/reject', [OrganizationApprovalController::class, 'rejectOrganization']);
+                });
+
+                // Organization registration monitoring
+                Route::prefix('organization-registration-monitor')->group(function () {
+                    Route::get('/health', [\App\Http\Controllers\Api\V1\OrganizationRegistrationMonitorController::class, 'getHealthStatus']);
+                    Route::get('/dashboard', [\App\Http\Controllers\Api\V1\OrganizationRegistrationMonitorController::class, 'getDashboardData']);
+                    Route::get('/statistics', [\App\Http\Controllers\Api\V1\OrganizationRegistrationMonitorController::class, 'getRegistrationStatistics']);
+                    Route::get('/performance', [\App\Http\Controllers\Api\V1\OrganizationRegistrationMonitorController::class, 'getPerformanceMetrics']);
+                    Route::get('/security-events', [\App\Http\Controllers\Api\V1\OrganizationRegistrationMonitorController::class, 'getRecentSecurityEvents']);
+                    Route::get('/alerts', [\App\Http\Controllers\Api\V1\OrganizationRegistrationMonitorController::class, 'getSystemAlerts']);
+                    Route::get('/trends', [\App\Http\Controllers\Api\V1\OrganizationRegistrationMonitorController::class, 'getRegistrationTrends']);
+                    Route::post('/cleanup', [\App\Http\Controllers\Api\V1\OrganizationRegistrationMonitorController::class, 'cleanupExpiredData']);
+                });
+
+                // Organization registration optimization
+                Route::prefix('organization-registration-optimizer')->group(function () {
+                    Route::post('/optimize-database', [\App\Http\Controllers\Api\V1\OrganizationRegistrationOptimizerController::class, 'optimizeDatabase']);
+                    Route::get('/performance-metrics', [\App\Http\Controllers\Api\V1\OrganizationRegistrationOptimizerController::class, 'getPerformanceMetrics']);
+                    Route::post('/maintenance', [\App\Http\Controllers\Api\V1\OrganizationRegistrationOptimizerController::class, 'runMaintenance']);
+                    Route::get('/database-health', [\App\Http\Controllers\Api\V1\OrganizationRegistrationOptimizerController::class, 'getDatabaseHealth']);
+                });
             });
 
         // ====================================================================

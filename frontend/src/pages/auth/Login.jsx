@@ -167,6 +167,12 @@ const Login = () => {
     announce('Navigating to register page');
   }, [navigate, announce]);
 
+  // Handle organization registration navigation
+  const handleRegisterOrganization = useCallback(() => {
+    navigate('/auth/register-organization');
+    announce('Navigating to organization registration page');
+  }, [navigate, announce]);
+
   // Focus management on mount
   useEffect(() => {
     setFocus();
@@ -187,6 +193,13 @@ const Login = () => {
               className="font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline"
             >
               create a new account
+            </button>
+            {' '}or{' '}
+            <button
+              onClick={handleRegisterOrganization}
+              className="font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline"
+            >
+              register your organization
             </button>
           </p>
         </div>

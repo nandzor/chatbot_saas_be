@@ -11,11 +11,11 @@ class OrganizationAuditService
      * Log an organization action.
      */
     public function logAction(
-        int $organizationId,
+        string $organizationId,
         string $action,
-        ?int $userId = null,
+        ?string $userId = null,
         ?string $resourceType = null,
-        ?int $resourceId = null,
+        ?string $resourceId = null,
         ?array $oldValues = null,
         ?array $newValues = null,
         ?array $metadata = null
@@ -35,7 +35,7 @@ class OrganizationAuditService
             ]);
 
             // Log to application logs
-            Log::channel('organization')->info('Organization audit log created', [
+            Log::info('Organization audit log created', [
                 'audit_log_id' => $auditLog->id,
                 'organization_id' => $organizationId,
                 'action' => $action,
@@ -47,7 +47,7 @@ class OrganizationAuditService
             return $auditLog;
 
         } catch (\Exception $e) {
-            Log::channel('organization')->error('Failed to create organization audit log', [
+            Log::error('Failed to create organization audit log', [
                 'error' => $e->getMessage(),
                 'organization_id' => $organizationId,
                 'action' => $action,

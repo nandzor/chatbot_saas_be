@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RefreshTokenRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\RegisterOrganizationRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
@@ -14,6 +15,7 @@ use App\Http\Requests\Auth\LockUserRequest;
 use App\Http\Resources\Auth\AuthResource;
 use App\Http\Resources\User\UserResource;
 use App\Services\AuthService;
+use App\Services\OrganizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,10 +28,12 @@ use App\Models\User;
 class AuthController extends BaseApiController
 {
     protected AuthService $authService;
+    protected OrganizationService $organizationService;
 
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService, OrganizationService $organizationService)
     {
         $this->authService = $authService;
+        $this->organizationService = $organizationService;
     }
 
     /**
@@ -105,6 +109,100 @@ class AuthController extends BaseApiController
                 'Failed to register user',
                 500,
                 ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Register organization with admin user.
+     */
+    public function registerOrganization(RegisterOrganizationRequest $request): JsonResponse
+    {
+        try {
+            $data = $request->validated();
+
+            // Log registration attempt
+            Log::info('Organization registration attempt', [
+                'organization_name' => $data['organization_name'] ?? 'N/A',
+                'organization_email' => $data['organization_email'] ?? 'N/A',
+                'admin_email' => $data['admin_email'] ?? 'N/A',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            $result = $this->organizationService->selfRegisterOrganization($data);
+
+            if ($result['success']) {
+                // Log successful registration
+                Log::info('Organization registration successful', [
+                    'organization_id' => $result['data']['organization']['id'] ?? 'N/A',
+                    'organization_name' => $result['data']['organization']['name'] ?? 'N/A',
+                    'admin_user_id' => $result['data']['admin_user']['id'] ?? 'N/A',
+                    'ip_address' => $request->ip(),
+                ]);
+
+                return $this->successResponse(
+                    $result['message'],
+                    $result['data'],
+                    201
+                );
+            }
+
+            // Log failed registration
+            Log::warning('Organization registration failed', [
+                'organization_name' => $data['organization_name'] ?? 'N/A',
+                'organization_email' => $data['organization_email'] ?? 'N/A',
+                'admin_email' => $data['admin_email'] ?? 'N/A',
+                'error' => $result['error'] ?? 'Unknown error',
+                'ip_address' => $request->ip(),
+            ]);
+
+            return $this->errorResponse(
+                $result['message'],
+                ['error' => $result['error'] ?? 'Registration failed'],
+                400
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Organization registration validation failed', [
+                'errors' => $e->errors(),
+                'ip_address' => $request->ip(),
+            ]);
+
+            return $this->errorResponse(
+                'Validation failed',
+                ['errors' => $e->errors()],
+                422
+            );
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error('Organization registration database error', [
+                'error' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'ip_address' => $request->ip(),
+            ]);
+
+            return $this->errorResponse(
+                'Database error occurred during registration',
+                ['error' => 'Please try again later'],
+                500
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Organization registration unexpected error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'ip_address' => $request->ip(),
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Organization registration failed',
+                500,
+                ['error' => 'An unexpected error occurred. Please try again later.'],
                 $e
             );
         }

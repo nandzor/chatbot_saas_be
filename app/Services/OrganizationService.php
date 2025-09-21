@@ -17,14 +17,19 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Events\OrganizationActivityEvent;
 use App\Services\OrganizationAuditService;
+use App\Services\OrganizationRegistrationLogger;
 
 class OrganizationService extends BaseService
 {
     protected OrganizationAuditService $auditService;
+    protected OrganizationRegistrationLogger $logger;
 
-    public function __construct(OrganizationAuditService $auditService)
-    {
+    public function __construct(
+        OrganizationAuditService $auditService,
+        OrganizationRegistrationLogger $logger
+    ) {
         $this->auditService = $auditService;
+        $this->logger = $logger;
     }
 
     /**
@@ -169,6 +174,170 @@ class OrganizationService extends BaseService
                 'data' => $data
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Self-register organization with admin user
+     */
+    public function selfRegisterOrganization(array $data): array
+    {
+        try {
+            DB::beginTransaction();
+
+            // Prepare organization data
+            $organizationData = [
+                'name' => $data['organization_name'],
+                'display_name' => $data['organization_name'],
+                'email' => $data['organization_email'],
+                'phone' => $data['organization_phone'] ?? null,
+                'address' => $data['organization_address'] ?? null,
+                'website' => $data['organization_website'] ?? null,
+                'business_type' => $data['business_type'] ?? null,
+                'industry' => $data['industry'] ?? null,
+                'company_size' => $data['company_size'] ?? null,
+                'tax_id' => $data['tax_id'] ?? null,
+                'description' => $data['description'] ?? null,
+                'timezone' => $data['timezone'] ?? 'Asia/Jakarta',
+                'locale' => $data['locale'] ?? 'id',
+                'currency' => $data['currency'] ?? 'IDR',
+                'status' => 'pending_approval', // Requires admin approval
+                'subscription_status' => 'trial',
+                'trial_ends_at' => now()->addDays(14),
+                'api_enabled' => false, // Disabled until approved
+                'webhook_enabled' => false,
+                'two_factor_enabled' => false,
+                'sso_enabled' => false,
+                'email_notifications' => json_encode(['admin' => true, 'user' => true]),
+                'push_notifications' => json_encode(['admin' => true, 'user' => true]),
+                'webhook_notifications' => json_encode(['enabled' => false]),
+                'chatbot_settings' => json_encode(['enabled' => false, 'max_bots' => 1]),
+                'analytics_settings' => json_encode(['enabled' => false]),
+                'integrations_settings' => json_encode(['enabled' => false]),
+                'custom_branding_settings' => json_encode(['enabled' => false]),
+            ];
+
+            // Generate unique org_code
+            $organizationData['org_code'] = $this->generateOrgCode($organizationData['name']);
+
+            // Create organization
+            $organization = $this->getModel()->create($organizationData);
+
+            // Create admin user
+            $adminUserData = [
+                'organization_id' => $organization->id,
+                'full_name' => $data['admin_first_name'] . ' ' . $data['admin_last_name'],
+                'first_name' => $data['admin_first_name'],
+                'last_name' => $data['admin_last_name'],
+                'email' => $data['admin_email'],
+                'username' => $data['admin_username'] ?? $this->generateUsername($data['admin_email']),
+                'password_hash' => \Illuminate\Support\Facades\Hash::make($data['admin_password']),
+                'phone' => $data['admin_phone'] ?? null,
+                'role' => 'org_admin',
+                'status' => 'pending_verification', // Requires email verification
+                'is_email_verified' => false,
+                'is_phone_verified' => false,
+                'two_factor_enabled' => false,
+                'permissions' => [],
+                'ui_preferences' => json_encode([
+                    'theme' => 'light',
+                    'language' => $data['locale'] ?? 'id',
+                    'timezone' => $data['timezone'] ?? 'Asia/Jakarta',
+                    'notifications' => ['email' => true, 'push' => true]
+                ]),
+            ];
+
+            // Create admin user
+            $adminUser = User::create($adminUserData);
+
+            // Create and assign org_admin role
+            $role = $this->getOrCreateRole($organization->id, 'org_admin');
+            $this->assignRoleToUser($adminUser->id, $role->id, $organization->id);
+
+            // Log activity
+            $this->auditService->logAction(
+                $organization->id,
+                'organization_self_registered',
+                $adminUser->id,
+                'organization',
+                $organization->id,
+                null,
+                [
+                    'organization_name' => $organization->name,
+                    'admin_email' => $adminUser->email,
+                    'admin_name' => $adminUser->full_name,
+                ],
+                [
+                    'registration_method' => 'self_registration',
+                    'admin_user_id' => $adminUser->id,
+                ]
+            );
+
+            // Send email verification
+            $emailVerificationService = app(\App\Services\EmailVerificationService::class);
+            $emailSent = $emailVerificationService->sendOrganizationEmailVerification($adminUser, $organization);
+
+            // Clear cache
+            $this->clearOrganizationCache();
+
+            DB::commit();
+
+            // Log successful registration
+            $this->logger->logRegistrationSuccess($organization, $adminUser, [
+                'email_sent' => $emailSent,
+                'registration_method' => 'self_registration',
+            ]);
+
+            Log::info('Organization self-registered', [
+                'organization_id' => $organization->id,
+                'organization_name' => $organization->name,
+                'org_code' => $organization->org_code,
+                'admin_user_id' => $adminUser->id,
+                'admin_email' => $adminUser->email,
+                'email_sent' => $emailSent,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Organization registration successful. Please check your email for verification.',
+                'data' => [
+                    'organization' => [
+                        'id' => $organization->id,
+                        'name' => $organization->name,
+                        'org_code' => $organization->org_code,
+                        'status' => $organization->status,
+                        'email' => $organization->email,
+                    ],
+                    'admin_user' => [
+                        'id' => $adminUser->id,
+                        'email' => $adminUser->email,
+                        'full_name' => $adminUser->full_name,
+                        'username' => $adminUser->username,
+                        'status' => $adminUser->status,
+                    ],
+                ],
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Log registration failure
+            $this->logger->logRegistrationFailure($data, $e->getMessage(), request()->ip(), [
+                'error_type' => get_class($e),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+            ]);
+
+            Log::error('Organization self-registration failed', [
+                'error' => $e->getMessage(),
+                'data' => $data,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Organization registration failed. Please try again.',
+                'error' => $e->getMessage(),
+            ];
         }
     }
 
@@ -613,7 +782,7 @@ class OrganizationService extends BaseService
                 'is_email_verified' => false,
                 'is_phone_verified' => false,
                 'two_factor_enabled' => false,
-                'permissions' => json_encode([]),
+                'permissions' => [],
                 'created_at' => $now,
                 'updated_at' => $now
             ]);
