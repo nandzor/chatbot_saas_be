@@ -341,11 +341,11 @@ class OrganizationSeeder extends Seeder
 
         // Run organization-related seeders in order
         $this->call([
-            OrganizationPermissionSeeder::class,
-            OrganizationRoleSeeder::class,
-            OrganizationRolePermissionSeeder::class,
-            OrganizationAnalyticsSeeder::class,
-            OrganizationAuditLogSeeder::class,
+            // OrganizationPermissionSeeder::class, // Removed - file not found
+            // OrganizationRoleSeeder::class, // Removed - file not found
+            // OrganizationRolePermissionSeeder::class, // Removed - file not found
+            // OrganizationAnalyticsSeeder::class, // Removed - file not found
+            // OrganizationAuditLogSeeder::class, // Removed - file not found
         ]);
 
 

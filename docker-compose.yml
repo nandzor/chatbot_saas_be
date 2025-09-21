@@ -10,8 +10,6 @@ services:
     ports:
       - "9000:80"
       - "8443:443"
-    env_file:
-      - ./.env
     volumes:
       # Source code synchronization (development friendly)
       - .:/app

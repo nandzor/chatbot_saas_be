@@ -24,8 +24,33 @@ class N8nController extends BaseApiController
     public function getWorkflows(): JsonResponse
     {
         try {
-            $workflows = $this->n8nService->getWorkflows();
-            return $this->successResponse('Workflows retrieved successfully', $workflows);
+            // Get workflows from N8N
+            $n8nWorkflows = $this->n8nService->getWorkflows();
+
+            $response = [
+                'n8n_workflows' => $n8nWorkflows,
+                'database_workflows' => [],
+                'total_n8n_workflows' => count($n8nWorkflows['data'] ?? []),
+                'total_database_workflows' => 0,
+                'database_status' => 'failed',
+                'database_error' => null
+            ];
+
+            // Try to get workflows from database (with fallback)
+            try {
+                $dbWorkflows = \App\Models\N8nWorkflow::latest()->get();
+                $response['database_workflows'] = $dbWorkflows->map(fn($workflow) => $workflow->summary);
+                $response['total_database_workflows'] = $dbWorkflows->count();
+                $response['database_status'] = 'success';
+            } catch (Exception $dbException) {
+                $response['database_status'] = 'failed';
+                $response['database_error'] = $dbException->getMessage();
+                Log::warning('Failed to retrieve workflows from database', [
+                    'error' => $dbException->getMessage()
+                ]);
+            }
+
+            return $this->successResponse('Workflows retrieved successfully', $response);
         } catch (Exception $e) {
             Log::error('Failed to get N8N workflows', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to retrieve workflows', 500);
@@ -55,15 +80,74 @@ class N8nController extends BaseApiController
     public function createWorkflow(Request $request): JsonResponse
     {
         try {
+            // Validate payload structure
             $workflowData = $request->validate([
                 'name' => 'required|string|max:255',
                 'nodes' => 'array',
                 'connections' => 'array',
                 'settings' => 'array',
+                'staticData' => 'array|nullable',
+                'shared' => 'array|nullable',
             ]);
 
-            $workflow = $this->n8nService->createWorkflow($workflowData);
-            return $this->successResponse('Workflow created successfully', $workflow, 201);
+            // Validate payload using model validation
+            $validationErrors = \App\Models\N8nWorkflow::validatePayload($workflowData);
+            if (!empty($validationErrors)) {
+                return $this->errorResponse('Invalid payload structure: ' . implode(', ', $validationErrors), 400);
+            }
+
+            // Create workflow in N8N
+            $n8nWorkflow = $this->n8nService->createWorkflow($workflowData);
+
+            // Try to store workflow in database (with fallback)
+            $response = [
+                'n8n_workflow' => $n8nWorkflow,
+                'database_storage' => 'failed',
+                'database_error' => null
+            ];
+
+            try {
+                // Log the N8N workflow data before processing
+                Log::info('Attempting to store workflow in database', [
+                    'n8n_workflow_id' => $n8nWorkflow['data']['id'] ?? $n8nWorkflow['id'] ?? 'unknown',
+                    'n8n_workflow_name' => $n8nWorkflow['data']['name'] ?? $n8nWorkflow['name'] ?? 'unknown',
+                    'organization_id' => auth()->user()?->organization_id,
+                    'created_by' => auth()->id()
+                ]);
+
+                // Use default organization if no authenticated user
+                $organizationId = auth()->user()?->organization_id ?? \App\Models\Organization::first()?->id;
+                $createdBy = auth()->id();
+
+                $workflow = \App\Models\N8nWorkflow::createOrUpdateFromN8n(
+                    $n8nWorkflow['data'] ?? $n8nWorkflow,
+                    $organizationId,
+                    $createdBy
+                );
+
+                // Log successful creation
+                Log::info('Successfully stored workflow in database', [
+                    'database_id' => $workflow->id,
+                    'workflow_id' => $workflow->workflow_id,
+                    'name' => $workflow->name,
+                    'created_at' => $workflow->created_at
+                ]);
+
+                $response['database_storage'] = 'success';
+                $response['stored_workflow'] = $workflow->summary;
+                $response['database_id'] = $workflow->id;
+                $response['database_created_at'] = $workflow->created_at;
+            } catch (Exception $dbException) {
+                $response['database_storage'] = 'failed';
+                $response['database_error'] = $dbException->getMessage();
+                Log::error('Failed to store workflow in database', [
+                    'workflow_id' => $n8nWorkflow['data']['id'] ?? $n8nWorkflow['id'] ?? 'unknown',
+                    'error' => $dbException->getMessage(),
+                    'trace' => $dbException->getTraceAsString()
+                ]);
+            }
+
+            return $this->successResponse('Workflow created successfully', $response, 201);
         } catch (Exception $e) {
             Log::error('Failed to create N8N workflow', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to create workflow', 500);

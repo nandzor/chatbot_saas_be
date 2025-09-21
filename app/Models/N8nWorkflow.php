@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class N8nWorkflow extends Model
 {
@@ -17,6 +18,7 @@ class N8nWorkflow extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'id',
         'organization_id',
         'workflow_id',
         'name',
@@ -48,6 +50,8 @@ class N8nWorkflow extends Model
         'webhook_secret',
         'api_endpoints',
         'metadata',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [
@@ -65,7 +69,23 @@ class N8nWorkflow extends Model
         'permissions' => 'array',
         'api_endpoints' => 'array',
         'metadata' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
+
+    /**
+     * Boot the model
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = Str::uuid();
+            }
+        });
+    }
 
     /**
      * Get the organization that owns this workflow
@@ -512,6 +532,187 @@ class N8nWorkflow extends Model
         }
 
         return 'warning';
+    }
+
+    /**
+     * Standardize N8N workflow payload for storage
+     */
+    public static function standardizePayload(array $n8nWorkflowData): array
+    {
+        return [
+            'workflow_id' => $n8nWorkflowData['id'] ?? null,
+            'name' => $n8nWorkflowData['name'] ?? 'Untitled Workflow',
+            'description' => $n8nWorkflowData['description'] ?? null,
+            'category' => $n8nWorkflowData['category'] ?? null,
+            'tags' => $n8nWorkflowData['tags'] ?? [],
+            'workflow_data' => $n8nWorkflowData,
+            'nodes' => $n8nWorkflowData['nodes'] ?? [],
+            'connections' => $n8nWorkflowData['connections'] ?? [],
+            'settings' => $n8nWorkflowData['settings'] ?? [],
+            'trigger_type' => $n8nWorkflowData['trigger_type'] ?? null,
+            'trigger_config' => $n8nWorkflowData['trigger_config'] ?? [],
+            'schedule_expression' => $n8nWorkflowData['schedule_expression'] ?? null,
+            'version' => $n8nWorkflowData['version'] ?? 1,
+            'previous_version_id' => $n8nWorkflowData['previous_version_id'] ?? null,
+            'is_latest_version' => $n8nWorkflowData['is_latest_version'] ?? true,
+            'status' => ($n8nWorkflowData['active'] ?? false) ? 'active' : 'inactive',
+            'is_enabled' => $n8nWorkflowData['active'] ?? false,
+            'last_execution_at' => isset($n8nWorkflowData['last_execution_at']) ?
+                \Carbon\Carbon::parse($n8nWorkflowData['last_execution_at']) : null,
+            'next_execution_at' => isset($n8nWorkflowData['next_execution_at']) ?
+                \Carbon\Carbon::parse($n8nWorkflowData['next_execution_at']) : null,
+            'total_executions' => $n8nWorkflowData['total_executions'] ?? 0,
+            'successful_executions' => $n8nWorkflowData['successful_executions'] ?? 0,
+            'failed_executions' => $n8nWorkflowData['failed_executions'] ?? 0,
+            'avg_execution_time' => $n8nWorkflowData['avg_execution_time'] ?? null,
+            'webhook_url' => $n8nWorkflowData['webhook_url'] ?? null,
+            'webhook_secret' => $n8nWorkflowData['webhook_secret'] ?? null,
+            'api_endpoints' => $n8nWorkflowData['api_endpoints'] ?? [],
+            'metadata' => $n8nWorkflowData['metadata'] ?? [],
+        ];
+    }
+
+    /**
+     * Create or update workflow from N8N data
+     */
+    public static function createOrUpdateFromN8n(array $n8nWorkflowData, ?string $organizationId = null, ?string $createdBy = null): self
+    {
+        $standardizedData = self::standardizePayload($n8nWorkflowData);
+
+        // Add organization and creator info
+        if ($organizationId) {
+            $standardizedData['organization_id'] = $organizationId;
+        }
+        if ($createdBy) {
+            $standardizedData['created_by'] = $createdBy;
+        }
+
+        // Log the standardized data
+        \Log::info('Standardized workflow data for database storage', [
+            'workflow_id' => $standardizedData['workflow_id'],
+            'name' => $standardizedData['name'],
+            'organization_id' => $standardizedData['organization_id'] ?? null,
+            'created_by' => $standardizedData['created_by'] ?? null,
+            'data_keys' => array_keys($standardizedData)
+        ]);
+
+        // Find existing workflow by N8N ID
+        $workflow = self::where('workflow_id', $standardizedData['workflow_id'])->first();
+
+        if ($workflow) {
+            // Update existing workflow
+            \Log::info('Updating existing workflow in database', [
+                'database_id' => $workflow->id,
+                'workflow_id' => $workflow->workflow_id
+            ]);
+            $workflow->update($standardizedData);
+            return $workflow;
+        } else {
+            // Create new workflow
+            \Log::info('Creating new workflow in database', [
+                'workflow_id' => $standardizedData['workflow_id'],
+                'name' => $standardizedData['name']
+            ]);
+
+            $workflow = self::create($standardizedData);
+
+            \Log::info('Successfully created workflow in database', [
+                'database_id' => $workflow->id,
+                'workflow_id' => $workflow->workflow_id,
+                'name' => $workflow->name,
+                'created_at' => $workflow->created_at
+            ]);
+
+            return $workflow;
+        }
+    }
+
+    /**
+     * Convert to N8N API format
+     */
+    public function toN8nFormat(): array
+    {
+        return [
+            'id' => $this->workflow_id,
+            'name' => $this->name,
+            'active' => $this->is_enabled,
+            'nodes' => $this->nodes ?? [],
+            'connections' => $this->connections ?? [],
+            'settings' => $this->settings ?? [],
+            'staticData' => $this->workflow_data['staticData'] ?? null,
+            'shared' => $this->workflow_data['shared'] ?? [],
+            'versionId' => $this->workflow_data['versionId'] ?? null,
+            'isArchived' => $this->workflow_data['isArchived'] ?? false,
+            'triggerCount' => $this->workflow_data['triggerCount'] ?? 0,
+            'createdAt' => $this->workflow_data['createdAt'] ?? $this->created_at?->toISOString(),
+            'updatedAt' => $this->workflow_data['updatedAt'] ?? $this->updated_at?->toISOString(),
+        ];
+    }
+
+    /**
+     * Validate workflow payload structure
+     */
+    public static function validatePayload(array $payload): array
+    {
+        $errors = [];
+
+        // Required fields
+        if (empty($payload['name'])) {
+            $errors[] = 'Name is required';
+        }
+
+        // Validate nodes structure
+        if (isset($payload['nodes']) && !is_array($payload['nodes'])) {
+            $errors[] = 'Nodes must be an array';
+        }
+
+        // Validate connections structure
+        if (isset($payload['connections']) && !is_array($payload['connections'])) {
+            $errors[] = 'Connections must be an array';
+        }
+
+        // Validate settings structure
+        if (isset($payload['settings']) && !is_array($payload['settings'])) {
+            $errors[] = 'Settings must be an array';
+        }
+
+        // Validate staticData structure
+        if (isset($payload['staticData']) && !is_array($payload['staticData'])) {
+            $errors[] = 'StaticData must be an array';
+        }
+
+        // Validate shared structure
+        if (isset($payload['shared']) && !is_array($payload['shared'])) {
+            $errors[] = 'Shared must be an array';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Get standardized workflow summary
+     */
+    public function getSummaryAttribute(): array
+    {
+        return [
+            'id' => $this->id,
+            'workflow_id' => $this->workflow_id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'category' => $this->category,
+            'active' => $this->is_enabled,
+            'status' => $this->status,
+            'node_count' => count($this->nodes ?? []),
+            'connection_count' => $this->connection_count,
+            'total_executions' => $this->total_executions ?? 0,
+            'successful_executions' => $this->successful_executions ?? 0,
+            'failed_executions' => $this->failed_executions ?? 0,
+            'success_rate' => $this->success_rate,
+            'last_execution' => $this->last_execution_at,
+            'created_by' => $this->created_by,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
     }
 }
 
