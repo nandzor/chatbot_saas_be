@@ -100,7 +100,10 @@ class N8nService extends BaseHttpClient
 
         $this->validateWorkflowData($workflowData);
 
-        $response = $this->post('/api/v1/workflows', $workflowData);
+        // Clean payload for N8N API - remove non-N8N fields and ensure proper format
+        $cleanPayload = $this->cleanWorkflowPayloadForN8n($workflowData);
+
+        $response = $this->post('/api/v1/workflows', $cleanPayload);
         return $this->handleResponse($response, 'create workflow');
     }
 
@@ -726,6 +729,43 @@ class N8nService extends BaseHttpClient
     }
 
     /**
+     * Clean workflow payload for N8N API
+     */
+    private function cleanWorkflowPayloadForN8n(array $workflowData): array
+    {
+        // Only include fields that N8N API recognizes
+        $allowedFields = ['name', 'nodes', 'connections', 'settings', 'staticData', 'shared'];
+        $cleanPayload = [];
+
+        foreach ($allowedFields as $field) {
+            if (isset($workflowData[$field])) {
+                $cleanPayload[$field] = $workflowData[$field];
+            }
+        }
+
+        // Ensure required fields are present with proper types
+        $cleanPayload['name'] = $cleanPayload['name'] ?? 'Untitled Workflow';
+        $cleanPayload['nodes'] = $cleanPayload['nodes'] ?? [];
+        $cleanPayload['connections'] = (object)($cleanPayload['connections'] ?? []); // N8N expects object
+        $cleanPayload['settings'] = (object)($cleanPayload['settings'] ?? []); // N8N expects object
+        $cleanPayload['staticData'] = (object)($cleanPayload['staticData'] ?? []); // N8N expects object
+        $cleanPayload['shared'] = $cleanPayload['shared'] ?? [];
+
+        // Fix nodes structure - ensure parameters is object for each node
+        if (isset($cleanPayload['nodes']) && is_array($cleanPayload['nodes'])) {
+            foreach ($cleanPayload['nodes'] as &$node) {
+                if (isset($node['parameters']) && is_array($node['parameters'])) {
+                    $node['parameters'] = (object)$node['parameters'];
+                } elseif (!isset($node['parameters'])) {
+                    $node['parameters'] = (object)[];
+                }
+            }
+        }
+
+        return $cleanPayload;
+    }
+
+    /**
      * Validate workflow data
      */
     private function validateWorkflowData(array $workflowData, bool $requireName = true): void
@@ -738,8 +778,8 @@ class N8nService extends BaseHttpClient
             throw N8nException::invalidWorkflowData('nodes must be an array');
         }
 
-        if (isset($workflowData['connections']) && !is_array($workflowData['connections'])) {
-            throw N8nException::invalidWorkflowData('connections must be an array');
+        if (isset($workflowData['connections']) && !is_array($workflowData['connections']) && !is_object($workflowData['connections'])) {
+            throw N8nException::invalidWorkflowData('connections must be an array or object');
         }
     }
 

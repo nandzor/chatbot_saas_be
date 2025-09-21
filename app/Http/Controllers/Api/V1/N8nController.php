@@ -88,6 +88,7 @@ class N8nController extends BaseApiController
                 'settings' => 'array',
                 'staticData' => 'array|nullable',
                 'shared' => 'array|nullable',
+                'custom_name' => 'string|nullable', // Optional custom name for standardization
             ]);
 
             // Validate payload using model validation
@@ -96,6 +97,26 @@ class N8nController extends BaseApiController
                 return $this->errorResponse('Invalid payload structure: ' . implode(', ', $validationErrors), 400);
             }
 
+            // Get organization and user info
+            $organizationId = auth()->user()?->organization_id ?? \App\Models\Organization::first()?->id;
+            $createdBy = auth()->id() ?? \App\Models\User::first()?->id;
+            $customName = $workflowData['custom_name'] ?? null;
+
+            // Generate standardized workflow name
+            $standardizedName = \App\Models\N8nWorkflow::generateWorkflowName($organizationId, $customName);
+
+            // Update workflow data with standardized name
+            $workflowData['name'] = $standardizedName;
+
+            // Log the standardization process
+            Log::info('Creating workflow with standardized naming', [
+                'original_name' => $request->input('name'),
+                'custom_name' => $customName,
+                'standardized_name' => $standardizedName,
+                'organization_id' => $organizationId,
+                'created_by' => $createdBy
+            ]);
+
             // Create workflow in N8N
             $n8nWorkflow = $this->n8nService->createWorkflow($workflowData);
 
@@ -103,7 +124,13 @@ class N8nController extends BaseApiController
             $response = [
                 'n8n_workflow' => $n8nWorkflow,
                 'database_storage' => 'failed',
-                'database_error' => null
+                'database_error' => null,
+                'naming_info' => [
+                    'original_name' => $request->input('name'),
+                    'custom_name' => $customName,
+                    'standardized_name' => $standardizedName,
+                    'organization_id' => $organizationId
+                ]
             ];
 
             try {
@@ -111,18 +138,16 @@ class N8nController extends BaseApiController
                 Log::info('Attempting to store workflow in database', [
                     'n8n_workflow_id' => $n8nWorkflow['data']['id'] ?? $n8nWorkflow['id'] ?? 'unknown',
                     'n8n_workflow_name' => $n8nWorkflow['data']['name'] ?? $n8nWorkflow['name'] ?? 'unknown',
-                    'organization_id' => auth()->user()?->organization_id,
-                    'created_by' => auth()->id()
+                    'standardized_name' => $standardizedName,
+                    'organization_id' => $organizationId,
+                    'created_by' => $createdBy
                 ]);
-
-                // Use default organization if no authenticated user
-                $organizationId = auth()->user()?->organization_id ?? \App\Models\Organization::first()?->id;
-                $createdBy = auth()->id();
 
                 $workflow = \App\Models\N8nWorkflow::createOrUpdateFromN8n(
                     $n8nWorkflow['data'] ?? $n8nWorkflow,
                     $organizationId,
-                    $createdBy
+                    $createdBy,
+                    $customName
                 );
 
                 // Log successful creation
@@ -130,6 +155,7 @@ class N8nController extends BaseApiController
                     'database_id' => $workflow->id,
                     'workflow_id' => $workflow->workflow_id,
                     'name' => $workflow->name,
+                    'standardized_name' => $standardizedName,
                     'created_at' => $workflow->created_at
                 ]);
 
@@ -142,12 +168,13 @@ class N8nController extends BaseApiController
                 $response['database_error'] = $dbException->getMessage();
                 Log::error('Failed to store workflow in database', [
                     'workflow_id' => $n8nWorkflow['data']['id'] ?? $n8nWorkflow['id'] ?? 'unknown',
+                    'standardized_name' => $standardizedName,
                     'error' => $dbException->getMessage(),
                     'trace' => $dbException->getTraceAsString()
                 ]);
             }
 
-            return $this->successResponse('Workflow created successfully', $response, 201);
+            return $this->successResponse('Workflow created successfully with standardized naming', $response, 201);
         } catch (Exception $e) {
             Log::error('Failed to create N8N workflow', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to create workflow', 500);

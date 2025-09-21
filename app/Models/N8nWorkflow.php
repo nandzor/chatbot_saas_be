@@ -535,6 +535,33 @@ class N8nWorkflow extends Model
     }
 
     /**
+     * Generate standardized workflow name with format: organization_id__count(001)
+     */
+    public static function generateWorkflowName(?string $organizationId = null, ?string $customName = null): string
+    {
+        // Use organization_id as base name, fallback to 'workflow' if not provided
+        $baseName = $organizationId ? $organizationId : 'workflow';
+
+        // If custom name provided, append it to base name
+        if ($customName) {
+            $cleanCustomName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $customName));
+            $baseName = $baseName . '_' . $cleanCustomName;
+        }
+
+        // Count existing workflows with similar name pattern for this organization
+        $query = self::query();
+        if ($organizationId) {
+            $query->where('organization_id', $organizationId);
+        }
+        $count = $query->where('name', 'like', $baseName . '__%')->count();
+
+        // Generate next number (001, 002, 003, etc.)
+        $nextNumber = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+
+        return $baseName . '__' . $nextNumber;
+    }
+
+    /**
      * Standardize N8N workflow payload for storage
      */
     public static function standardizePayload(array $n8nWorkflowData): array
@@ -545,7 +572,7 @@ class N8nWorkflow extends Model
             'description' => $n8nWorkflowData['description'] ?? null,
             'category' => $n8nWorkflowData['category'] ?? null,
             'tags' => $n8nWorkflowData['tags'] ?? [],
-            'workflow_data' => $n8nWorkflowData,
+            'workflow_data' => $n8nWorkflowData ?: [],
             'nodes' => $n8nWorkflowData['nodes'] ?? [],
             'connections' => $n8nWorkflowData['connections'] ?? [],
             'settings' => $n8nWorkflowData['settings'] ?? [],
@@ -575,7 +602,7 @@ class N8nWorkflow extends Model
     /**
      * Create or update workflow from N8N data
      */
-    public static function createOrUpdateFromN8n(array $n8nWorkflowData, ?string $organizationId = null, ?string $createdBy = null): self
+    public static function createOrUpdateFromN8n(array $n8nWorkflowData, ?string $organizationId = null, ?string $createdBy = null, ?string $customName = null): self
     {
         $standardizedData = self::standardizePayload($n8nWorkflowData);
 
@@ -586,15 +613,6 @@ class N8nWorkflow extends Model
         if ($createdBy) {
             $standardizedData['created_by'] = $createdBy;
         }
-
-        // Log the standardized data
-        \Log::info('Standardized workflow data for database storage', [
-            'workflow_id' => $standardizedData['workflow_id'],
-            'name' => $standardizedData['name'],
-            'organization_id' => $standardizedData['organization_id'] ?? null,
-            'created_by' => $standardizedData['created_by'] ?? null,
-            'data_keys' => array_keys($standardizedData)
-        ]);
 
         // Find existing workflow by N8N ID
         $workflow = self::where('workflow_id', $standardizedData['workflow_id'])->first();
@@ -608,10 +626,19 @@ class N8nWorkflow extends Model
             $workflow->update($standardizedData);
             return $workflow;
         } else {
-            // Create new workflow
-            \Log::info('Creating new workflow in database', [
+            // Generate standardized workflow name for new workflow
+            if ($organizationId) {
+                $standardizedData['name'] = self::generateWorkflowName($organizationId, $customName);
+            }
+
+            // Log the standardized data
+            \Log::info('Creating new workflow in database with standardized name', [
                 'workflow_id' => $standardizedData['workflow_id'],
-                'name' => $standardizedData['name']
+                'original_name' => $n8nWorkflowData['name'] ?? 'Untitled Workflow',
+                'standardized_name' => $standardizedData['name'],
+                'organization_id' => $standardizedData['organization_id'] ?? null,
+                'created_by' => $standardizedData['created_by'] ?? null,
+                'custom_name' => $customName
             ]);
 
             $workflow = self::create($standardizedData);
