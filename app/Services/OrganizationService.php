@@ -208,13 +208,13 @@ class OrganizationService extends BaseService
                 'webhook_enabled' => false,
                 'two_factor_enabled' => false,
                 'sso_enabled' => false,
-                'email_notifications' => json_encode(['admin' => true, 'user' => true]),
-                'push_notifications' => json_encode(['admin' => true, 'user' => true]),
-                'webhook_notifications' => json_encode(['enabled' => false]),
-                'chatbot_settings' => json_encode(['enabled' => false, 'max_bots' => 1]),
-                'analytics_settings' => json_encode(['enabled' => false]),
-                'integrations_settings' => json_encode(['enabled' => false]),
-                'custom_branding_settings' => json_encode(['enabled' => false]),
+                'email_notifications' => ['admin' => true, 'user' => true],
+                'push_notifications' => ['admin' => true, 'user' => true],
+                'webhook_notifications' => ['enabled' => false],
+                'chatbot_settings' => ['enabled' => false, 'max_bots' => 1],
+                'analytics_settings' => ['enabled' => false],
+                'integrations_settings' => ['enabled' => false],
+                'custom_branding_settings' => ['enabled' => false],
             ];
 
             // Generate unique org_code
@@ -239,12 +239,12 @@ class OrganizationService extends BaseService
                 'is_phone_verified' => false,
                 'two_factor_enabled' => false,
                 'permissions' => [],
-                'ui_preferences' => json_encode([
+                'ui_preferences' => [
                     'theme' => 'light',
                     'language' => $data['locale'] ?? 'id',
                     'timezone' => $data['timezone'] ?? 'Asia/Jakarta',
                     'notifications' => ['email' => true, 'push' => true]
-                ]),
+                ],
             ];
 
             // Create admin user
@@ -886,7 +886,7 @@ class OrganizationService extends BaseService
                 'is_active' => true,
                 'is_primary' => true,
                 'scope' => 'organization',
-                'scope_context' => json_encode(['organization_id' => $organizationId]),
+                'scope_context' => ['organization_id' => $organizationId],
                 'effective_from' => now(),
                 'assigned_by' => \Illuminate\Support\Facades\Auth::id(),
                 'assigned_reason' => 'User created with role assignment',
