@@ -2637,7 +2637,7 @@ class ClientManagementService
                 'is_email_verified' => false,
                 'is_phone_verified' => false,
                 'two_factor_enabled' => false,
-                'permissions' => json_encode([]),
+                'permissions' => [],
                 'created_at' => $now,
                 'updated_at' => $now
             ]);
@@ -2703,7 +2703,7 @@ class ClientManagementService
                     'is_active' => true,
                     'is_primary' => true,
                     'scope' => 'organization',
-                    'scope_context' => json_encode(['organization_id' => $organization->id]),
+                    'scope_context' => ['organization_id' => $organization->id],
                     'effective_from' => now(),
                     'assigned_by' => \Illuminate\Support\Facades\Auth::id(),
                     'assigned_reason' => 'User created with role assignment'

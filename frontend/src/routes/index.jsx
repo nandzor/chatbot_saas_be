@@ -10,6 +10,8 @@ import AgentLayout from '@/layouts/AgentLayout';
 // Auth Pages
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
+import RegisterOrganization from '@/pages/auth/RegisterOrganization';
+import VerifyOrganizationEmail from '@/pages/auth/VerifyOrganizationEmail';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
 import ResetPassword from '@/pages/auth/ResetPassword';
 import SuperAdminLogin from '@/pages/auth/SuperAdminLogin';
@@ -97,6 +99,8 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/auth/login" replace /> },
           { path: 'login', element: <Login /> },
           { path: 'register', element: <Register /> },
+          { path: 'register-organization', element: <RegisterOrganization /> },
+          { path: 'verify-organization-email', element: <VerifyOrganizationEmail /> },
           { path: 'forgot-password', element: <ForgotPassword /> },
           { path: 'reset-password', element: <ResetPassword /> },
         ],

@@ -7,7 +7,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  useLoadingStates,
   LoadingButton
 } from '@/utils/loadingStates';
 import {
@@ -44,11 +43,10 @@ const Login = () => {
   const [error, setError] = useState(null);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const { login, isLoading: authLoading } = useAuth();
+  const { login, isLoading: authLoading, error: authError } = useAuth();
   const navigate = useNavigate();
   const { announce } = useAnnouncement();
   const { focusRef, setFocus } = useFocusManagement();
-  const { setLoading, getLoadingState } = useLoadingStates();
 
   // Form fields configuration
   const formFields = [
@@ -73,7 +71,7 @@ const Login = () => {
     }
   ];
 
-  // Validation rules
+  // Validation rules - simplified for login (no complex password requirements)
   const validationRules = {
     email: {
       required: true,
@@ -86,10 +84,9 @@ const Login = () => {
     },
     password: {
       required: true,
-      minLength: 6,
       custom: (value) => {
-        if (!value || value.length < 6) {
-          return 'Password must be at least 6 characters';
+        if (!value || value.trim() === '') {
+          return 'Password is required';
         }
         return null;
       }
@@ -121,7 +118,6 @@ const Login = () => {
   // Handle form submission
   const handleSubmit = useCallback(async (values, options = {}) => {
     try {
-      setLoading('submit', true);
       setError(null);
 
       // Sanitize input
@@ -139,16 +135,10 @@ const Login = () => {
       announce(`Login successful! Redirecting to ${redirectPath}...`);
       navigate(redirectPath);
     } catch (err) {
-      const errorResult = handleError(err, {
-        context: 'Login',
-        showToast: true
-      });
-      setError(errorResult.message);
+      // AuthContext already handles error display, just announce the failure
       announce('Login failed. Please check your credentials.');
-    } finally {
-      setLoading('submit', false);
     }
-  }, [login, navigate, rememberMe, setLoading, announce, getRedirectPath]);
+  }, [login, navigate, rememberMe, announce, getRedirectPath]);
 
   // Handle remember me change
   const handleRememberMeChange = useCallback((e) => {
@@ -165,6 +155,12 @@ const Login = () => {
   const handleRegister = useCallback(() => {
     navigate('/auth/register');
     announce('Navigating to register page');
+  }, [navigate, announce]);
+
+  // Handle organization registration navigation
+  const handleRegisterOrganization = useCallback(() => {
+    navigate('/auth/register-organization');
+    announce('Navigating to organization registration page');
   }, [navigate, announce]);
 
   // Focus management on mount
@@ -188,14 +184,21 @@ const Login = () => {
             >
               create a new account
             </button>
+            {' '}or{' '}
+            <button
+              onClick={handleRegisterOrganization}
+              className="font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline"
+            >
+              register your organization
+            </button>
           </p>
         </div>
 
         {/* Error Alert */}
-        {error && (
+        {(error || authError) && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{error || authError}</AlertDescription>
           </Alert>
         )}
 
@@ -358,7 +361,7 @@ const Login = () => {
         </Card>
 
         {/* Loading Overlay */}
-        {getLoadingState('submit') && (
+        {authLoading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <Card className="p-6">
               <CardContent className="flex flex-col items-center space-y-4">

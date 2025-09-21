@@ -32,11 +32,13 @@ Route::prefix('n8n')->group(function () {
     Route::get('/workflows/{workflowId}/executions', [N8nController::class, 'getWorkflowExecutions']);
 
     // Execution routes
+    Route::get('/executions', [N8nController::class, 'getAllExecutions']);
     Route::get('/executions/{executionId}', [N8nController::class, 'getExecution']);
 
     // Credential management routes
     Route::get('/credentials', [N8nController::class, 'getCredentials']);
     Route::get('/credentials/{credentialId}', [N8nController::class, 'getCredential']);
+    Route::get('/credentials/schema/{credentialTypeName}', [N8nController::class, 'getCredentialSchema']);
     Route::post('/credentials', [N8nController::class, 'createCredential']);
     Route::put('/credentials/{credentialId}', [N8nController::class, 'updateCredential']);
     Route::delete('/credentials/{credentialId}', [N8nController::class, 'deleteCredential']);

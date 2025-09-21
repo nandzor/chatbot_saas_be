@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
         \App\Providers\EventServiceProvider::class,
         \App\Providers\NotificationServiceProvider::class,
+        \App\Providers\N8nServiceProvider::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         // Register middleware aliases
@@ -48,6 +49,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle.validation' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':20,1',
             'throttle.webhook' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':100,1',
             'throttle.subscription' => \Illuminate\Routing\Middleware\ThrottleRequests::class.':30,1',
+            'throttle.organization' => \App\Http\Middleware\OrganizationRegistrationThrottle::class,
+            'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
+            'input.sanitization' => \App\Http\Middleware\InputSanitization::class,
             'webhook.signature' => \App\Http\Middleware\WebhookSignatureMiddleware::class,
         ]);
 

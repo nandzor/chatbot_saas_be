@@ -221,7 +221,7 @@ class ApiExceptionHandler
             'method' => $request->method(),
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'user_id' => Auth::user()?->id ?? null,
+            'user_id' => self::getUserId(),
             'request_id' => $request->header('X-Request-ID'),
         ];
 
@@ -235,6 +235,18 @@ class ApiExceptionHandler
             Log::warning('API Client Error', $context);
         } else {
             Log::error('API Server Error', $context);
+        }
+    }
+
+    /**
+     * Get user ID safely, handling cases where Auth facade is not available.
+     */
+    private static function getUserId(): ?int
+    {
+        try {
+            return Auth::user()?->id ?? null;
+        } catch (\Exception $e) {
+            return null;
         }
     }
 

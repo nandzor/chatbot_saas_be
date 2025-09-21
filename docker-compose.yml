@@ -12,18 +12,6 @@ services:
       - "8443:443"
     env_file:
       - ./.env
-    environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - DB_CONNECTION=pgsql
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_DATABASE=cte
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=kambin
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - QUEUE_CONNECTION=database
     volumes:
       # Source code synchronization (development friendly)
       - .:/app

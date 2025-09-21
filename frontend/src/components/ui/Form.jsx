@@ -3,7 +3,7 @@
  * Form component dengan semua optimizations dan best practices
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   useDebounce,
   withPerformanceOptimization
@@ -21,8 +21,6 @@ import {
 } from '@/utils/errorHandler';
 import {
   validateInput,
-  sanitizeInput,
-  useSecureForm,
   useRateLimit
 } from '@/utils/securityUtils';
 import {
@@ -69,17 +67,29 @@ const Form = ({
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitAttempts, setSubmitAttempts] = useState(0);
+  const [, setSubmitAttempts] = useState(0);
   const [lastSaved, setLastSaved] = useState(null);
 
   const formRef = useRef(null);
   const { focusRef, setFocus } = useFocusManagement();
   const { announce } = useAnnouncement();
-  const { submitSecurely } = useSecureForm();
   const { isAllowed: canSubmit, getRemainingTime, resetAttempts } = useRateLimit(maxAttempts, 60000);
 
   // Debounced values for auto-save
   const debouncedValues = useDebounce(values, autoSaveDelay);
+
+  // Auto-save handler
+  const handleAutoSave = useCallback(async () => {
+    try {
+      if (onSubmit && typeof onSubmit === 'function') {
+        await onSubmit(values, { autoSave: true });
+        setLastSaved(new Date());
+        announce('Form auto-saved successfully');
+      }
+    } catch (error) {
+      handleValidationError(error, false);
+    }
+  }, [values, onSubmit, announce]);
 
   // Helper function to get nested value
   const getNestedValue = useCallback((obj, path) => {
@@ -114,7 +124,7 @@ const Form = ({
     if (autoSave && Object.keys(debouncedValues).length > 0 && lastSaved !== null) {
       handleAutoSave();
     }
-  }, [debouncedValues, autoSave]);
+  }, [debouncedValues, autoSave, handleAutoSave, lastSaved]);
 
   // Validate single field
   const validateField = useCallback((fieldName, value) => {
@@ -131,28 +141,30 @@ const Form = ({
     }
 
     if (actualValue && actualValue.toString().trim() !== '') {
-      // Type-specific validation
-      switch (field?.type) {
-        case 'email':
-          if (!validateInput.email(actualValue)) {
-            fieldErrors.push('Please enter a valid email address');
-          }
-          break;
-        case 'password':
-          if (!validateInput.password(actualValue)) {
-            fieldErrors.push('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
-          }
-          break;
-        case 'tel':
-          if (!validateInput.phoneNumber(actualValue)) {
-            fieldErrors.push('Please enter a valid phone number');
-          }
-          break;
-        case 'url':
-          if (!validateInput.url(actualValue)) {
-            fieldErrors.push('Please enter a valid URL');
-          }
-          break;
+      // Type-specific validation (only if no custom validation is provided)
+      if (!rules.custom) {
+        switch (field?.type) {
+          case 'email':
+            if (!validateInput.email(actualValue)) {
+              fieldErrors.push('Please enter a valid email address');
+            }
+            break;
+          case 'password':
+            if (!validateInput.password(actualValue)) {
+              fieldErrors.push('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
+            }
+            break;
+          case 'tel':
+            if (!validateInput.phoneNumber(actualValue)) {
+              fieldErrors.push('Please enter a valid phone number');
+            }
+            break;
+          case 'url':
+            if (!validateInput.url(actualValue)) {
+              fieldErrors.push('Please enter a valid URL');
+            }
+            break;
+        }
       }
 
       // Length validation
@@ -184,7 +196,7 @@ const Form = ({
     }
 
     return fieldErrors;
-  }, [fields, validationRules, values]);
+  }, [fields, validationRules, values, getNestedValue]);
 
   // Validate all fields
   const validateForm = useCallback(() => {
@@ -208,9 +220,8 @@ const Form = ({
   const handleFieldChange = useCallback((fieldName, value) => {
     // Convert null/undefined to empty string for form inputs
     const cleanValue = value === null || value === undefined ? '' : value;
-    const sanitizedValue = typeof cleanValue === 'string' ? sanitizeInput(cleanValue) : cleanValue;
 
-    setValues(prev => setNestedValue(prev, fieldName, sanitizedValue));
+    setValues(prev => setNestedValue(prev, fieldName, cleanValue));
 
     setTouched(prev => ({
       ...prev,
@@ -219,7 +230,7 @@ const Form = ({
 
     // Validate field if it's been touched
     if (touched[fieldName]) {
-      const fieldErrors = validateField(fieldName, sanitizedValue);
+      const fieldErrors = validateField(fieldName, cleanValue);
       setErrors(prev => ({
         ...prev,
         [fieldName]: fieldErrors.length > 0 ? fieldErrors[0] : undefined
@@ -240,19 +251,6 @@ const Form = ({
       [fieldName]: fieldErrors.length > 0 ? fieldErrors[0] : undefined
     }));
   }, [values, validateField]);
-
-  // Auto-save handler
-  const handleAutoSave = useCallback(async () => {
-    try {
-      if (onSubmit && typeof onSubmit === 'function') {
-        await onSubmit(values, { autoSave: true });
-        setLastSaved(new Date());
-        announce('Form auto-saved successfully');
-      }
-    } catch (error) {
-      handleValidationError(error, false);
-    }
-  }, [values, onSubmit, announce]);
 
   // Form submission
   const handleSubmit = useCallback(async (e) => {
@@ -294,7 +292,7 @@ const Form = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [validateForm, errors, canSubmit, getRemainingTime, values, onSubmit, announce, resetAttempts]);
+  }, [validateForm, errors, values, onSubmit, announce, resetAttempts]);
 
   // Form reset
   const handleReset = useCallback(() => {
@@ -316,13 +314,45 @@ const Form = ({
   const formProgress = useMemo(() => {
     if (!showProgress) return 0;
 
-    const requiredFields = fields.filter(field => validationRules[field.name]?.required);
-    const completedFields = requiredFields.filter(field => {
+    // Get all fields that should be considered for progress
+    const allFields = fields.filter(field => {
+      // Include required fields
+      if (validationRules[field.name]?.required) return true;
+      // Include fields that have values (optional fields that user filled)
       const value = getNestedValue(values, field.name);
       return value && value.toString().trim() !== '';
     });
 
-    return requiredFields.length > 0 ? (completedFields.length / requiredFields.length) * 100 : 0;
+    if (allFields.length === 0) return 0;
+
+    // Count completed fields
+    const completedFields = allFields.filter(field => {
+      const value = getNestedValue(values, field.name);
+
+      // Check if field has a meaningful value
+      if (!value || value.toString().trim() === '') return false;
+
+      // For select fields, check if a valid option is selected
+      if (field.type === 'select' && field.options) {
+        return field.options.some(option =>
+          (typeof option === 'object' ? option.value : option) === value
+        );
+      }
+
+      // For checkbox fields, check if checked
+      if (field.type === 'checkbox') {
+        return Boolean(value);
+      }
+
+      // For other fields, check if value meets minimum requirements
+      if (validationRules[field.name]?.minLength) {
+        return value.toString().length >= validationRules[field.name].minLength;
+      }
+
+      return true;
+    });
+
+    return (completedFields.length / allFields.length) * 100;
   }, [fields, values, validationRules, showProgress, getNestedValue]);
 
   // Render field
@@ -367,6 +397,26 @@ const Form = ({
           </select>
         );
         break;
+      case 'checkbox':
+        fieldElement = (
+          <div className="flex items-start">
+            <div className="flex items-center h-5">
+              <input
+                {...commonProps}
+                type="checkbox"
+                checked={Boolean(fieldValue)}
+                onChange={(e) => handleFieldChange(field.name, e.target.checked)}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+            </div>
+            <div className="ml-3 text-sm">
+              <label htmlFor={field.name} className="text-gray-700">
+                {field.label}
+              </label>
+            </div>
+          </div>
+        );
+        break;
       default:
         fieldElement = (
           <Input
@@ -389,9 +439,8 @@ const Form = ({
         {fieldElement}
       </AccessibleFormField>
     );
-  }, [values, errors, validationRules, isSubmitting, handleFieldChange, handleFieldBlur]);
+  }, [values, errors, validationRules, isSubmitting, handleFieldChange, handleFieldBlur, getNestedValue]);
 
-  const hasErrors = Object.keys(errors).length > 0;
   const remainingTime = Math.ceil(getRemainingTime() / 1000);
 
   return (
@@ -405,7 +454,7 @@ const Form = ({
 
           {showProgress && (
             <div className="text-right">
-              <Badge variant="outline">
+              <Badge variant="outline" className="text-xs">
                 {Math.round(formProgress)}% Complete
               </Badge>
             </div>
@@ -413,9 +462,9 @@ const Form = ({
         </div>
 
         {showProgress && (
-          <div className="w-full bg-secondary rounded-full h-2">
+          <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
             <div
-              className="bg-primary h-2 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-500 ease-out"
               style={{ width: `${formProgress}%` }}
             />
           </div>
@@ -424,8 +473,8 @@ const Form = ({
 
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-          {/* Rate limit warning */}
-          {!canSubmit() && (
+          {/* Rate limit warning - disabled for development */}
+          {false && !canSubmit() && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>

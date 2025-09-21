@@ -59,7 +59,6 @@ class N8nController extends BaseApiController
                 'name' => 'required|string|max:255',
                 'nodes' => 'array',
                 'connections' => 'array',
-                'active' => 'boolean',
                 'settings' => 'array',
             ]);
 
@@ -196,6 +195,20 @@ class N8nController extends BaseApiController
     }
 
     /**
+     * Get all executions
+     */
+    public function getAllExecutions(): JsonResponse
+    {
+        try {
+            $executions = $this->n8nService->getAllExecutions();
+            return $this->successResponse('Executions retrieved successfully', $executions);
+        } catch (Exception $e) {
+            Log::error('Failed to get N8N executions', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to retrieve executions', 500);
+        }
+    }
+
+    /**
      * Get a specific execution
      */
     public function getExecution(string $executionId): JsonResponse
@@ -240,6 +253,23 @@ class N8nController extends BaseApiController
                 'error' => $e->getMessage()
             ]);
             return $this->errorResponse('Failed to retrieve credential', 500);
+        }
+    }
+
+    /**
+     * Get credential schema by type name
+     */
+    public function getCredentialSchema(string $credentialTypeName): JsonResponse
+    {
+        try {
+            $schema = $this->n8nService->getCredentialSchema($credentialTypeName);
+            return $this->successResponse('Credential schema retrieved successfully', $schema);
+        } catch (Exception $e) {
+            Log::error('Failed to get N8N credential schema', [
+                'credential_type' => $credentialTypeName,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to retrieve credential schema', 500);
         }
     }
 
@@ -349,6 +379,51 @@ class N8nController extends BaseApiController
         } catch (Exception $e) {
             Log::error('Failed to test N8N connection', ['error' => $e->getMessage()]);
             return $this->errorResponse('Failed to test N8N connection', 500);
+        }
+    }
+
+    /**
+     * Test N8N connection with real API
+     */
+    public function testConnectionReal(): JsonResponse
+    {
+        try {
+            // Create a new N8nService instance with real API configuration
+            $realN8nService = new \App\Services\N8n\N8nService([
+                'base_url' => 'http://localhost:5678',
+                'api_key' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhMmY1ZGNiNy0wYzdlLTQzZDItOWI3NS02YTZhNTlkNzA4NDgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4NDYwMTg3fQ.DtvTi6tiCgsdSQJraNS9Lfcsglw0Rp0mc7hBIJQRROk',
+                'timeout' => 10,
+                'retry_attempts' => 2,
+                'mock_responses' => false,
+            ]);
+
+            $result = $realN8nService->testConnection();
+            return $this->successResponse('N8N real API connection test completed', $result);
+        } catch (Exception $e) {
+            Log::error('Failed to test N8N real API connection', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to test N8N real API connection', 500);
+        }
+    }
+
+    /**
+     * Test N8N connection with forced mock mode
+     */
+    public function testConnectionMock(): JsonResponse
+    {
+        try {
+            // Force mock mode for testing
+            $mockService = new \App\Services\N8n\N8nService([
+                'base_url' => 'http://localhost:5678',
+                'api_key' => 'test-key',
+                'mock_responses' => true,
+                'timeout' => 30,
+            ]);
+
+            $result = $mockService->testConnection();
+            return $this->successResponse('N8N connection test completed (Mock Mode)', $result);
+        } catch (Exception $e) {
+            Log::error('Failed to test N8N connection in mock mode', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to test N8N connection in mock mode', 500);
         }
     }
 

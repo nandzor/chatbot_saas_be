@@ -7,6 +7,7 @@ class AuthService {
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout: 10000, // 10 seconds timeout
     });
 
     this.refreshPromise = null;
@@ -48,8 +49,10 @@ class AuthService {
       async (error) => {
         const originalRequest = error.config;
 
-        // If 401 and not already retrying
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Don't try to refresh tokens for login requests or if already retrying
+        const isLoginRequest = originalRequest.url?.includes('/auth/login');
+
+        if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
           originalRequest._retry = true;
 
           try {
@@ -82,6 +85,8 @@ class AuthService {
    */
   async login(credentials) {
     try {
+      console.log('🔐 AuthService: Starting login with credentials:', { ...credentials, password: '[HIDDEN]' });
+
       // Validate credentials
       if (!credentials.email && !credentials.username) {
         throw new Error('Email or username is required');
@@ -96,7 +101,9 @@ class AuthService {
         ...(credentials.email ? { email: credentials.email } : { username: credentials.username })
       };
 
+      console.log('🔐 AuthService: Making API call to /auth/login');
       const response = await this.api.post('/auth/login', loginData);
+      console.log('🔐 AuthService: Received response:', response.data);
 
       if (response.data.success) {
         const { data } = response.data;
@@ -126,6 +133,7 @@ class AuthService {
 
       return response.data;
     } catch (error) {
+      console.log('🔐 AuthService: Login error:', error);
       throw error;
     }
   }

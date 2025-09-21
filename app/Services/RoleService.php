@@ -384,7 +384,7 @@ class RoleService extends BaseService
                     'is_active' => $options['is_active'] ?? true,
                     'is_primary' => $options['is_primary'] ?? false,
                     'scope' => $options['scope'] ?? 'organization',
-                    'scope_context' => json_encode($options['scope_context'] ?? $user->organization_id),
+                    'scope_context' => $options['scope_context'] ?? ['organization_id' => $user->organization_id],
                     'effective_from' => $options['effective_from'] ?? now(),
                     'effective_until' => $options['effective_until'] ?? null,
                     'assigned_by' => Auth::user()->id,

@@ -39,9 +39,9 @@ class UserPermissionObserver
      */
     public function saved(User $user): void
     {
-        // Only sync if role was changed or this is a new user
-        if ($user->wasRecentlyCreated || $user->isDirty('role')) {
-            $this->permissionSyncService->syncUserPermissions($user, true);
-        }
+        // Skip auto-sync permissions to avoid infinite loop
+        // if ($user->wasRecentlyCreated || $user->isDirty('role')) {
+        //     $this->permissionSyncService->syncUserPermissions($user, true);
+        // }
     }
 }
