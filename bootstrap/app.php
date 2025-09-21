@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
         \App\Providers\EventServiceProvider::class,
         \App\Providers\NotificationServiceProvider::class,
+        \App\Providers\N8nServiceProvider::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         // Register middleware aliases
