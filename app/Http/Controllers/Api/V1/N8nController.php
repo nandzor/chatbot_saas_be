@@ -193,6 +193,8 @@ class N8nController extends BaseApiController
                 'connections' => 'array',
                 'active' => 'boolean',
                 'settings' => 'array',
+                'staticData' => 'array',
+                'meta' => 'array',
             ]);
 
             $result = $this->n8nService->updateWorkflow($workflowId, $workflowData);
@@ -203,6 +205,86 @@ class N8nController extends BaseApiController
                 'error' => $e->getMessage()
             ]);
             return $this->errorResponse('Failed to update workflow', 500);
+        }
+    }
+
+    /**
+     * Update workflow system message
+     */
+    public function updateSystemMessage(Request $request, string $workflowId): JsonResponse
+    {
+        try {
+            $request->validate([
+                'system_message' => 'required|string',
+                'node_id' => 'string|nullable', // Optional: specific node ID to update
+            ]);
+
+            $systemMessage = $request->input('system_message');
+            $nodeId = $request->input('node_id', '153caa6f-c7eb-4556-8f62-deed794bb2b7'); // Default AI Agent node ID
+
+            // Get current workflow
+            $workflow = $this->n8nService->getWorkflow($workflowId);
+
+            // Check if workflow exists (response should have 'id' key)
+            if (!isset($workflow['id']) || $workflow['id'] !== $workflowId) {
+                return $this->errorResponse('Workflow not found', 404);
+            }
+
+            $workflowData = $workflow;
+            $nodes = $workflowData['nodes'] ?? [];
+
+            // Find and update the AI Agent node
+            $nodeUpdated = false;
+            foreach ($nodes as &$node) {
+                if ($node['id'] === $nodeId && isset($node['parameters']['options']['systemMessage'])) {
+                    $node['parameters']['options']['systemMessage'] = $systemMessage;
+                    $nodeUpdated = true;
+                    break;
+                }
+            }
+
+            if (!$nodeUpdated) {
+                return $this->errorResponse('AI Agent node not found or systemMessage not found', 404);
+            }
+
+            // Update workflow with modified nodes
+            $updateData = [
+                'name' => $workflowData['name'],
+                'nodes' => $nodes,
+                'connections' => $workflowData['connections'] ?? [],
+                'settings' => $workflowData['settings'] ?? [],
+                'staticData' => $workflowData['staticData'] ?? [],
+                'meta' => $workflowData['meta'] ?? [],
+            ];
+
+            // Clean the payload for N8N API
+            $cleanUpdateData = $this->n8nService->cleanWorkflowPayloadForN8n($updateData);
+            $result = $this->n8nService->updateWorkflow($workflowId, $cleanUpdateData);
+
+            // Check if update was successful (N8N API returns workflow data on success)
+            if (isset($result['id']) && $result['id'] === $workflowId) {
+                // Also update in database
+                $dbWorkflow = \App\Models\N8nWorkflow::where('workflow_id', $workflowId)->first();
+                if ($dbWorkflow) {
+                    $workflowData = $dbWorkflow->workflow_data;
+                    $workflowData['nodes'] = $nodes;
+                    $dbWorkflow->update(['workflow_data' => $workflowData]);
+                }
+            }
+
+            return $this->successResponse('System message updated successfully', [
+                'workflow_id' => $workflowId,
+                'node_id' => $nodeId,
+                'system_message_length' => strlen($systemMessage),
+                'updated_at' => now()
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('Failed to update system message', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to update system message', 500);
         }
     }
 

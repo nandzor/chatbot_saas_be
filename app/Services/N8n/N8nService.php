@@ -731,10 +731,10 @@ class N8nService extends BaseHttpClient
     /**
      * Clean workflow payload for N8N API
      */
-    private function cleanWorkflowPayloadForN8n(array $workflowData): array
+    public function cleanWorkflowPayloadForN8n(array $workflowData): array
     {
-        // Only include fields that N8N API recognizes
-        $allowedFields = ['name', 'nodes', 'connections', 'settings', 'staticData', 'shared'];
+        // Only include fields that N8N API recognizes for updates
+        $allowedFields = ['name', 'nodes', 'connections', 'settings', 'staticData'];
         $cleanPayload = [];
 
         foreach ($allowedFields as $field) {
@@ -749,7 +749,6 @@ class N8nService extends BaseHttpClient
         $cleanPayload['connections'] = (object)($cleanPayload['connections'] ?? []); // N8N expects object
         $cleanPayload['settings'] = (object)($cleanPayload['settings'] ?? []); // N8N expects object
         $cleanPayload['staticData'] = (object)($cleanPayload['staticData'] ?? []); // N8N expects object
-        $cleanPayload['shared'] = $cleanPayload['shared'] ?? [];
 
         // Fix nodes structure - ensure parameters is object for each node
         if (isset($cleanPayload['nodes']) && is_array($cleanPayload['nodes'])) {

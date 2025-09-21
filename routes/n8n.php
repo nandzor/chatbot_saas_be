@@ -23,6 +23,7 @@ Route::prefix('n8n')->group(function () {
     Route::get('/workflows/{workflowId}', [N8nController::class, 'getWorkflow']);
     Route::post('/workflows', [N8nController::class, 'createWorkflow']);
     Route::put('/workflows/{workflowId}', [N8nController::class, 'updateWorkflow']);
+    Route::put('/workflows/{workflowId}/system-message', [N8nController::class, 'updateSystemMessage']);
     Route::delete('/workflows/{workflowId}', [N8nController::class, 'deleteWorkflow']);
 
     // Workflow execution routes
