@@ -18,7 +18,7 @@ return new class extends Migration
             $table->uuid('user_id')->nullable();
             $table->string('action', 50);
             $table->string('resource_type', 50)->nullable();
-            $table->unsignedBigInteger('resource_id')->nullable();
+            $table->uuid('resource_id')->nullable();
             $table->json('old_values')->nullable();
             $table->json('new_values')->nullable();
             $table->string('ip_address', 45)->nullable();

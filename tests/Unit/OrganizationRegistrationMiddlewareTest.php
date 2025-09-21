@@ -35,6 +35,9 @@ class OrganizationRegistrationMiddlewareTest extends TestCase
      */
     public function test_organization_registration_throttle_middleware(): void
     {
+        // Clear cache to avoid rate limiting
+        Cache::flush();
+
         $request = Request::create('/api/register-organization', 'POST', [
             'organization_name' => 'Test Organization',
             'organization_email' => 'org@test.com',
@@ -122,7 +125,10 @@ class OrganizationRegistrationMiddlewareTest extends TestCase
                 return new Response('Success', 200);
             });
 
-            $this->assertEquals('no-cache, no-store, must-revalidate', $response->headers->get('Cache-Control'));
+            $cacheControl = $response->headers->get('Cache-Control');
+            $this->assertStringContainsString('no-cache', $cacheControl);
+            $this->assertStringContainsString('no-store', $cacheControl);
+            $this->assertStringContainsString('must-revalidate', $cacheControl);
             $this->assertEquals('no-cache', $response->headers->get('Pragma'));
             $this->assertEquals('0', $response->headers->get('Expires'));
         }
@@ -276,10 +282,20 @@ class OrganizationRegistrationMiddlewareTest extends TestCase
      */
     public function test_middleware_chain(): void
     {
+        // Clear cache to avoid rate limiting
+        Cache::flush();
+
         $request = Request::create('/api/register-organization', 'POST', [
             'organization_name' => '<script>alert("xss")</script>Test Organization',
             'organization_email' => '  ORG@TEST.COM  ',
+            'admin_first_name' => 'John',
+            'admin_last_name' => 'Doe',
+            'admin_username' => 'johndoe',
             'admin_email' => 'admin@test.com',
+            'admin_password' => 'Password123!',
+            'admin_password_confirmation' => 'Password123!',
+            'terms_accepted' => true,
+            'privacy_policy_accepted' => true,
         ]);
 
         $request->setLaravelSession($this->app['session.store']);

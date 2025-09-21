@@ -86,6 +86,7 @@ class OrganizationRegistrationServiceTest extends TestCase
     {
         // Mock database error
         DB::shouldReceive('beginTransaction')->andThrow(new \Exception('Database error'));
+        DB::shouldReceive('rollBack')->andReturn(true);
 
         $data = [
             'organization_name' => 'Test Organization',

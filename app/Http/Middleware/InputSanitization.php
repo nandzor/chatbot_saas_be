@@ -16,10 +16,10 @@ class InputSanitization
     public function handle(Request $request, Closure $next): Response
     {
         // Only apply to organization registration endpoints
-        if ($request->is('api/register-organization') || 
-            $request->is('api/verify-organization-email') || 
+        if ($request->is('api/register-organization') ||
+            $request->is('api/verify-organization-email') ||
             $request->is('api/resend-verification')) {
-            
+
             $this->sanitizeInput($request);
         }
 
@@ -58,13 +58,21 @@ class InputSanitization
             if (isset($input[$field]) && is_string($input[$field])) {
                 // Remove null bytes and control characters
                 $input[$field] = str_replace(["\0", "\x00"], '', $input[$field]);
-                
+
+                // Remove script tags and other potentially dangerous HTML
+                $input[$field] = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', '', $input[$field]);
+                $input[$field] = preg_replace('/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/mi', '', $input[$field]);
+                $input[$field] = preg_replace('/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/mi', '', $input[$field]);
+                $input[$field] = preg_replace('/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/mi', '', $input[$field]);
+                $input[$field] = preg_replace('/<link\b[^>]*>/mi', '', $input[$field]);
+                $input[$field] = preg_replace('/<meta\b[^>]*>/mi', '', $input[$field]);
+
                 // Trim whitespace
                 $input[$field] = trim($input[$field]);
-                
+
                 // Normalize line endings
                 $input[$field] = str_replace(["\r\n", "\r"], "\n", $input[$field]);
-                
+
                 // Limit length to prevent buffer overflow attacks
                 if (strlen($input[$field]) > 10000) {
                     $input[$field] = substr($input[$field], 0, 10000);
@@ -84,6 +92,11 @@ class InputSanitization
         // Sanitize URL fields
         if (isset($input['organization_website'])) {
             $input['organization_website'] = filter_var($input['organization_website'], FILTER_SANITIZE_URL);
+
+            // If URL is invalid after sanitization, set to empty string
+            if (!filter_var($input['organization_website'], FILTER_VALIDATE_URL)) {
+                $input['organization_website'] = '';
+            }
         }
 
         // Sanitize phone numbers
@@ -92,7 +105,7 @@ class InputSanitization
             if (isset($input[$field])) {
                 // Remove all non-digit characters except + at the beginning
                 $input[$field] = preg_replace('/[^\d+]/', '', $input[$field]);
-                
+
                 // Ensure + is only at the beginning
                 if (strpos($input[$field], '+') !== 0 && strpos($input[$field], '+') !== false) {
                     $input[$field] = str_replace('+', '', $input[$field]);
@@ -102,8 +115,8 @@ class InputSanitization
 
         // Sanitize tax ID
         if (isset($input['tax_id'])) {
-            // Remove all non-alphanumeric characters except hyphens
-            $input['tax_id'] = preg_replace('/[^A-Z0-9-]/', '', strtoupper($input[$field]));
+            // Remove all non-alphanumeric characters
+            $input['tax_id'] = preg_replace('/[^A-Z0-9]/', '', strtoupper($input['tax_id']));
         }
 
         // Sanitize boolean fields

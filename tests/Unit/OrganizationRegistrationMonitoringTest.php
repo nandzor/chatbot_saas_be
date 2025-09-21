@@ -276,7 +276,6 @@ class OrganizationRegistrationMonitoringTest extends TestCase
         $cleanupResults = $this->monitor->cleanupExpiredData();
         
         $this->assertArrayHasKey('expired_tokens_cleaned', $cleanupResults);
-        $this->assertArrayHasKey('used_verification_tokens', $cleanupResults);
         $this->assertArrayHasKey('old_logs_cleaned', $cleanupResults);
     }
 

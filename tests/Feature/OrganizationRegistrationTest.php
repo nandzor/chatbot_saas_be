@@ -20,6 +20,9 @@ class OrganizationRegistrationTest extends TestCase
     {
         parent::setUp();
         Mail::fake();
+
+        // Bypass rate limiting for tests
+        Cache::flush();
     }
 
     /**
@@ -329,6 +332,7 @@ class OrganizationRegistrationTest extends TestCase
             'organization_email' => 'org@test.com',
             'admin_first_name' => 'John',
             'admin_last_name' => 'Doe',
+            'admin_username' => 'johndoe',
             'admin_email' => 'admin@test.com',
             'admin_password' => 'Password123!',
             'admin_password_confirmation' => 'Password123!',
@@ -356,6 +360,7 @@ class OrganizationRegistrationTest extends TestCase
             'organization_email' => '  ORG@TEST.COM  ', // Should be lowercased and trimmed
             'admin_first_name' => '  John  ',
             'admin_last_name' => 'Doe',
+            'admin_username' => 'johndoe',
             'admin_email' => '  ADMIN@TEST.COM  ',
             'admin_password' => 'Password123!',
             'admin_password_confirmation' => 'Password123!',
@@ -407,6 +412,7 @@ class OrganizationRegistrationTest extends TestCase
             'organization_email' => 'org@test.com',
             'admin_first_name' => 'John',
             'admin_last_name' => 'Doe',
+            'admin_username' => 'johndoe',
             'admin_email' => 'admin@test.com',
             'admin_password' => 'Password123!',
             'admin_password_confirmation' => 'Password123!',
@@ -438,6 +444,7 @@ class OrganizationRegistrationTest extends TestCase
             'organization_email' => 'org@test.com',
             'admin_first_name' => 'John',
             'admin_last_name' => 'Doe',
+            'admin_username' => 'johndoe',
             'admin_email' => 'admin@test.com',
             'admin_password' => 'Password123!',
             'admin_password_confirmation' => 'Password123!',
@@ -464,6 +471,7 @@ class OrganizationRegistrationTest extends TestCase
             'organization_email' => 'org@test.com',
             'admin_first_name' => 'John',
             'admin_last_name' => 'Doe',
+            'admin_username' => 'johndoe',
             'admin_email' => 'admin@test.com',
             'admin_password' => 'Password123!',
             'admin_password_confirmation' => 'Password123!',
