@@ -478,29 +478,6 @@ class N8nController extends BaseApiController
     }
 
     /**
-     * Test N8N connection with real API
-     */
-    public function testConnectionReal(): JsonResponse
-    {
-        try {
-            // Create a new N8nService instance with real API configuration
-            $realN8nService = new \App\Services\N8n\N8nService([
-                'base_url' => 'http://localhost:5678',
-                'api_key' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhMmY1ZGNiNy0wYzdlLTQzZDItOWI3NS02YTZhNTlkNzA4NDgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4NDYwMTg3fQ.DtvTi6tiCgsdSQJraNS9Lfcsglw0Rp0mc7hBIJQRROk',
-                'timeout' => 10,
-                'retry_attempts' => 2,
-                'mock_responses' => false,
-            ]);
-
-            $result = $realN8nService->testConnection();
-            return $this->successResponse('N8N real API connection test completed', $result);
-        } catch (Exception $e) {
-            Log::error('Failed to test N8N real API connection', ['error' => $e->getMessage()]);
-            return $this->errorResponse('Failed to test N8N real API connection', 500);
-        }
-    }
-
-    /**
      * Test N8N connection with forced mock mode
      */
     public function testConnectionMock(): JsonResponse
