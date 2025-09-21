@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class N8nWorkflow extends Model
 {
@@ -619,7 +620,7 @@ class N8nWorkflow extends Model
 
         if ($workflow) {
             // Update existing workflow
-            \Log::info('Updating existing workflow in database', [
+            Log::info('Updating existing workflow in database', [
                 'database_id' => $workflow->id,
                 'workflow_id' => $workflow->workflow_id
             ]);
@@ -632,7 +633,7 @@ class N8nWorkflow extends Model
             }
 
             // Log the standardized data
-            \Log::info('Creating new workflow in database with standardized name', [
+            Log::info('Creating new workflow in database with standardized name', [
                 'workflow_id' => $standardizedData['workflow_id'],
                 'original_name' => $n8nWorkflowData['name'] ?? 'Untitled Workflow',
                 'standardized_name' => $standardizedData['name'],
@@ -643,7 +644,7 @@ class N8nWorkflow extends Model
 
             $workflow = self::create($standardizedData);
 
-            \Log::info('Successfully created workflow in database', [
+            Log::info('Successfully created workflow in database', [
                 'database_id' => $workflow->id,
                 'workflow_id' => $workflow->workflow_id,
                 'name' => $workflow->name,
