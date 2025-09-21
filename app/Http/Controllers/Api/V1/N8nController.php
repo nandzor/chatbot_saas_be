@@ -268,7 +268,10 @@ class N8nController extends BaseApiController
                 if ($dbWorkflow) {
                     $workflowData = $dbWorkflow->workflow_data;
                     $workflowData['nodes'] = $nodes;
-                    $dbWorkflow->update(['workflow_data' => $workflowData]);
+                    $dbWorkflow->update([
+                        'workflow_data' => $workflowData,
+                        'nodes' => $nodes  // Update nodes field as well
+                    ]);
                 }
             }
 
