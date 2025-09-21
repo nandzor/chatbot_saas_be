@@ -185,8 +185,59 @@ class N8nController extends BaseApiController
     public function deleteWorkflow(string $workflowId): JsonResponse
     {
         try {
+            // Delete workflow from N8N
             $result = $this->n8nService->deleteWorkflow($workflowId);
-            return $this->successResponse('Workflow deleted successfully', $result);
+
+            // Try to delete workflow from database (with fallback)
+            $response = [
+                'n8n_deletion' => $result,
+                'database_deletion' => 'failed',
+                'database_error' => null
+            ];
+
+            try {
+                // Log the deletion attempt
+                Log::info('Attempting to delete workflow from database', [
+                    'workflow_id' => $workflowId
+                ]);
+
+                // Find and delete workflow from database
+                $workflow = \App\Models\N8nWorkflow::where('workflow_id', $workflowId)->first();
+
+                if ($workflow) {
+                    $workflow->delete();
+
+                    // Log successful deletion
+                    Log::info('Successfully deleted workflow from database', [
+                        'database_id' => $workflow->id,
+                        'workflow_id' => $workflow->workflow_id,
+                        'name' => $workflow->name
+                    ]);
+
+                    $response['database_deletion'] = 'success';
+                    $response['deleted_workflow'] = [
+                        'database_id' => $workflow->id,
+                        'workflow_id' => $workflow->workflow_id,
+                        'name' => $workflow->name
+                    ];
+                } else {
+                    $response['database_deletion'] = 'not_found';
+                    $response['database_message'] = 'Workflow not found in database';
+                    Log::info('Workflow not found in database for deletion', [
+                        'workflow_id' => $workflowId
+                    ]);
+                }
+            } catch (Exception $dbException) {
+                $response['database_deletion'] = 'failed';
+                $response['database_error'] = $dbException->getMessage();
+                Log::error('Failed to delete workflow from database', [
+                    'workflow_id' => $workflowId,
+                    'error' => $dbException->getMessage(),
+                    'trace' => $dbException->getTraceAsString()
+                ]);
+            }
+
+            return $this->successResponse('Workflow deleted successfully', $response);
         } catch (Exception $e) {
             Log::error('Failed to delete N8N workflow', [
                 'workflow_id' => $workflowId,
