@@ -141,28 +141,30 @@ const Form = ({
     }
 
     if (actualValue && actualValue.toString().trim() !== '') {
-      // Type-specific validation
-      switch (field?.type) {
-        case 'email':
-          if (!validateInput.email(actualValue)) {
-            fieldErrors.push('Please enter a valid email address');
-          }
-          break;
-        case 'password':
-          if (!validateInput.password(actualValue)) {
-            fieldErrors.push('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
-          }
-          break;
-        case 'tel':
-          if (!validateInput.phoneNumber(actualValue)) {
-            fieldErrors.push('Please enter a valid phone number');
-          }
-          break;
-        case 'url':
-          if (!validateInput.url(actualValue)) {
-            fieldErrors.push('Please enter a valid URL');
-          }
-          break;
+      // Type-specific validation (only if no custom validation is provided)
+      if (!rules.custom) {
+        switch (field?.type) {
+          case 'email':
+            if (!validateInput.email(actualValue)) {
+              fieldErrors.push('Please enter a valid email address');
+            }
+            break;
+          case 'password':
+            if (!validateInput.password(actualValue)) {
+              fieldErrors.push('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
+            }
+            break;
+          case 'tel':
+            if (!validateInput.phoneNumber(actualValue)) {
+              fieldErrors.push('Please enter a valid phone number');
+            }
+            break;
+          case 'url':
+            if (!validateInput.url(actualValue)) {
+              fieldErrors.push('Please enter a valid URL');
+            }
+            break;
+        }
       }
 
       // Length validation

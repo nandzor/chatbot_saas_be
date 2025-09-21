@@ -161,6 +161,7 @@ export const AuthProvider = ({ children }) => {
 
   // Login function with unified auth support
   const login = useCallback(async (usernameOrEmail, password) => {
+    console.log('🔐 AuthContext: Starting login process');
     setIsLoading(true);
     setError(null);
 
@@ -176,8 +177,12 @@ export const AuthProvider = ({ children }) => {
         ...(usernameOrEmail.includes('@') ? { email: usernameOrEmail } : { username: usernameOrEmail })
       };
 
+      console.log('🔐 AuthContext: Calling authService.login with credentials:', { ...credentials, password: '[HIDDEN]' });
+
       // Call unified auth service
       const response = await authService.login(credentials);
+
+      console.log('🔐 AuthContext: Received response from authService:', response);
 
       if (response.success) {
         const userData = response.data.user;
@@ -216,19 +221,23 @@ export const AuthProvider = ({ children }) => {
         throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
+      console.log('🔐 AuthContext: Login error caught:', error);
 
       // Handle unified auth errors
       if (error.response?.data) {
         const authError = authService.handleAuthError(error);
+        console.log('🔐 AuthContext: Auth error handled:', authError);
         setError(authError.message);
         toaster.addToast(authError.message, 'error');
       } else {
+        console.log('🔐 AuthContext: Generic error:', error.message);
         setError(error.message || 'Login failed');
         toaster.addToast(error.message || 'Login failed', 'error');
       }
 
       throw error;
     } finally {
+      console.log('🔐 AuthContext: Setting isLoading to false');
       setIsLoading(false);
     }
   }, [toaster]);
