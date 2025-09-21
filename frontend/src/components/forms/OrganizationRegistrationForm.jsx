@@ -3,11 +3,10 @@
  * Multi-step form for organization self-registration
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  useLoadingStates,
-  LoadingButton
+  useLoadingStates
 } from '@/utils/loadingStates';
 import {
   handleError,
@@ -24,17 +23,13 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Button,
   Alert,
   AlertDescription,
   Form
 } from '@/components/ui';
+import { StepProgress } from '@/components/ui/StepProgress';
 import {
-  Eye,
-  EyeOff,
   Mail,
   Lock,
   User,
@@ -54,11 +49,11 @@ import {
 const OrganizationRegistrationForm = () => {
   const navigate = useNavigate();
   const { announce } = useAnnouncement();
-  const { focusRef, setFocus } = useFocusManagement();
+  const { setFocus } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData] = useState({
     // Organization Information
     organization_name: '',
     organization_email: '',
@@ -91,13 +86,11 @@ const OrganizationRegistrationForm = () => {
     marketing_consent: false,
   });
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
   // Business type options
-  const businessTypes = [
+  const businessTypes = useMemo(() => [
     { value: 'startup', label: 'Startup' },
     { value: 'small_business', label: 'Small Business' },
     { value: 'medium_business', label: 'Medium Business' },
@@ -111,20 +104,20 @@ const OrganizationRegistrationForm = () => {
     { value: 'retail', label: 'Retail' },
     { value: 'manufacturing', label: 'Manufacturing' },
     { value: 'other', label: 'Other' },
-  ];
+  ], []);
 
   // Company size options
-  const companySizes = [
+  const companySizes = useMemo(() => [
     { value: '1-10', label: '1-10 employees' },
     { value: '11-50', label: '11-50 employees' },
     { value: '51-200', label: '51-200 employees' },
     { value: '201-500', label: '201-500 employees' },
     { value: '501-1000', label: '501-1000 employees' },
     { value: '1000+', label: '1000+ employees' },
-  ];
+  ], []);
 
   // Form steps configuration
-  const steps = [
+  const steps = useMemo(() => [
     {
       id: 1,
       title: 'Organization Information',
@@ -149,10 +142,10 @@ const OrganizationRegistrationForm = () => {
       description: 'Review and accept terms',
       icon: Shield,
     },
-  ];
+  ], []);
 
   // Step 1: Organization Information
-  const organizationFields = [
+  const organizationFields = useMemo(() => [
     {
       name: 'organization_name',
       type: 'text',
@@ -233,10 +226,10 @@ const OrganizationRegistrationForm = () => {
       required: false,
       icon: FileText,
     },
-  ];
+  ], [businessTypes, companySizes]);
 
   // Step 2: Admin User Information
-  const adminFields = [
+  const adminFields = useMemo(() => [
     {
       name: 'admin_first_name',
       type: 'text',
@@ -295,10 +288,10 @@ const OrganizationRegistrationForm = () => {
       required: false,
       icon: Phone,
     },
-  ];
+  ], []);
 
   // Step 3: Preferences
-  const preferenceFields = [
+  const preferenceFields = useMemo(() => [
     {
       name: 'timezone',
       type: 'select',
@@ -338,7 +331,32 @@ const OrganizationRegistrationForm = () => {
         { value: 'THB', label: 'Thai Baht (THB)' },
       ],
     },
-  ];
+  ], []);
+
+  // Step 4: Terms and Conditions
+  const termsFields = useMemo(() => [
+    {
+      name: 'terms_accepted',
+      type: 'checkbox',
+      label: 'I agree to the Terms and Conditions',
+      required: true,
+      description: 'You must agree to the terms and conditions to continue',
+    },
+    {
+      name: 'privacy_policy_accepted',
+      type: 'checkbox',
+      label: 'I agree to the Privacy Policy',
+      required: true,
+      description: 'You must agree to the privacy policy to continue',
+    },
+    {
+      name: 'marketing_consent',
+      type: 'checkbox',
+      label: 'I would like to receive marketing communications (optional)',
+      required: false,
+      description: 'Optional: Receive updates about new features and services',
+    },
+  ], []);
 
   // Validation rules
   const validationRules = {
@@ -350,7 +368,7 @@ const OrganizationRegistrationForm = () => {
         if (!validateInput.noScriptTags(value)) {
           return 'Invalid characters detected';
         }
-        if (!/^[a-zA-Z0-9\s\-\.\&\(\)]+$/.test(value)) {
+        if (!/^[a-zA-Z0-9\s\-.&()]+$/.test(value)) {
           return 'Organization name can only contain letters, numbers, spaces, and special characters: - . & ( )';
         }
         return null;
@@ -369,7 +387,7 @@ const OrganizationRegistrationForm = () => {
     },
     organization_phone: {
       required: false,
-      pattern: /^[\+]?[1-9][\d]{0,15}$/,
+      pattern: /^[+]?[1-9][\d]{0,15}$/,
       patternMessage: 'Please enter a valid phone number',
     },
     organization_website: {
@@ -447,13 +465,34 @@ const OrganizationRegistrationForm = () => {
     },
     admin_phone: {
       required: false,
-      pattern: /^[\+]?[1-9][\d]{0,15}$/,
+      pattern: /^[+]?[1-9][\d]{0,15}$/,
       patternMessage: 'Please enter a valid phone number',
+    },
+    terms_accepted: {
+      required: true,
+      custom: (value) => {
+        if (!value) {
+          return 'You must agree to the terms and conditions';
+        }
+        return null;
+      }
+    },
+    privacy_policy_accepted: {
+      required: true,
+      custom: (value) => {
+        if (!value) {
+          return 'You must agree to the privacy policy';
+        }
+        return null;
+      }
+    },
+    marketing_consent: {
+      required: false,
     },
   };
 
   // Handle form submission
-  const handleSubmit = useCallback(async (values, options = {}) => {
+  const handleSubmit = useCallback(async (values) => {
     try {
       setLoading('submit', true);
       setError(null);
@@ -476,7 +515,8 @@ const OrganizationRegistrationForm = () => {
       };
 
       // Call API
-      const response = await fetch('/api/register-organization', {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api';
+      const response = await fetch(`${apiBaseUrl}/register-organization`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -512,10 +552,37 @@ const OrganizationRegistrationForm = () => {
     }
   }, [navigate, setLoading, announce]);
 
+  // Get current step fields
+  const getCurrentStepFields = useCallback(() => {
+    switch (currentStep) {
+      case 1:
+        return organizationFields;
+      case 2:
+        return adminFields;
+      case 3:
+        return preferenceFields;
+      case 4:
+        return termsFields;
+      default:
+        return [];
+    }
+  }, [currentStep, organizationFields, adminFields, preferenceFields, termsFields]);
+
+  // Validate current step - simplified to let Form component handle validation
+  const validateCurrentStep = useCallback(() => {
+    // The Form component will handle its own validation
+    // This is just a placeholder that always returns valid
+    // The actual validation happens in the Form component's onSubmit
+    return { isValid: true };
+  }, []);
+
   // Handle step navigation
-  const handleNextStep = useCallback(() => {
+  const handleNextStep = useCallback((values) => {
+    // If we get here, the Form component has already validated the fields
+    // So we can proceed to the next step
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
+      setError(null);
       announce(`Step ${currentStep + 1}: ${steps[currentStep].title}`);
     }
   }, [currentStep, steps, announce]);
@@ -526,20 +593,6 @@ const OrganizationRegistrationForm = () => {
       announce(`Step ${currentStep - 1}: ${steps[currentStep - 2].title}`);
     }
   }, [currentStep, steps, announce]);
-
-  // Get current step fields
-  const getCurrentStepFields = () => {
-    switch (currentStep) {
-      case 1:
-        return organizationFields;
-      case 2:
-        return adminFields;
-      case 3:
-        return preferenceFields;
-      default:
-        return [];
-    }
-  };
 
   // Focus management on step change
   useEffect(() => {
@@ -581,38 +634,18 @@ const OrganizationRegistrationForm = () => {
         </div>
 
         {/* Progress Steps */}
-        <div className="flex justify-center">
-          <div className="flex items-center space-x-4">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.id;
-              const isCompleted = currentStep > step.id;
-
-              return (
-                <div key={step.id} className="flex items-center">
-                  <div className={`
-                    flex items-center justify-center w-10 h-10 rounded-full border-2
-                    ${isActive ? 'border-indigo-600 bg-indigo-600 text-white' :
-                      isCompleted ? 'border-green-500 bg-green-500 text-white' :
-                      'border-gray-300 bg-white text-gray-500'}
-                  `}>
-                    {isCompleted ? (
-                      <CheckCircle className="w-5 h-5" />
-                    ) : (
-                      <Icon className="w-5 h-5" />
-                    )}
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className={`
-                      w-16 h-0.5 mx-2
-                      ${isCompleted ? 'bg-green-500' : 'bg-gray-300'}
-                    `} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <StepProgress
+          steps={steps.map(step => ({
+            title: step.title,
+            description: step.description,
+            icon: step.icon
+          }))}
+          currentStep={currentStep}
+          completedSteps={Array.from({ length: currentStep - 1 }, (_, i) => i + 1)}
+          showLabels={true}
+          showProgress={true}
+          className="mb-8"
+        />
 
         {/* Step Title */}
         <div className="text-center">
@@ -646,66 +679,6 @@ const OrganizationRegistrationForm = () => {
               autoSave={false}
               className=""
             >
-              {/* Step 4: Terms and Conditions */}
-              {currentStep === 4 && (
-                <div className="space-y-4">
-                  <div className="flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id="terms_accepted"
-                        name="terms_accepted"
-                        type="checkbox"
-                        required
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label htmlFor="terms_accepted" className="text-gray-700">
-                        I agree to the{' '}
-                        <a href="#" className="text-indigo-600 hover:text-indigo-500">
-                          Terms and Conditions
-                        </a>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id="privacy_policy_accepted"
-                        name="privacy_policy_accepted"
-                        type="checkbox"
-                        required
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label htmlFor="privacy_policy_accepted" className="text-gray-700">
-                        I agree to the{' '}
-                        <a href="#" className="text-indigo-600 hover:text-indigo-500">
-                          Privacy Policy
-                        </a>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id="marketing_consent"
-                        name="marketing_consent"
-                        type="checkbox"
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label htmlFor="marketing_consent" className="text-gray-700">
-                        I would like to receive marketing communications (optional)
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Navigation Buttons */}
               <div className="flex justify-between pt-6">

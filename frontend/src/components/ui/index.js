@@ -12,6 +12,7 @@ export { default as Badge } from './Badge';
 export { default as Skeleton } from './Skeleton';
 export { Alert, AlertDescription, AlertTitle } from './Alert';
 export { Progress } from './Progress';
+export { StepProgress, FieldProgress } from './StepProgress';
 export { default as Checkbox } from './Checkbox';
 export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './Select';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './Tabs';

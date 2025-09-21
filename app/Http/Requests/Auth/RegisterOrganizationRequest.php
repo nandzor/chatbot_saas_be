@@ -33,7 +33,7 @@ class RegisterOrganizationRequest extends FormRequest
             ],
             'organization_email' => [
                 'required',
-                'email:rfc,dns',
+                app()->environment('local', 'testing') ? 'email:rfc' : 'email:rfc,dns',
                 'max:255',
                 'unique:organizations,email',
                 'different:admin_email',
@@ -111,7 +111,7 @@ class RegisterOrganizationRequest extends FormRequest
             ],
             'admin_email' => [
                 'required',
-                'email:rfc,dns',
+                app()->environment('local', 'testing') ? 'email:rfc' : 'email:rfc,dns',
                 'max:255',
                 'unique:users,email',
                 'different:organization_email',

@@ -24,8 +24,8 @@ class OrganizationRegistrationThrottle
      */
     public function handle(Request $request, Closure $next, int $maxAttempts = 3, int $decayMinutes = 15): Response
     {
-        // Skip rate limiting in testing environment
-        if (app()->environment('testing')) {
+        // Skip rate limiting in testing and local environment
+        if (app()->environment('testing', 'local')) {
             return $next($request);
         }
 
