@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Services\Waha\WahaService;
 use App\Services\Waha\WahaSyncService;
+use App\Services\Waha\WahaSessionService;
 use App\Services\N8n\N8nService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,12 +17,18 @@ class WahaController extends BaseApiController
 {
     protected WahaService $wahaService;
     protected WahaSyncService $wahaSyncService;
+    protected WahaSessionService $wahaSessionService;
     protected N8nService $n8nService;
 
-    public function __construct(WahaService $wahaService, WahaSyncService $wahaSyncService, N8nService $n8nService)
-    {
+    public function __construct(
+        WahaService $wahaService,
+        WahaSyncService $wahaSyncService,
+        WahaSessionService $wahaSessionService,
+        N8nService $n8nService
+    ) {
         $this->wahaService = $wahaService;
         $this->wahaSyncService = $wahaSyncService;
+        $this->wahaSessionService = $wahaSessionService;
         $this->n8nService = $n8nService;
     }
 
@@ -94,7 +101,7 @@ class WahaController extends BaseApiController
 
             // Validate the request payload if provided
             $validatedData = $request->validate([
-                'name' => 'nullable|string|max:255', // Made nullable since we'll generate it
+                'name' => 'nullable|string|max:255',
                 'start' => 'boolean',
                 'config' => 'nullable|array',
                 'config.metadata' => 'nullable|array',
@@ -114,84 +121,43 @@ class WahaController extends BaseApiController
                 'config.webhooks.*.customHeaders' => 'nullable|array',
             ]);
 
-            // Generate session name using UUID for better uniqueness
-            $localSessionName = isset($validatedData['name']) ? $validatedData['name'] : $this->generateUuidSessionName($organization->id);
-
-            // For WAHA Plus, we can use the actual session name (not forced to 'default')
-            // Keep the original session name for WAHA Plus compatibility
-            $wahaSessionName = isset($validatedData['name']) ? $validatedData['name'] : $localSessionName;
-
-            // Ensure the 'name' key is always present for WahaService
-            $validatedData['name'] = $wahaSessionName;
-
             // Add organization metadata to the config
-            if (!isset($validatedData['config'])) {
-                $validatedData['config'] = [];
-            }
-            if (!isset($validatedData['config']['metadata'])) {
-                $validatedData['config']['metadata'] = [];
-            }
+            $this->addOrganizationMetadata($validatedData, $organization);
 
-            // Add organization information to metadata
-            $validatedData['config']['metadata']['organization.id'] = $organization->id;
-            $validatedData['config']['metadata']['organization.name'] = $organization->name;
-            $validatedData['config']['metadata']['organization.code'] = $organization->org_code;
+            // Use service to create session with N8N integration
+            $result = $this->wahaSessionService->createSessionWithN8nIntegration($validatedData, $organization->id);
 
-            // Flatten nested metadata objects to string key-value pairs for WAHA API compatibility
-            $validatedData['config']['metadata'] = $this->flattenMetadata($validatedData['config']['metadata']);
-
-            // Create N8N workflow first to get webhookId
-            $n8nWorkflowResult = $this->createN8nWorkflowForWaha($organization->id, $localSessionName);
-            $n8nWebhookId = $n8nWorkflowResult['webhook_id'] ?? null;
-
-            // Update webhook configuration with N8N webhook if available
-            if ($n8nWebhookId && isset($validatedData['config']['webhooks'])) {
-                foreach ($validatedData['config']['webhooks'] as &$webhook) {
-                    if (empty($webhook['url']) || $webhook['url'] === config('waha.webhooks.default_url', '')) {
-                        $webhook['url'] = $this->generateN8nWebhookUrl($n8nWebhookId);
-                        $webhook['customHeaders'] = array_merge($webhook['customHeaders'] ?? [], [
-                            'X-Webhook-Source' => 'WAHA-Session',
-                            'X-Organization-ID' => $organization->id,
-                            'X-N8N-Webhook-ID' => $n8nWebhookId
-                        ]);
-                    }
-                }
-            }
-
-            // Create session in 3rd party WAHA instance
-            $result = $this->wahaService->createSession($validatedData);
-
-            // Check if result is successful (either has 'success' field or has session data)
-            $isSuccess = ($result['success'] ?? false) || isset($result['name']) || isset($result['session']);
+            // Check if result is successful
+            $isSuccess = ($result['waha_session']['success'] ?? false) ||
+                        isset($result['waha_session']['name']) ||
+                        isset($result['waha_session']['session']);
 
             if ($isSuccess) {
-                // Create or update local session record with enhanced session name
+                // Create or update local session record
                 $localSession = $this->wahaSyncService->createOrUpdateLocalSession(
                     $organization->id,
-                    $localSessionName,
-                    $result
+                    $result['session_name'],
+                    $result['waha_session']
                 );
 
-                // Add N8N workflow info to the response (already created above)
-                $result['n8n_workflow'] = $n8nWorkflowResult;
-
                 $this->logApiAction('create_waha_session', [
-                    'session_name' => $localSessionName,
-                    'waha_session_name' => $wahaSessionName, // Actual session name for WAHA Plus
+                    'session_name' => $result['session_name'],
                     'organization_id' => $organization->id,
                     'local_session_id' => $localSession->id,
-                    'n8n_workflow_created' => $n8nWorkflowResult['success'] ?? false,
-                    'n8n_workflow_id' => $n8nWorkflowResult['n8n_workflow']['data']['id'] ?? null,
-                    'third_party_response' => $result,
+                    'n8n_workflow_created' => $result['n8n_workflow']['success'] ?? false,
+                    'n8n_workflow_id' => $result['n8n_workflow']['data']['id'] ?? null,
+                    'webhook_id' => $result['webhook_id'],
+                    'webhook_url' => $result['webhook_url'],
                 ]);
 
                 return $this->successResponse('Session created successfully with N8N workflow', [
                     'local_session_id' => $localSession->id,
                     'organization_id' => $organization->id,
-                    'session_name' => $localSessionName,
-                    'waha_session_name' => $wahaSessionName, // Actual session name for WAHA Plus
-                    'n8n_workflow' => $n8nWorkflowResult,
-                    'third_party_response' => $result,
+                    'session_name' => $result['session_name'],
+                    'n8n_workflow' => $result['n8n_workflow'],
+                    'webhook_id' => $result['webhook_id'],
+                    'webhook_url' => $result['webhook_url'],
+                    'third_party_response' => $result['waha_session'],
                     'status' => $localSession->status,
                 ]);
             }
@@ -842,67 +808,6 @@ class WahaController extends BaseApiController
         return $payload;
     }
 
-    /**
-     * Create N8N workflow for WAHA session
-     *
-     * @param string $organizationId The organization ID
-     * @param string $sessionName The WAHA session name
-     * @return array
-     */
-    private function createN8nWorkflowForWaha(string $organizationId, string $sessionName): array
-    {
-        try {
-            // Get workflow payload
-            $workflowPayload = $this->getWahaWorkflowPayload($organizationId);
-
-            // Update webhook ID in the first node to include session name for uniqueness
-            if (isset($workflowPayload['nodes'][0]['webhookId'])) {
-                $workflowPayload['nodes'][0]['webhookId'] = $organizationId . '_' . $sessionName;
-            }
-
-            // Create workflow using N8N service
-            $result = $this->n8nService->createWorkflowWithDatabase(
-                $workflowPayload,
-                $organizationId,
-                Auth::id(),
-                'waha_' . $sessionName
-            );
-
-            // Extract webhookId from the created workflow
-            $webhookId = null;
-            if (isset($result['n8n_workflow']['data']['nodes'][0]['webhookId'])) {
-                $webhookId = $result['n8n_workflow']['data']['nodes'][0]['webhookId'];
-            } elseif (isset($result['n8n_workflow']['nodes'][0]['webhookId'])) {
-                $webhookId = $result['n8n_workflow']['nodes'][0]['webhookId'];
-            }
-
-            // Add webhookId to the result
-            $result['webhook_id'] = $webhookId;
-            $result['webhook_url'] = $webhookId ? $this->generateN8nWebhookUrl($webhookId) : null;
-
-            Log::info('N8N workflow created for WAHA session', [
-                'organization_id' => $organizationId,
-                'session_name' => $sessionName,
-                'webhook_id' => $webhookId,
-                'webhook_url' => $result['webhook_url'],
-                'workflow_result' => $result
-            ]);
-
-            return $result;
-        } catch (Exception $e) {
-            Log::error('Failed to create N8N workflow for WAHA session', [
-                'organization_id' => $organizationId,
-                'session_name' => $sessionName,
-                'error' => $e->getMessage()
-            ]);
-
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'workflow_creation' => 'failed'
-            ];
-        }
-    }
 
     /**
      * Create session with automatic defaults - no frontend payload required
@@ -913,64 +818,43 @@ class WahaController extends BaseApiController
     private function createSessionWithDefaults($organization): JsonResponse
     {
         try {
-            // Generate unique session name
-            $localSessionName = $this->generateUuidSessionName($organization->id);
-            $wahaSessionName = $localSessionName;
-
-            // Create N8N workflow first to get webhookId
-            $n8nWorkflowResult = $this->createN8nWorkflowForWaha($organization->id, $localSessionName);
-            $n8nWebhookId = $n8nWorkflowResult['webhook_id'] ?? null;
-
-            // Build session data with sensible defaults including N8N webhook
-            $sessionData = [
-                'name' => $wahaSessionName,
-                'start' => true, // Auto-start the session
-                'config' => $this->getDefaultSessionConfig($organization, $n8nWebhookId)
-            ];
-
-            Log::info('Creating WAHA session with automatic defaults', [
-                'organization_id' => $organization->id,
-                'session_name' => $localSessionName,
-                'auto_start' => true
-            ]);
-
-            // Create session in 3rd party WAHA instance
-            $result = $this->wahaService->createSession($sessionData);
+            // Use service to create default session with N8N integration
+            $result = $this->wahaSessionService->createDefaultSessionWithN8nIntegration($organization);
 
             // Check if result is successful
-            $isSuccess = ($result['success'] ?? false) || isset($result['name']) || isset($result['session']);
+            $isSuccess = ($result['waha_session']['success'] ?? false) ||
+                        isset($result['waha_session']['name']) ||
+                        isset($result['waha_session']['session']);
 
             if ($isSuccess) {
                 // Create or update local session record
                 $localSession = $this->wahaSyncService->createOrUpdateLocalSession(
                     $organization->id,
-                    $localSessionName,
-                    $result
+                    $result['session_name'],
+                    $result['waha_session']
                 );
 
-                // Add N8N workflow info to the response (already created above)
-                $result['n8n_workflow'] = $n8nWorkflowResult;
-
                 $this->logApiAction('create_waha_session_auto', [
-                    'session_name' => $localSessionName,
-                    'waha_session_name' => $wahaSessionName,
+                    'session_name' => $result['session_name'],
                     'organization_id' => $organization->id,
                     'local_session_id' => $localSession->id,
                     'auto_created' => true,
-                    'n8n_workflow_created' => $n8nWorkflowResult['success'] ?? false,
-                    'n8n_workflow_id' => $n8nWorkflowResult['n8n_workflow']['data']['id'] ?? null,
-                    'third_party_response' => $result,
+                    'n8n_workflow_created' => $result['n8n_workflow']['success'] ?? false,
+                    'n8n_workflow_id' => $result['n8n_workflow']['data']['id'] ?? null,
+                    'webhook_id' => $result['webhook_id'],
+                    'webhook_url' => $result['webhook_url'],
                 ]);
 
                 return $this->successResponse('Session created successfully with automatic defaults and N8N workflow', [
                     'local_session_id' => $localSession->id,
                     'organization_id' => $organization->id,
-                    'session_name' => $localSessionName,
-                    'waha_session_name' => $wahaSessionName,
+                    'session_name' => $result['session_name'],
                     'auto_created' => true,
-                    'n8n_workflow' => $n8nWorkflowResult,
+                    'n8n_workflow' => $result['n8n_workflow'],
+                    'webhook_id' => $result['webhook_id'],
+                    'webhook_url' => $result['webhook_url'],
                     'status' => $localSession->status,
-                    'third_party_response' => $result,
+                    'third_party_response' => $result['waha_session'],
                 ]);
             }
 
@@ -985,69 +869,37 @@ class WahaController extends BaseApiController
     }
 
     /**
-     * Generate webhook URL for N8N workflow
+     * Add organization metadata to session configuration
      *
-     * @param string $webhookId The N8N webhook ID
-     * @return string The complete webhook URL
+     * @param array $validatedData Session data
+     * @param object $organization Organization object
+     * @return void
      */
-    private function generateN8nWebhookUrl(string $webhookId): string
+    private function addOrganizationMetadata(array &$validatedData, $organization): void
     {
-        $n8nBaseUrl = config('n8n.server.url', 'http://localhost:5678');
-        return rtrim($n8nBaseUrl, '/') . '/webhook/' . $webhookId;
+        // Ensure config structure exists
+        if (!isset($validatedData['config'])) {
+            $validatedData['config'] = [];
+        }
+        if (!isset($validatedData['config']['metadata'])) {
+            $validatedData['config']['metadata'] = [];
+        }
+
+        // Get user name instead of ID
+        $user = Auth::user();
+        $createdByName = $user ? ($user->first_name . ' ' . $user->last_name) : 'System';
+
+        // Add organization information to metadata (avoid duplication)
+        $validatedData['config']['metadata']['organization.id'] = $organization->id;
+        $validatedData['config']['metadata']['organization.name'] = $organization->name;
+        $validatedData['config']['metadata']['organization.code'] = $organization->org_code;
+        $validatedData['config']['metadata']['created_by'] = $createdByName;
+        $validatedData['config']['metadata']['created_at'] = now()->toISOString();
+
+        // Flatten nested metadata objects to string key-value pairs for WAHA API compatibility
+        $validatedData['config']['metadata'] = $this->flattenMetadata($validatedData['config']['metadata']);
     }
 
-    /**
-     * Get default session configuration for automatic session creation
-     *
-     * @param object $organization The organization object
-     * @param string|null $n8nWebhookId Optional N8N webhook ID
-     * @return array Default session configuration
-     */
-    private function getDefaultSessionConfig($organization, ?string $n8nWebhookId = null): array
-    {
-        // Determine webhook URL - prioritize N8N webhook if available
-        $webhookUrl = $n8nWebhookId
-            ? $this->generateN8nWebhookUrl($n8nWebhookId)
-            : config('waha.webhooks.default_url', '');
-
-        return [
-            'metadata' => $this->flattenMetadata([
-                'organization.id' => $organization->id,
-                'organization.name' => $organization->name,
-                'organization.code' => $organization->org_code,
-                'user.id' => 'system-auto',
-                'user.email' => 'system@auto.com',
-                'created_by' => 'backend-auto',
-                'created_at' => now()->toISOString(),
-                'n8n_webhook_id' => $n8nWebhookId,
-            ]),
-            'webhook_by_events' => false,
-            'events' => ['message', 'session.status'],
-            'reject_calls' => false,
-            'mark_online_on_chat' => true,
-            'debug' => true,
-            'proxy' => null,
-            'noweb' => [
-                'store' => [
-                    'enabled' => true,
-                    'fullSync' => false
-                ]
-            ],
-            'webhooks' => [
-                [
-                    'url' => $webhookUrl,
-                    'events' => ['message', 'session.status'],
-                    'hmac' => null,
-                    'retries' => 3,
-                    'customHeaders' => [
-                        'X-Webhook-Source' => 'WAHA-Session',
-                        'X-Organization-ID' => $organization->id,
-                        'X-N8N-Webhook-ID' => $n8nWebhookId ?? 'none'
-                    ]
-                ]
-            ]
-        ];
-    }
 
     /**
      * Generate a unique session name using UUID

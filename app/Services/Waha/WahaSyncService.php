@@ -752,18 +752,7 @@ class WahaSyncService
      */
     private function generateUniquePhoneNumber(string $sessionName): string
     {
-        // Create a hash of the session name to ensure uniqueness
-        $hash = substr(md5($sessionName), 0, 4);
-
-        // Convert hash to numeric format for phone number
-        $numericHash = '';
-        for ($i = 0; $i < strlen($hash); $i++) {
-            $numericHash .= ord($hash[$i]) % 10;
-        }
-
-        // Ensure we have at least 4 digits
-        $numericHash = str_pad($numericHash, 4, '0', STR_PAD_RIGHT);
-
-        return '+628123456' . $numericHash;
+        // Return "-" as requested for phone number in database
+        return '-';
     }
 }
