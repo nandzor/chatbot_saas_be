@@ -85,9 +85,16 @@ const WahaSessionManager = () => {
     goToFirstPage,
     goToLastPage,
     goToPreviousPage,
-    goToNextPage,
-    totalSessions
+    goToNextPage
   } = useWahaSessions();
+
+  // Debug logging
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log('WahaSessionManager - pagination:', pagination);
+    // eslint-disable-next-line no-console
+    console.log('WahaSessionManager - sessions:', sessions);
+  }
 
   const [showQRConnector, setShowQRConnector] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
@@ -491,14 +498,14 @@ const WahaSessionManager = () => {
       )}
 
       {/* Session Statistics Summary */}
-      {sessions.length > 0 && (
+      {pagination && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <Smartphone className="w-5 h-5 text-blue-500" />
                 <div>
-                  <div className="text-2xl font-bold">{totalSessions}</div>
+                  <div className="text-2xl font-bold">{pagination?.totalItems || 0}</div>
                   <div className="text-sm text-muted-foreground">Total Sessions</div>
                 </div>
               </div>
@@ -513,7 +520,7 @@ const WahaSessionManager = () => {
                   <div className="text-2xl font-bold">
                     {sessions.filter(s => s.is_connected && s.is_authenticated).length}
                   </div>
-                  <div className="text-sm text-muted-foreground">Connected</div>
+                  <div className="text-sm text-muted-foreground">Connected (Current Page)</div>
                 </div>
               </div>
             </CardContent>
@@ -527,7 +534,7 @@ const WahaSessionManager = () => {
                   <div className="text-2xl font-bold">
                     {sessions.reduce((total, s) => total + (s.total_messages_sent || 0) + (s.total_messages_received || 0), 0)}
                   </div>
-                  <div className="text-sm text-muted-foreground">Total Messages</div>
+                  <div className="text-sm text-muted-foreground">Messages (Current Page)</div>
                 </div>
               </div>
             </CardContent>
@@ -541,7 +548,7 @@ const WahaSessionManager = () => {
                   <div className="text-2xl font-bold">
                     {sessions.reduce((total, s) => total + (s.error_count || 0), 0)}
                   </div>
-                  <div className="text-sm text-muted-foreground">Total Errors</div>
+                  <div className="text-sm text-muted-foreground">Errors (Current Page)</div>
                 </div>
               </div>
             </CardContent>
@@ -617,13 +624,13 @@ const WahaSessionManager = () => {
               />
 
               {/* Enhanced Pagination */}
-              {pagination.totalPages > 1 && (
+              {pagination && (
                 <div className="mt-6">
                   <Pagination
-                    currentPage={pagination.currentPage}
-                    totalPages={pagination.totalPages}
-                    totalItems={pagination.totalItems}
-                    perPage={pagination.perPage}
+                    currentPage={pagination?.currentPage || 1}
+                    totalPages={pagination?.totalPages || 1}
+                    totalItems={pagination?.totalItems || 0}
+                    perPage={pagination?.perPage || 10}
                     onPageChange={handlePageChange}
                     onPerPageChange={handlePerPageChange}
                     onFirstPage={goToFirstPage}

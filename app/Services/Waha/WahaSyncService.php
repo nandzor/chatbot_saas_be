@@ -423,6 +423,138 @@ class WahaSyncService
     }
 
     /**
+     * Get sessions for organization with pagination and filters
+     * Standardized implementation following UserService pattern
+     */
+    public function getSessionsForOrganizationWithPagination(
+        string $organizationId,
+        int $page = 1,
+        int $perPage = 10,
+        string $search = '',
+        string $status = 'all',
+        string $healthStatus = 'all',
+        string $sortBy = 'created_at',
+        string $sortOrder = 'desc'
+    ): array {
+        try {
+            // First sync sessions to ensure we have latest data
+            $this->syncSessionsForOrganization($organizationId);
+
+            // Build query for local sessions
+            $query = WahaSession::where('organization_id', $organizationId)
+                ->with(['organization', 'channelConfig']);
+
+            // Apply search filter (standardized like UserService)
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('session_name', 'ILIKE', "%{$search}%")
+                      ->orWhere('phone_number', 'ILIKE', "%{$search}%")
+                      ->orWhere('business_name', 'ILIKE', "%{$search}%");
+                });
+            }
+
+            // Apply status filter (standardized approach)
+            if ($status !== 'all') {
+                switch ($status) {
+                    case 'connected':
+                        $query->where(function ($q) {
+                            $q->where('is_connected', true)
+                              ->where('is_authenticated', true);
+                        });
+                        break;
+                    case 'connecting':
+                        $query->where('is_connected', true)
+                              ->where('is_authenticated', false);
+                        break;
+                    case 'disconnected':
+                        $query->where('is_connected', false);
+                        break;
+                    case 'error':
+                        $query->where('status', 'error');
+                        break;
+                }
+            }
+
+            // Apply health status filter
+            if ($healthStatus !== 'all') {
+                $query->where('health_status', $healthStatus);
+            }
+
+            // Apply sorting (standardized validation)
+            $allowedSortFields = ['created_at', 'updated_at', 'session_name', 'status', 'health_status'];
+            if (in_array($sortBy, $allowedSortFields)) {
+                $query->orderBy($sortBy, $sortOrder);
+            } else {
+                $query->orderBy('created_at', 'desc');
+            }
+
+            // Get paginated results using Laravel's standard pagination
+            $sessions = $query->paginate($perPage, ['*'], 'page', $page);
+
+            // Format sessions for display
+            $formattedSessions = $sessions->map(function ($session) {
+                return $this->formatSessionForDisplay($session);
+            });
+
+            // Return standardized pagination response format
+            return [
+                'sessions' => $formattedSessions,
+                'pagination' => [
+                    'current_page' => $sessions->currentPage(),
+                    'last_page' => $sessions->lastPage(),
+                    'per_page' => $sessions->perPage(),
+                    'total' => $sessions->total(),
+                    'from' => $sessions->firstItem(),
+                    'to' => $sessions->lastItem(),
+                    'has_more_pages' => $sessions->hasMorePages(),
+                ]
+            ];
+        } catch (Exception $e) {
+            Log::error('Failed to get paginated WAHA sessions', [
+                'organization_id' => $organizationId,
+                'page' => $page,
+                'per_page' => $perPage,
+                'search' => $search,
+                'status' => $status,
+                'health_status' => $healthStatus,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Format session for display
+     */
+    protected function formatSessionForDisplay($session): array
+    {
+        return [
+            'id' => $session->id,
+            'session_name' => $session->session_name,
+            'phone_number' => $session->phone_number,
+            'status' => $session->status,
+            'is_connected' => $session->is_connected,
+            'is_authenticated' => $session->is_authenticated,
+            'is_ready' => $session->is_ready,
+            'health_status' => $session->health_status,
+            'error_count' => $session->error_count,
+            'last_error' => $session->last_error,
+            'total_messages_sent' => $session->total_messages_sent,
+            'total_messages_received' => $session->total_messages_received,
+            'total_media_sent' => $session->total_media_sent,
+            'total_media_received' => $session->total_media_received,
+            'business_name' => $session->business_name,
+            'business_description' => $session->business_description,
+            'business_category' => $session->business_category,
+            'created_at' => $session->created_at,
+            'updated_at' => $session->updated_at,
+            'last_health_check' => $session->last_health_check,
+            'last_message_at' => $session->last_message_at,
+            'organization_id' => $session->organization_id,
+        ];
+    }
+
+    /**
      * Get session for organization with sync
      */
     public function getSessionForOrganization(string $organizationId, string $sessionName): ?array

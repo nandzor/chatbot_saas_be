@@ -29,27 +29,28 @@ export class WahaApiService extends BaseApiService {
   }
 
   /**
-   * Mendapatkan semua sesi WAHA untuk organization saat ini
-   * Response format: { sessions: [], organization_id: string, total: number, created: number, updated: number }
+   * Mendapatkan semua sesi WAHA untuk organization saat ini dengan pagination dan filter
+   * Response format: { data: [], pagination: {}, meta: {} } - non-nested structure
    */
-  async getSessions() {
-    const response = await this.get('/sessions');
+  async getSessions(params = {}) {
+    const response = await this.get('/sessions', params);
 
-    // Enhanced response format with organization context
-    if (response.success && response.data) {
-      return {
-        ...response,
-        data: {
-          sessions: response.data.sessions || [],
-          organization_id: response.data.organization_id,
-          total: response.data.total || 0,
-          created: response.data.created || 0,
-          updated: response.data.updated || 0,
-        }
-      };
+    // Return response as-is since backend already provides correct structure
+    if (response.success) {
+      return response;
     }
 
     return response;
+  }
+
+  /**
+   * Mencari sesi WAHA dengan query dan filter
+   */
+  async searchSessions(query, params = {}) {
+    return this.getSessions({
+      ...params,
+      search: query
+    });
   }
 
   /**

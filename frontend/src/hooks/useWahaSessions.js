@@ -63,35 +63,66 @@ export const useWahaSessions = () => {
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.log('Loading WAHA sessions with params:', queryParams);
+        // eslint-disable-next-line no-console
+        console.log('Current pagination state:', pagination);
       }
 
       const response = await wahaApi.getSessions(queryParams);
 
-      if (response.success) {
-        // Enhanced response format with organization context
-        const sessionsData = response.data;
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('WAHA API Response:', response);
+      }
 
-        if (sessionsData && Array.isArray(sessionsData.sessions)) {
+      if (response.success) {
+        // Handle non-nested data structure: response.data, response.pagination, response.meta
+        const sessionsData = response.data;
+        const paginationData = response.pagination;
+
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('Sessions Data:', sessionsData);
+          // eslint-disable-next-line no-console
+          console.log('Pagination Data:', paginationData);
+        }
+
+        if (Array.isArray(sessionsData)) {
           // Format sessions for display
-          const formattedSessions = sessionsData.sessions.map(session =>
+          const formattedSessions = sessionsData.map(session =>
             wahaApi.formatSessionForDisplay(session)
           );
+
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('Formatted Sessions:', formattedSessions);
+          }
 
           setSessions(formattedSessions);
 
           // Update pagination if available
-          if (sessionsData.pagination) {
+          if (paginationData) {
+            const newPagination = {
+              currentPage: paginationData.current_page || 1,
+              totalPages: paginationData.last_page || 1,
+              totalItems: paginationData.total || 0,
+              perPage: paginationData.per_page || 10
+            };
+
             setPagination(prev => ({
               ...prev,
-              currentPage: sessionsData.pagination.current_page || 1,
-              totalPages: sessionsData.pagination.last_page || 1,
-              totalItems: sessionsData.pagination.total || 0,
-              perPage: sessionsData.pagination.per_page || 10
+              ...newPagination
             }));
 
             if (import.meta.env.DEV) {
               // eslint-disable-next-line no-console
-              console.log('Updated pagination:', sessionsData.pagination);
+              console.log('Updated pagination:', newPagination);
+              // eslint-disable-next-line no-console
+              console.log('Meta data:', response.meta);
+            }
+          } else {
+            if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.warn('No pagination data received');
             }
           }
         } else {
@@ -105,9 +136,17 @@ export const useWahaSessions = () => {
           }));
         }
       } else {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.error('WAHA API Error:', response);
+        }
         throw new Error(response.error || 'Gagal memuat sesi');
       }
     } catch (err) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.error('WAHA Sessions Error:', err);
+      }
       // Handle organization-specific errors
       const organizationError = wahaApi.handleOrganizationError(err);
       setError(organizationError);
@@ -132,7 +171,8 @@ export const useWahaSessions = () => {
       setLoading(false);
       setPaginationLoading(false);
     }
-  }, [pagination.currentPage, pagination.perPage, filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Search sessions
   const searchSessions = useCallback(async (query) => {
@@ -147,23 +187,46 @@ export const useWahaSessions = () => {
       });
 
       if (response.success) {
+        // Handle non-nested data structure: response.data, response.pagination, response.meta
         const sessionsData = response.data;
+        const paginationData = response.pagination;
 
-        if (sessionsData && Array.isArray(sessionsData.sessions)) {
-          const formattedSessions = sessionsData.sessions.map(session =>
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('Search - Sessions Data:', sessionsData);
+          // eslint-disable-next-line no-console
+          console.log('Search - Pagination Data:', paginationData);
+        }
+
+        if (Array.isArray(sessionsData)) {
+          const formattedSessions = sessionsData.map(session =>
             wahaApi.formatSessionForDisplay(session)
           );
 
           setSessions(formattedSessions);
 
-          if (sessionsData.pagination) {
+          if (paginationData) {
+            const newPagination = {
+              currentPage: paginationData.current_page || 1,
+              totalPages: paginationData.last_page || 1,
+              totalItems: paginationData.total || 0,
+              perPage: paginationData.per_page || 10
+            };
+
             setPagination(prev => ({
               ...prev,
-              currentPage: sessionsData.pagination.current_page || 1,
-              totalPages: sessionsData.pagination.last_page || 1,
-              totalItems: sessionsData.pagination.total || 0,
-              perPage: sessionsData.pagination.per_page || 10
+              ...newPagination
             }));
+
+            if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.log('Search - Updated pagination:', newPagination);
+            }
+          } else {
+            if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.warn('Search - No pagination data received');
+            }
           }
         } else {
           setSessions([]);
@@ -199,7 +262,8 @@ export const useWahaSessions = () => {
       setLoading(false);
       setPaginationLoading(false);
     }
-  }, [pagination.currentPage, pagination.perPage, filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Update filters
   const updateFilters = useCallback((newFilters) => {
@@ -213,6 +277,11 @@ export const useWahaSessions = () => {
 
   // Handle page change
   const handlePageChange = useCallback(async (page) => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log('handlePageChange called with page:', page, 'currentPage:', pagination.currentPage, 'totalPages:', pagination.totalPages);
+    }
+
     if (page >= 1 && page <= pagination.totalPages && page !== pagination.currentPage) {
       try {
         updatePagination({ currentPage: page });
@@ -553,7 +622,8 @@ export const useWahaSessions = () => {
   // Load sessions on mount
   useEffect(() => {
     loadSessions();
-  }, [loadSessions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cleanup monitoring on unmount
   useEffect(() => {

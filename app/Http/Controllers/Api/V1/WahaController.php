@@ -47,9 +47,9 @@ class WahaController extends BaseApiController
     }
 
     /**
-     * Get all sessions for current organization
+     * Get all sessions for current organization with pagination and filters
      */
-    public function getSessions(): JsonResponse
+    public function getSessions(Request $request): JsonResponse
     {
         try {
             // Get current organization
@@ -58,21 +58,56 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('access WAHA sessions');
             }
 
-            // Use sync service to get sessions with automatic synchronization
-            $result = $this->wahaSyncService->getSessionsForOrganization($organization->id);
+            // Use standardized pagination and filter methods from BaseApiController
+            $pagination = $this->getPaginationParams($request);
+            $filters = $this->getFilterParams($request, ['status', 'health_status']);
+            $search = $this->getSearchParams($request);
+            $sort = $this->getSortParams($request, ['created_at', 'updated_at', 'session_name', 'status', 'health_status'], 'created_at');
+
+            // Get sessions with pagination and filters using standardized approach
+            $result = $this->wahaSyncService->getSessionsForOrganizationWithPagination(
+                $organization->id,
+                $pagination['page'],
+                $pagination['per_page'],
+                $search['search'] ?? '',
+                $filters['status'] ?? 'all',
+                $filters['health_status'] ?? 'all',
+                $sort['sort_by'],
+                $sort['sort_direction']
+            );
 
             $this->logApiAction('get_waha_sessions', [
                 'organization_id' => $organization->id,
-                'sessions_count' => $result['total'],
-                'created' => $result['created'] ?? 0,
-                'updated' => $result['updated'] ?? 0,
+                'pagination' => $pagination,
+                'filters' => $filters,
+                'search' => $search,
+                'sort' => $sort,
+                'total_sessions' => $result['pagination']['total'] ?? 0,
             ]);
 
-            return $this->successResponse('Sessions retrieved successfully', $result);
+            // Create response with pagination and meta
+            $response = [
+                'success' => true,
+                'message' => 'Sessions retrieved successfully',
+                'data' => $result['sessions'],
+                'pagination' => $result['pagination'],
+                'meta' => [
+                    'api_version' => config('app.api_version', '1.0'),
+                    'environment' => app()->environment(),
+                    'execution_time_ms' => round((microtime(true) - LARAVEL_START) * 1000, 2),
+                    'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+                    'queries_count' => \Illuminate\Support\Facades\DB::getQueryLog() ? count(\Illuminate\Support\Facades\DB::getQueryLog()) : 0
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => request()->header('X-Request-ID') ?? $this->generateRequestId(),
+            ];
+
+            return response()->json($response, 200);
         } catch (Exception $e) {
             Log::error('Failed to get WAHA sessions', [
                 'organization_id' => $this->getCurrentOrganization()?->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'request_data' => $request->all()
             ]);
             return $this->errorResponse('Failed to retrieve sessions', 500);
         }
