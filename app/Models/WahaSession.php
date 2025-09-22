@@ -119,6 +119,7 @@ class WahaSession extends Model
         'total_media_received',
         'uptime_percentage',
         'config',
+        'webhook_config',
         'metadata',
         'status_type',
     ];
@@ -140,6 +141,7 @@ class WahaSession extends Model
         'total_media_received' => 'integer',
         'uptime_percentage' => 'decimal:2',
         'config' => 'array',
+        'webhook_config' => 'array',
         'metadata' => 'array',
     ];
 

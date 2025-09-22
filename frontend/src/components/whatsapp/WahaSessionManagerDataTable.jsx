@@ -37,6 +37,22 @@ import WhatsAppQRConnector from '@/features/shared/WhatsAppQRConnector';
 import WhatsAppChatDialog from './WhatsAppChatDialog';
 import toast from 'react-hot-toast';
 
+// Helper function to get organization ID from JWT token in localStorage
+const getOrganizationIdFromToken = () => {
+  try {
+    const jwtToken = localStorage.getItem('jwt_token');
+    if (jwtToken) {
+      // Decode JWT token to get organization_id
+      const payload = JSON.parse(atob(jwtToken.split('.')[1]));
+      return payload.organization_id || null;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Failed to decode JWT token:', error);
+    return null;
+  }
+};
+
 // Constants
 const SESSION_STATUS = {
   CONNECTED: 'connected',
@@ -108,9 +124,10 @@ const WahaSessionManager = () => {
       isCreatingRef.current = true;
       setIsCreatingSession(true);
 
-      // Generate a unique session name with timestamp
-      const timestamp = Date.now();
-      const sessionName = `whatsapp-connector-${timestamp}`;
+      // Generate a unique session name with same format as backend
+      const organizationId = getOrganizationIdFromToken() || '-'; // JWT token fallback to default
+      const randomId = Math.random().toString(36).substring(2, 10); // 8 character random string
+      const sessionName = `${organizationId}_session-${randomId}`;
 
       await createSession(sessionName);
 

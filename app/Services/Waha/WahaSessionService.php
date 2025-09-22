@@ -58,11 +58,26 @@ class WahaSessionService
             // Add session name to the configuration
             $sessionConfig['name'] = $sessionName;
 
+            // Debug logging
+            Log::info('Sending session config to WAHA API', [
+                'session_config' => $sessionConfig,
+                'config_structure' => array_keys($sessionConfig),
+                'config_webhooks' => $sessionConfig['config']['webhooks'] ?? 'NOT_SET'
+            ]);
+
             // Create WAHA session
             $wahaResult = $this->wahaService->createSession($sessionConfig);
 
             // Save session to database with N8N workflow ID for cascade delete
             $workflowId = $this->extractWorkflowIdFromN8nResult($n8nResult);
+
+            Log::info('About to call saveSessionToDatabase', [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'workflow_id' => $workflowId,
+                'waha_result_keys' => array_keys($wahaResult)
+            ]);
+
             $this->saveSessionToDatabase($organizationId, $sessionName, $wahaResult, $workflowId);
 
             // Combine results
@@ -448,12 +463,10 @@ class WahaSessionService
             'start' => true,
             'config' => [
                 'metadata' => $this->flattenMetadata([
-                    'organization.id' => $organization->id,
                     'organization.name' => $organization->name,
                     'organization.code' => $organization->org_code,
                     'created_by' => $createdByName,
-                    'created_at' => now()->toISOString(),
-                    'n8n_webhook_id' => $n8nWebhookId,
+                    'created_at' => now()->setTimezone('Asia/Jakarta')->toISOString(),
                 ]),
                 'proxy' => null,
                 'debug' => false,
@@ -553,6 +566,12 @@ class WahaSessionService
     protected function generateSessionName(string $organizationId, ?string $customName = null): string
     {
         if ($customName) {
+            // If custom name already contains organization_id, use it as is
+            if (strpos($customName, $organizationId) === 0) {
+                return $customName;
+            }
+
+            // Otherwise, clean and format the name
             $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $customName));
             return $organizationId . '_' . $cleanName . '_' . substr(md5(uniqid()), 0, 8);
         }

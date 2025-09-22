@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseApiController;
+use App\Models\WahaSession;
 use App\Services\Waha\WahaService;
 use App\Services\Waha\WahaSyncService;
 use App\Services\Waha\WahaSessionService;
@@ -126,11 +127,28 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('create WAHA session');
             }
 
-            // Check if request has any data, if not use defaults
-            $hasPayload = $request->hasAny(['name', 'start', 'config']) || !empty($request->all());
+            // Check if request has meaningful data, ignore frontend default payloads
+            $requestData = $request->all();
 
-            if (!$hasPayload) {
+            // Extract only the original frontend payload (exclude middleware-added data)
+            $frontendPayload = array_intersect_key($requestData, array_flip(['name', 'start', 'config']));
+
+            // Check if frontend provided a custom name (not empty and not just default pattern)
+            $hasCustomName = isset($frontendPayload['name']) &&
+                            !empty($frontendPayload['name']) &&
+                            !preg_match('/^whatsapp-connector-\d+$/', $frontendPayload['name']);
+
+            // Check if frontend provided meaningful config (not just empty config)
+            $hasMeaningfulConfig = isset($frontendPayload['config']) &&
+                                 !empty($frontendPayload['config']);
+
+            // Only use defaults if no custom name and no meaningful config
+            $shouldUseDefaults = empty($frontendPayload) ||
+                               (!empty($frontendPayload) && !$hasCustomName && !$hasMeaningfulConfig);
+
+            if ($shouldUseDefaults) {
                 // Create session with automatic defaults - no frontend payload needed
+                Log::info('Using createSessionWithDefaults due to no custom name or config');
                 return $this->createSessionWithDefaults($organization);
             }
 
@@ -862,17 +880,16 @@ class WahaController extends BaseApiController
                         isset($result['waha_session']['session']);
 
             if ($isSuccess) {
-                // Create or update local session record
-                $localSession = $this->wahaSyncService->createOrUpdateLocalSession(
-                    $organization->id,
-                    $result['session_name'],
-                    $result['waha_session']
-                );
+                // Session already saved to database by createDefaultSessionWithN8nIntegration
+                // Just get the local session for response
+                $localSession = WahaSession::where('organization_id', $organization->id)
+                    ->where('session_name', $result['session_name'])
+                    ->first();
 
                 $this->logApiAction('create_waha_session_auto', [
                     'session_name' => $result['session_name'],
                     'organization_id' => $organization->id,
-                    'local_session_id' => $localSession->id,
+                    'local_session_id' => $localSession->id ?? 'N/A',
                     'auto_created' => true,
                     'n8n_workflow_created' => $result['n8n_workflow']['success'] ?? false,
                     'n8n_workflow_id' => $result['n8n_workflow']['data']['id'] ?? null,
@@ -881,14 +898,14 @@ class WahaController extends BaseApiController
                 ]);
 
                 return $this->successResponse('Session created successfully with automatic defaults and N8N workflow', [
-                    'local_session_id' => $localSession->id,
+                    'local_session_id' => $localSession->id ?? 'N/A',
                     'organization_id' => $organization->id,
                     'session_name' => $result['session_name'],
                     'auto_created' => true,
                     'n8n_workflow' => $result['n8n_workflow'],
                     'webhook_id' => $result['webhook_id'],
                     'webhook_url' => $result['webhook_url'],
-                    'status' => $localSession->status,
+                    'status' => $localSession->status ?? 'unknown',
                     'third_party_response' => $result['waha_session'],
                 ]);
             }
