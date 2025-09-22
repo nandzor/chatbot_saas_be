@@ -48,4 +48,8 @@ Route::prefix('waha')->middleware(['unified.auth', 'waha.organization'])->group(
     // Health and status routes
     Route::get('/sessions/{sessionId}/connected', [WahaController::class, 'isSessionConnected']);
     Route::get('/sessions/{sessionId}/health', [WahaController::class, 'getSessionHealth']);
+    Route::post('/sessions/{sessionId}/sync', [WahaController::class, 'syncSessionStatus']);
+
+    // Webhook routes (no authentication required for WAHA server callbacks)
+    Route::post('/webhook', [WahaController::class, 'handleWebhook'])->withoutMiddleware(['unified.auth', 'waha.organization']);
 });

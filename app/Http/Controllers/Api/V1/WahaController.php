@@ -238,11 +238,8 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('start WAHA session');
             }
 
-            // Check if session already exists and is working
-            $existingSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
-            if ($existingSession && $existingSession->is_connected && $existingSession->is_authenticated) {
-                return $this->errorResponse('Session is already running and connected', 409);
-            }
+            // Check if session already exists by ID
+            $existingSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
 
             $config = $request->validate([
                 'webhook' => 'nullable|string|url',
@@ -259,12 +256,50 @@ class WahaController extends BaseApiController
                 'business_email' => 'nullable|email|max:255',
             ]);
 
-            // Use sync service to create session with organization validation
-            $localSession = $this->wahaSyncService->createSessionForOrganization(
-                $organization->id,
-                $sessionId,
-                $config
-            );
+            $localSession = null;
+
+            if ($existingSession) {
+                // Session exists locally, check if already running
+                if ($existingSession->is_connected && $existingSession->is_authenticated) {
+                    return $this->errorResponse('Session is already running and connected', 409);
+                }
+
+                // Check if session exists on WAHA server
+                try {
+                    $sessionInfo = $this->wahaService->getSessionInfo($existingSession->session_name);
+
+                    // Session exists on WAHA server, try to start it
+                    $result = $this->wahaService->startSession($existingSession->session_name, $config);
+
+                    // If no exception thrown, start session was successful
+                    // Update session status to connecting
+                    $this->wahaSyncService->updateSessionStatus($organization->id, $existingSession->session_name, 'connecting');
+                    $localSession = $existingSession;
+                } catch (\App\Services\Waha\Exceptions\WahaException $e) {
+                    // Session doesn't exist on WAHA server, return error
+                    Log::warning('Session not found on WAHA server, cannot start', [
+                        'session_id' => $sessionId,
+                        'session_name' => $existingSession->session_name,
+                        'organization_id' => $organization->id,
+                        'error' => $e->getMessage()
+                    ]);
+
+                    return $this->errorResponse('Session not found on WAHA server. Please create the session first.', 404);
+                } catch (Exception $e) {
+                    // Other error
+                    Log::error('Unexpected error checking WAHA session', [
+                        'session_id' => $sessionId,
+                        'session_name' => $existingSession->session_name,
+                        'organization_id' => $organization->id,
+                        'error' => $e->getMessage()
+                    ]);
+
+                    return $this->errorResponse('Failed to check session status on WAHA server', 500);
+                }
+            } else {
+                // Session doesn't exist locally, return error
+                return $this->errorResponse('Session not found. Please create the session first.', 404);
+            }
 
             $this->logApiAction('start_waha_session', [
                 'session_id' => $sessionId,
@@ -845,6 +880,125 @@ class WahaController extends BaseApiController
                 'error' => $e->getMessage()
             ]);
             return $this->errorResponse('Failed to retrieve session info', 500);
+        }
+    }
+
+    /**
+     * Handle WAHA webhook for session status updates
+     */
+    public function handleWebhook(Request $request): JsonResponse
+    {
+        try {
+            $payload = $request->all();
+
+            Log::info('WAHA webhook received', [
+                'payload' => $payload
+            ]);
+
+            // Extract session information from webhook payload
+            $sessionName = $payload['session'] ?? $payload['name'] ?? null;
+            $status = $payload['status'] ?? $payload['state'] ?? null;
+            $organizationId = $payload['organization_id'] ?? null;
+
+            if (!$sessionName || !$status) {
+                return $this->errorResponse('Invalid webhook payload: missing session name or status', 400);
+            }
+
+            // If organization_id is not in payload, try to find it by session name
+            if (!$organizationId) {
+                $localSession = \App\Models\WahaSession::where('session_name', $sessionName)->first();
+                if (!$localSession) {
+                    return $this->errorResponse('Session not found in database', 404);
+                }
+                $organizationId = $localSession->organization_id;
+            }
+
+            // Update session status in database
+            $updated = $this->wahaSyncService->updateSessionStatus($organizationId, $sessionName, $status);
+
+            if ($updated) {
+                Log::info('Session status updated via webhook', [
+                    'session_name' => $sessionName,
+                    'status' => $status,
+                    'organization_id' => $organizationId
+                ]);
+
+                return $this->successResponse('Session status updated successfully', [
+                    'session_name' => $sessionName,
+                    'status' => $status,
+                    'organization_id' => $organizationId
+                ]);
+            } else {
+                return $this->errorResponse('Failed to update session status', 500);
+            }
+
+        } catch (Exception $e) {
+            Log::error('WAHA webhook processing failed', [
+                'error' => $e->getMessage(),
+                'payload' => $request->all()
+            ]);
+            return $this->errorResponse('Webhook processing failed', 500);
+        }
+    }
+
+    /**
+     * Sync session status from WAHA server to database
+     */
+    public function syncSessionStatus(string $sessionId): JsonResponse
+    {
+        try {
+            // Get current organization
+            $organization = $this->getCurrentOrganization();
+            if (!$organization) {
+                return $this->handleUnauthorizedAccess('sync WAHA session status');
+            }
+
+            // Verify session belongs to current organization
+            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
+            if (!$localSession) {
+                return $this->handleResourceNotFound('WAHA session', $sessionId);
+            }
+
+            // Get session status from WAHA server
+            $sessionInfo = $this->wahaService->getSessionInfo($localSession->session_name);
+
+            if ($sessionInfo && isset($sessionInfo['status'])) {
+                // Update local database with current WAHA server status
+                $updated = $this->wahaSyncService->updateSessionStatus(
+                    $organization->id,
+                    $localSession->session_name,
+                    $sessionInfo['status']
+                );
+
+                if ($updated) {
+                    Log::info('Session status synced from WAHA server', [
+                        'session_id' => $sessionId,
+                        'session_name' => $localSession->session_name,
+                        'status' => $sessionInfo['status'],
+                        'organization_id' => $organization->id
+                    ]);
+
+                    return $this->successResponse('Session status synced successfully', [
+                        'session_id' => $sessionId,
+                        'session_name' => $localSession->session_name,
+                        'status' => $sessionInfo['status'],
+                        'is_connected' => $sessionInfo['status'] === 'WORKING',
+                        'is_authenticated' => $sessionInfo['status'] === 'WORKING'
+                    ]);
+                } else {
+                    return $this->errorResponse('Failed to update session status in database', 500);
+                }
+            } else {
+                return $this->errorResponse('Failed to get session status from WAHA server', 500);
+            }
+
+        } catch (Exception $e) {
+            Log::error('Failed to sync session status', [
+                'session_id' => $sessionId,
+                'organization_id' => $this->getCurrentOrganization()?->id,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to sync session status', 500);
         }
     }
 
