@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Api\BaseApiController;
+use Exception;
+use Illuminate\Http\Request;
 use App\Services\N8n\N8nService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Exception;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Api\BaseApiController;
 
 class N8nController extends BaseApiController
 {
@@ -73,8 +74,8 @@ class N8nController extends BaseApiController
             }
 
             // Get organization and user info
-            $organizationId = auth()->user()?->organization_id ?? \App\Models\Organization::first()?->id;
-            $createdBy = auth()->id() ?? \App\Models\User::first()?->id;
+            $organizationId = Auth::user()->organization_id ?? \App\Models\Organization::first()?->id;
+            $createdBy = Auth::user()->id ?? \App\Models\User::first()?->id;
             $customName = $workflowData['custom_name'] ?? null;
 
             // Use service to create workflow with database storage
