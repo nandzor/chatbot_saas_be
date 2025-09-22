@@ -536,7 +536,7 @@ class N8nWorkflow extends Model
     }
 
     /**
-     * Generate standardized workflow name with format: organization_id__count(001)
+     * Generate standardized workflow name with format: organization_id_customName
      */
     public static function generateWorkflowName(?string $organizationId = null, ?string $customName = null): string
     {
@@ -554,12 +554,14 @@ class N8nWorkflow extends Model
         if ($organizationId) {
             $query->where('organization_id', $organizationId);
         }
-        $count = $query->where('name', 'like', $baseName . '__%')->count();
+        $count = $query->where('name', 'like', $baseName . '%')->count();
 
-        // Generate next number (001, 002, 003, etc.)
-        $nextNumber = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        // If there are existing workflows with similar name, add a simple counter
+        if ($count > 0) {
+            $baseName = $baseName . '_' . ($count + 1);
+        }
 
-        return $baseName . '__' . $nextNumber;
+        return $baseName;
     }
 
     /**

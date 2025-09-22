@@ -1,6 +1,6 @@
 {
-  "name": "WAHA Chatbot Mang Kirik",
-  "custom_name": "waha_mang_kirik",
+  "name": "organization_id_(count001)",
+  "custom_name": "chatbot",
   "nodes": [
     {
       "parameters": {},
@@ -9,7 +9,7 @@
       "position": [0, 0],
       "id": "4ca29826-5f46-4714-bccd-7d04d1fe3733",
       "name": "WAHA Trigger",
-      "webhookId": "04ab3138-09cc-4dfb-8589-8b0715b31db4",
+      "webhookId": "organization_id_(count001)",
       "notesInFlow": false
     },
     {

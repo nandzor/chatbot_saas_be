@@ -1,4 +1,4 @@
-Saya akan mengenhance menu Inbox untuk Organization Admin dengan menambahkan fitur Panduan Menghubungkan WhatsApp via QR Code (WAHA Session). Mari saya buat implementasi yang lengkap.
+Saya akan mengenhance menu Inbox untuk Organization Admin dengan menambahkan fitur Panduan Menghubungkan WhatsApp Baru via QR Code (WAHA Session). Mari saya buat implementasi yang lengkap.
 Ran tool
 Mari saya buat komponen WhatsApp QR Code Scanner terlebih dahulu:
 Ran tool

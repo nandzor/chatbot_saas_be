@@ -442,7 +442,7 @@ const WahaSessionManager = () => {
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
-            {isCreatingSession ? 'Membuat...' : 'Hubungkan WhatsApp'}
+            {isCreatingSession ? 'Membuat...' : 'Hubungkan WhatsApp Baru'}
           </Button>
         </div>
       </div>
