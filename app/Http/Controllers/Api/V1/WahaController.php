@@ -301,17 +301,18 @@ class WahaController extends BaseApiController
             }
 
             // Verify session belongs to current organization
-            $localSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
+            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
             if (!$localSession) {
                 return $this->handleResourceNotFound('WAHA session', $sessionId);
             }
 
             // Stop session in WAHA server
-            $result = $this->wahaService->stopSession($sessionId);
+            $result = $this->wahaService->stopSession($localSession->session_name);
 
-            if ($result['success'] ?? false) {
+            // Check if the result contains session data (WAHA API returns session info on success)
+            if (isset($result['name']) && isset($result['status'])) {
                 // Update session status using sync service
-                $this->wahaSyncService->updateSessionStatus($organization->id, $sessionId, 'STOPPED');
+                $this->wahaSyncService->updateSessionStatus($organization->id, $localSession->session_name, 'STOPPED');
 
                 $this->logApiAction('stop_waha_session', [
                     'session_id' => $sessionId,

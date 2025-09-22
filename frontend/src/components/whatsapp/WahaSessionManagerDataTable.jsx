@@ -275,7 +275,7 @@ const WahaSessionManager = () => {
       text = 'Ready';
     } else if (status === SESSION_STATUS.CONNECTING || status === SESSION_STATUS.SCAN_QR_CODE) {
       variant = 'secondary';
-      text = 'Connecting';
+      text = 'Connecting Scan QR';
     } else if (status === 'stopped' || status === 'STOPPED') {
       variant = 'destructive';
       text = 'Stopped';
@@ -403,10 +403,11 @@ const WahaSessionManager = () => {
       onClick: (session) => handleShowQR(session),
       className: 'text-blue-600 hover:text-blue-700',
       disabled: (session) => {
-        // Disable QR button if session is already connected
+        // Disable QR button if session is disconnected, working, or connected
+        const isDisconnected = session.status === 'disconnected' || session.status === 'DISCONNECTED';
         const isWorking = session.status === 'working' || session.status === 'WORKING';
         const isConnected = session.is_connected && session.is_authenticated;
-        return isWorking || isConnected;
+        return isDisconnected || isWorking || isConnected;
       }
     },
     {
