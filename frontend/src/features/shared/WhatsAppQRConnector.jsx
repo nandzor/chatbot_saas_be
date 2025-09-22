@@ -44,7 +44,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
   const [qrCode, setQrCode] = useState('');
   const [inboxName, setInboxName] = useState('');
   const [sessionId, setSessionId] = useState('');
-  const [connectionTimeout] = useState(120); // 2 minutes
+  const [connectionTimeout] = useState(30); // 30 seconds
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [monitoringInterval, setMonitoringInterval] = useState(null);
@@ -632,6 +632,40 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
                 </CardContent>
               </Card>
 
+              {/* Connection Status */}
+              {connectionStep === 'scanning' && (
+                <Card className="border-0 shadow-xl bg-gradient-to-r from-yellow-50 to-orange-50">
+                  <CardContent className="p-12">
+                    <div className="flex items-center justify-center gap-6 mb-4">
+                      <div className="w-6 h-6 bg-yellow-500 rounded-full animate-pulse shadow-xl"></div>
+                      <Clock className="w-8 h-8 text-yellow-600" />
+                      <span className="text-yellow-800 font-bold text-xl">
+                        Menunggu koneksi... ({timeRemaining}s tersisa)
+                      </span>
+                    </div>
+                    <div className="text-center">
+                      <Button
+                        onClick={regenerateQrCode}
+                        disabled={isRegenerating}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all duration-200 hover:shadow-xl"
+                      >
+                        {isRegenerating ? (
+                          <>
+                            <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                            Memperbarui QR Code...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-5 h-5 mr-2" />
+                            Perbarui QR Code
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Instructions */}
               <Card className="border-0 shadow-xl bg-gradient-to-r from-blue-50 to-green-50">
                 <CardContent className="p-16">
@@ -711,40 +745,6 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
                   {showQRCode ? 'Sembunyikan' : 'Tampilkan'}
                 </Button>
               </div>
-
-              {/* Connection Status */}
-              {connectionStep === 'scanning' && (
-                <Card className="border-0 shadow-xl bg-gradient-to-r from-yellow-50 to-orange-50">
-                  <CardContent className="p-12">
-                    <div className="flex items-center justify-center gap-6 mb-4">
-                      <div className="w-6 h-6 bg-yellow-500 rounded-full animate-pulse shadow-xl"></div>
-                      <Clock className="w-8 h-8 text-yellow-600" />
-                      <span className="text-yellow-800 font-bold text-xl">
-                        Menunggu koneksi... ({timeRemaining}s tersisa)
-                      </span>
-                    </div>
-                    <div className="text-center">
-                      <Button
-                        onClick={regenerateQrCode}
-                        disabled={isRegenerating}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all duration-200 hover:shadow-xl"
-                      >
-                        {isRegenerating ? (
-                          <>
-                            <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                            Memperbarui QR Code...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="w-5 h-5 mr-2" />
-                            Perbarui QR Code
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               {connectionStep === 'connected' && (
                 <Card className="border-0 shadow-xl bg-gradient-to-r from-green-50 to-emerald-50">
