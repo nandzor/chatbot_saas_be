@@ -719,14 +719,14 @@ Route::prefix('v1')->group(function () {
         // ====================================================================
 
         Route::prefix('knowledge-base')
-            ->middleware(['permission:knowledge_articles.read', 'organization', 'knowledge-base.org-access'])
+            ->middleware(['permission:knowledge_articles.view', 'organization', 'knowledge-base.org-access'])
             ->group(function () {
 
             // Basic CRUD operations
-            Route::get('/', [KnowledgeBaseController::class, 'index']);
-            Route::get('/categories', [KnowledgeBaseController::class, 'categories']);
-            Route::get('/search', [KnowledgeBaseController::class, 'search']);
-            Route::get('/slug/{slug}', [KnowledgeBaseController::class, 'showBySlug']);
+            Route::get('/', [KnowledgeBaseController::class, 'index'])->name('knowledge-base.index');
+            Route::get('/categories', [KnowledgeBaseController::class, 'categories'])->name('knowledge-base.categories');
+            Route::get('/search', [KnowledgeBaseController::class, 'search'])->name('knowledge-base.search');
+            Route::get('/slug/{slug}', [KnowledgeBaseController::class, 'showBySlug'])->name('knowledge-base.show-by-slug');
 
             // Individual knowledge base item operations
             Route::prefix('{id}')->group(function () {
@@ -737,7 +737,7 @@ Route::prefix('v1')->group(function () {
             });
 
             // Routes requiring additional permissions
-            Route::middleware(['permission:knowledge.create'])->post('/', [KnowledgeBaseController::class, 'store']);
+            Route::middleware(['permission:knowledge.create'])->post('/', [KnowledgeBaseController::class, 'store'])->name('knowledge-base.store');
 
             Route::middleware(['permission:knowledge.update'])->group(function () {
                 Route::put('/{id}', [KnowledgeBaseController::class, 'update']);

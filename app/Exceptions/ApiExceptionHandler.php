@@ -241,7 +241,7 @@ class ApiExceptionHandler
     /**
      * Get user ID safely, handling cases where Auth facade is not available.
      */
-    private static function getUserId(): ?int
+    private static function getUserId(): ?string
     {
         try {
             return Auth::user()?->id ?? null;
