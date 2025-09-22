@@ -663,20 +663,17 @@ class WahaService extends BaseHttpClient
             $response = $this->get(sprintf(self::ENDPOINT_QR_CODE, $sessionId));
 
             if ($response->successful()) {
-                // Check if response is an image
-                $contentType = $response->header('Content-Type');
-                if (str_contains($contentType, 'image/')) {
-                    // Return base64 encoded image data
-                    $imageData = base64_encode($response->body());
+                // WAHA server returns JSON with QR code data
+                $responseData = $response->json();
+                
+                if (isset($responseData['data']) && isset($responseData['mimetype'])) {
+                    // WAHA server returns QR code as base64 data in JSON format
                     return [
-                        'success' => true,
-                        'message' => 'QR code retrieved successfully',
-                        'qr_code' => $imageData,
-                        'format' => 'base64',
-                        'content_type' => $contentType
+                        'mimetype' => $responseData['mimetype'],
+                        'data' => $responseData['data']
                     ];
                 } else {
-                    // Handle JSON response
+                    // Fallback to handleResponse for other formats
                     return $this->handleResponse($response, 'get QR code');
                 }
             } else {

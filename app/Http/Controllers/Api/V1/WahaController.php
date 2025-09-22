@@ -752,24 +752,26 @@ class WahaController extends BaseApiController
      */
     private function ensureSessionIsRunning(mixed $localSession): void
     {
-        $sessionStatus = $this->wahaService->getSessionStatus($localSession->session_name);
+        $sessionInfo = $this->wahaService->getSessionInfo($localSession->session_name);
 
-        if (!$sessionStatus['success']) {
-            throw new Exception('Failed to get session status: ' . ($sessionStatus['error'] ?? 'Unknown error'));
+        if (!$sessionInfo || !isset($sessionInfo['status'])) {
+            throw new Exception('Failed to get session info: ' . ($sessionInfo['error'] ?? 'Unknown error'));
         }
 
-        $status = $sessionStatus['data']['status'] ?? 'UNKNOWN';
+        $status = $sessionInfo['status'] ?? 'UNKNOWN';
 
         if ($status === 'STOPPED') {
             Log::info('Session is stopped, attempting to start it.', ['session_name' => $localSession->session_name]);
-            $startResult = $this->wahaService->startSession($localSession->session_name);
+            try {
+                $startResult = $this->wahaService->startSession($localSession->session_name);
+                // If no exception thrown, start was successful
+                Log::info('Session started successfully', ['session_name' => $localSession->session_name]);
 
-            if (!$startResult['success']) {
-                throw new Exception('Failed to start a stopped session: ' . ($startResult['error'] ?? 'Unknown error'));
+                // Beri jeda agar sesi sempat terinisialisasi
+                sleep(2);
+            } catch (Exception $e) {
+                throw new Exception('Failed to start a stopped session: ' . $e->getMessage());
             }
-
-            // Beri jeda agar sesi sempat terinisialisasi
-            sleep(2);
         }
     }
 
@@ -792,9 +794,13 @@ class WahaController extends BaseApiController
             ]);
 
             // Jika gagal, coba restart sesi
-            $restartResult = $this->wahaService->restartSession($localSession->session_name);
-            if (!$restartResult['success']) {
-                throw new Exception('Failed to restart session after QR fetch failure.');
+            try {
+                $restartResult = $this->wahaService->restartSession($localSession->session_name);
+                Log::info('Session restarted successfully after QR fetch failure', [
+                    'session_name' => $localSession->session_name
+                ]);
+            } catch (Exception $restartException) {
+                throw new Exception('Failed to restart session after QR fetch failure: ' . $restartException->getMessage());
             }
 
             // Beri jeda agar sesi sempat restart

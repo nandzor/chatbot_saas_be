@@ -65,6 +65,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
       setIsRegenerating(true);
       setError(null);
       setProgress(50);
+      setQrCode(''); // Reset QR code before regenerating
 
       console.log('🔄 Regenerating QR code for session:', sessionId);
       const response = await wahaApi.regenerateQrCode(sessionId);
@@ -74,7 +75,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
 
         // Handle the new base64 QR code format
         if (response.data.data) {
-          qrCodeData = response.data.data;
+          // New format: base64 encoded image data
+          qrCodeData = `data:${response.data.mimetype || 'image/png'};base64,${response.data.data}`;
         } else if (response.data.qr_code) {
           qrCodeData = response.data.qr_code;
         } else if (typeof response.data === 'string') {
@@ -613,6 +615,12 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
                           src={qrCode}
                           alt="WhatsApp QR Code"
                           className="w-96 h-96 mx-auto rounded-2xl shadow-xl"
+                          onError={() => {
+                            setError('Gagal memuat QR Code. Silakan coba lagi.');
+                          }}
+                          onLoad={() => {
+                            setError(null);
+                          }}
                         />
                       </div>
                     </div>
