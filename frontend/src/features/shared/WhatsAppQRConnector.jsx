@@ -51,9 +51,57 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
   const [progress, setProgress] = useState(0);
   const [showQRCode, setShowQRCode] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(connectionTimeout);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const qrRequestRef = useRef(null); // Prevent duplicate QR requests
+  const initializationRef = useRef(false); // Prevent duplicate initialization
   const inboxNameInputRef = useRef(null); // For auto focus
   const namingSectionRef = useRef(null); // For auto scroll
+
+  // Regenerate QR code when timeout occurs
+  const regenerateQrCode = useCallback(async () => {
+    if (isRegenerating) return;
+
+    try {
+      setIsRegenerating(true);
+      setError(null);
+      setProgress(50);
+
+      console.log('🔄 Regenerating QR code for session:', sessionId);
+      const response = await wahaApi.regenerateQrCode(sessionId);
+
+      if (response.success && response.data) {
+        let qrCodeData = '';
+
+        // Handle the new base64 QR code format
+        if (response.data.data) {
+          qrCodeData = response.data.data;
+        } else if (response.data.qr_code) {
+          qrCodeData = response.data.qr_code;
+        } else if (typeof response.data === 'string') {
+          qrCodeData = response.data;
+        }
+
+        if (qrCodeData) {
+          setQrCode(qrCodeData);
+          setConnectionStep('scanning');
+          setProgress(70);
+          setTimeRemaining(connectionTimeout); // Reset timer
+          toast.success('QR Code berhasil diperbarui');
+        } else {
+          throw new Error('QR Code tidak tersedia');
+        }
+      } else {
+        throw new Error(response.error || 'Gagal memperbarui QR Code');
+      }
+    } catch (error) {
+      console.error('Failed to regenerate QR code:', error);
+      const errorMessage = handleError(error);
+      setError(errorMessage);
+      setConnectionStep('error');
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [sessionId, isRegenerating, connectionTimeout]);
 
   // Define startConnectionMonitoring function first
   const startConnectionMonitoring = useCallback((sessionId) => {
@@ -106,7 +154,9 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
 
   // Initialize WAHA session and get QR code
   useEffect(() => {
-    if (connectionStep === 'initializing') {
+    if (connectionStep === 'initializing' && !initializationRef.current) {
+      initializationRef.current = true;
+
       const initializeSession = async () => {
         try {
           setIsLoading(true);
@@ -114,13 +164,13 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
           setProgress(10);
 
           // Use provided session ID or generate new one
-          const newSessionId = providedSessionId || `whatsapp-connector-${Date.now()}`;
-          setSessionId(newSessionId);
+          const actualSessionId = providedSessionId || `whatsapp-connector-${Date.now()}`;
+          setSessionId(actualSessionId);
 
           // Only create session if not provided
           if (!providedSessionId) {
             // Create and start session
-            const response = await wahaApi.createSession(newSessionId, {
+            const response = await wahaApi.createSession(actualSessionId, {
               metadata: {
                 'user.id': 'frontend-user',
                 'user.email': 'user@frontend.com'
@@ -150,7 +200,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
             }
 
             qrRequestRef.current = true;
-            const qrResponse = await wahaApi.getQrCode(newSessionId);
+            const qrResponse = await wahaApi.getQrCode(actualSessionId);
 
             if (qrResponse.success && qrResponse.data) {
               let qrCodeData = '';
@@ -174,7 +224,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
               setProgress(70);
 
               // Start monitoring connection status
-              startConnectionMonitoring(newSessionId);
+              startConnectionMonitoring(actualSessionId);
             } else {
               throw new Error('QR Code tidak tersedia');
             }
@@ -196,7 +246,15 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
 
       initializeSession();
     }
-  }, [connectionStep, startConnectionMonitoring, providedSessionId]);
+  }, [connectionStep, providedSessionId]);
+
+  // Cleanup refs when component unmounts or dialog closes
+  useEffect(() => {
+    return () => {
+      initializationRef.current = false;
+      qrRequestRef.current = null;
+    };
+  }, []);
 
   // Timer countdown effect
   useEffect(() => {
@@ -205,6 +263,8 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
         setTimeRemaining(prev => {
           if (prev <= 1) {
             clearInterval(timer);
+            // Auto regenerate QR code when time runs out
+            regenerateQrCode();
             return 0;
           }
           return prev - 1;
@@ -238,7 +298,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
         }, 500); // Delay to ensure scroll completes first
       }
     }
-  }, [connectionStep]);
+  }, [connectionStep, regenerateQrCode]);
 
   // Cleanup monitoring on unmount
   useEffect(() => {
@@ -635,12 +695,31 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
               {connectionStep === 'scanning' && (
                 <Card className="border-0 shadow-xl bg-gradient-to-r from-yellow-50 to-orange-50">
                   <CardContent className="p-12">
-                    <div className="flex items-center justify-center gap-6">
+                    <div className="flex items-center justify-center gap-6 mb-4">
                       <div className="w-6 h-6 bg-yellow-500 rounded-full animate-pulse shadow-xl"></div>
                       <Clock className="w-8 h-8 text-yellow-600" />
                       <span className="text-yellow-800 font-bold text-xl">
                         Menunggu koneksi... ({timeRemaining}s tersisa)
                       </span>
+                    </div>
+                    <div className="text-center">
+                      <Button
+                        onClick={regenerateQrCode}
+                        disabled={isRegenerating}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all duration-200 hover:shadow-xl"
+                      >
+                        {isRegenerating ? (
+                          <>
+                            <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                            Memperbarui QR Code...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-5 h-5 mr-2" />
+                            Perbarui QR Code
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

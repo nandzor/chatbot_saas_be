@@ -235,6 +235,13 @@ export class WahaApiService extends BaseApiService {
   }
 
   /**
+   * Regenerate QR Code untuk koneksi WhatsApp
+   */
+  async regenerateQrCode(sessionId) {
+    return this.post(`/sessions/${sessionId}/qr/regenerate`);
+  }
+
+  /**
    * Mengecek apakah sesi terhubung
    */
   async isSessionConnected(sessionId) {

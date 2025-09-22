@@ -657,6 +657,70 @@ class WahaController extends BaseApiController
     }
 
     /**
+     * Regenerate QR code for session
+     */
+    public function regenerateQrCode(string $sessionId): JsonResponse
+    {
+        try {
+            // Get current organization
+            $organization = $this->getCurrentOrganization();
+            if (!$organization) {
+                return $this->handleUnauthorizedAccess('regenerate WAHA QR code');
+            }
+
+            // Verify session belongs to current organization
+            $localSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
+            if (!$localSession) {
+                return $this->handleResourceNotFound('WAHA session', $sessionId);
+            }
+
+            // Check if session is already connected
+            if ($localSession->is_connected && $localSession->is_authenticated) {
+                return $this->successResponse('Session is already connected', [
+                    'connected' => true,
+                    'status' => $localSession->status,
+                    'phone_number' => $localSession->phone_number,
+                    'message' => 'QR code regeneration is not needed as session is already connected'
+                ]);
+            }
+
+            // Try to restart session to get new QR code
+            try {
+                $restartResult = $this->wahaService->restartSession($localSession->session_name);
+
+                if (!$restartResult['success']) {
+                    throw new Exception($restartResult['error'] ?? 'Failed to restart session');
+                }
+
+                // Get new QR code after restart
+                $qrCode = $this->wahaService->getQrCode($localSession->session_name);
+
+                $this->logApiAction('regenerate_waha_qr_code', [
+                    'session_id' => $sessionId,
+                    'organization_id' => $organization->id,
+                ]);
+
+                return $this->successResponse('QR code regenerated successfully', $qrCode);
+            } catch (Exception $e) {
+                // If restart fails, try to get existing QR code
+                try {
+                    $qrCode = $this->wahaService->getQrCode($localSession->session_name);
+                    return $this->successResponse('QR code retrieved successfully', $qrCode);
+                } catch (Exception $qrException) {
+                    throw new Exception('Failed to regenerate or retrieve QR code: ' . $e->getMessage());
+                }
+            }
+        } catch (Exception $e) {
+            Log::error('Failed to regenerate WAHA QR code', [
+                'session_id' => $sessionId,
+                'organization_id' => $this->getCurrentOrganization()?->id,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to regenerate QR code', 500);
+        }
+    }
+
+    /**
      * Delete session
      */
     public function deleteSession(string $sessionName): JsonResponse

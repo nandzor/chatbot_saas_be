@@ -755,6 +755,57 @@ class WahaService extends BaseHttpClient
     }
 
     /**
+     * Restart session to regenerate QR code
+     *
+     * @param string $sessionId The session ID to restart
+     * @return array{success: bool, message: string, error?: string}
+     */
+    public function restartSession(string $sessionId): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getSessionRestart();
+        }
+
+        try {
+            // First stop the session
+            $stopResult = $this->stopSession($sessionId);
+            if (!$stopResult['success']) {
+                Log::warning('Failed to stop session before restart', [
+                    'session_id' => $sessionId,
+                    'error' => $stopResult['error'] ?? 'Unknown error'
+                ]);
+            }
+
+            // Wait a moment for session to fully stop
+            sleep(1);
+
+            // Start the session again
+            $startResult = $this->startSession($sessionId);
+            if (!$startResult['success']) {
+                throw new Exception($startResult['error'] ?? 'Failed to restart session');
+            }
+
+            Log::info('Session restarted successfully', [
+                'session_id' => $sessionId
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Session restarted successfully'
+            ];
+        } catch (Exception $e) {
+            Log::error('Failed to restart session', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
      * Build health status from session status data
      *
      * @param array $status Session status data from WAHA
