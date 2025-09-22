@@ -58,7 +58,6 @@ const TOAST_MESSAGES = {
   SESSION_CREATED: 'Sesi berhasil dibuat',
   SESSION_STARTED: 'Sesi berhasil dimulai',
   SESSION_STOPPED: 'Sesi berhasil dihentikan',
-  SESSION_DELETED: 'Sesi berhasil dihapus',
   QR_LOADED: 'QR Code berhasil dimuat',
   QR_ERROR: 'Gagal memuat QR Code',
   REFRESH_SUCCESS: 'Data sesi berhasil diperbarui'
@@ -152,7 +151,7 @@ const WahaSessionManager = () => {
   const handleDeleteSession = useCallback(async (sessionId) => {
     try {
       await deleteSession(sessionId);
-      toast.success(TOAST_MESSAGES.SESSION_DELETED);
+      // Toast notification is handled in the hook
       await loadSessions(); // Refresh sessions after deletion
     } catch (error) {
       // Error already handled in hook

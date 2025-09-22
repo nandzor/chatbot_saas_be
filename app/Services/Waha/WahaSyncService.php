@@ -658,6 +658,13 @@ class WahaSyncService
 
         // Create or update local session record
         try {
+            Log::info('Creating session with webhook config', [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'webhook_config' => $config['webhooks'] ?? $config
+            ]);
+
             $session = WahaSession::updateOrCreate(
                 [
                     'organization_id' => $organizationId,
@@ -673,6 +680,7 @@ class WahaSyncService
                     'business_category' => $config['business_category'] ?? null,
                     'business_website' => $config['business_website'] ?? null,
                     'business_email' => $config['business_email'] ?? null,
+                    'webhook_config' => $config['webhooks'] ?? $config, // Store webhook configuration
                     'status' => 'connecting',
                     'is_authenticated' => false,
                     'is_connected' => false,
@@ -689,7 +697,8 @@ class WahaSyncService
                 'session_id' => $session->id,
                 'session_name' => $sessionName,
                 'n8n_workflow_id' => $n8nWorkflowId,
-                'organization_id' => $organizationId
+                'organization_id' => $organizationId,
+                'webhook_config_stored' => $session->webhook_config
             ]);
 
             return $session;

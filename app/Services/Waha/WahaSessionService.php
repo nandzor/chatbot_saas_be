@@ -46,12 +46,20 @@ class WahaSessionService
             $n8nWebhookId = $n8nResult['webhook_id'] ?? null;
             $n8nWebhookUrl = $n8nResult['webhook_url'] ?? null;
 
-            // Update session configuration with N8N webhook
-            $this->updateSessionConfigWithN8nWebhook($validatedData, $n8nWebhookUrl, $organizationId);
+            // Get organization object
+            $organization = \App\Models\Organization::find($organizationId);
+            if (!$organization) {
+                throw new Exception('Organization not found');
+            }
+
+            // Get default session configuration with webhook
+            $sessionConfig = $this->getDefaultSessionConfig($organization, $n8nWebhookId);
+
+            // Add session name to the configuration
+            $sessionConfig['name'] = $sessionName;
 
             // Create WAHA session
-            $sessionData = $this->prepareSessionData($validatedData, $sessionName, $organizationId);
-            $wahaResult = $this->wahaService->createSession($sessionData);
+            $wahaResult = $this->wahaService->createSession($sessionConfig);
 
             // Save session to database with N8N workflow ID for cascade delete
             $workflowId = $this->extractWorkflowIdFromN8nResult($n8nResult);
@@ -299,8 +307,8 @@ class WahaSessionService
         $baseUrl = rtrim($n8nBaseUrl, '/');
 
         return [
-            'test' => $baseUrl . '/webhook-test/' . $webhookId,
-            'production' => $baseUrl . '/webhook/' . $webhookId
+            'test' => $baseUrl . '/webhook-test/' . $webhookId . '/waha',
+            'production' => $baseUrl . '/webhook/' . $webhookId . '/waha'
         ];
     }
 
@@ -446,67 +454,60 @@ class WahaSessionService
                     'created_by' => $createdByName,
                     'created_at' => now()->toISOString(),
                     'n8n_webhook_id' => $n8nWebhookId,
-                ])
+                ]),
+                'proxy' => null,
+                'debug' => false,
+                'ignore' => [
+                    'status' => null,
+                    'groups' => null,
+                    'channels' => null
+                ],
+                'noweb' => [
+                    'store' => [
+                        'enabled' => true,
+                        'fullSync' => false
+                    ]
+                ],
+                'webjs' => [
+                    'tagsEventsOn' => false
+                ]
             ]
         ];
 
         if ($n8nWebhookId) {
             $webhookUrls = $this->generateN8nWebhookUrls($n8nWebhookId);
 
-            // Configure webhooks array for WAHA dashboard compatibility
-            $sessionData['webhooks'] = [
+            // Configure webhooks array inside config for WAHA 3rd party compatibility
+            $sessionData['config']['webhooks'] = [
                 [
                     'url' => $webhookUrls['test'],
                     'events' => ['message', 'session.status'],
                     'hmac' => null,
                     'retries' => null,
-                    'customHeaders' => [
-                        'X-Webhook-Source' => 'WAHA-Session-Test',
-                        'X-Organization-ID' => $organization->id,
-                        'X-N8N-Webhook-ID' => $n8nWebhookId,
-                        'X-Environment' => 'test'
-                    ]
+                    'customHeaders' => null
                 ],
                 [
                     'url' => $webhookUrls['production'],
                     'events' => ['message', 'session.status'],
                     'hmac' => null,
                     'retries' => null,
-                    'customHeaders' => [
-                        'X-Webhook-Source' => 'WAHA-Session-Production',
-                        'X-Organization-ID' => $organization->id,
-                        'X-N8N-Webhook-ID' => $n8nWebhookId,
-                        'X-Environment' => 'production'
-                    ]
+                    'customHeaders' => null
                 ]
             ];
-
-            // Also add webhook and events at root level for backwards compatibility
-            $sessionData['webhook'] = $webhookUrls['production']; // Use production as primary
-            $sessionData['events'] = ['message', 'session.status'];
-            $sessionData['webhookByEvents'] = true;
 
         } else {
             // Fallback to default webhook if no N8N webhook ID
             $defaultUrl = config('waha.webhooks.default_url', '');
             if ($defaultUrl) {
-                $sessionData['webhooks'] = [
+                $sessionData['config']['webhooks'] = [
                     [
                         'url' => $defaultUrl,
                         'events' => ['message', 'session.status'],
                         'hmac' => null,
                         'retries' => null,
-                        'customHeaders' => [
-                            'X-Webhook-Source' => 'WAHA-Session-Default',
-                            'X-Organization-ID' => $organization->id,
-                            'X-Environment' => 'default'
-                        ]
+                        'customHeaders' => null
                     ]
                 ];
-
-                $sessionData['webhook'] = $defaultUrl;
-                $sessionData['events'] = ['message', 'session.status'];
-                $sessionData['webhookByEvents'] = true;
             }
         }
 
@@ -579,14 +580,37 @@ class WahaSessionService
 
             $wahaSyncService = app(\App\Services\Waha\WahaSyncService::class);
 
+            // Extract webhook configuration from WAHA result
+            $webhookConfig = [];
+            Log::info('Extracting webhook configuration from WAHA result', [
+                'waha_result_structure' => array_keys($wahaResult),
+                'session_config_exists' => isset($wahaResult['session']['config']),
+                'webhooks_exists' => isset($wahaResult['session']['config']['webhooks']),
+                'webhooks_count' => isset($wahaResult['session']['config']['webhooks']) ? count($wahaResult['session']['config']['webhooks']) : 0
+            ]);
+
+            if (isset($wahaResult['session']['config']['webhooks'])) {
+                $webhookConfig = [
+                    'enabled' => true,
+                    'url' => $wahaResult['session']['config']['webhooks'][0]['url'] ?? null,
+                    'events' => $wahaResult['session']['config']['webhooks'][0]['events'] ?? ['message', 'session.status'],
+                    'secret' => $wahaResult['session']['config']['webhooks'][0]['hmac'] ?? null,
+                    'webhooks' => $wahaResult['session']['config']['webhooks'] // Store full webhooks array
+                ];
+                Log::info('Webhook configuration extracted successfully', ['webhook_config' => $webhookConfig]);
+            } else {
+                Log::warning('No webhooks found in WAHA result', ['waha_result' => $wahaResult]);
+            }
+
             // Use the existing method to create/update session in database
-            $session = $wahaSyncService->createSessionForOrganization($organizationId, $sessionName, [], $n8nWorkflowId);
+            $session = $wahaSyncService->createSessionForOrganization($organizationId, $sessionName, $webhookConfig, $n8nWorkflowId);
 
             Log::info('Session saved to database with N8N workflow ID', [
                 'organization_id' => $organizationId,
                 'session_name' => $sessionName,
                 'n8n_workflow_id' => $n8nWorkflowId,
-                'session_id' => $session->id ?? 'N/A'
+                'session_id' => $session->id ?? 'N/A',
+                'webhook_config' => $webhookConfig
             ]);
         } catch (Exception $e) {
             Log::error('Failed to save session to database', [
