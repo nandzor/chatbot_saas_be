@@ -8,7 +8,11 @@ import {
   Button,
   Badge,
   Alert,
-  AlertDescription
+  AlertDescription,
+  Input,
+  Select,
+  SelectItem,
+  Pagination
 } from '@/components/ui';
 import DataTable from '@/components/ui/DataTable';
 import {
@@ -25,7 +29,8 @@ import {
   Heart,
   Wifi,
   WifiOff,
-  MessageCircle
+  MessageCircle,
+  Search
 } from 'lucide-react';
 import { useWahaSessions } from '@/hooks/useWahaSessions';
 import WhatsAppQRConnector from '@/features/shared/WhatsAppQRConnector';
@@ -63,18 +68,31 @@ const WahaSessionManager = () => {
   const {
     sessions,
     loading,
+    paginationLoading,
     error,
+    pagination,
+    filters,
     createSession,
     startSession,
     stopSession,
     deleteSession,
     startMonitoring,
-    loadSessions
+    loadSessions,
+    searchSessions,
+    updateFilters,
+    handlePageChange,
+    handlePerPageChange,
+    goToFirstPage,
+    goToLastPage,
+    goToPreviousPage,
+    goToNextPage,
+    totalSessions
   } = useWahaSessions();
 
   const [showQRConnector, setShowQRConnector] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [createdSessionId, setCreatedSessionId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const isCreatingRef = useRef(false);
 
   const handleCreateSession = useCallback(async () => {
@@ -162,6 +180,21 @@ const WahaSessionManager = () => {
       // Error already handled in hook
     }
   }, [loadSessions]);
+
+  // Handle search
+  const handleSearch = useCallback(async (query) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      await searchSessions(query);
+    } else {
+      await loadSessions();
+    }
+  }, [searchSessions, loadSessions]);
+
+  // Handle filter change
+  const handleFilterChange = useCallback((key, value) => {
+    updateFilters({ [key]: value });
+  }, [updateFilters]);
 
   // Helper functions - memoized for performance
   const getHealthStatusIcon = useCallback((session) => {
@@ -465,7 +498,7 @@ const WahaSessionManager = () => {
               <div className="flex items-center gap-2">
                 <Smartphone className="w-5 h-5 text-blue-500" />
                 <div>
-                  <div className="text-2xl font-bold">{sessions.length}</div>
+                  <div className="text-2xl font-bold">{totalSessions}</div>
                   <div className="text-sm text-muted-foreground">Total Sessions</div>
                 </div>
               </div>
@@ -525,6 +558,44 @@ const WahaSessionManager = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Search and Filters */}
+          <div className="flex items-center space-x-4 mb-6">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Cari sesi..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <Select
+              value={filters.status}
+              onValueChange={(value) => handleFilterChange('status', value)}
+              className="w-40"
+            >
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="connected">Connected</SelectItem>
+              <SelectItem value="connecting">Connecting</SelectItem>
+              <SelectItem value="disconnected">Disconnected</SelectItem>
+              <SelectItem value="error">Error</SelectItem>
+            </Select>
+
+            <Select
+              value={filters.health_status}
+              onValueChange={(value) => handleFilterChange('health_status', value)}
+              className="w-40"
+            >
+              <SelectItem value="all">Semua Health</SelectItem>
+              <SelectItem value="healthy">Healthy</SelectItem>
+              <SelectItem value="unhealthy">Unhealthy</SelectItem>
+              <SelectItem value="unknown">Unknown</SelectItem>
+            </Select>
+          </div>
+
           {sessions.length === 0 && !loading ? (
             <div className="text-center py-8">
               <Smartphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -534,15 +605,47 @@ const WahaSessionManager = () => {
               </p>
             </div>
           ) : (
-            <DataTable
-              data={sessions}
-              columns={columns}
-              actions={actions}
-              loading={loading}
-              error={error}
-              searchable={true}
-              ariaLabel="WAHA Sessions Table"
-            />
+            <>
+              <DataTable
+                data={sessions}
+                columns={columns}
+                actions={actions}
+                loading={loading}
+                error={error}
+                searchable={false}
+                ariaLabel="WAHA Sessions Table"
+              />
+
+              {/* Enhanced Pagination */}
+              {pagination.totalPages > 1 && (
+                <div className="mt-6">
+                  <Pagination
+                    currentPage={pagination.currentPage}
+                    totalPages={pagination.totalPages}
+                    totalItems={pagination.totalItems}
+                    perPage={pagination.perPage}
+                    onPageChange={handlePageChange}
+                    onPerPageChange={handlePerPageChange}
+                    onFirstPage={goToFirstPage}
+                    onLastPage={goToLastPage}
+                    onPrevPage={goToPreviousPage}
+                    onNextPage={goToNextPage}
+                    variant="table"
+                    size="sm"
+                    loading={paginationLoading}
+                    showPerPageSelector={true}
+                    showPageInfo={true}
+                    showFirstLast={true}
+                    showPrevNext={true}
+                    showPageNumbers={true}
+                    perPageOptions={[5, 10, 15, 25, 50]}
+                    maxVisiblePages={5}
+                    ariaLabel="WAHA Sessions table pagination"
+                    className="border-t pt-4"
+                  />
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

@@ -23,15 +23,49 @@ const ERROR_MESSAGES = {
 export const useWahaSessions = () => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [paginationLoading, setPaginationLoading] = useState(false);
   const [error, setError] = useState(null);
   const [monitoringSessions, setMonitoringSessions] = useState(new Set());
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    perPage: 10
+  });
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'all',
+    health_status: 'all',
+    sortBy: 'created_at',
+    sortOrder: 'desc'
+  });
 
-  // Load all sessions
-  const loadSessions = useCallback(async () => {
+  // Load all sessions with pagination support
+  const loadSessions = useCallback(async (params = {}) => {
     try {
-      setLoading(true);
+      // Check if this is a pagination change (not initial load)
+      const isPaginationChange = params.page || params.per_page;
+
+      if (isPaginationChange) {
+        setPaginationLoading(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
-      const response = await wahaApi.getSessions();
+
+      const queryParams = {
+        page: pagination.currentPage,
+        per_page: pagination.perPage,
+        ...filters,
+        ...params
+      };
+
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('Loading WAHA sessions with params:', queryParams);
+      }
+
+      const response = await wahaApi.getSessions(queryParams);
 
       if (response.success) {
         // Enhanced response format with organization context
@@ -44,8 +78,31 @@ export const useWahaSessions = () => {
           );
 
           setSessions(formattedSessions);
+
+          // Update pagination if available
+          if (sessionsData.pagination) {
+            setPagination(prev => ({
+              ...prev,
+              currentPage: sessionsData.pagination.current_page || 1,
+              totalPages: sessionsData.pagination.last_page || 1,
+              totalItems: sessionsData.pagination.total || 0,
+              perPage: sessionsData.pagination.per_page || 10
+            }));
+
+            if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.log('Updated pagination:', sessionsData.pagination);
+            }
+          }
         } else {
           setSessions([]);
+          setPagination(prev => ({
+            ...prev,
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: 0,
+            perPage: 10
+          }));
         }
       } else {
         throw new Error(response.error || 'Gagal memuat sesi');
@@ -62,10 +119,161 @@ export const useWahaSessions = () => {
       } else {
         toast.error(`${ERROR_MESSAGES.LOAD_SESSIONS}: ${organizationError.message}`);
       }
+
+      // Reset pagination on error
+      setPagination(prev => ({
+        ...prev,
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        perPage: 10
+      }));
     } finally {
       setLoading(false);
+      setPaginationLoading(false);
     }
+  }, [pagination.currentPage, pagination.perPage, filters]);
+
+  // Search sessions
+  const searchSessions = useCallback(async (query) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await wahaApi.searchSessions(query, {
+        page: pagination.currentPage,
+        per_page: pagination.perPage,
+        ...filters
+      });
+
+      if (response.success) {
+        const sessionsData = response.data;
+
+        if (sessionsData && Array.isArray(sessionsData.sessions)) {
+          const formattedSessions = sessionsData.sessions.map(session =>
+            wahaApi.formatSessionForDisplay(session)
+          );
+
+          setSessions(formattedSessions);
+
+          if (sessionsData.pagination) {
+            setPagination(prev => ({
+              ...prev,
+              currentPage: sessionsData.pagination.current_page || 1,
+              totalPages: sessionsData.pagination.last_page || 1,
+              totalItems: sessionsData.pagination.total || 0,
+              perPage: sessionsData.pagination.per_page || 10
+            }));
+          }
+        } else {
+          setSessions([]);
+          setPagination(prev => ({
+            ...prev,
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: 0,
+            perPage: 10
+          }));
+        }
+      } else {
+        throw new Error(response.error || 'Gagal mencari sesi');
+      }
+    } catch (err) {
+      const errorMessage = handleError(err);
+      setError(errorMessage);
+      toast.error(`Gagal mencari sesi: ${errorMessage.message}`);
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.error('Error searching sessions:', err);
+      }
+
+      // Reset pagination on error
+      setPagination(prev => ({
+        ...prev,
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        perPage: 10
+      }));
+    } finally {
+      setLoading(false);
+      setPaginationLoading(false);
+    }
+  }, [pagination.currentPage, pagination.perPage, filters]);
+
+  // Update filters
+  const updateFilters = useCallback((newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
   }, []);
+
+  // Update pagination
+  const updatePagination = useCallback((newPagination) => {
+    setPagination(prev => ({ ...prev, ...newPagination }));
+  }, []);
+
+  // Handle page change
+  const handlePageChange = useCallback(async (page) => {
+    if (page >= 1 && page <= pagination.totalPages && page !== pagination.currentPage) {
+      try {
+        updatePagination({ currentPage: page });
+        await loadSessions({ page });
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.error('Error changing page:', error);
+        }
+        toast.error('Gagal mengubah halaman');
+      }
+    }
+  }, [pagination.totalPages, pagination.currentPage, updatePagination, loadSessions]);
+
+  // Handle per page change
+  const handlePerPageChange = useCallback(async (perPage) => {
+    try {
+      if (perPage > 0 && perPage <= 100) {
+        updatePagination({ perPage, currentPage: 1 });
+        await loadSessions({ per_page: perPage, page: 1 });
+      } else {
+        toast.error('Jumlah item per halaman harus antara 1-100');
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.error('Error changing per page:', error);
+      }
+      toast.error('Gagal mengubah jumlah item per halaman');
+    }
+  }, [updatePagination, loadSessions]);
+
+  // Go to first page
+  const goToFirstPage = useCallback(async () => {
+    updatePagination({ currentPage: 1 });
+    await loadSessions({ page: 1 });
+  }, [updatePagination, loadSessions]);
+
+  // Go to last page
+  const goToLastPage = useCallback(async () => {
+    updatePagination({ currentPage: pagination.totalPages });
+    await loadSessions({ page: pagination.totalPages });
+  }, [pagination.totalPages, updatePagination, loadSessions]);
+
+  // Go to previous page
+  const goToPreviousPage = useCallback(async () => {
+    if (pagination.currentPage > 1) {
+      const newPage = pagination.currentPage - 1;
+      updatePagination({ currentPage: newPage });
+      await loadSessions({ page: newPage });
+    }
+  }, [pagination.currentPage, updatePagination, loadSessions]);
+
+  // Go to next page
+  const goToNextPage = useCallback(async () => {
+    if (pagination.currentPage < pagination.totalPages) {
+      const newPage = pagination.currentPage + 1;
+      updatePagination({ currentPage: newPage });
+      await loadSessions({ page: newPage });
+    }
+  }, [pagination.currentPage, pagination.totalPages, updatePagination, loadSessions]);
 
   // Create new session
   const createSession = useCallback(async (sessionId, config = {}) => {
@@ -361,11 +569,15 @@ export const useWahaSessions = () => {
     // State
     sessions,
     loading,
+    paginationLoading,
     error,
+    pagination,
+    filters,
     monitoringSessions: Array.from(monitoringSessions),
 
     // Actions
     loadSessions,
+    searchSessions,
     createSession,
     startSession,
     stopSession,
@@ -381,6 +593,16 @@ export const useWahaSessions = () => {
     getContacts,
     getGroups,
     getSessionStats,
+    updateFilters,
+    updatePagination,
+
+    // Pagination actions
+    handlePageChange,
+    handlePerPageChange,
+    goToFirstPage,
+    goToLastPage,
+    goToPreviousPage,
+    goToNextPage,
 
     // Computed - memoized for performance
     connectedSessions: useMemo(() =>
@@ -395,5 +617,6 @@ export const useWahaSessions = () => {
       Array.isArray(sessions) ? sessions.filter(session => session.status === 'error') : [],
       [sessions]
     ),
+    totalSessions: sessions.length
   };
 };
