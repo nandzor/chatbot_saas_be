@@ -135,16 +135,16 @@ class WahaController extends BaseApiController
 
             // Check if frontend provided a custom name (not empty and not just default pattern)
             $hasCustomName = isset($frontendPayload['name']) &&
-                            !empty($frontendPayload['name']) &&
-                            !preg_match('/^whatsapp-connector-\d+$/', $frontendPayload['name']);
+                !empty($frontendPayload['name']) &&
+                !preg_match('/^whatsapp-connector-\d+$/', $frontendPayload['name']);
 
             // Check if frontend provided meaningful config (not just empty config)
             $hasMeaningfulConfig = isset($frontendPayload['config']) &&
-                                 !empty($frontendPayload['config']);
+                !empty($frontendPayload['config']);
 
             // Only use defaults if no custom name and no meaningful config
             $shouldUseDefaults = empty($frontendPayload) ||
-                               (!empty($frontendPayload) && !$hasCustomName && !$hasMeaningfulConfig);
+                (!empty($frontendPayload) && !$hasCustomName && !$hasMeaningfulConfig);
 
             if ($shouldUseDefaults) {
                 // Create session with automatic defaults - no frontend payload needed
@@ -182,8 +182,8 @@ class WahaController extends BaseApiController
 
             // Check if result is successful
             $isSuccess = ($result['waha_session']['success'] ?? false) ||
-                        isset($result['waha_session']['name']) ||
-                        isset($result['waha_session']['session']);
+                isset($result['waha_session']['name']) ||
+                isset($result['waha_session']['session']);
 
             if ($isSuccess) {
                 // Create or update local session record
@@ -659,64 +659,118 @@ class WahaController extends BaseApiController
     /**
      * Regenerate QR code for session
      */
+    // ...
+
     public function regenerateQrCode(string $sessionId): JsonResponse
     {
         try {
-            // Get current organization
+            // 1. Validasi awal (Guard Clauses)
             $organization = $this->getCurrentOrganization();
             if (!$organization) {
                 return $this->handleUnauthorizedAccess('regenerate WAHA QR code');
             }
 
-            // Verify session belongs to current organization
             $localSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
             if (!$localSession) {
                 return $this->handleResourceNotFound('WAHA session', $sessionId);
             }
 
-            // Check if session is already connected
+            // 2. Jika sudah terhubung, tidak perlu generate QR baru
             if ($localSession->is_connected && $localSession->is_authenticated) {
                 return $this->successResponse('Session is already connected', [
                     'connected' => true,
                     'status' => $localSession->status,
-                    'phone_number' => $localSession->phone_number,
-                    'message' => 'QR code regeneration is not needed as session is already connected'
+                    'message' => 'QR code regeneration is not needed.'
                 ]);
             }
 
-            // Try to restart session to get new QR code
-            try {
-                $restartResult = $this->wahaService->restartSession($localSession->session_name);
+            // 3. Pastikan sesi berjalan sebelum meminta QR
+            $this->ensureSessionIsRunning($localSession);
 
-                if (!$restartResult['success']) {
-                    throw new Exception($restartResult['error'] ?? 'Failed to restart session');
-                }
+            // 4. Ambil QR code, dengan logika retry (restart) jika gagal
+            $qrCode = $this->fetchQrCodeWithRestart($localSession);
 
-                // Get new QR code after restart
-                $qrCode = $this->wahaService->getQrCode($localSession->session_name);
+            $this->logApiAction('regenerate_waha_qr_code', [
+                'session_id' => $sessionId,
+                'organization_id' => $organization->id
+            ]);
 
-                $this->logApiAction('regenerate_waha_qr_code', [
-                    'session_id' => $sessionId,
-                    'organization_id' => $organization->id,
-                ]);
-
-                return $this->successResponse('QR code regenerated successfully', $qrCode);
-            } catch (Exception $e) {
-                // If restart fails, try to get existing QR code
-                try {
-                    $qrCode = $this->wahaService->getQrCode($localSession->session_name);
-                    return $this->successResponse('QR code retrieved successfully', $qrCode);
-                } catch (Exception $qrException) {
-                    throw new Exception('Failed to regenerate or retrieve QR code: ' . $e->getMessage());
-                }
-            }
+            return $this->successResponse('QR code retrieved successfully', $qrCode);
         } catch (Exception $e) {
             Log::error('Failed to regenerate WAHA QR code', [
                 'session_id' => $sessionId,
                 'organization_id' => $this->getCurrentOrganization()?->id,
                 'error' => $e->getMessage()
             ]);
-            return $this->errorResponse('Failed to regenerate QR code', 500);
+
+            // Memberikan pesan error yang lebih spesifik kepada client jika memungkinkan
+            return $this->errorResponse($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Memastikan sesi WAHA dalam keadaan berjalan, jika 'STOPPED' maka akan dijalankan.
+     *
+     * @param mixed $localSession
+     * @throws Exception
+     */
+    private function ensureSessionIsRunning(mixed $localSession): void
+    {
+        $sessionStatus = $this->wahaService->getSessionStatus($localSession->session_name);
+
+        if (!$sessionStatus['success']) {
+            throw new Exception('Failed to get session status: ' . ($sessionStatus['error'] ?? 'Unknown error'));
+        }
+
+        $status = $sessionStatus['data']['status'] ?? 'UNKNOWN';
+
+        if ($status === 'STOPPED') {
+            Log::info('Session is stopped, attempting to start it.', ['session_name' => $localSession->session_name]);
+            $startResult = $this->wahaService->startSession($localSession->session_name);
+
+            if (!$startResult['success']) {
+                throw new Exception('Failed to start a stopped session: ' . ($startResult['error'] ?? 'Unknown error'));
+            }
+
+            // Beri jeda agar sesi sempat terinisialisasi
+            sleep(2);
+        }
+    }
+
+    /**
+     * Mencoba mengambil QR code. Jika gagal, coba restart sesi dan ambil lagi.
+     *
+     * @param mixed $localSession
+     * @return array
+     * @throws Exception
+     */
+    private function fetchQrCodeWithRestart(mixed $localSession): array
+    {
+        try {
+            // Coba ambil QR code pertama kali
+            return $this->wahaService->getQrCode($localSession->session_name);
+        } catch (Exception $initialException) {
+            Log::warning('Initial QR code fetch failed, attempting session restart.', [
+                'session_name' => $localSession->session_name,
+                'error' => $initialException->getMessage()
+            ]);
+
+            // Jika gagal, coba restart sesi
+            $restartResult = $this->wahaService->restartSession($localSession->session_name);
+            if (!$restartResult['success']) {
+                throw new Exception('Failed to restart session after QR fetch failure.');
+            }
+
+            // Beri jeda agar sesi sempat restart
+            sleep(3);
+
+            // Coba lagi mengambil QR code setelah restart
+            try {
+                return $this->wahaService->getQrCode($localSession->session_name);
+            } catch (Exception $retryException) {
+                // Jika percobaan kedua tetap gagal, menyerah.
+                throw new Exception('Failed to get QR code even after restarting session.');
+            }
         }
     }
 
@@ -940,8 +994,8 @@ class WahaController extends BaseApiController
 
             // Check if result is successful
             $isSuccess = ($result['waha_session']['success'] ?? false) ||
-                        isset($result['waha_session']['name']) ||
-                        isset($result['waha_session']['session']);
+                isset($result['waha_session']['name']) ||
+                isset($result['waha_session']['session']);
 
             if ($isSuccess) {
                 // Session already saved to database by createDefaultSessionWithN8nIntegration
@@ -1064,7 +1118,6 @@ class WahaController extends BaseApiController
                     'session_name' => $sessionName
                 ]
             );
-
         } catch (Exception $e) {
             Log::error('Failed to get chat list', [
                 'session_id' => $sessionId,
@@ -1102,7 +1155,6 @@ class WahaController extends BaseApiController
                     'session_name' => $sessionName
                 ]
             );
-
         } catch (Exception $e) {
             Log::error('Failed to get chat overview', [
                 'session_id' => $sessionId,
@@ -1131,7 +1183,6 @@ class WahaController extends BaseApiController
                 $result['message'] ?? 'Profile picture retrieved successfully',
                 $result['data'] ?? []
             );
-
         } catch (Exception $e) {
             Log::error('Failed to get profile picture', [
                 'session_id' => $sessionId,
@@ -1166,7 +1217,6 @@ class WahaController extends BaseApiController
                 $result['message'] ?? 'Chat messages retrieved successfully',
                 $result['data'] ?? []
             );
-
         } catch (Exception $e) {
             Log::error('Failed to get chat messages', [
                 'session_id' => $sessionId,
@@ -1204,7 +1254,6 @@ class WahaController extends BaseApiController
                 $result['message'] ?? 'Message sent successfully',
                 $result['data'] ?? []
             );
-
         } catch (Exception $e) {
             Log::error('Failed to send chat message', [
                 'session_id' => $sessionId,

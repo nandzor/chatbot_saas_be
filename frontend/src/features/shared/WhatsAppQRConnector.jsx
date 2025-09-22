@@ -185,6 +185,9 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
             if (!response.success) {
               throw new Error(response.error || 'Gagal membuat sesi WAHA');
             }
+          } else {
+            // For existing sessions, check if session exists and is ready for QR
+            console.log('📱 Using existing session:', actualSessionId);
           }
 
           setProgress(30);
@@ -362,8 +365,9 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
       clearInterval(monitoringInterval);
     }
 
-    // Stop session if not completed
-    if (sessionId && connectionStep !== 'completed') {
+    // Only stop session if it was newly created (not an existing session) and not completed
+    // For existing sessions (providedSessionId), we should NOT stop them when closing dialog
+    if (sessionId && !providedSessionId && connectionStep !== 'completed') {
       wahaApi.stopSession(sessionId).catch(() => {
         // Ignore errors when stopping session
       });
@@ -413,7 +417,7 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
   const getStepTitle = () => {
     switch (connectionStep) {
       case 'initializing':
-        return 'Menginisialisasi Sesi WAHA';
+        return providedSessionId ? 'Memuat Sesi WAHA' : 'Menginisialisasi Sesi WAHA';
       case 'qr-ready':
         return 'QR Code Siap';
       case 'scanning':
@@ -434,9 +438,13 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
   const getStepDescription = () => {
     switch (connectionStep) {
       case 'initializing':
-        return 'Membuat sesi WAHA dan mempersiapkan koneksi...';
+        return providedSessionId
+          ? 'Memuat sesi WAHA yang sudah ada dan mempersiapkan QR Code...'
+          : 'Membuat sesi WAHA dan mempersiapkan koneksi...';
       case 'qr-ready':
-        return 'QR Code telah siap. Klik tombol di bawah untuk melihat QR Code.';
+        return providedSessionId
+          ? 'QR Code untuk sesi yang sudah ada telah siap. Klik tombol di bawah untuk melihat QR Code.'
+          : 'QR Code telah siap. Klik tombol di bawah untuk melihat QR Code.';
       case 'scanning':
         return 'Pindai QR Code dengan WhatsApp untuk menghubungkan perangkat.';
       case 'connected':
@@ -550,10 +558,15 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
             <div className="text-center py-8">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
-                <span className="text-lg font-medium">Menginisialisasi...</span>
+                <span className="text-lg font-medium">
+                  {providedSessionId ? 'Memuat...' : 'Menginisialisasi...'}
+                </span>
               </div>
               <p className="text-muted-foreground">
-                Membuat sesi WAHA dan mempersiapkan koneksi WhatsApp
+                {providedSessionId
+                  ? 'Memuat sesi WAHA yang sudah ada dan mempersiapkan QR Code'
+                  : 'Membuat sesi WAHA dan mempersiapkan koneksi WhatsApp'
+                }
               </p>
             </div>
           )}

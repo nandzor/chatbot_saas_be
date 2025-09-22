@@ -175,7 +175,9 @@ const WahaSessionManager = () => {
     }
   }, [deleteSession, loadSessions]);
 
-  const handleShowQR = useCallback((_sessionId) => {
+  const handleShowQR = useCallback((session) => {
+    // Pass the session_name to show QR for existing session
+    setCreatedSessionId(session.session_name || session.name || session.id);
     setShowQRConnector(true);
   }, []);
 
@@ -398,7 +400,7 @@ const WahaSessionManager = () => {
     {
       icon: QrCode,
       label: 'Show QR Code',
-      onClick: (session) => handleShowQR(session.id),
+      onClick: (session) => handleShowQR(session),
       className: 'text-blue-600 hover:text-blue-700',
       disabled: (session) => {
         // Disable QR button if session is already connected
@@ -413,10 +415,11 @@ const WahaSessionManager = () => {
       onClick: (session) => handleStartSession(session.id),
       className: 'text-green-600 hover:text-green-700',
       disabled: (session) => {
-        // Disable start button if session is already working/connected
+        // Disable start button if session is connecting, working, or connected
+        const isConnecting = session.status === 'connecting' || session.status === 'CONNECTING';
         const isWorking = session.status === 'working' || session.status === 'WORKING';
         const isConnected = session.is_connected && session.is_authenticated;
-        return isWorking || isConnected;
+        return isConnecting || isWorking || isConnected;
       }
     },
     {
@@ -425,10 +428,16 @@ const WahaSessionManager = () => {
       onClick: (session) => handleStopSession(session.id),
       className: 'text-orange-600 hover:text-orange-700',
       disabled: (session) => {
-        // Disable stop button if session is not running
+        // Enable stop button if session is connecting, working, or connected
+        // Disable stop button if session is stopped/disconnected
+        const isConnecting = session.status === 'connecting' || session.status === 'CONNECTING';
         const isWorking = session.status === 'working' || session.status === 'WORKING';
         const isConnected = session.is_connected && session.is_authenticated;
-        return !isWorking && !isConnected;
+        const isStopped = session.status === 'stopped' || session.status === 'STOPPED' || session.status === 'disconnected';
+
+        // Stop button should be enabled when session is active (connecting, working, connected)
+        // Stop button should be disabled when session is stopped/disconnected
+        return isStopped && !isConnecting && !isWorking && !isConnected;
       }
     },
     {
