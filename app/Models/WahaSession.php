@@ -22,6 +22,7 @@ use Carbon\Carbon;
  *
  * @property string $id
  * @property string $organization_id
+ * @property string|null $n8n_workflow_id
  * @property string $channel_config_id
  * @property string $session_name
  * @property string $waha_instance_url
@@ -81,6 +82,7 @@ class WahaSession extends Model
 
     protected $fillable = [
         'organization_id',
+        'n8n_workflow_id',
         'channel_config_id',
         'session_name',
         'waha_instance_url',
@@ -227,6 +229,14 @@ class WahaSession extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Get the N8N workflow associated with this session
+     */
+    public function n8nWorkflow(): BelongsTo
+    {
+        return $this->belongsTo(N8nWorkflow::class, 'n8n_workflow_id', 'id');
     }
 
     /**

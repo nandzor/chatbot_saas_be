@@ -199,7 +199,7 @@ class WahaSyncService
     /**
      * Create local session from WAHA data
      */
-    protected function createLocalSession(string $organizationId, string $sessionName, array $wahaData): WahaSession
+    protected function createLocalSession(string $organizationId, string $sessionName, array $wahaData, ?string $n8nWorkflowId = null): WahaSession
     {
         Log::info('Creating local session with data', [
             'organization_id' => $organizationId,
@@ -211,6 +211,7 @@ class WahaSyncService
 
         $sessionData = [
             'organization_id' => $organizationId,
+            'n8n_workflow_id' => $n8nWorkflowId,
             'channel_config_id' => '00000000-0000-0000-0000-000000000000', // Default channel config
             'session_name' => $sessionName,
             'phone_number' => $this->extractPhoneNumber($wahaData),
@@ -618,7 +619,7 @@ class WahaSyncService
     /**
      * Create session with organization validation
      */
-    public function createSessionForOrganization(string $organizationId, string $sessionName, array $config = []): WahaSession
+    public function createSessionForOrganization(string $organizationId, string $sessionName, array $config = [], ?string $n8nWorkflowId = null): WahaSession
     {
         // Check if session already exists locally
         $existingSession = WahaSession::where('organization_id', $organizationId)
@@ -628,6 +629,7 @@ class WahaSyncService
         if ($existingSession) {
             // Update existing session
             $existingSession->update([
+                'n8n_workflow_id' => $n8nWorkflowId ?? $existingSession->n8n_workflow_id,
                 'business_name' => $config['business_name'] ?? $existingSession->business_name,
                 'business_description' => $config['business_description'] ?? $existingSession->business_description,
                 'business_category' => $config['business_category'] ?? $existingSession->business_category,
@@ -641,47 +643,12 @@ class WahaSyncService
             return $existingSession;
         }
 
-        // Check if session exists in WAHA server first
-        $wahaSessions = $this->wahaService->getSessions();
-        $sessionExists = false;
-
-        Log::info('Checking WAHA sessions', [
+        // Skip WAHA server check for now - just create local session
+        Log::info('Creating local session without WAHA server check', [
             'session_name' => $sessionName,
-            'waha_sessions' => $wahaSessions
+            'organization_id' => $organizationId,
+            'n8n_workflow_id' => $n8nWorkflowId
         ]);
-
-        if (isset($wahaSessions['success']) && $wahaSessions['success']) {
-            $sessions = $wahaSessions['data'] ?? [];
-            foreach ($sessions as $session) {
-                if (($session['name'] ?? '') === $sessionName) {
-                    $sessionExists = true;
-                    break;
-                }
-            }
-        } else {
-            // If no success flag, check if it's a direct array
-            if (is_array($wahaSessions)) {
-                foreach ($wahaSessions as $session) {
-                    if (($session['name'] ?? '') === $sessionName) {
-                        $sessionExists = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        Log::info('Session exists check', [
-            'session_name' => $sessionName,
-            'session_exists' => $sessionExists
-        ]);
-
-        // Only start session if it doesn't exist
-        if (!$sessionExists) {
-            $result = $this->wahaService->startSession($sessionName, $config);
-            if (!($result['success'] ?? false)) {
-                throw new Exception('Failed to start session in WAHA server');
-            }
-        }
 
         // Get default channel config
         $channelConfig = \App\Models\ChannelConfig::first();
@@ -690,31 +657,52 @@ class WahaSyncService
         }
 
         // Create or update local session record
-        return WahaSession::updateOrCreate(
-            [
-                'organization_id' => $organizationId,
+        try {
+            $session = WahaSession::updateOrCreate(
+                [
+                    'organization_id' => $organizationId,
+                    'session_name' => $sessionName,
+                ],
+                [
+                    'n8n_workflow_id' => $n8nWorkflowId,
+                    'channel_config_id' => $channelConfig->id,
+                    'phone_number' => $config['phone_number'] ?? substr($sessionName, 0, 20),
+                    'instance_id' => $sessionName,
+                    'business_name' => $config['business_name'] ?? null,
+                    'business_description' => $config['business_description'] ?? null,
+                    'business_category' => $config['business_category'] ?? null,
+                    'business_website' => $config['business_website'] ?? null,
+                    'business_email' => $config['business_email'] ?? null,
+                    'status' => 'connecting',
+                    'is_authenticated' => false,
+                    'is_connected' => false,
+                    'health_status' => 'unknown',
+                    'error_count' => 0,
+                    'total_messages_sent' => 0,
+                    'total_messages_received' => 0,
+                    'total_media_sent' => 0,
+                    'total_media_received' => 0,
+                ]
+            );
+
+            Log::info('Session created/updated successfully', [
+                'session_id' => $session->id,
                 'session_name' => $sessionName,
-            ],
-            [
-                'channel_config_id' => $channelConfig->id,
-                'phone_number' => $config['phone_number'] ?? '',
-                'instance_id' => $sessionName,
-                'business_name' => $config['business_name'] ?? null,
-                'business_description' => $config['business_description'] ?? null,
-                'business_category' => $config['business_category'] ?? null,
-                'business_website' => $config['business_website'] ?? null,
-                'business_email' => $config['business_email'] ?? null,
-                'status' => 'connecting',
-                'is_authenticated' => false,
-                'is_connected' => false,
-                'health_status' => 'unknown',
-                'error_count' => 0,
-                'total_messages_sent' => 0,
-                'total_messages_received' => 0,
-                'total_media_sent' => 0,
-                'total_media_received' => 0,
-            ]
-        );
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'organization_id' => $organizationId
+            ]);
+
+            return $session;
+        } catch (Exception $e) {
+            Log::error('Failed to create/update session', [
+                'session_name' => $sessionName,
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -842,7 +830,7 @@ class WahaSyncService
     }
 
     /**
-     * Delete session with organization validation
+     * Delete session with organization validation and N8N workflow cleanup
      */
     public function deleteSessionForOrganization(string $organizationId, string $sessionName): bool
     {
@@ -852,18 +840,27 @@ class WahaSyncService
             return false;
         }
 
+        // Get N8N workflow ID from session metadata before deleting
+        $n8nWorkflowId = $this->extractN8nWorkflowIdFromSession($localSession);
+
         // Delete from WAHA server using session name
         $result = $this->wahaService->deleteSession($sessionName);
 
         // For DELETE operations, WAHA server returns empty response on success (HTTP 200)
         // Check if the result is not an error (no exception thrown means success)
         if (is_array($result) && !isset($result['error'])) {
+            // Delete N8N workflow if exists
+            if ($n8nWorkflowId) {
+                $this->deleteN8nWorkflowForSession($n8nWorkflowId, $organizationId, $sessionName);
+            }
+
             // Delete local record
             $localSession->delete();
             Log::info('Session deleted successfully', [
                 'organization_id' => $organizationId,
                 'session_name' => $sessionName,
-                'local_session_id' => $localSession->id
+                'local_session_id' => $localSession->id,
+                'n8n_workflow_id' => $n8nWorkflowId
             ]);
             return true;
         }
@@ -874,6 +871,113 @@ class WahaSyncService
             'result' => $result
         ]);
         return false;
+    }
+
+    /**
+     * Extract N8N workflow ID from session metadata
+     *
+     * @param object $session WahaSession model
+     * @return string|null
+     */
+    private function extractN8nWorkflowIdFromSession($session): ?string
+    {
+        try {
+            // First, try to get workflow ID from direct relationship
+            if ($session->n8n_workflow_id) {
+                return $session->n8n_workflow_id;
+            }
+
+            // Fallback: Check metadata for n8n_webhook_id
+            $metadata = $session->metadata ?? [];
+
+            if (isset($metadata['n8n_webhook_id'])) {
+                $webhookId = $metadata['n8n_webhook_id'];
+
+                // Find workflow by webhook ID
+                $workflow = \App\Models\N8nWorkflow::where('organization_id', $session->organization_id)
+                    ->whereJsonContains('metadata->webhook_id', $webhookId)
+                    ->first();
+
+                if ($workflow) {
+                    // Update session with workflow ID for future use
+                    $session->update(['n8n_workflow_id' => $workflow->workflow_id]);
+                    return $workflow->workflow_id;
+                }
+            }
+
+            // Last fallback: try to find workflow by session name pattern
+            $workflow = \App\Models\N8nWorkflow::where('organization_id', $session->organization_id)
+                ->where('name', 'like', '%' . $session->session_name . '%')
+                ->first();
+
+            if ($workflow) {
+                // Update session with workflow ID for future use
+                $session->update(['n8n_workflow_id' => $workflow->workflow_id]);
+                return $workflow->workflow_id;
+            }
+
+            return null;
+        } catch (Exception $e) {
+            Log::warning('Failed to extract N8N workflow ID from session', [
+                'session_id' => $session->id,
+                'session_name' => $session->session_name,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Delete N8N workflow for session
+     *
+     * @param string $workflowId N8N workflow ID
+     * @param string $organizationId Organization ID
+     * @param string $sessionName Session name
+     * @return void
+     */
+    private function deleteN8nWorkflowForSession(string $workflowId, string $organizationId, string $sessionName): void
+    {
+        try {
+            // Get the workflow from database to get the correct workflow_id for N8N API
+            $workflow = \App\Models\N8nWorkflow::find($workflowId);
+            if (!$workflow) {
+                Log::warning('N8N workflow not found in database', [
+                    'workflow_id' => $workflowId,
+                    'organization_id' => $organizationId,
+                    'session_name' => $sessionName
+                ]);
+                return;
+            }
+
+            $n8nService = app(\App\Services\N8n\N8nService::class);
+
+            // Delete workflow from N8N using the correct workflow_id
+            $result = $n8nService->deleteWorkflowWithDatabase($workflow->workflow_id);
+
+            if ($result['success']) {
+                Log::info('N8N workflow deleted successfully for session', [
+                    'database_id' => $workflowId,
+                    'workflow_id' => $workflow->workflow_id,
+                    'organization_id' => $organizationId,
+                    'session_name' => $sessionName
+                ]);
+            } else {
+                Log::warning('Failed to delete N8N workflow for session', [
+                    'database_id' => $workflowId,
+                    'workflow_id' => $workflow->workflow_id,
+                    'organization_id' => $organizationId,
+                    'session_name' => $sessionName,
+                    'error' => $result['error'] ?? 'Unknown error'
+                ]);
+            }
+        } catch (Exception $e) {
+            Log::error('Exception while deleting N8N workflow for session', [
+                'workflow_id' => $workflowId,
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**

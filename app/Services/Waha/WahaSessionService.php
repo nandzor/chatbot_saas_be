@@ -53,6 +53,23 @@ class WahaSessionService
             $sessionData = $this->prepareSessionData($validatedData, $sessionName, $organizationId);
             $wahaResult = $this->wahaService->createSession($sessionData);
 
+            // Save session to database with N8N workflow ID
+            $workflowId = null;
+            if (isset($n8nResult['database_id'])) {
+                // Use database_id which is a valid UUID
+                $workflowId = $n8nResult['database_id'];
+            } elseif (isset($n8nResult['stored_workflow']) && is_array($n8nResult['stored_workflow'])) {
+                // Fallback to stored_workflow workflow_id
+                $workflowId = $n8nResult['stored_workflow']['workflow_id'] ?? null;
+            } elseif (isset($n8nResult['n8n_workflow'])) {
+                if (is_object($n8nResult['n8n_workflow'])) {
+                    $workflowId = $n8nResult['n8n_workflow']->workflow_id ?? null;
+                } elseif (is_array($n8nResult['n8n_workflow'])) {
+                    $workflowId = $n8nResult['n8n_workflow']['id'] ?? null;
+                }
+            }
+            $this->saveSessionToDatabase($organizationId, $sessionName, $wahaResult, $workflowId);
+
             // Combine results
             return [
                 'waha_session' => $wahaResult,
@@ -100,6 +117,23 @@ class WahaSessionService
 
             // Create WAHA session
             $wahaResult = $this->wahaService->createSession($sessionConfig);
+
+            // Save session to database with N8N workflow ID
+            $workflowId = null;
+            if (isset($n8nResult['database_id'])) {
+                // Use database_id which is a valid UUID
+                $workflowId = $n8nResult['database_id'];
+            } elseif (isset($n8nResult['stored_workflow']) && is_array($n8nResult['stored_workflow'])) {
+                // Fallback to stored_workflow workflow_id
+                $workflowId = $n8nResult['stored_workflow']['workflow_id'] ?? null;
+            } elseif (isset($n8nResult['n8n_workflow'])) {
+                if (is_object($n8nResult['n8n_workflow'])) {
+                    $workflowId = $n8nResult['n8n_workflow']->workflow_id ?? null;
+                } elseif (is_array($n8nResult['n8n_workflow'])) {
+                    $workflowId = $n8nResult['n8n_workflow']['id'] ?? null;
+                }
+            }
+            $this->saveSessionToDatabase($organization->id, $sessionName, $wahaResult, $workflowId);
 
             // Combine results
             return [
@@ -214,12 +248,18 @@ class WahaSessionService
      */
     protected function extractWebhookIdFromWorkflow(array $workflowResult): ?string
     {
-        if (isset($workflowResult['n8n_workflow']['data']['nodes'][0]['webhookId'])) {
-            return $workflowResult['n8n_workflow']['data']['nodes'][0]['webhookId'];
+        // Check if n8n_workflow is array (from N8N API response)
+        if (isset($workflowResult['n8n_workflow']) && is_array($workflowResult['n8n_workflow'])) {
+            if (isset($workflowResult['n8n_workflow']['nodes'][0]['webhookId'])) {
+                return $workflowResult['n8n_workflow']['nodes'][0]['webhookId'];
+            }
         }
 
-        if (isset($workflowResult['n8n_workflow']['nodes'][0]['webhookId'])) {
-            return $workflowResult['n8n_workflow']['nodes'][0]['webhookId'];
+        // Check if n8n_workflow is object (from database)
+        if (isset($workflowResult['n8n_workflow']) && is_object($workflowResult['n8n_workflow'])) {
+            if (isset($workflowResult['n8n_workflow']->data['nodes'][0]['webhookId'])) {
+                return $workflowResult['n8n_workflow']->data['nodes'][0]['webhookId'];
+            }
         }
 
         return null;
@@ -507,5 +547,45 @@ class WahaSessionService
         }
 
         return $organizationId . '_session-' . substr(md5(uniqid()), 0, 8);
+    }
+
+    /**
+     * Save session to database with N8N workflow ID
+     *
+     * @param string $organizationId
+     * @param string $sessionName
+     * @param array $wahaResult
+     * @param string|null $n8nWorkflowId
+     * @return void
+     */
+    protected function saveSessionToDatabase(string $organizationId, string $sessionName, array $wahaResult, ?string $n8nWorkflowId = null): void
+    {
+        try {
+            Log::info('Starting saveSessionToDatabase', [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'n8n_workflow_id' => $n8nWorkflowId
+            ]);
+
+            $wahaSyncService = app(\App\Services\Waha\WahaSyncService::class);
+
+            // Use the existing method to create/update session in database
+            $session = $wahaSyncService->createSessionForOrganization($organizationId, $sessionName, [], $n8nWorkflowId);
+
+            Log::info('Session saved to database with N8N workflow ID', [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'session_id' => $session->id ?? 'N/A'
+            ]);
+        } catch (Exception $e) {
+            Log::error('Failed to save session to database', [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 }
