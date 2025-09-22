@@ -54,17 +54,25 @@ export const useWahaSessions = () => {
       setError(null);
 
       const queryParams = {
-        page: pagination.currentPage,
-        per_page: pagination.perPage,
+        page: params.page || pagination.currentPage,
+        per_page: params.per_page || pagination.perPage,
         ...filters,
         ...params
       };
 
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
-        console.log('Loading WAHA sessions with params:', queryParams);
+        console.log('=== LOAD SESSIONS DEBUG ===');
+        // eslint-disable-next-line no-console
+        console.log('Input params:', params);
         // eslint-disable-next-line no-console
         console.log('Current pagination state:', pagination);
+        // eslint-disable-next-line no-console
+        console.log('Current filters:', filters);
+        // eslint-disable-next-line no-console
+        console.log('Final queryParams:', queryParams);
+        // eslint-disable-next-line no-console
+        console.log('========================');
       }
 
       const response = await wahaApi.getSessions(queryParams);
@@ -171,8 +179,7 @@ export const useWahaSessions = () => {
       setLoading(false);
       setPaginationLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pagination, filters]);
 
   // Search sessions
   const searchSessions = useCallback(async (query) => {
@@ -284,7 +291,7 @@ export const useWahaSessions = () => {
 
     if (page >= 1 && page <= pagination.totalPages && page !== pagination.currentPage) {
       try {
-        updatePagination({ currentPage: page });
+        // Call loadSessions directly without dependency
         await loadSessions({ page });
       } catch (error) {
         if (import.meta.env.DEV) {
@@ -294,13 +301,13 @@ export const useWahaSessions = () => {
         toast.error('Gagal mengubah halaman');
       }
     }
-  }, [pagination.totalPages, pagination.currentPage, updatePagination, loadSessions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.totalPages, pagination.currentPage]);
 
   // Handle per page change
   const handlePerPageChange = useCallback(async (perPage) => {
     try {
       if (perPage > 0 && perPage <= 100) {
-        updatePagination({ perPage, currentPage: 1 });
         await loadSessions({ per_page: perPage, page: 1 });
       } else {
         toast.error('Jumlah item per halaman harus antara 1-100');
@@ -312,37 +319,34 @@ export const useWahaSessions = () => {
       }
       toast.error('Gagal mengubah jumlah item per halaman');
     }
-  }, [updatePagination, loadSessions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Go to first page
   const goToFirstPage = useCallback(async () => {
-    updatePagination({ currentPage: 1 });
     await loadSessions({ page: 1 });
-  }, [updatePagination, loadSessions]);
+  }, [loadSessions]);
 
   // Go to last page
   const goToLastPage = useCallback(async () => {
-    updatePagination({ currentPage: pagination.totalPages });
     await loadSessions({ page: pagination.totalPages });
-  }, [pagination.totalPages, updatePagination, loadSessions]);
+  }, [pagination.totalPages, loadSessions]);
 
   // Go to previous page
   const goToPreviousPage = useCallback(async () => {
     if (pagination.currentPage > 1) {
       const newPage = pagination.currentPage - 1;
-      updatePagination({ currentPage: newPage });
       await loadSessions({ page: newPage });
     }
-  }, [pagination.currentPage, updatePagination, loadSessions]);
+  }, [pagination.currentPage, loadSessions]);
 
   // Go to next page
   const goToNextPage = useCallback(async () => {
     if (pagination.currentPage < pagination.totalPages) {
       const newPage = pagination.currentPage + 1;
-      updatePagination({ currentPage: newPage });
       await loadSessions({ page: newPage });
     }
-  }, [pagination.currentPage, pagination.totalPages, updatePagination, loadSessions]);
+  }, [pagination.currentPage, pagination.totalPages, loadSessions]);
 
   // Create new session
   const createSession = useCallback(async (sessionId, config = {}) => {

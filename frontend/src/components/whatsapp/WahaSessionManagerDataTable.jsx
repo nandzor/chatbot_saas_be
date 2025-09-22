@@ -81,11 +81,7 @@ const WahaSessionManager = () => {
     searchSessions,
     updateFilters,
     handlePageChange,
-    handlePerPageChange,
-    goToFirstPage,
-    goToLastPage,
-    goToPreviousPage,
-    goToNextPage
+    handlePerPageChange
   } = useWahaSessions();
 
   // Debug logging
@@ -623,9 +619,9 @@ const WahaSessionManager = () => {
                 ariaLabel="WAHA Sessions Table"
               />
 
-              {/* Enhanced Pagination */}
-              {pagination && (
-                <div className="mt-6">
+              {/* Pagination - Same as Knowledge Base */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="flex justify-center mt-6">
                   <Pagination
                     currentPage={pagination?.currentPage || 1}
                     totalPages={pagination?.totalPages || 1}
@@ -633,22 +629,17 @@ const WahaSessionManager = () => {
                     perPage={pagination?.perPage || 10}
                     onPageChange={handlePageChange}
                     onPerPageChange={handlePerPageChange}
-                    onFirstPage={goToFirstPage}
-                    onLastPage={goToLastPage}
-                    onPrevPage={goToPreviousPage}
-                    onNextPage={goToNextPage}
+                    perPageOptions={[5, 10, 25, 50, 100]}
                     variant="table"
-                    size="sm"
+                    size="default"
                     loading={paginationLoading}
-                    showPerPageSelector={true}
                     showPageInfo={true}
+                    showPerPageSelector={true}
                     showFirstLast={true}
                     showPrevNext={true}
                     showPageNumbers={true}
-                    perPageOptions={[5, 10, 15, 25, 50]}
-                    maxVisiblePages={5}
+                    className="w-full max-w-4xl"
                     ariaLabel="WAHA Sessions table pagination"
-                    className="border-t pt-4"
                   />
                 </div>
               )}

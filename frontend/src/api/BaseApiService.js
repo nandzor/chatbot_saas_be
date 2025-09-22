@@ -52,8 +52,13 @@ export class BaseApiService {
   /**
    * GET request
    */
-  async get(endpoint = '', config = {}) {
-    return this.request('GET', endpoint, null, config);
+  async get(endpoint = '', params = {}, config = {}) {
+    // Add query parameters to config
+    const configWithParams = {
+      ...config,
+      params: params
+    };
+    return this.request('GET', endpoint, null, configWithParams);
   }
 
   /**
