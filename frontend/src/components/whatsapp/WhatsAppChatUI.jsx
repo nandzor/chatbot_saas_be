@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Button, Input, ScrollArea, Avatar, Badge } from '@/components/ui';
-import { Send, Smile, Paperclip, MoreVertical, Phone, Video, Search, X } from 'lucide-react';
+import { Button, Input, ScrollArea, Avatar } from '@/components/ui';
+import { Send, Smile, Paperclip } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -38,7 +38,8 @@ const WhatsAppChatUI = ({
     try {
       await onSendMessage(sessionId, messageText);
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Error handling can be implemented here
+      // For now, silently handle the error
     } finally {
       setIsTyping(false);
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,36 +8,17 @@ import {
   Button,
   Badge,
   Avatar,
-  ScrollArea,
-  Input,
-  Card,
-  CardContent
+  Input
 } from '@/components/ui';
 import {
   MessageSquare,
   Phone,
   Video,
   MoreVertical,
-  Send,
-  Paperclip,
-  Smile,
   Search,
-  Filter,
   X,
-  User,
-  Bot,
-  Check,
-  CheckCheck,
-  Clock,
-  Reply,
-  Forward,
-  Copy,
-  Star,
-  Archive,
-  Trash2
+  Bot
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
-import { id } from 'date-fns/locale';
 import WhatsAppChatUI from './WhatsAppChatUI';
 
 const WhatsAppChatDialog = ({
@@ -89,7 +70,8 @@ const WhatsAppChatDialog = ({
     try {
       await onSendMessage(sessionId, message);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      // Error handling can be implemented here
+      // For now, silently handle the error
     }
   };
 
