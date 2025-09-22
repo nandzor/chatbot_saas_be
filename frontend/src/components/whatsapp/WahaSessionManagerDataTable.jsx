@@ -124,9 +124,9 @@ const WahaSessionManager = () => {
       isCreatingRef.current = true;
       setIsCreatingSession(true);
 
-      // Generate a unique session name with same format as backend
-      const organizationId = getOrganizationIdFromToken() || '-'; // JWT token fallback to default
-      const randomId = Math.random().toString(36).substring(2, 10); // 8 character random string
+      // Generate a unique session name with same format as backend (max 54 chars for WAHA API)
+      const organizationId = getOrganizationIdFromToken() || '42712bc4-9623-46eb-9ff7-87c625c082e4'; // JWT token fallback to default
+      const randomId = Math.random().toString(36).substring(2, 6); // 4 character random string (shorter)
       const sessionName = `${organizationId}_session-${randomId}`;
 
       await createSession(sessionName);

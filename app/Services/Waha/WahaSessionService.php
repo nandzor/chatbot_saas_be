@@ -566,17 +566,19 @@ class WahaSessionService
     protected function generateSessionName(string $organizationId, ?string $customName = null): string
     {
         if ($customName) {
-            // If custom name already contains organization_id, use it as is
+            // If custom name already contains organization_id, use it as is (but ensure max 54 chars)
             if (strpos($customName, $organizationId) === 0) {
-                return $customName;
+                return strlen($customName) <= 54 ? $customName : substr($customName, 0, 54);
             }
 
             // Otherwise, clean and format the name
             $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $customName));
-            return $organizationId . '_' . $cleanName . '_' . substr(md5(uniqid()), 0, 8);
+            $sessionName = $organizationId . '_' . $cleanName . '_' . substr(md5(uniqid()), 0, 8);
+            return strlen($sessionName) <= 54 ? $sessionName : substr($sessionName, 0, 54);
         }
 
-        return $organizationId . '_session-' . substr(md5(uniqid()), 0, 8);
+        $sessionName = $organizationId . '_session-' . substr(md5(uniqid()), 0, 8);
+        return strlen($sessionName) <= 54 ? $sessionName : substr($sessionName, 0, 54);
     }
 
     /**
