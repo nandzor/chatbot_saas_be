@@ -874,7 +874,7 @@ class WahaSyncService
     }
 
     /**
-     * Extract N8N workflow ID from session metadata
+     * Extract N8N workflow ID from session
      *
      * @param object $session WahaSession model
      * @return string|null
@@ -882,43 +882,24 @@ class WahaSyncService
     private function extractN8nWorkflowIdFromSession($session): ?string
     {
         try {
-            // First, try to get workflow ID from direct relationship
+            // Use direct relationship - n8n_workflow_id should be populated
             if ($session->n8n_workflow_id) {
+                Log::info('Using n8n_workflow_id from direct relationship', [
+                    'session_id' => $session->id,
+                    'session_name' => $session->session_name,
+                    'n8n_workflow_id' => $session->n8n_workflow_id
+                ]);
                 return $session->n8n_workflow_id;
             }
 
-            // Fallback: Check metadata for n8n_webhook_id
-            $metadata = $session->metadata ?? [];
-
-            if (isset($metadata['n8n_webhook_id'])) {
-                $webhookId = $metadata['n8n_webhook_id'];
-
-                // Find workflow by webhook ID
-                $workflow = \App\Models\N8nWorkflow::where('organization_id', $session->organization_id)
-                    ->whereJsonContains('metadata->webhook_id', $webhookId)
-                    ->first();
-
-                if ($workflow) {
-                    // Update session with workflow ID for future use
-                    $session->update(['n8n_workflow_id' => $workflow->workflow_id]);
-                    return $workflow->workflow_id;
-                }
-            }
-
-            // Last fallback: try to find workflow by session name pattern
-            $workflow = \App\Models\N8nWorkflow::where('organization_id', $session->organization_id)
-                ->where('name', 'like', '%' . $session->session_name . '%')
-                ->first();
-
-            if ($workflow) {
-                // Update session with workflow ID for future use
-                $session->update(['n8n_workflow_id' => $workflow->workflow_id]);
-                return $workflow->workflow_id;
-            }
+            Log::warning('No n8n_workflow_id found for session', [
+                'session_id' => $session->id,
+                'session_name' => $session->session_name
+            ]);
 
             return null;
         } catch (Exception $e) {
-            Log::warning('Failed to extract N8N workflow ID from session', [
+            Log::error('Failed to extract N8N workflow ID from session', [
                 'session_id' => $session->id,
                 'session_name' => $session->session_name,
                 'error' => $e->getMessage()

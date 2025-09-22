@@ -53,21 +53,8 @@ class WahaSessionService
             $sessionData = $this->prepareSessionData($validatedData, $sessionName, $organizationId);
             $wahaResult = $this->wahaService->createSession($sessionData);
 
-            // Save session to database with N8N workflow ID
-            $workflowId = null;
-            if (isset($n8nResult['database_id'])) {
-                // Use database_id which is a valid UUID
-                $workflowId = $n8nResult['database_id'];
-            } elseif (isset($n8nResult['stored_workflow']) && is_array($n8nResult['stored_workflow'])) {
-                // Fallback to stored_workflow workflow_id
-                $workflowId = $n8nResult['stored_workflow']['workflow_id'] ?? null;
-            } elseif (isset($n8nResult['n8n_workflow'])) {
-                if (is_object($n8nResult['n8n_workflow'])) {
-                    $workflowId = $n8nResult['n8n_workflow']->workflow_id ?? null;
-                } elseif (is_array($n8nResult['n8n_workflow'])) {
-                    $workflowId = $n8nResult['n8n_workflow']['id'] ?? null;
-                }
-            }
+            // Save session to database with N8N workflow ID for cascade delete
+            $workflowId = $this->extractWorkflowIdFromN8nResult($n8nResult);
             $this->saveSessionToDatabase($organizationId, $sessionName, $wahaResult, $workflowId);
 
             // Combine results
@@ -118,21 +105,8 @@ class WahaSessionService
             // Create WAHA session
             $wahaResult = $this->wahaService->createSession($sessionConfig);
 
-            // Save session to database with N8N workflow ID
-            $workflowId = null;
-            if (isset($n8nResult['database_id'])) {
-                // Use database_id which is a valid UUID
-                $workflowId = $n8nResult['database_id'];
-            } elseif (isset($n8nResult['stored_workflow']) && is_array($n8nResult['stored_workflow'])) {
-                // Fallback to stored_workflow workflow_id
-                $workflowId = $n8nResult['stored_workflow']['workflow_id'] ?? null;
-            } elseif (isset($n8nResult['n8n_workflow'])) {
-                if (is_object($n8nResult['n8n_workflow'])) {
-                    $workflowId = $n8nResult['n8n_workflow']->workflow_id ?? null;
-                } elseif (is_array($n8nResult['n8n_workflow'])) {
-                    $workflowId = $n8nResult['n8n_workflow']['id'] ?? null;
-                }
-            }
+            // Save session to database with N8N workflow ID for cascade delete
+            $workflowId = $this->extractWorkflowIdFromN8nResult($n8nResult);
             $this->saveSessionToDatabase($organization->id, $sessionName, $wahaResult, $workflowId);
 
             // Combine results
@@ -238,6 +212,42 @@ class WahaSessionService
         }
 
         return $payload;
+    }
+
+
+    /**
+     * Extract workflow ID from N8N result for database storage
+     *
+     * @param array $n8nResult Result from N8N service
+     * @return string|null Valid UUID for database storage
+     */
+    private function extractWorkflowIdFromN8nResult(array $n8nResult): ?string
+    {
+        // Priority 1: Use database_id (always a valid UUID)
+        if (isset($n8nResult['database_id']) && !empty($n8nResult['database_id'])) {
+            return $n8nResult['database_id'];
+        }
+
+        // Priority 2: Use stored_workflow ID (if database storage was successful)
+        if (isset($n8nResult['stored_workflow']['id']) && !empty($n8nResult['stored_workflow']['id'])) {
+            return $n8nResult['stored_workflow']['id'];
+        }
+
+        // Priority 3: Fallback to N8N workflow ID (may not be UUID)
+        if (isset($n8nResult['n8n_workflow']['data']['id'])) {
+            return $n8nResult['n8n_workflow']['data']['id'];
+        }
+
+        if (isset($n8nResult['n8n_workflow']['id'])) {
+            return $n8nResult['n8n_workflow']['id'];
+        }
+
+        Log::warning('No valid workflow ID found in N8N result', [
+            'available_keys' => array_keys($n8nResult),
+            'n8n_result' => $n8nResult
+        ]);
+
+        return null;
     }
 
     /**
