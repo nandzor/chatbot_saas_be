@@ -268,12 +268,25 @@ class WahaController extends BaseApiController
                 try {
                     $sessionInfo = $this->wahaService->getSessionInfo($existingSession->session_name);
 
-                    // Session exists on WAHA server, try to start it
+                    // Update database first with connecting status
+                    $this->wahaSyncService->updateSessionStatus($organization->id, $existingSession->session_name, 'STARTING');
+
+                    // Then try to start session on WAHA server
                     $result = $this->wahaService->startSession($existingSession->session_name, $config);
 
                     // If no exception thrown, start session was successful
-                    // Update session status to connecting
-                    $this->wahaSyncService->updateSessionStatus($organization->id, $existingSession->session_name, 'connecting');
+                    // Now check actual status from WAHA server and update database accordingly
+                    try {
+                        $updatedSessionInfo = $this->wahaService->getSessionInfo($existingSession->session_name);
+                        $actualStatus = $updatedSessionInfo['status'] ?? 'connecting';
+
+                        // Update database with actual status from WAHA server
+                        $this->wahaSyncService->updateSessionStatus($organization->id, $existingSession->session_name, $actualStatus);
+                    } catch (\Exception $e) {
+                        // If we can't get updated status, keep as connecting
+                        $this->wahaSyncService->updateSessionStatus($organization->id, $existingSession->session_name, 'STARTING');
+                    }
+
                     $localSession = $existingSession;
                 } catch (\App\Services\Waha\Exceptions\WahaException $e) {
                     // Session doesn't exist on WAHA server, return error
@@ -307,11 +320,14 @@ class WahaController extends BaseApiController
                 'local_session_id' => $localSession->id,
             ]);
 
+            // Get the updated session status from database
+            $updatedLocalSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
+
             return $this->successResponse('Session started successfully', [
                 'local_session_id' => $localSession->id,
                 'organization_id' => $organization->id,
-                'session_name' => $sessionId,
-                'status' => 'connecting',
+                'session_name' => $localSession->session_name,
+                'status' => $updatedLocalSession->status ?? 'connecting',
             ]);
         } catch (Exception $e) {
             Log::error('Failed to start WAHA session', [
@@ -865,8 +881,14 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('get WAHA session info');
             }
 
-            // Use sync service to get session with automatic sync
-            $sessionData = $this->wahaSyncService->getSessionForOrganization($organization->id, $sessionId);
+            // First verify session access by ID to get session name
+            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
+            if (!$localSession) {
+                return $this->handleResourceNotFound('WAHA session', $sessionId);
+            }
+
+            // Use sync service to get session with automatic sync using session name
+            $sessionData = $this->wahaSyncService->getSessionForOrganization($organization->id, $localSession->session_name);
 
             if (!$sessionData) {
                 return $this->handleResourceNotFound('WAHA session', $sessionId);

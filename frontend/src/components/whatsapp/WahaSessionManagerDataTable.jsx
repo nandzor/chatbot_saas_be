@@ -111,6 +111,7 @@ const WahaSessionManager = () => {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [createdSessionId, setCreatedSessionId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isStartingSession, setIsStartingSession] = useState(false);
   const isCreatingRef = useRef(false);
 
   const handleCreateSession = useCallback(async () => {
@@ -146,11 +147,58 @@ const WahaSessionManager = () => {
 
   const handleStartSession = useCallback(async (sessionId) => {
     try {
+      setIsStartingSession(true); // Set loading state
       await startSession(sessionId);
       startMonitoring(sessionId);
-      toast.success(TOAST_MESSAGES.SESSION_STARTED);
-      await loadSessions(); // Refresh sessions after starting
+
+      // Show progress toast with countdown
+      let timeLeft = 6;
+      const progressToast = toast.loading(`Sesi WAHA dimulai. Memperbarui status... (${timeLeft}s)`, {
+        duration: Infinity, // Keep toast alive during progress
+      });
+
+      // Update progress every second
+      const progressInterval = setInterval(() => {
+        timeLeft--;
+        const progress = ((6 - timeLeft) / 6) * 100;
+
+        if (timeLeft > 0) {
+          toast.loading(`Sesi WAHA dimulai. Memperbarui status... (${timeLeft}s)`, {
+            id: progressToast,
+            duration: Infinity,
+            style: {
+              background: `linear-gradient(to right, #10b981 ${progress}%, #e5e7eb ${progress}%)`,
+              color: '#fff',
+              border: '1px solid #10b981',
+              borderRadius: '8px',
+              padding: '12px 16px',
+            },
+          });
+        }
+      }, 1000);
+
+      // Wait 6 seconds before fetching session list to allow database sync
+      setTimeout(async () => {
+        clearInterval(progressInterval);
+        await loadSessions(); // Refresh sessions after starting
+
+        // Show success toast briefly and dismiss quickly
+        toast.success('Status sesi WAHA berhasil diperbarui!', {
+          id: progressToast,
+          duration: 2000, // Quick dismissal after 2 seconds
+          style: {
+            background: '#10b981',
+            color: '#fff',
+            border: '1px solid #10b981',
+            borderRadius: '8px',
+            padding: '12px 16px',
+          },
+        });
+
+        setIsStartingSession(false); // Clear loading state
+      }, 6000);
     } catch (error) {
+      setIsStartingSession(false); // Clear loading state on error
       // Error already handled in hook
     }
   }, [startSession, startMonitoring, loadSessions]);
@@ -158,7 +206,6 @@ const WahaSessionManager = () => {
   const handleStopSession = useCallback(async (sessionId) => {
     try {
       await stopSession(sessionId);
-      toast.success(TOAST_MESSAGES.SESSION_STOPPED);
       await loadSessions(); // Refresh sessions after stopping
     } catch (error) {
       // Error already handled in hook
@@ -411,16 +458,16 @@ const WahaSessionManager = () => {
       }
     },
     {
-      icon: Play,
-      label: 'Start Session',
+      icon: isStartingSession ? RefreshCw : Play,
+      label: isStartingSession ? 'Memulai...' : 'Start Session',
       onClick: (session) => handleStartSession(session.id),
-      className: 'text-green-600 hover:text-green-700',
+      className: isStartingSession ? 'text-blue-600 hover:text-blue-700' : 'text-green-600 hover:text-green-700',
       disabled: (session) => {
-        // Disable start button if session is connecting, working, or connected
+        // Disable start button if session is connecting, working, connected, or if starting
         const isConnecting = session.status === 'connecting' || session.status === 'CONNECTING';
         const isWorking = session.status === 'working' || session.status === 'WORKING';
         const isConnected = session.is_connected && session.is_authenticated;
-        return isConnecting || isWorking || isConnected;
+        return isConnecting || isWorking || isConnected || isStartingSession;
       }
     },
     {
@@ -635,15 +682,30 @@ const WahaSessionManager = () => {
             </div>
           ) : (
             <>
-              <DataTable
-                data={sessions}
-                columns={columns}
-                actions={actions}
-                loading={loading}
-                error={error}
-                searchable={false}
-                ariaLabel="WAHA Sessions Table"
-              />
+              <div className="relative">
+                <DataTable
+                  data={sessions}
+                  columns={columns}
+                  actions={actions}
+                  loading={loading}
+                  error={error}
+                  searchable={false}
+                  ariaLabel="WAHA Sessions Table"
+                />
+
+                {/* Loading overlay for start session */}
+                {isStartingSession && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+                    <div className="flex flex-col items-center gap-3">
+                      <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-gray-900">Memulai Sesi WAHA</p>
+                        <p className="text-xs text-gray-500">Mohon tunggu sebentar...</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Pagination - Same as Knowledge Base */}
               {pagination && pagination.totalPages > 1 && (

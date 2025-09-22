@@ -414,14 +414,13 @@ export const useWahaSessions = () => {
       const result = await wahaApi.startSession(sessionId, config);
 
       if (result.success) {
-        // Update session status
+        // Update session status immediately
         setSessions(prev => Array.isArray(prev) ? prev.map(session =>
           session.id === sessionId
-            ? { ...session, status: 'starting', connected: false }
+            ? { ...session, status: result.data?.status || 'starting', connected: result.data?.status === 'working' }
             : session
         ) : []);
 
-        toast.success('Sesi WAHA berhasil dimulai');
         return result;
       } else {
         throw new Error(result.error || 'Gagal memulai sesi');

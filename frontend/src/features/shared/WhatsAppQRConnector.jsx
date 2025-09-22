@@ -67,7 +67,25 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
       setProgress(50);
       setQrCode(''); // Reset QR code before regenerating
 
-      console.log('🔄 Regenerating QR code for session:', sessionId);
+      // First check session status to ensure session is still active
+      setProgress(60); // Update progress to show status check
+
+      const statusResponse = await wahaApi.getSessionStatus(sessionId);
+
+      if (!statusResponse.success) {
+        throw new Error('Session tidak aktif atau tidak ditemukan');
+      }
+
+      const sessionStatus = statusResponse.data?.status;
+
+      // Only regenerate QR if session is in scanning state
+      if (sessionStatus !== 'scanning' && sessionStatus !== 'connecting') {
+        throw new Error(`Session dalam status '${sessionStatus}', tidak dapat regenerate QR code`);
+      }
+
+      setProgress(70); // Update progress for QR regeneration
+
+      // Then regenerate QR code
       const response = await wahaApi.regenerateQrCode(sessionId);
 
       if (response.success && response.data) {
@@ -96,7 +114,6 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
         throw new Error(response.error || 'Gagal memperbarui QR Code');
       }
     } catch (error) {
-      console.error('Failed to regenerate QR code:', error);
       const errorMessage = handleError(error);
       setError(errorMessage);
       setConnectionStep('error');
@@ -189,7 +206,6 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
             }
           } else {
             // For existing sessions, check if session exists and is ready for QR
-            console.log('📱 Using existing session:', actualSessionId);
           }
 
           setProgress(30);
@@ -263,24 +279,31 @@ const WhatsAppQRConnector = ({ onClose, onSuccess, sessionId: providedSessionId 
 
   // Timer countdown effect
   useEffect(() => {
+    let timer;
+
     if (connectionStep === 'scanning') {
-      const timer = setInterval(() => {
+      // Start countdown timer
+      timer = setInterval(() => {
         setTimeRemaining(prev => {
           if (prev <= 1) {
-            clearInterval(timer);
             // Auto regenerate QR code when time runs out
             regenerateQrCode();
-            return 0;
+            return connectionTimeout; // Reset to full timeout
           }
           return prev - 1;
         });
       }, 1000);
-
-      return () => clearInterval(timer);
     } else {
+      // Reset timer when not scanning
       setTimeRemaining(connectionTimeout);
     }
-  }, [connectionStep, connectionTimeout]);
+
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [connectionStep, connectionTimeout, regenerateQrCode]);
 
   // Auto scroll and focus when reaching naming step
   useEffect(() => {
