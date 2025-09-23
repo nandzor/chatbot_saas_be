@@ -221,7 +221,7 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-[1380px] max-h-[90vh] overflow-y-auto p-0">
         <div className="p-8">
           {/* Enhanced Header */}
           <div className="flex justify-between items-start mb-8">
@@ -561,34 +561,39 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
 
               {/* Tab 2: Input Knowledge Article */}
               <TabsContent value="article" className="space-y-6 mt-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="content" className="text-sm font-medium flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-green-600" />
-                      Konten Knowledge *
-                    </Label>
-                    <Textarea
-                      id="content"
-                      placeholder="Tuliskan konten knowledge yang detail dan informatif..."
-                      value={formData.content}
-                      onChange={(e) => handleInputChange('content', e.target.value)}
-                      rows={15}
-                      className={errors.content ? 'border-red-500' : ''}
-                    />
-                    {errors.content && (
-                      <p className="text-sm text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.content}
-                      </p>
-                    )}
-                    <div className="flex justify-between text-sm text-gray-500">
-                      <span>Jumlah karakter: {formData.content.length}</span>
-                      <span>Minimal 50 karakter</span>
+                <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+                  {/* Left Column: Content Input (70%) */}
+                  <div className="lg:col-span-7 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="content" className="text-sm font-medium flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-green-600" />
+                        Konten Knowledge *
+                      </Label>
+                      <Textarea
+                        id="content"
+                        placeholder="Tuliskan konten knowledge yang detail dan informatif..."
+                        value={formData.content}
+                        onChange={(e) => handleInputChange('content', e.target.value)}
+                        rows={15}
+                        className={errors.content ? 'border-red-500' : ''}
+                      />
+                      {errors.content && (
+                        <p className="text-sm text-red-600 flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.content}
+                        </p>
+                      )}
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>Jumlah karakter: {formData.content.length}</span>
+                        <span>Minimal 50 karakter</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Test Chatbot Response Component */}
-                  <TestChatbotResponse knowledgeContent={formData.content} />
+                  {/* Right Column: Test Chatbot Response Component (30%) */}
+                  <div className="lg:col-span-3 space-y-4">
+                    <TestChatbotResponse knowledgeContent={formData.content} />
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
