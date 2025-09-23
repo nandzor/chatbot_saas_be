@@ -1,9 +1,9 @@
 /**
  * View Knowledge Details Dialog
- * Dialog untuk melihat detail knowledge item
+ * Optimized dialog untuk melihat detail knowledge item dengan UX yang lebih baik
  */
 
-import React from 'react';
+import { useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,75 +32,58 @@ import {
   Globe,
   Shield,
   Clock,
-  CheckCircle,
   User,
   Calendar,
   Zap,
   Target,
   AlertCircle,
-  Copy,
-  ExternalLink
+  Copy
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import {
+  STATUS_CONFIG,
+  PRIORITY_CONFIG
+} from './constants';
 
 const ViewKnowledgeDetailsDialog = ({ open, onOpenChange, knowledgeItem, onEdit }) => {
-  if (!knowledgeItem) return null;
-
-  const formatDate = (dateString) => {
+  // Utility functions
+  const formatDate = useCallback((dateString) => {
     if (!dateString) return 'N/A';
     try {
       return new Date(dateString).toLocaleString();
     } catch {
       return 'Invalid Date';
     }
-  };
+  }, []);
 
-  const copyToClipboard = (text) => {
+  const copyToClipboard = useCallback((text) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard');
-  };
+  }, []);
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'published':
-        return (
-          <Badge variant="default" className="flex items-center space-x-1">
-            <CheckCircle className="h-3 w-3" />
-            <span>Published</span>
-          </Badge>
-        );
-      case 'draft':
-        return (
-          <Badge variant="secondary" className="flex items-center space-x-1">
-            <Clock className="h-3 w-3" />
-            <span>Draft</span>
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="flex items-center space-x-1">
-            <AlertCircle className="h-3 w-3" />
-            <span>{status}</span>
-          </Badge>
-        );
-    }
-  };
+  const getStatusBadge = useCallback((status) => {
+    const config = STATUS_CONFIG[status] || { variant: 'outline', icon: AlertCircle, label: status };
+    const IconComponent = config.icon;
 
-  const getPriorityBadge = (priority) => {
-    const priorityConfig = {
-      low: { color: 'text-gray-600', bg: 'bg-gray-100', label: 'Low' },
-      medium: { color: 'text-yellow-600', bg: 'bg-yellow-100', label: 'Medium' },
-      high: { color: 'text-red-600', bg: 'bg-red-100', label: 'High' }
-    };
+    return (
+      <Badge variant={config.variant} className="flex items-center space-x-1">
+        <IconComponent className="h-3 w-3" />
+        <span>{config.label}</span>
+      </Badge>
+    );
+  }, []);
 
-    const config = priorityConfig[priority] || priorityConfig.medium;
+  const getPriorityBadge = useCallback((priority) => {
+    const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.medium;
 
     return (
       <Badge variant="outline" className={`${config.color} ${config.bg}`}>
         {config.label}
       </Badge>
     );
-  };
+  }, []);
+
+  if (!knowledgeItem) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

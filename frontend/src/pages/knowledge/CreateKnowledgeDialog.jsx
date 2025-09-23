@@ -1,9 +1,9 @@
 /**
  * Create Knowledge Dialog
- * Dialog untuk membuat knowledge item baru
+ * Optimized dialog untuk membuat knowledge item baru dengan struktur yang clean
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -47,47 +47,27 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@/utils/errorHandler';
 import { sanitizeInput } from '@/utils/securityUtils';
 import TestChatbotResponse from '@/components/knowledge/TestChatbotResponse';
+import {
+  INITIAL_FORM_DATA,
+  INITIAL_QA_ITEM,
+  PRIORITY_OPTIONS,
+  LANGUAGE_OPTIONS,
+  TAG_SUGGESTIONS
+} from './constants';
 
 const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categories = [] }) => {
+  // State management
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    content: '',
-    content_type: 'article',
-    category_id: '',
-    priority: 'medium',
-    tags: [],
-    language: 'en',
-    is_public: true,
-    requires_approval: false,
-    workflow_status: 'draft'
-  });
-
-  // QA-specific state
-  const [qaItems, setQaItems] = useState([
-    { question: '', answer: '' }
-  ]);
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+  const [qaItems, setQaItems] = useState([INITIAL_QA_ITEM]);
   const [newTag, setNewTag] = useState('');
 
-  // Reset form when dialog opens/closes
+  // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      setFormData({
-        title: '',
-        description: '',
-        content: '',
-        content_type: 'article',
-        category_id: '',
-        priority: 'medium',
-        tags: [],
-        language: 'en',
-        is_public: true,
-        requires_approval: false,
-        workflow_status: 'draft'
-      });
-      setQaItems([{ question: '', answer: '' }]);
+      setFormData({ ...INITIAL_FORM_DATA });
+      setQaItems([{ ...INITIAL_QA_ITEM }]);
       setNewTag('');
       setErrors({});
     }
@@ -114,7 +94,7 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
 
   // Add QA item
   const addQAItem = useCallback(() => {
-    setQaItems(prev => [...prev, { question: '', answer: '' }]);
+    setQaItems(prev => [...prev, { ...INITIAL_QA_ITEM }]);
   }, []);
 
   // Remove QA item
@@ -122,12 +102,13 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
     setQaItems(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  // Handle tag management
-  const addTag = useCallback(() => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+  // Tag management
+  const addTag = useCallback((tag = newTag) => {
+    const trimmedTag = tag.trim();
+    if (trimmedTag && !formData.tags.includes(trimmedTag)) {
       setFormData(prev => ({
         ...prev,
-        tags: [...prev.tags, sanitizeInput(newTag.trim())]
+        tags: [...prev.tags, sanitizeInput(trimmedTag)]
       }));
       setNewTag('');
     }
@@ -208,16 +189,6 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
     }
   }, [formData, qaItems, validateForm, onKnowledgeCreated]);
 
-  const priorityOptions = [
-    { value: 'low', label: 'Low', color: 'text-gray-600' },
-    { value: 'medium', label: 'Medium', color: 'text-yellow-600' },
-    { value: 'high', label: 'High', color: 'text-red-600' }
-  ];
-
-  const languageOptions = [
-    { value: 'en', label: 'English' },
-    { value: 'id', label: 'Indonesian' }
-  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -341,7 +312,7 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
                   Prioritas
                 </Label>
                 <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
-                  {priorityOptions.map((priority) => (
+                  {PRIORITY_OPTIONS.map((priority) => (
                     <SelectItem key={priority.value} value={priority.value}>
                       <span className={priority.color}>{priority.label}</span>
                     </SelectItem>
@@ -356,7 +327,7 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
                   Bahasa
                 </Label>
                 <Select value={formData.language} onValueChange={(value) => handleInputChange('language', value)}>
-                  {languageOptions.map((lang) => (
+                  {LANGUAGE_OPTIONS.map((lang) => (
                     <SelectItem key={lang.value} value={lang.value}>
                       {lang.label}
                     </SelectItem>
@@ -442,7 +413,7 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
                 <div className="space-y-2">
                   <p className="text-xs text-gray-500">Tag yang sering digunakan:</p>
                   <div className="flex flex-wrap gap-2">
-                    {['FAQ', 'Pembayaran', 'Akun', 'Produk', 'Layanan', 'Cara', 'Panduan', 'Informasi'].map((tag) => (
+                    {TAG_SUGGESTIONS.map((tag) => (
                       <button
                         key={tag}
                         type="button"

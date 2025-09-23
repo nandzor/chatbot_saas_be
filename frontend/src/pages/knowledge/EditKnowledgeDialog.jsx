@@ -1,9 +1,9 @@
 /**
  * Edit Knowledge Dialog
- * Dialog untuk mengedit knowledge item
+ * Optimized dialog untuk mengedit knowledge item dengan struktur yang lebih clean
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -47,33 +47,24 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@/utils/errorHandler';
 import { sanitizeInput } from '@/utils/securityUtils';
 import TestChatbotResponse from '@/components/knowledge/TestChatbotResponse';
+import {
+  INITIAL_FORM_DATA,
+  INITIAL_QA_ITEM
+} from './constants';
 
 const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpdated, categories = [] }) => {
+  // State management
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    content: '',
-    content_type: 'article',
-    category_id: '',
-    priority: 'medium',
-    tags: [],
-    language: 'en',
-    is_public: true,
-    requires_approval: false,
-    workflow_status: 'draft'
-  });
-
-  // QA-specific state
-  const [qaItems, setQaItems] = useState([
-    { question: '', answer: '' }
-  ]);
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+  const [qaItems, setQaItems] = useState([INITIAL_QA_ITEM]);
   const [newTag, setNewTag] = useState('');
 
   // Initialize form data when knowledgeItem changes
   useEffect(() => {
-    if (knowledgeItem && open) {
+    if (!knowledgeItem || !open) return;
+
+    const initializeFormData = () => {
       setFormData({
         title: knowledgeItem.title || '',
         description: knowledgeItem.description || '',
@@ -88,19 +79,20 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
         workflow_status: knowledgeItem.workflow_status || 'draft'
       });
 
-      // Handle QA items
-      if (knowledgeItem.content_type === 'qa_collection' && knowledgeItem.qa_items) {
-        setQaItems(knowledgeItem.qa_items.length > 0 ? knowledgeItem.qa_items : [{ question: '', answer: '' }]);
-      } else {
-        setQaItems([{ question: '', answer: '' }]);
-      }
+      // Initialize QA items
+      const qaItems = knowledgeItem.content_type === 'qa_collection' && knowledgeItem.qa_items?.length > 0
+        ? knowledgeItem.qa_items
+        : [INITIAL_QA_ITEM];
+      setQaItems(qaItems);
 
       setNewTag('');
       setErrors({});
-    }
+    };
+
+    initializeFormData();
   }, [knowledgeItem, open]);
 
-  // Handle form input changes
+  // Form handlers
   const handleInputChange = useCallback((field, value) => {
     const sanitizedValue = typeof value === 'string' ? sanitizeInput(value) : value;
     setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
@@ -111,7 +103,6 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
     }
   }, [errors]);
 
-  // Handle QA item changes
   const handleQAItemChange = useCallback((index, field, value) => {
     const sanitizedValue = sanitizeInput(value);
     setQaItems(prev => prev.map((item, i) =>
@@ -119,22 +110,21 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
     ));
   }, []);
 
-  // Add QA item
   const addQAItem = useCallback(() => {
-    setQaItems(prev => [...prev, { question: '', answer: '' }]);
+    setQaItems(prev => [...prev, { ...INITIAL_QA_ITEM }]);
   }, []);
 
-  // Remove QA item
   const removeQAItem = useCallback((index) => {
     setQaItems(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  // Handle tag management
-  const addTag = useCallback(() => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+  // Tag management
+  const addTag = useCallback((tag = newTag) => {
+    const trimmedTag = tag.trim();
+    if (trimmedTag && !formData.tags.includes(trimmedTag)) {
       setFormData(prev => ({
         ...prev,
-        tags: [...prev.tags, sanitizeInput(newTag.trim())]
+        tags: [...prev.tags, sanitizeInput(trimmedTag)]
       }));
       setNewTag('');
     }
@@ -147,22 +137,25 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
     }));
   }, []);
 
-  // Validate form
+  // Validation
   const validateForm = useCallback(() => {
     const newErrors = {};
 
+    // Title validation
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
     } else if (formData.title.length < 3) {
       newErrors.title = 'Title must be at least 3 characters';
     }
 
+    // Description validation
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
     } else if (formData.description.length < 10) {
       newErrors.description = 'Description must be at least 10 characters';
     }
 
+    // Content validation based on type
     if (formData.content_type === 'article') {
       if (!formData.content.trim()) {
         newErrors.content = 'Content is required for articles';
@@ -178,6 +171,7 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
       }
     }
 
+    // Category validation
     if (!formData.category_id) {
       newErrors.category_id = 'Category is required';
     }
@@ -186,7 +180,7 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
     return Object.keys(newErrors).length === 0;
   }, [formData, qaItems]);
 
-  // Handle form submission
+  // Form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
 
@@ -215,16 +209,46 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
     }
   }, [formData, qaItems, validateForm, onKnowledgeUpdated]);
 
-  const priorityOptions = [
-    { value: 'low', label: 'Low', color: 'text-gray-600' },
-    { value: 'medium', label: 'Medium', color: 'text-yellow-600' },
-    { value: 'high', label: 'High', color: 'text-red-600' }
-  ];
+  // Memoized components
+  const DialogHeader = useMemo(() => (
+    <div className="flex justify-between items-start mb-8">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+          <Brain className="w-6 h-6 text-blue-600" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Edit Knowledge</h2>
+          <p className="text-gray-600 mt-1">Perbarui informasi knowledge yang sudah ada</p>
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onOpenChange(false)}
+        className="hover:bg-gray-100 rounded-full"
+      >
+        <X className="w-5 h-5" />
+      </Button>
+    </div>
+  ), [onOpenChange]);
 
-  const languageOptions = [
-    { value: 'en', label: 'English' },
-    { value: 'id', label: 'Indonesian' }
-  ];
+  const ProgressIndicator = useMemo(() => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-700">Progress Form</span>
+        <span className="text-sm text-gray-500">
+          {formData.content_type === 'qa_collection' ? 'Step 1 of 2' : 'Step 2 of 2'}
+        </span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div
+          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+          style={{ width: formData.content_type === 'qa_collection' ? '50%' : '100%' }}
+        />
+      </div>
+    </div>
+  ), [formData.content_type]);
+
 
   if (!knowledgeItem) {
     return null;
@@ -234,41 +258,8 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[1380px] max-h-[90vh] overflow-y-auto p-0">
         <div className="p-8">
-          {/* Enhanced Header */}
-          <div className="flex justify-between items-start mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Brain className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Edit Knowledge
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  Perbarui informasi knowledge yang sudah ada
-                </p>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-gray-100 rounded-full">
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-
-          {/* Progress Indicator */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Progress Form</span>
-              <span className="text-sm text-gray-500">
-                {formData.content_type === 'qa_collection' ? 'Step 1 of 2' : 'Step 2 of 2'}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: formData.content_type === 'qa_collection' ? '50%' : '100%' }}
-              />
-            </div>
-          </div>
+          {DialogHeader}
+          {ProgressIndicator}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information Section */}
@@ -351,11 +342,15 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
                   Prioritas
                 </Label>
                 <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
-                  {priorityOptions.map((priority) => (
-                    <SelectItem key={priority.value} value={priority.value}>
-                      <span className={priority.color}>{priority.label}</span>
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="low">
+                    <span className="text-gray-600">Low</span>
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <span className="text-yellow-600">Medium</span>
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <span className="text-red-600">High</span>
+                  </SelectItem>
                 </Select>
               </div>
 
@@ -366,11 +361,8 @@ const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpd
                   Bahasa
                 </Label>
                 <Select value={formData.language} onValueChange={(value) => handleInputChange('language', value)}>
-                  {languageOptions.map((lang) => (
-                    <SelectItem key={lang.value} value={lang.value}>
-                      {lang.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="id">Indonesian</SelectItem>
                 </Select>
               </div>
 

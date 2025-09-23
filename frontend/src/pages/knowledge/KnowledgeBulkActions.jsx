@@ -1,9 +1,9 @@
 /**
  * Knowledge Bulk Actions Component
- * Component untuk bulk actions pada knowledge items
+ * Optimized component untuk bulk actions pada knowledge items dengan better UX
  */
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -28,36 +28,66 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import {
+  BULK_ACTIONS,
+  DESTRUCTIVE_ACTIONS
+} from './constants';
 
 const KnowledgeBulkActions = ({ selectedCount, onAction, onClear }) => {
-  const handleBulkAction = (action) => {
+  const handleBulkAction = useCallback((action) => {
     if (selectedCount === 0) {
       toast.error('No items selected');
       return;
     }
 
     // Confirm destructive actions
-    if (action === 'delete') {
-      if (!window.confirm(`Are you sure you want to delete ${selectedCount} knowledge item(s)? This action cannot be undone.`)) {
+    if (DESTRUCTIVE_ACTIONS.includes(action)) {
+      const actionLabel = BULK_ACTIONS.find(a => a.key === action)?.label || action;
+      if (!window.confirm(`Are you sure you want to ${actionLabel.toLowerCase()} ${selectedCount} knowledge item(s)? This action cannot be undone.`)) {
         return;
       }
     }
 
     onAction(action);
-  };
+  }, [selectedCount, onAction]);
+
+  // Memoized components
+  const SelectionInfo = useMemo(() => (
+    <div className="flex items-center space-x-3">
+      <Badge variant="default" className="bg-blue-600">
+        {selectedCount} selected
+      </Badge>
+      <span className="text-sm text-gray-600">
+        Bulk actions available
+      </span>
+    </div>
+  ), [selectedCount]);
+
+  const ActionMenuItems = useMemo(() =>
+    BULK_ACTIONS.map((action, index) => {
+      const isLastNonDestructive = index === BULK_ACTIONS.length - 2;
+      const isDestructive = DESTRUCTIVE_ACTIONS.includes(action.key);
+
+      return (
+        <React.Fragment key={action.key}>
+          {isLastNonDestructive && <DropdownMenuSeparator />}
+          <DropdownMenuItem
+            onClick={() => handleBulkAction(action.key)}
+            className={action.className}
+          >
+            <action.icon className="mr-2 h-4 w-4" />
+            {action.label}
+          </DropdownMenuItem>
+        </React.Fragment>
+      );
+    }), [handleBulkAction]
+  );
 
   return (
     <Card className="border-blue-200 bg-blue-50">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Badge variant="default" className="bg-blue-600">
-              {selectedCount} selected
-            </Badge>
-            <span className="text-sm text-gray-600">
-              Bulk actions available
-            </span>
-          </div>
+          {SelectionInfo}
 
           <div className="flex items-center space-x-2">
             <DropdownMenu>
@@ -70,36 +100,7 @@ const KnowledgeBulkActions = ({ selectedCount, onAction, onClear }) => {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Bulk Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-
-                <DropdownMenuItem onClick={() => handleBulkAction('publish')}>
-                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                  Publish Selected
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onClick={() => handleBulkAction('draft')}>
-                  <Clock className="mr-2 h-4 w-4 text-yellow-600" />
-                  Move to Draft
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onClick={() => handleBulkAction('make_public')}>
-                  <Globe className="mr-2 h-4 w-4 text-blue-600" />
-                  Make Public
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onClick={() => handleBulkAction('make_private')}>
-                  <Shield className="mr-2 h-4 w-4 text-gray-600" />
-                  Make Private
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem
-                  onClick={() => handleBulkAction('delete')}
-                  className="text-red-600 focus:text-red-600"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Selected
-                </DropdownMenuItem>
+                {ActionMenuItems}
               </DropdownMenuContent>
             </DropdownMenu>
 

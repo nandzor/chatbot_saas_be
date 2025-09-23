@@ -1,6 +1,6 @@
 /**
  * Enhanced Knowledge List Page
- * Knowledge management dengan DataTable dan enhanced components (mirip UserList)
+ * Optimized knowledge management dengan DataTable dan enhanced components
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -40,7 +40,6 @@ import {
   AvatarFallback
 } from '@/components/ui';
 import {
-  BookOpen,
   FileText,
   Edit,
   Trash2,
@@ -60,6 +59,10 @@ import CreateKnowledgeDialog from './CreateKnowledgeDialog';
 import EditKnowledgeDialog from './EditKnowledgeDialog';
 import KnowledgeBulkActions from './KnowledgeBulkActions';
 import { useKnowledgeManagement } from '@/hooks/useKnowledgeManagement';
+import {
+  INITIAL_FILTERS,
+  STATS_CARDS_CONFIG
+} from './constants';
 
 const KnowledgeList = React.memo(() => {
   const { announce } = useAnnouncement();
@@ -88,37 +91,24 @@ const KnowledgeList = React.memo(() => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
 
   // Initial data loading is handled by useKnowledgeManagement hook
 
-  // Handle search
+  // Search and filter handlers
   const handleSearch = useCallback((query) => {
     const sanitizedQuery = sanitizeInput(query);
     setSearchQuery(sanitizedQuery);
     updateFilters({ search: sanitizedQuery });
   }, [updateFilters]);
 
-  // Handle filter changes
   const handleFilterChange = useCallback((filterType, value) => {
     const sanitizedValue = sanitizeInput(value);
-    switch (filterType) {
-      case 'status':
-        setStatusFilter(sanitizedValue);
-        updateFilters({ status: sanitizedValue });
-        break;
-      case 'type':
-        setTypeFilter(sanitizedValue);
-        updateFilters({ type: sanitizedValue });
-        break;
-      default:
-        break;
-    }
+    setFilters(prev => ({ ...prev, [filterType]: sanitizedValue }));
+    updateFilters({ [filterType]: sanitizedValue });
   }, [updateFilters]);
 
-  // Handle item selection
+  // Selection handlers
   const handleItemSelect = useCallback((itemId, isSelected) => {
     setSelectedItems(prev => {
       const newSelection = isSelected
@@ -129,7 +119,6 @@ const KnowledgeList = React.memo(() => {
     });
   }, []);
 
-  // Handle select all
   const handleSelectAll = useCallback((isSelected) => {
     if (isSelected) {
       const allIds = knowledgeItems.map(item => item.id);
@@ -141,7 +130,12 @@ const KnowledgeList = React.memo(() => {
     }
   }, [knowledgeItems]);
 
-  // Handle create
+  const clearSelection = useCallback(() => {
+    setSelectedItems([]);
+    setShowBulkActions(false);
+  }, []);
+
+  // CRUD handlers
   const handleCreate = useCallback(async (formData) => {
     try {
       await createKnowledgeItem(formData);
@@ -153,7 +147,6 @@ const KnowledgeList = React.memo(() => {
     }
   }, [createKnowledgeItem, announce]);
 
-  // Handle edit
   const handleEdit = useCallback(async (formData) => {
     try {
       await updateKnowledgeItem(selectedItem.id, formData);
@@ -166,7 +159,6 @@ const KnowledgeList = React.memo(() => {
     }
   }, [updateKnowledgeItem, selectedItem, announce]);
 
-  // Handle delete
   const handleDelete = useCallback(async (itemId) => {
     try {
       await deleteKnowledgeItem(itemId);
@@ -177,31 +169,33 @@ const KnowledgeList = React.memo(() => {
     }
   }, [deleteKnowledgeItem, announce]);
 
+  const handleEditClick = useCallback((item) => {
+    if (item) {
+      setSelectedItem(item);
+      setEditDialogOpen(true);
+    }
+  }, []);
 
-  // Handle bulk actions
+
+  // Bulk actions
   const handleBulkAction = useCallback(async (action) => {
     try {
-      switch (action) {
-        case 'delete':
-          await Promise.all(selectedItems.map(id => deleteKnowledgeItem(id)));
-          break;
-        case 'activate':
-          await Promise.all(selectedItems.map(id => toggleKnowledgeStatus(id, 'active')));
-          break;
-        case 'deactivate':
-          await Promise.all(selectedItems.map(id => toggleKnowledgeStatus(id, 'inactive')));
-          break;
-        default:
-          break;
+      const actions = {
+        delete: () => Promise.all(selectedItems.map(id => deleteKnowledgeItem(id))),
+        activate: () => Promise.all(selectedItems.map(id => toggleKnowledgeStatus(id, 'active'))),
+        deactivate: () => Promise.all(selectedItems.map(id => toggleKnowledgeStatus(id, 'inactive')))
+      };
+
+      if (actions[action]) {
+        await actions[action]();
+        clearSelection();
+        announce(`Bulk ${action} completed successfully`, 'success');
+        toast.success(`Bulk ${action} completed successfully`);
       }
-      setSelectedItems([]);
-      setShowBulkActions(false);
-      announce(`Bulk ${action} completed successfully`, 'success');
-      toast.success(`Bulk ${action} completed successfully`);
     } catch (error) {
       handleError(error, `Failed to perform bulk ${action}`);
     }
-  }, [selectedItems, deleteKnowledgeItem, toggleKnowledgeStatus, announce]);
+  }, [selectedItems, deleteKnowledgeItem, toggleKnowledgeStatus, announce, clearSelection]);
 
   // Table columns configuration
   const columns = useMemo(() => [
@@ -342,12 +336,7 @@ const KnowledgeList = React.memo(() => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => {
-              if (item) {
-                setSelectedItem(item);
-                setEditDialogOpen(true);
-              }
-            }}>
+            <DropdownMenuItem onClick={() => handleEditClick(item)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
@@ -368,39 +357,14 @@ const KnowledgeList = React.memo(() => {
       ),
       width: '80px'
     }
-  ], [selectedItems, handleItemSelect, handleDelete]);
+  ], [selectedItems, handleItemSelect, handleDelete, handleEditClick]);
 
   // Statistics cards
-  const statsCards = useMemo(() => [
-    {
-      title: 'Total Items',
-      value: statistics.total,
-      icon: BookOpen,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      title: 'Published',
-      value: statistics.published,
-      icon: CheckCircle,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
-    },
-    {
-      title: 'Drafts',
-      value: statistics.drafts,
-      icon: Clock,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50'
-    },
-    {
-      title: 'Categories',
-      value: statistics.categories,
-      icon: Tag,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
-    }
-  ], [statistics]);
+  const statsCards = useMemo(() =>
+    STATS_CARDS_CONFIG.map(config => ({
+      ...config,
+      value: statistics[config.key]
+    })), [statistics]);
 
   if (error) {
     return (
@@ -469,12 +433,12 @@ const KnowledgeList = React.memo(() => {
               />
             </div>
             <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={(value) => handleFilterChange('status', value)}>
+              <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="published">Published</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
               </Select>
-              <Select value={typeFilter} onValueChange={(value) => handleFilterChange('type', value)}>
+              <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="article">Articles</SelectItem>
                 <SelectItem value="qa_collection">Q&A</SelectItem>
@@ -496,10 +460,7 @@ const KnowledgeList = React.memo(() => {
         <KnowledgeBulkActions
           selectedCount={selectedItems.length}
           onAction={handleBulkAction}
-          onClear={() => {
-            setSelectedItems([]);
-            setShowBulkActions(false);
-          }}
+          onClear={clearSelection}
         />
       )}
 
