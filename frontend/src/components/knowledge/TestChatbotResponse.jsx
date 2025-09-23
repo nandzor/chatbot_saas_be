@@ -16,6 +16,7 @@ import {
 const TestChatbotResponse = ({ knowledgeContent = '' }) => {
   // Chat testing state
   const [testMessage, setTestMessage] = useState('');
+  const [selectedQuickMessage, setSelectedQuickMessage] = useState('');
   const [conversationHistory, setConversationHistory] = useState([
     {
       id: 1,
@@ -30,6 +31,15 @@ const TestChatbotResponse = ({ knowledgeContent = '' }) => {
       timestamp: new Date()
     }
   ]);
+
+  // Quick test messages
+  const quickTestMessages = [
+    'Bagaimana cara mengajukan gadai emas?',
+    'Berapa lama proses approval?',
+    'Apa saja syarat dokumen yang diperlukan?',
+    'Berapa bunga yang dikenakan?',
+    'Bisa bayar cicilan tidak?'
+  ];
   const [isScrolling, setIsScrolling] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
@@ -153,6 +163,30 @@ const TestChatbotResponse = ({ knowledgeContent = '' }) => {
     }
   };
 
+  // Handle quick message selection
+  const handleQuickMessage = (message) => {
+    setSelectedQuickMessage(message);
+
+    // Generate AI response directly
+    const response = generateAIResponse(message, knowledgeContent);
+
+    const newMessage = {
+      id: Date.now(),
+      type: 'user',
+      message: message,
+      timestamp: new Date()
+    };
+
+    const botResponse = {
+      id: Date.now() + 1,
+      type: 'bot',
+      message: response,
+      timestamp: new Date()
+    };
+
+    setConversationHistory(prev => [...prev, newMessage, botResponse]);
+  };
+
   const clearChat = () => {
     setConversationHistory([
       {
@@ -168,6 +202,8 @@ const TestChatbotResponse = ({ knowledgeContent = '' }) => {
         timestamp: new Date()
       }
     ]);
+    setSelectedQuickMessage('');
+    setTestMessage('');
   };
 
   // Auto-scroll when conversation updates
@@ -181,6 +217,32 @@ const TestChatbotResponse = ({ knowledgeContent = '' }) => {
 
   return (
     <div className="space-y-6">
+      {/* Quick Test Messages */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-blue-600" />
+          Quick Test Messages
+        </Label>
+        <div className="space-y-2">
+          {quickTestMessages.map((message, index) => (
+            <button
+              key={index}
+              onClick={() => handleQuickMessage(message)}
+              className={`w-full text-left p-3 rounded-lg border transition-all duration-200 hover:shadow-md ${
+                selectedQuickMessage === message
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <span className="text-sm">{message}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Chat Testing Interface */}
       <div className="space-y-3">
         <Label className="text-sm font-medium flex items-center gap-2">
@@ -317,35 +379,43 @@ const TestChatbotResponse = ({ knowledgeContent = '' }) => {
         </div>
       </div>
 
-      {/* Response Preview */}
+      {/* AI Response Preview */}
       <div className="space-y-3">
         <Label className="text-sm font-medium flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-purple-600" />
-          Response Preview
+          <Sparkles className="w-4 h-4 text-green-600" />
+          AI Response Preview
         </Label>
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          {testMessage ? (
-            <div className="space-y-2">
-              <div className="text-sm">
-                <strong>Pertanyaan:</strong> &ldquo;{testMessage}&rdquo;
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          {selectedQuickMessage || testMessage ? (
+            <div className="p-4 space-y-3">
+              <div className="text-sm text-gray-600">
+                <strong>Pertanyaan:</strong> &ldquo;{selectedQuickMessage || testMessage}&rdquo;
               </div>
-              <div className="text-sm text-gray-700 bg-white p-3 rounded border-l-4 border-l-blue-500">
-                <strong>AI Response:</strong> {generateAIResponse(testMessage, knowledgeContent)}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-green-800">AI Response:</span>
+                </div>
+                <div className="text-sm text-gray-700">
+                  {generateAIResponse(selectedQuickMessage || testMessage, knowledgeContent)}
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>Response length: {generateAIResponse(selectedQuickMessage || testMessage, knowledgeContent).length} chars</span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Confidence: High
+                </span>
               </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-500 italic">
-              Ketik pesan test di atas untuk melihat preview response
-            </div>
-          )}
-
-          {testMessage && (
-            <div className="mt-3 text-xs text-gray-500 flex items-center gap-4">
-              <span>Response length: {generateAIResponse(testMessage, knowledgeContent).length} chars</span>
+            <div className="p-4 text-sm text-gray-500 italic text-center">
+              Pilih quick test message atau ketik pesan untuk melihat preview response
             </div>
           )}
         </div>
       </div>
+
     </div>
   );
 };

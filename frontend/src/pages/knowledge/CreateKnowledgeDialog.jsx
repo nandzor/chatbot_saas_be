@@ -588,6 +588,27 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
                         <span>Minimal 50 karakter</span>
                       </div>
                     </div>
+
+                    {/* Testing Tips - Below content knowledge field */}
+                    <div className="space-y-3 pt-4 border-t border-gray-200">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 text-xs font-bold">i</span>
+                        </div>
+                        Testing Tips
+                      </Label>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <div className="text-xs text-yellow-800 space-y-1">
+                          <p className="font-medium">💡 Tips untuk testing yang efektif:</p>
+                          <ul className="space-y-1 ml-2">
+                            <li>• Gunakan pertanyaan yang spesifik dan jelas</li>
+                            <li>• Test berbagai jenis pertanyaan (umum, teknis, spesifik)</li>
+                            <li>• Perhatikan konteks dan relevansi jawaban</li>
+                            <li>• Test dengan bahasa yang berbeda</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Right Column: Test Chatbot Response Component (30%) */}
