@@ -3,7 +3,7 @@
  * Knowledge management dengan DataTable dan enhanced components (mirip UserList)
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   handleError,
   withErrorHandling
@@ -92,10 +92,7 @@ const KnowledgeList = React.memo(() => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
 
-  // Load data on mount and when filters change
-  useEffect(() => {
-    loadKnowledgeItems();
-  }, [loadKnowledgeItems]);
+  // Initial data loading is handled by useKnowledgeManagement hook
 
   // Handle search
   const handleSearch = useCallback((query) => {
@@ -484,7 +481,7 @@ const KnowledgeList = React.memo(() => {
               </Select>
               <Button
                 variant="outline"
-                onClick={loadKnowledgeItems}
+                onClick={() => loadKnowledgeItems()}
                 disabled={loading}
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />

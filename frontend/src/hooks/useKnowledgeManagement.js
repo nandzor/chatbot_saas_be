@@ -51,8 +51,8 @@ export const useKnowledgeManagement = () => {
     filtersRef.current = filters;
   }, [filters]);
 
-  // Load knowledge items - create stable function reference
-  const loadKnowledgeItems = useCallback(async (params = {}) => {
+  // Load knowledge items - create completely stable function reference
+  const loadKnowledgeItems = useRef(async (params = {}) => {
     try {
       const isPaginationChange = params.page || params.per_page;
 
@@ -127,7 +127,7 @@ export const useKnowledgeManagement = () => {
       setLoading(false);
       setPaginationLoading(false);
     }
-  }, []); // No dependencies - uses refs for current values
+  });
 
   // Load categories
   const loadCategories = useCallback(async () => {
@@ -151,7 +151,7 @@ export const useKnowledgeManagement = () => {
 
       if (response.success) {
         toast.success('Knowledge item berhasil dibuat');
-        await loadKnowledgeItems();
+        await loadKnowledgeItems.current();
         return { success: true, data: response.data };
       } else {
         throw new Error(response.message);
@@ -174,7 +174,7 @@ export const useKnowledgeManagement = () => {
 
       if (response.success) {
         toast.success('Knowledge item berhasil diperbarui');
-        await loadKnowledgeItems();
+        await loadKnowledgeItems.current();
         return { success: true, data: response.data };
       } else {
         throw new Error(response.message);
@@ -197,7 +197,7 @@ export const useKnowledgeManagement = () => {
 
       if (response.success) {
         toast.success('Knowledge item berhasil dihapus');
-        await loadKnowledgeItems();
+        await loadKnowledgeItems.current();
         return { success: true };
       } else {
         throw new Error(response.message);
@@ -238,7 +238,7 @@ export const useKnowledgeManagement = () => {
 
       if (response.success) {
         toast.success('Knowledge item berhasil dipublikasikan');
-        await loadKnowledgeItems();
+        await loadKnowledgeItems.current();
         return { success: true, data: response.data };
       } else {
         throw new Error(response.message);
@@ -307,7 +307,7 @@ export const useKnowledgeManagement = () => {
 
       if (response.success) {
         toast.success(`Knowledge item ${newStatus === 'published' ? 'published' : 'moved to draft'}`);
-        await loadKnowledgeItems();
+        await loadKnowledgeItems.current();
         return { success: true, data: response.data };
       } else {
         throw new Error(response.message);
@@ -325,14 +325,14 @@ export const useKnowledgeManagement = () => {
   // Handle page change
   const handlePageChange = useCallback((page) => {
     setPagination(prev => ({ ...prev, currentPage: page }));
-    loadKnowledgeItems({ page });
+    loadKnowledgeItems.current({ page });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Remove loadKnowledgeItems dependency
 
   // Handle per page change
   const handlePerPageChange = useCallback((perPage) => {
     setPagination(prev => ({ ...prev, perPage, currentPage: 1 }));
-    loadKnowledgeItems({ page: 1, per_page: perPage });
+    loadKnowledgeItems.current({ page: 1, per_page: perPage });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Remove loadKnowledgeItems dependency
 
@@ -342,7 +342,7 @@ export const useKnowledgeManagement = () => {
       console.log('🔄 useKnowledgeManagement: useEffect running - loading initial data');
       initialLoadDone.current = true;
       loadCategories();
-      loadKnowledgeItems();
+      loadKnowledgeItems.current();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount
@@ -359,7 +359,7 @@ export const useKnowledgeManagement = () => {
     statistics,
 
     // Actions
-    loadKnowledgeItems,
+    loadKnowledgeItems: loadKnowledgeItems.current,
     createKnowledgeItem,
     updateKnowledgeItem,
     deleteKnowledgeItem,
