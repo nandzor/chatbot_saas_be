@@ -53,6 +53,9 @@ class BotPersonality extends Model
         'success_rate',
         'is_default',
         'status',
+        'n8n_workflow_id',
+        'waha_session_id',
+        'knowledge_base_item_id',
     ];
 
     protected $casts = [
@@ -90,6 +93,78 @@ class BotPersonality extends Model
     public function channelConfigs(): HasMany
     {
         return $this->hasMany(ChannelConfig::class, 'personality_id');
+    }
+
+    /**
+     * Get the n8n workflow associated with this personality.
+     */
+    public function n8nWorkflow(): BelongsTo
+    {
+        return $this->belongsTo(N8nWorkflow::class, 'n8n_workflow_id');
+    }
+
+    /**
+     * Get the WhatsApp session associated with this personality.
+     */
+    public function wahaSession(): BelongsTo
+    {
+        return $this->belongsTo(WahaSession::class, 'waha_session_id');
+    }
+
+    /**
+     * Get the knowledge base item associated with this personality.
+     */
+    public function knowledgeBaseItem(): BelongsTo
+    {
+        return $this->belongsTo(KnowledgeBaseItem::class, 'knowledge_base_item_id');
+    }
+
+    /**
+     * Check if this personality has an n8n workflow configured.
+     */
+    public function hasN8nWorkflow(): bool
+    {
+        return !is_null($this->n8n_workflow_id);
+    }
+
+    /**
+     * Check if this personality has a WhatsApp session configured.
+     */
+    public function hasWahaSession(): bool
+    {
+        return !is_null($this->waha_session_id);
+    }
+
+    /**
+     * Check if this personality has a knowledge base item configured.
+     */
+    public function hasKnowledgeBaseItem(): bool
+    {
+        return !is_null($this->knowledge_base_item_id);
+    }
+
+    /**
+     * Get the n8n workflow name if available.
+     */
+    public function getN8nWorkflowNameAttribute(): ?string
+    {
+        return $this->n8nWorkflow?->name;
+    }
+
+    /**
+     * Get the WhatsApp session name if available.
+     */
+    public function getWahaSessionNameAttribute(): ?string
+    {
+        return $this->wahaSession?->name;
+    }
+
+    /**
+     * Get the knowledge base item title if available.
+     */
+    public function getKnowledgeBaseItemTitleAttribute(): ?string
+    {
+        return $this->knowledgeBaseItem?->title;
     }
 
     /**
@@ -366,5 +441,77 @@ class BotPersonality extends Model
                   ->orWhere('display_name', 'LIKE', "%{$term}%")
                   ->orWhere('description', 'LIKE', "%{$term}%");
         });
+    }
+
+    /**
+     * Scope for personalities with n8n workflow configured.
+     */
+    public function scopeWithN8nWorkflow($query)
+    {
+        return $query->whereNotNull('n8n_workflow_id');
+    }
+
+    /**
+     * Scope for personalities with WhatsApp session configured.
+     */
+    public function scopeWithWahaSession($query)
+    {
+        return $query->whereNotNull('waha_session_id');
+    }
+
+    /**
+     * Scope for personalities with knowledge base item configured.
+     */
+    public function scopeWithKnowledgeBaseItem($query)
+    {
+        return $query->whereNotNull('knowledge_base_item_id');
+    }
+
+    /**
+     * Scope for personalities without n8n workflow.
+     */
+    public function scopeWithoutN8nWorkflow($query)
+    {
+        return $query->whereNull('n8n_workflow_id');
+    }
+
+    /**
+     * Scope for personalities without WhatsApp session.
+     */
+    public function scopeWithoutWahaSession($query)
+    {
+        return $query->whereNull('waha_session_id');
+    }
+
+    /**
+     * Scope for personalities without knowledge base item.
+     */
+    public function scopeWithoutKnowledgeBaseItem($query)
+    {
+        return $query->whereNull('knowledge_base_item_id');
+    }
+
+    /**
+     * Scope for personalities with specific n8n workflow.
+     */
+    public function scopeWithN8nWorkflowId($query, string $workflowId)
+    {
+        return $query->where('n8n_workflow_id', $workflowId);
+    }
+
+    /**
+     * Scope for personalities with specific WhatsApp session.
+     */
+    public function scopeWithWahaSessionId($query, string $sessionId)
+    {
+        return $query->where('waha_session_id', $sessionId);
+    }
+
+    /**
+     * Scope for personalities with specific knowledge base item.
+     */
+    public function scopeWithKnowledgeBaseItemId($query, string $itemId)
+    {
+        return $query->where('knowledge_base_item_id', $itemId);
     }
 }

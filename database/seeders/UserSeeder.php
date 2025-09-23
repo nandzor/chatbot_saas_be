@@ -329,6 +329,168 @@ class UserSeeder extends Seeder
             );
         }
 
+        // Enhanced Organization Administrator for testing
+        $enhancedOrgAdmin = [
+            'organization_id' => $organizations->first()->id,
+            'email' => 'admin@test.com',
+            'username' => 'admin',
+            'password_hash' => Hash::make('Password123!'),
+            'full_name' => 'Organization Administrator',
+            'first_name' => 'Organization',
+            'last_name' => 'Administrator',
+            'phone' => '+6281234567891',
+            'avatar_url' => 'https://via.placeholder.com/200x200/2563EB/FFFFFF?text=OA',
+            'role' => 'org_admin',
+            'is_email_verified' => true,
+            'is_phone_verified' => true,
+            'two_factor_enabled' => false,
+            'login_count' => 14,
+            'failed_login_attempts' => 0,
+            'password_changed_at' => now(),
+            'active_sessions' => [],
+            'max_concurrent_sessions' => 5,
+            'ui_preferences' => [
+                'theme' => 'light',
+                'language' => 'id',
+                'timezone' => 'Asia/Jakarta',
+                'notifications' => ['email' => true, 'push' => true]
+            ],
+            'dashboard_config' => [
+                'widgets' => ['analytics', 'recent_activity', 'organization_status', 'bot_personalities', 'knowledge_base'],
+                'layout' => 'grid'
+            ],
+            'notification_preferences' => [
+                'email_notifications' => true,
+                'push_notifications' => true,
+                'sms_notifications' => false
+            ],
+            'bio' => 'Enhanced Organization Administrator with full API permissions for testing and development.',
+            'location' => 'Jakarta, Indonesia',
+            'department' => 'Administration',
+            'job_title' => 'Organization Administrator',
+            'skills' => ['Management', 'Administration', 'Leadership', 'API Development', 'Testing'],
+            'languages' => ['indonesia', 'english'],
+            'api_access_enabled' => true,
+            'api_rate_limit' => 1000,
+            'permissions' => [
+                // User Management
+                'users.view' => true,
+                'users.create' => true,
+                'users.update' => true,
+                'users.delete' => true,
+                'users.restore' => true,
+                'users.bulk_update' => true,
+                'users.view_all' => true,
+                'users.edit_all' => true,
+
+                // Role Management
+                'roles.view' => true,
+                'roles.create' => true,
+                'roles.update' => true,
+                'roles.delete' => true,
+                'roles.assign' => true,
+                'roles.revoke' => true,
+
+                // Permission Management
+                'permissions.view' => true,
+                'permissions.create' => true,
+                'permissions.update' => true,
+                'permissions.delete' => true,
+                'permissions.manage_groups' => true,
+                'permissions.assign' => true,
+                'permissions.revoke' => true,
+                'permissions.check' => true,
+                'permissions.manage' => true,
+
+                // Organization Management
+                'organizations.view' => true,
+                'organizations.create' => true,
+                'organizations.update' => true,
+                'organizations.delete' => true,
+                'organizations.manage_users' => true,
+                'organizations.manage_permissions' => true,
+                'organizations.bulk_actions' => true,
+                'organizations.import' => true,
+
+                // Bot Management
+                'bots.view' => true,
+                'bots.create' => true,
+                'bots.update' => true,
+                'bots.delete' => true,
+                'bots.train' => true,
+                'bots.chat' => true,
+                'bots.manage' => true,
+
+                // Bot Personalities
+                'bot_personalities.view' => true,
+                'bot_personalities.create' => true,
+                'bot_personalities.update' => true,
+                'bot_personalities.delete' => true,
+                'bot_personalities.manage' => true,
+                'bot_personalities.view_all' => true,
+                'bot_personalities.edit_all' => true,
+                'bot_personalities.assign_whatsapp' => true,
+                'bot_personalities.assign_knowledge_base' => true,
+                'bot_personalities.assign_n8n_workflow' => true,
+                'bot_personalities.set_default' => true,
+                'bot_personalities.toggle_status' => true,
+                'bot_personalities.export' => true,
+                'bot_personalities.view_statistics' => true,
+
+                // Conversation Management
+                'conversations.view' => true,
+                'conversations.create' => true,
+                'conversations.send_message' => true,
+
+                // Analytics
+                'analytics.view' => true,
+                'analytics.export' => true,
+                'analytics.admin' => true,
+
+                // Knowledge Base
+                'knowledge_articles.view' => true,
+                'knowledge.create' => true,
+                'knowledge.update' => true,
+                'knowledge.delete' => true,
+                'knowledge.publish' => true,
+                'knowledge.approve' => true,
+                'articles.manage' => true,
+
+                // Subscription Plans
+                'subscription_plans.view' => true,
+                'subscription_plans.create' => true,
+                'subscription_plans.update' => true,
+                'subscription_plans.delete' => true,
+
+                // Subscriptions
+                'subscriptions.view' => true,
+                'subscriptions.update' => true,
+
+                // Payments
+                'payments.view' => true,
+
+                // Settings
+                'settings.manage' => true,
+
+                // Super Admin
+                'superadmin.*' => true,
+
+                // Advanced
+                'advanced.*' => true,
+
+                // Reports
+                'reports.view' => true,
+                'reports.export' => true
+            ],
+            'status' => 'active'
+        ];
+
+        // Create enhanced organization admin
+        User::updateOrCreate(
+            ['email' => $enhancedOrgAdmin['email']],
+            $enhancedOrgAdmin
+        );
+
         // Organization-specific users
         foreach ($organizations as $organization) {
             $orgUsers = [
