@@ -27,38 +27,35 @@ class BotPersonalityService {
    * Helper method to make API calls using AuthService
    */
   async _makeApiCall(method, endpoint, data = null, config = {}) {
-    const organizationId = this.getOrganizationId();
-    if (!organizationId) {
-      // Try to get organization ID from current user async
-      try {
-        const user = await this.authService.getCurrentUser();
-        const asyncOrgId = user?.organization_id || user?.organization?.id || user?.org_id || user?.organizationId;
+    try {
+      // Always try to get fresh user data to ensure we have the latest organization_id
+      const user = await this.authService.getCurrentUser();
+      const organizationId = user?.organization_id || user?.organization?.id || user?.org_id || user?.organizationId;
 
-        if (!asyncOrgId) {
-          throw new Error('Organization ID not found. Please ensure you are logged in and have an organization assigned.');
-        }
-
-        // Use the async organization ID
-        const response = await this.authService.api.request({
-          method,
-          url: `/v1${endpoint}`,
-          data,
-          ...config
-        });
-        return response.data;
-      } catch (error) {
+      if (!organizationId) {
         throw new Error('Organization ID not found. Please ensure you are logged in and have an organization assigned.');
       }
-    }
 
-    // Use the sync organization ID
-    const response = await this.authService.api.request({
-      method,
-      url: `/v1${endpoint}`,
-      data,
-      ...config
-    });
-    return response.data;
+      const response = await this.authService.api.request({
+        method,
+        url: `/v1${endpoint}`,
+        data,
+        ...config
+      });
+
+      // Ensure we return the response data properly
+      return response.data || response;
+    } catch (error) {
+      // Re-throw with more specific error handling
+      if (error.response?.status === 401) {
+        throw new Error('Authentication failed. Please log in again.');
+      } else if (error.response?.status === 403) {
+        throw new Error('Access denied. You do not have permission to access this resource.');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error. Please try again later.');
+      }
+      throw error;
+    }
   }
 
   /**

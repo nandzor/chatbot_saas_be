@@ -60,7 +60,8 @@ import {
   Clock,
   MessageSquare,
   Database,
-  Star
+  Star,
+  Zap
 } from 'lucide-react';
 import CreateBotPersonalityDialog from './CreateBotPersonalityDialog';
 import EditBotPersonalityDialog from './EditBotPersonalityDialog';
@@ -451,11 +452,11 @@ const BotPersonalityList = React.memo(() => {
     );
   }
 
-  const showEmpty = !loading && botPersonalities.length === 0;
+  const showEmpty = !loading && !error && botPersonalities.length === 0;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6" ref={focusRef}>
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      <div className="max-w-full mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -498,7 +499,7 @@ const BotPersonalityList = React.memo(() => {
 
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Personalities</CardTitle>
@@ -666,7 +667,17 @@ const BotPersonalityList = React.memo(() => {
             </div>
           </CardHeader>
           <CardContent>
-            {showEmpty ? (
+            {error ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
+                <p className="text-sm text-red-600 mb-4">{error}</p>
+                <Button onClick={() => loadBotPersonalities()} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            ) : showEmpty ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Bot className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No bot personalities found</h3>

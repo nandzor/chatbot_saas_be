@@ -12,7 +12,7 @@ const botPersonalityService = new BotPersonalityService();
 export const useBotPersonalityManagement = () => {
   // State
   const [botPersonalities, setBotPersonalities] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -70,13 +70,17 @@ export const useBotPersonalityManagement = () => {
       const response = await botPersonalityService.getList(queryParams);
 
       if (response.success && response.data) {
+        // Handle both nested and direct data structure
+        const itemsArray = Array.isArray(response.data) ? response.data : (response.data.data || []);
+
         // Filter out null/invalid items
-        const items = (response.data.data || []).filter(item => item && typeof item === 'object');
+        const items = itemsArray.filter(item => item && typeof item === 'object' && item.id);
         setBotPersonalities(items);
 
-        // Update pagination
-        if (response.data.pagination) {
-          setPagination(response.data.pagination);
+        // Update pagination - handle both nested and direct structure
+        const paginationData = response.data.pagination || response.pagination;
+        if (paginationData) {
+          setPagination(paginationData);
         }
 
         // Calculate statistics
@@ -94,8 +98,29 @@ export const useBotPersonalityManagement = () => {
       }
     } catch (err) {
       // Error loading bot personalities
-      setError(err.message || 'Failed to load bot personalities');
-      toast.error('Failed to load bot personalities');
+      const errorMessage = err.message || 'Failed to load bot personalities';
+      setError(errorMessage);
+      toast.error(errorMessage);
+
+      // Reset data on error
+      setBotPersonalities([]);
+      setPagination({
+        currentPage: 1,
+        perPage: 15,
+        total: 0,
+        lastPage: 1,
+        from: 0,
+        to: 0,
+        hasMorePages: false
+      });
+      setStatistics({
+        total: 0,
+        active: 0,
+        inactive: 0,
+        withN8nWorkflow: 0,
+        withWahaSession: 0,
+        withKnowledgeBaseItem: 0
+      });
     } finally {
       setLoading(false);
     }
