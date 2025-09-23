@@ -110,13 +110,27 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
       ]);
 
       if (wahaResponse.success) {
-        setWahaSessions(wahaResponse.data.data || []);
+        // Handle both nested and direct data structure
+        const wahaData = Array.isArray(wahaResponse.data) ? wahaResponse.data : (wahaResponse.data.data || []);
+        setWahaSessions(wahaData);
       }
       if (kbResponse.success) {
-        setKnowledgeBaseItems(kbResponse.data.data || []);
+        // Handle both nested and direct data structure
+        const kbData = Array.isArray(kbResponse.data) ? kbResponse.data : (kbResponse.data.data || []);
+        setKnowledgeBaseItems(kbData);
+        // Temporary debug info
+        if (import.meta.env.DEV) {
+          console.log('📚 Knowledge Base Response:', kbResponse);
+          console.log('📚 Knowledge Base Data:', kbData);
+          console.log('📚 Knowledge Base Count:', kbData.length);
+        }
       }
     } catch (error) {
       console.error('Error loading related data:', error);
+      // Temporary debug info
+      if (import.meta.env.DEV) {
+        console.log('❌ Error details:', error);
+      }
       toast.error('Failed to load related data');
     } finally {
       setLoadingRelatedData(false);
@@ -467,7 +481,7 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search knowledge base items..."
+                      placeholder="Search published knowledge base items..."
                       value={knowledgeBaseSearch}
                       onChange={(e) => setKnowledgeBaseSearch(e.target.value)}
                       className="pl-10"
@@ -477,7 +491,7 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                     {loadingRelatedData ? (
                       <div className="p-4 text-center text-sm text-gray-500">
                         <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
-                        Loading knowledge base items...
+                        Loading published knowledge base items...
                       </div>
                     ) : filteredKnowledgeBaseItems.length > 0 ? (
                       filteredKnowledgeBaseItems.map((item) => (

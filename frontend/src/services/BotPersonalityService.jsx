@@ -36,9 +36,12 @@ class BotPersonalityService {
         throw new Error('Organization ID not found. Please ensure you are logged in and have an organization assigned.');
       }
 
+      // Handle different endpoint prefixes
+      const url = endpoint.startsWith('/waha/') ? endpoint : `/v1${endpoint}`;
+
       const response = await this.authService.api.request({
         method,
-        url: `/v1${endpoint}`,
+        url,
         data,
         ...config
       });
@@ -128,7 +131,7 @@ class BotPersonalityService {
    */
   async getWahaSessions(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/waha-sessions', null, { params });
+      const response = await this._makeApiCall('GET', '/waha/sessions', null, { params });
       return response;
     } catch (error) {
       console.error('❌ Error fetching WhatsApp sessions:', error);
@@ -137,15 +140,39 @@ class BotPersonalityService {
   }
 
   /**
-   * Get knowledge base items for selection
+   * Get knowledge base items for selection (only published)
    */
   async getKnowledgeBaseItems(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/knowledge-base', null, { params });
+      const searchParams = {
+        ...params,
+        status: 'published', // Only get published items
+        per_page: params.per_page || 100
+      };
+      const response = await this._makeApiCall('GET', '/knowledge-base', null, { params: searchParams });
       return response;
     } catch (error) {
       console.error('❌ Error fetching knowledge base items:', error);
       throw handleError(error, 'Failed to fetch knowledge base items');
+    }
+  }
+
+  /**
+   * Search knowledge base items with query (only published)
+   */
+  async searchKnowledgeBaseItems(query, params = {}) {
+    try {
+      const searchParams = {
+        ...params,
+        search: query,
+        status: 'published', // Only get published items
+        per_page: params.per_page || 100
+      };
+      const response = await this._makeApiCall('GET', '/knowledge-base', null, { params: searchParams });
+      return response;
+    } catch (error) {
+      console.error('❌ Error searching knowledge base items:', error);
+      throw handleError(error, 'Failed to search knowledge base items');
     }
   }
 
