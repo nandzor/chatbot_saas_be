@@ -461,6 +461,7 @@ class AuthController extends BaseApiController
             // Load relationships if user supports them
             if ($user instanceof \Illuminate\Database\Eloquent\Model) {
                 $user->load([
+                    'roles.permissions',
                     'organization',
                     'sessions' => function ($query) {
                         $query->where('is_active', true)->latest();

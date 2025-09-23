@@ -411,6 +411,16 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                             <p className="text-sm text-gray-500">Loading working WhatsApp sessions...</p>
                           </div>
                         </div>
+                      ) : wahaSessionSearch.trim() === '' ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="text-center">
+                            <Search className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                            <p className="text-sm text-gray-500">Search for WhatsApp sessions</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Type in the search box above to find sessions
+                            </p>
+                          </div>
+                        </div>
                       ) : filteredWahaSessions.length > 0 ? (
                         <div className="divide-y divide-gray-100">
                           {filteredWahaSessions.map((session) => (
@@ -514,6 +524,16 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                         <div className="text-center">
                           <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3 text-purple-600" />
                           <p className="text-sm text-gray-500">Loading published knowledge base items...</p>
+                        </div>
+                      </div>
+                    ) : knowledgeBaseSearch.trim() === '' ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                          <Search className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                          <p className="text-sm text-gray-500">Search for knowledge base items</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Type in the search box above to find items
+                          </p>
                         </div>
                       </div>
                     ) : filteredKnowledgeBaseItems.length > 0 ? (

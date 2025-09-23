@@ -188,6 +188,12 @@ class UserResource extends JsonResource
     protected function getPermissionsData(): array
     {
         try {
+            // Use the User model's getAllPermissions method for consistency
+            if (method_exists($this, 'getAllPermissions')) {
+                return $this->getAllPermissions()->pluck('code')->toArray();
+            }
+
+            // Fallback to the original method if getAllPermissions doesn't exist
             // Get direct permissions from user's permissions field (associative array)
             $directPermissions = $this->permissions ?? [];
 

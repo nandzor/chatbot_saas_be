@@ -100,13 +100,6 @@ Route::prefix('v1')->group(function () {
         // ====================================================================
 
         Route::prefix('me')->group(function () {
-            Route::get('/', function (Request $request) {
-                return response()->json([
-                    'success' => true,
-                    'data' => $request->user(),
-                ]);
-            });
-
             Route::put('/profile', [UserController::class, 'updateProfile']);
         });
 
