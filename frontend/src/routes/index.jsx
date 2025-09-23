@@ -26,6 +26,7 @@ import Settings from '@/pages/settings/Settings';
 import ProfileSettings from '@/features/shared/ProfileSettings';
 import WhatsAppIntegration from '@/pages/WhatsAppIntegration';
 import UserList from '@/pages/org-user-management/UserList';
+import BotPersonalityList from '@/pages/bot-personalities/BotPersonalityList';
 
 // Role Management Pages
 import RoleList from '@/pages/roles/RoleList';
@@ -143,6 +144,14 @@ export const router = createBrowserRouter([
             element: (
               <RoleBasedRoute requiredPermission="knowledge.view">
                 <Knowledge />
+              </RoleBasedRoute>
+            )
+          },
+          {
+            path: 'bot-personalities',
+            element: (
+              <RoleBasedRoute requiredPermission="bot_personalities.view">
+                <BotPersonalityList />
               </RoleBasedRoute>
             )
           },

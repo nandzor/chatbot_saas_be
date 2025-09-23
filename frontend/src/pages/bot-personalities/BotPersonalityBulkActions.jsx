@@ -19,8 +19,8 @@ import {
 } from '@/components/ui';
 import {
   Trash2,
-  BotCheck,
-  BotX,
+  CheckCircle2,
+  XCircle,
   Star,
   StarOff,
   Download,
@@ -70,9 +70,9 @@ const BotPersonalityBulkActions = ({
   const getActionIcon = (action) => {
     switch (action) {
       case 'activate':
-        return <BotCheck className="w-4 h-4" />;
+        return <CheckCircle2 className="w-4 h-4" />;
       case 'deactivate':
-        return <BotX className="w-4 h-4" />;
+        return <XCircle className="w-4 h-4" />;
       case 'set-default':
         return <Star className="w-4 h-4" />;
       case 'remove-default':
@@ -164,13 +164,13 @@ const BotPersonalityBulkActions = ({
           >
             <SelectItem value="activate">
               <div className="flex items-center gap-2">
-                <BotCheck className="w-4 h-4" />
+                <CheckCircle2 className="w-4 h-4" />
                 Activate Selected
               </div>
             </SelectItem>
             <SelectItem value="deactivate">
               <div className="flex items-center gap-2">
-                <BotX className="w-4 h-4" />
+                <XCircle className="w-4 h-4" />
                 Deactivate Selected
               </div>
             </SelectItem>
@@ -247,7 +247,7 @@ const BotPersonalityBulkActions = ({
               }}
               disabled={loading || inactiveCount === 0}
             >
-              <BotCheck className="w-4 h-4 mr-1" />
+              <CheckCircle2 className="w-4 h-4 mr-1" />
               Activate All Inactive
             </Button>
             <Button
@@ -259,7 +259,7 @@ const BotPersonalityBulkActions = ({
               }}
               disabled={loading || activeCount === 0}
             >
-              <BotX className="w-4 h-4 mr-1" />
+              <XCircle className="w-4 h-4 mr-1" />
               Deactivate All Active
             </Button>
             <Button

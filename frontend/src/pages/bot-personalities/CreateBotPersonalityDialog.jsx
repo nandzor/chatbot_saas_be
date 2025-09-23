@@ -35,7 +35,6 @@ import {
   X,
   MessageSquare,
   Database,
-  Workflow,
   Plus,
   Star,
   Settings
@@ -68,7 +67,6 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
     status: 'active',
     is_default: false,
     // Assignment fields
-    n8n_workflow_id: null,
     waha_session_id: null,
     knowledge_base_item_id: null
   });
@@ -76,13 +74,11 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
   // Related data states
   const [wahaSessions, setWahaSessions] = useState([]);
   const [knowledgeBaseItems, setKnowledgeBaseItems] = useState([]);
-  const [n8nWorkflows, setN8nWorkflows] = useState([]);
   const [loadingRelatedData, setLoadingRelatedData] = useState(false);
 
   // Search states for assignment
   const [wahaSessionSearch, setWahaSessionSearch] = useState('');
   const [knowledgeBaseSearch, setKnowledgeBaseSearch] = useState('');
-  const [n8nWorkflowSearch, setN8nWorkflowSearch] = useState('');
 
   // Filtered data based on search
   const filteredWahaSessions = wahaSessions.filter(session =>
@@ -95,10 +91,6 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
     item.description?.toLowerCase().includes(knowledgeBaseSearch.toLowerCase())
   );
 
-  const filteredN8nWorkflows = n8nWorkflows.filter(workflow =>
-    workflow.name?.toLowerCase().includes(n8nWorkflowSearch.toLowerCase()) ||
-    workflow.description?.toLowerCase().includes(n8nWorkflowSearch.toLowerCase())
-  );
 
   // Load related data when dialog opens
   useEffect(() => {
@@ -112,10 +104,9 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
       setLoadingRelatedData(true);
 
       // Load all related data in parallel
-      const [wahaResponse, kbResponse, n8nResponse] = await Promise.all([
+      const [wahaResponse, kbResponse] = await Promise.all([
         botPersonalityService.getWahaSessions({ per_page: 100 }),
-        botPersonalityService.getKnowledgeBaseItems({ per_page: 100 }),
-        botPersonalityService.getN8nWorkflows({ per_page: 100 })
+        botPersonalityService.getKnowledgeBaseItems({ per_page: 100 })
       ]);
 
       if (wahaResponse.success) {
@@ -123,9 +114,6 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
       }
       if (kbResponse.success) {
         setKnowledgeBaseItems(kbResponse.data.data || []);
-      }
-      if (n8nResponse.success) {
-        setN8nWorkflows(n8nResponse.data.data || []);
       }
     } catch (error) {
       console.error('Error loading related data:', error);
@@ -155,14 +143,12 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
         learning_enabled: true,
         status: 'active',
         is_default: false,
-        n8n_workflow_id: null,
         waha_session_id: null,
         knowledge_base_item_id: null
       });
       setErrors({});
       setWahaSessionSearch('');
       setKnowledgeBaseSearch('');
-      setN8nWorkflowSearch('');
     }
   }, [open]);
 
@@ -262,9 +248,6 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
     return knowledgeBaseItems.find(item => item.id === formData.knowledge_base_item_id);
   };
 
-  const getSelectedN8nWorkflow = () => {
-    return n8nWorkflows.find(workflow => workflow.id === formData.n8n_workflow_id);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -545,76 +528,6 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                 </div>
               </div>
 
-              {/* N8N Workflow Assignment */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Workflow className="w-4 h-4 text-orange-600" />
-                  N8N Workflow
-                </Label>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search N8N workflows..."
-                      value={n8nWorkflowSearch}
-                      onChange={(e) => setN8nWorkflowSearch(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <div className="max-h-40 overflow-y-auto border rounded-md">
-                    {loadingRelatedData ? (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
-                        Loading N8N workflows...
-                      </div>
-                    ) : filteredN8nWorkflows.length > 0 ? (
-                      filteredN8nWorkflows.map((workflow) => (
-                        <div
-                          key={workflow.id}
-                          className={`p-3 cursor-pointer hover:bg-gray-50 border-b last:border-b-0 ${
-                            formData.n8n_workflow_id === workflow.id ? 'bg-blue-50 border-blue-200' : ''
-                          }`}
-                          onClick={() => handleAssignmentChange('n8n_workflow_id',
-                            formData.n8n_workflow_id === workflow.id ? null : workflow.id
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">{workflow.name}</div>
-                              <div className="text-sm text-gray-500">
-                                {workflow.status || 'Active'} • {workflow.nodes?.length || 0} nodes
-                              </div>
-                            </div>
-                            {formData.n8n_workflow_id === workflow.id && (
-                              <CheckCircle className="w-5 h-5 text-blue-600" />
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        No N8N workflows found
-                      </div>
-                    )}
-                  </div>
-                  {formData.n8n_workflow_id && (
-                    <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                      <Badge variant="outline" className="bg-orange-100 text-orange-700">
-                        <Workflow className="w-3 h-3 mr-1" />
-                        {getSelectedN8nWorkflow()?.name}
-                      </Badge>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleAssignmentChange('n8n_workflow_id', null)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
             </CardContent>
           </Card>
 

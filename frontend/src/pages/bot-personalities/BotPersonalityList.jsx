@@ -38,10 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DataTable,
-  Pagination,
-  Avatar,
-  AvatarFallback,
-  AvatarImage
+  Pagination
 } from '@/components/ui';
 import {
   Bot,
@@ -56,20 +53,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  BotCheck,
-  BotX,
-  Settings,
+  CheckCircle2,
+  XCircle as BotXIcon,
   Download,
   RefreshCw,
-  Shield,
   Clock,
-  Activity,
-  Monitor,
   MessageSquare,
   Database,
-  Workflow,
-  Star,
-  StarOff
+  Star
 } from 'lucide-react';
 import CreateBotPersonalityDialog from './CreateBotPersonalityDialog';
 import EditBotPersonalityDialog from './EditBotPersonalityDialog';
@@ -98,6 +89,7 @@ const BotPersonalityList = React.memo(() => {
     handlePageChange,
     handlePerPageChange
   } = useBotPersonalityManagement();
+
 
   // Local UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -348,12 +340,6 @@ const BotPersonalityList = React.memo(() => {
       sortable: false,
       render: (value, personality) => (
         <div className="flex items-center space-x-2">
-          {personality.n8n_workflow_id && (
-            <Badge variant="outline" className="text-xs">
-              <Workflow className="w-3 h-3 mr-1" />
-              N8N
-            </Badge>
-          )}
           {personality.waha_session_id && (
             <Badge variant="outline" className="text-xs">
               <MessageSquare className="w-3 h-3 mr-1" />
@@ -366,7 +352,7 @@ const BotPersonalityList = React.memo(() => {
               KB
             </Badge>
           )}
-          {!personality.n8n_workflow_id && !personality.waha_session_id && !personality.knowledge_base_item_id && (
+          {!personality.waha_session_id && !personality.knowledge_base_item_id && (
             <span className="text-xs text-gray-400">None</span>
           )}
         </div>
@@ -415,12 +401,12 @@ const BotPersonalityList = React.memo(() => {
             <DropdownMenuItem onClick={() => handleToggleStatus(personality)}>
               {personality.status === 'active' ? (
                 <>
-                  <BotX className="mr-2 h-4 w-4" />
+                  <BotXIcon className="mr-2 h-4 w-4" />
                   Deactivate
                 </>
               ) : (
                 <>
-                  <BotCheck className="mr-2 h-4 w-4" />
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
                   Activate
                 </>
               )}
@@ -510,6 +496,7 @@ const BotPersonalityList = React.memo(() => {
           </div>
         </div>
 
+
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Card>
@@ -528,7 +515,7 @@ const BotPersonalityList = React.memo(() => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Personalities</CardTitle>
-              <BotCheck className="h-4 w-4 text-muted-foreground" />
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{statistics.active}</div>
@@ -541,7 +528,7 @@ const BotPersonalityList = React.memo(() => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Inactive Personalities</CardTitle>
-              <BotX className="h-4 w-4 text-muted-foreground" />
+              <BotXIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{statistics.inactive}</div>
@@ -551,18 +538,6 @@ const BotPersonalityList = React.memo(() => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">With N8N Workflow</CardTitle>
-              <Workflow className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.withN8nWorkflow}</div>
-              <p className="text-xs text-muted-foreground">
-                Connected to N8N workflows
-              </p>
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

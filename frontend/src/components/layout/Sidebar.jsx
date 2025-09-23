@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import {
   Home,
   Users,
@@ -16,7 +15,8 @@ import {
   Heart,
   UserPlus,
   Zap,
-  Smartphone
+  Smartphone,
+  Brain
 } from 'lucide-react';
 
 const Sidebar = ({ role, isCollapsed, isMobile }) => {
@@ -43,6 +43,7 @@ const Sidebar = ({ role, isCollapsed, isMobile }) => {
           { id: 'inbox', label: 'Inbox', icon: MessageSquare, href: '/dashboard/inbox' },
           { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/dashboard/analytics' },
           { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, href: '/dashboard/knowledge' },
+          { id: 'bot-personalities', label: 'Bot Personalities', icon: Brain, href: '/dashboard/bot-personalities' },
           { id: 'automations', label: 'Automations', icon: Workflow, href: '/dashboard/automations' },
           { id: 'whatsapp', label: 'WhatsApp Integration', icon: Smartphone, href: '/dashboard/whatsapp' },
           { id: 'users', label: 'User Management', icon: Users, href: '/dashboard/users' },

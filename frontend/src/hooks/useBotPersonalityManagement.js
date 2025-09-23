@@ -67,8 +67,6 @@ export const useBotPersonalityManagement = () => {
         ...params
       };
 
-      // Loading bot personalities with params
-
       const response = await botPersonalityService.getList(queryParams);
 
       if (response.success && response.data) {
@@ -106,7 +104,6 @@ export const useBotPersonalityManagement = () => {
   // Load initial data - only run once on mount
   useEffect(() => {
     if (!initialLoadDone.current) {
-      // useBotPersonalityManagement: useEffect running - loading initial data
       initialLoadDone.current = true;
       loadBotPersonalities.current();
     }

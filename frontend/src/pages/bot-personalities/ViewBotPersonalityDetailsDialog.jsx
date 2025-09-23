@@ -22,7 +22,6 @@ import {
   Bot,
   MessageSquare,
   Database,
-  Workflow,
   Star,
   CheckCircle,
   XCircle,
@@ -200,28 +199,6 @@ const ViewBotPersonalityDetailsDialog = ({ open, onOpenChange, personality }) =>
                   )}
                 </div>
 
-                {/* N8N Workflow */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <Workflow className="w-4 h-4 text-orange-600" />
-                    N8N Workflow
-                  </label>
-                  {personality.n8n_workflow_id ? (
-                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                      <Badge variant="outline" className="bg-orange-100 text-orange-700 mb-2">
-                        <Workflow className="w-3 h-3 mr-1" />
-                        Connected
-                      </Badge>
-                      <p className="text-sm text-gray-700">
-                        Workflow ID: {personality.n8n_workflow_id}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <p className="text-sm text-gray-500">Not connected</p>
-                    </div>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>
