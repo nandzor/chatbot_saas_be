@@ -22,9 +22,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Badge,
-  Alert,
-  AlertDescription
 } from '@/components/ui';
 import {
   Bot,
@@ -36,12 +33,11 @@ import {
   MessageSquare,
   Database,
   Plus,
-  Star,
-  Settings
+  Settings,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@/utils/errorHandler';
-import { sanitizeInput, validateInput } from '@/utils/securityUtils';
+import { sanitizeInput } from '@/utils/securityUtils';
 import BotPersonalityService from '@/services/BotPersonalityService';
 
 const botPersonalityService = new BotPersonalityService();
@@ -118,19 +114,8 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
         // Handle both nested and direct data structure
         const kbData = Array.isArray(kbResponse.data) ? kbResponse.data : (kbResponse.data.data || []);
         setKnowledgeBaseItems(kbData);
-        // Temporary debug info
-        if (import.meta.env.DEV) {
-          console.log('📚 Knowledge Base Response:', kbResponse);
-          console.log('📚 Knowledge Base Data:', kbData);
-          console.log('📚 Knowledge Base Count:', kbData.length);
-        }
       }
     } catch (error) {
-      console.error('Error loading related data:', error);
-      // Temporary debug info
-      if (import.meta.env.DEV) {
-        console.log('❌ Error details:', error);
-      }
       toast.error('Failed to load related data');
     } finally {
       setLoadingRelatedData(false);
@@ -165,6 +150,7 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
       setKnowledgeBaseSearch('');
     }
   }, [open]);
+
 
   // Handle form input changes
   const handleInputChange = useCallback((field, value) => {
@@ -405,66 +391,101 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                 <Label className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-green-600" />
                   WhatsApp Session
+                  <span className="text-xs text-gray-500 font-normal">(Working only)</span>
                 </Label>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Search WhatsApp sessions..."
+                      placeholder="Search working WhatsApp sessions..."
                       value={wahaSessionSearch}
                       onChange={(e) => setWahaSessionSearch(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 h-11 border-gray-200 focus:border-green-500 focus:ring-green-500 rounded-lg"
                     />
                   </div>
-                  <div className="max-h-40 overflow-y-auto border rounded-md">
-                    {loadingRelatedData ? (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
-                        Loading WhatsApp sessions...
-                      </div>
-                    ) : filteredWahaSessions.length > 0 ? (
-                      filteredWahaSessions.map((session) => (
-                        <div
-                          key={session.id}
-                          className={`p-3 cursor-pointer hover:bg-gray-50 border-b last:border-b-0 ${
-                            formData.waha_session_id === session.id ? 'bg-blue-50 border-blue-200' : ''
-                          }`}
-                          onClick={() => handleAssignmentChange('waha_session_id',
-                            formData.waha_session_id === session.id ? null : session.id
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">{session.name || session.session_name}</div>
-                              <div className="text-sm text-gray-500">
-                                {session.status || 'Active'} • {session.phone_number || 'No phone'}
-                              </div>
-                            </div>
-                            {formData.waha_session_id === session.id && (
-                              <CheckCircle className="w-5 h-5 text-blue-600" />
-                            )}
+                  <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg shadow-sm bg-white">
+                      {loadingRelatedData ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="text-center">
+                            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3 text-green-600" />
+                            <p className="text-sm text-gray-500">Loading working WhatsApp sessions...</p>
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        No WhatsApp sessions found
-                      </div>
-                    )}
-                  </div>
+                      ) : filteredWahaSessions.length > 0 ? (
+                        <div className="divide-y divide-gray-100">
+                          {filteredWahaSessions.map((session) => (
+                            <div
+                              key={session.id}
+                              className={`group p-4 cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
+                                formData.waha_session_id === session.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''
+                              }`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleAssignmentChange('waha_session_id',
+                                  formData.waha_session_id === session.id ? null : session.id
+                                );
+                              }}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <MessageSquare className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                    <h4 className="font-semibold text-sm text-gray-900 truncate">
+                                      {session.name || session.session_name}
+                                    </h4>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 font-medium">
+                                      {session.status || 'Working'}
+                                    </span>
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 font-medium">
+                                      WhatsApp
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="ml-3 flex-shrink-0">
+                                  {formData.waha_session_id === session.id ? (
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full border-2 border-gray-300 group-hover:border-green-400 transition-colors" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="text-center">
+                            <MessageSquare className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                            <p className="text-sm text-gray-500">No working WhatsApp sessions found</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Try a different search term
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   {formData.waha_session_id && (
-                    <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700">
-                        <MessageSquare className="w-3 h-3 mr-1" />
-                        {getSelectedWahaSession()?.name || getSelectedWahaSession()?.session_name}
-                      </Badge>
+                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <MessageSquare className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-green-900 truncate">
+                            {getSelectedWahaSession()?.name || getSelectedWahaSession()?.session_name}
+                          </p>
+                          <p className="text-xs text-green-600">Selected WhatsApp session</p>
+                        </div>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleAssignmentChange('waha_session_id', null)}
+                        className="h-8 w-8 p-0 hover:bg-green-100"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-4 h-4 text-green-600" />
                       </Button>
                     </div>
                   )}
@@ -477,65 +498,99 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                   <Database className="w-4 h-4 text-purple-600" />
                   Knowledge Base Item
                 </Label>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       placeholder="Search published knowledge base items..."
                       value={knowledgeBaseSearch}
                       onChange={(e) => setKnowledgeBaseSearch(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 h-11 border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-lg"
                     />
                   </div>
-                  <div className="max-h-40 overflow-y-auto border rounded-md">
+                  <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg shadow-sm bg-white">
                     {loadingRelatedData ? (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
-                        Loading published knowledge base items...
+                      <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3 text-purple-600" />
+                          <p className="text-sm text-gray-500">Loading published knowledge base items...</p>
+                        </div>
                       </div>
                     ) : filteredKnowledgeBaseItems.length > 0 ? (
-                      filteredKnowledgeBaseItems.map((item) => (
-                        <div
-                          key={item.id}
-                          className={`p-3 cursor-pointer hover:bg-gray-50 border-b last:border-b-0 ${
-                            formData.knowledge_base_item_id === item.id ? 'bg-blue-50 border-blue-200' : ''
-                          }`}
-                          onClick={() => handleAssignmentChange('knowledge_base_item_id',
-                            formData.knowledge_base_item_id === item.id ? null : item.id
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">{item.title}</div>
-                              <div className="text-sm text-gray-500">
-                                {item.type || 'Article'} • {item.status || 'Published'}
+                      <div className="divide-y divide-gray-100">
+                        {filteredKnowledgeBaseItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`group p-4 cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
+                              formData.knowledge_base_item_id === item.id ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''
+                            }`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleAssignmentChange('knowledge_base_item_id',
+                                formData.knowledge_base_item_id === item.id ? null : item.id
+                              );
+                            }}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Database className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                                  <h4 className="font-semibold text-sm text-gray-900 truncate">
+                                    {item.title}
+                                  </h4>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-purple-100 text-purple-800 font-medium">
+                                    {item.type || 'Article'}
+                                  </span>
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 font-medium">
+                                    {item.status || 'Published'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="ml-3 flex-shrink-0">
+                                {formData.knowledge_base_item_id === item.id ? (
+                                  <CheckCircle className="w-5 h-5 text-purple-600" />
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full border-2 border-gray-300 group-hover:border-purple-400 transition-colors" />
+                                )}
                               </div>
                             </div>
-                            {formData.knowledge_base_item_id === item.id && (
-                              <CheckCircle className="w-5 h-5 text-blue-600" />
-                            )}
                           </div>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     ) : (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        No knowledge base items found
+                      <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                          <Database className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                          <p className="text-sm text-gray-500">No knowledge base items found</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Try a different search term
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
                   {formData.knowledge_base_item_id && (
-                    <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                      <Badge variant="outline" className="bg-purple-100 text-purple-700">
-                        <Database className="w-3 h-3 mr-1" />
-                        {getSelectedKnowledgeBaseItem()?.title}
-                      </Badge>
+                    <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Database className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-purple-900 truncate">
+                            {getSelectedKnowledgeBaseItem()?.title}
+                          </p>
+                          <p className="text-xs text-purple-600">Selected knowledge base item</p>
+                        </div>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleAssignmentChange('knowledge_base_item_id', null)}
+                        className="h-8 w-8 p-0 hover:bg-purple-100"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-4 h-4 text-purple-600" />
                       </Button>
                     </div>
                   )}

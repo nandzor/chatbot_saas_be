@@ -127,11 +127,15 @@ class BotPersonalityService {
   }
 
   /**
-   * Get waha sessions for selection
+   * Get waha sessions for selection (only working sessions)
    */
   async getWahaSessions(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/waha/sessions', null, { params });
+      const searchParams = {
+        ...params,
+        status: 'working' // Only get working sessions
+      };
+      const response = await this._makeApiCall('GET', '/waha/sessions', null, { params: searchParams });
       return response;
     } catch (error) {
       console.error('❌ Error fetching WhatsApp sessions:', error);
