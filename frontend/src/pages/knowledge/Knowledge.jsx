@@ -1,7 +1,7 @@
-import Knowledge from '@/features/shared/Knowledge';
+import KnowledgeList from './KnowledgeList';
 
 const KnowledgePage = () => {
-  return <Knowledge />;
+  return <KnowledgeList />;
 };
 
 export default KnowledgePage;
