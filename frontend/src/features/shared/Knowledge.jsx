@@ -531,35 +531,12 @@ const Knowledge = () => {
         : value;
     }
 
-    // Validate input based on field type
-    let isValid = true;
-    if (field === 'title' && !validateInput.title(sanitizedValue)) {
-      isValid = false;
-      setFormErrors(prev => ({
-        ...prev,
-        [field]: 'Title must be between 3-100 characters and contain only valid characters'
-      }));
-    } else if (field === 'description' && !validateInput.description(sanitizedValue)) {
-      isValid = false;
-      setFormErrors(prev => ({
-        ...prev,
-        [field]: 'Description must be between 10-200 characters'
-      }));
-    } else if (field === 'content' && !validateInput.content(sanitizedValue)) {
-      isValid = false;
-      setFormErrors(prev => ({
-        ...prev,
-        [field]: 'Content must be between 50-10000 characters'
-      }));
-    }
+    // Always update the form data during typing - validation happens on submit
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
 
-    if (isValid) {
-      setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
-
-      // Clear error for this field
-      if (formErrors[field]) {
-        setFormErrors(prev => ({ ...prev, [field]: '' }));
-      }
+    // Clear error for this field when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({ ...prev, [field]: '' }));
     }
 
     // Update character count untuk content

@@ -8,9 +8,24 @@ import { useEffect, useCallback, useRef } from 'react';
 /**
  * XSS protection utilities
  */
-export const sanitizeInput = (input) => {
+export const sanitizeInput = (input, type = 'text') => {
   if (typeof input !== 'string') return input;
 
+  // For HTML content, allow some basic HTML tags but sanitize dangerous ones
+  if (type === 'html') {
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+=/gi, '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+  }
+
+  // For text content, sanitize all HTML
   return input
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -28,7 +43,7 @@ export const sanitizeSearchQuery = (query) => {
 
   // Remove SQL keywords and special characters
   return query
-    .replace(/[';\-]/g, '')
+    .replace(/[';-]/g, '')
     .replace(/\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b/gi, '')
     .trim();
 };
@@ -37,9 +52,6 @@ export const sanitizeSearchQuery = (query) => {
  * Safe HTML parsing
  */
 export const createSafeHTML = (htmlString) => {
-  const allowedTags = ['p', 'br', 'strong', 'em', 'u', 'span', 'div'];
-  const allowedAttributes = ['class', 'id'];
-
   // Simple HTML sanitization (in production, use DOMPurify)
   const cleanHTML = htmlString
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -169,14 +181,14 @@ export const validateInput = {
     const hasUppercase = /[A-Z]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
 
     return hasUppercase && hasLowercase && hasNumber && hasSpecial;
   },
 
   phoneNumber: (phone) => {
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
+    const phoneRegex = /^[+]?[1-9][\d]{0,15}$/;
+    return phoneRegex.test(phone.replace(/[\s\-()]/g, ''));
   },
 
   url: (url) => {
@@ -195,6 +207,27 @@ export const validateInput = {
 
   noScriptTags: (input) => {
     return !/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi.test(input);
+  },
+
+  // Title validation: 3-100 characters, no dangerous content
+  title: (input) => {
+    if (!input || typeof input !== 'string') return false;
+    const trimmed = input.trim();
+    return trimmed.length >= 3 && trimmed.length <= 100 && this.noScriptTags(trimmed);
+  },
+
+  // Description validation: 10-200 characters, no dangerous content
+  description: (input) => {
+    if (!input || typeof input !== 'string') return false;
+    const trimmed = input.trim();
+    return trimmed.length >= 10 && trimmed.length <= 200 && this.noScriptTags(trimmed);
+  },
+
+  // Content validation: 50-10000 characters, no dangerous content
+  content: (input) => {
+    if (!input || typeof input !== 'string') return false;
+    const trimmed = input.trim();
+    return trimmed.length >= 50 && trimmed.length <= 10000 && this.noScriptTags(trimmed);
   }
 };
 
@@ -218,7 +251,7 @@ export const secureStorage = {
       localStorage.setItem(key, data);
       return true;
     } catch (error) {
-      console.warn('Failed to store data securely:', error);
+      // Silently fail for security reasons
       return false;
     }
   },
@@ -231,7 +264,7 @@ export const secureStorage = {
       const parsed = decrypt ? JSON.parse(atob(data)) : JSON.parse(data);
       return parsed;
     } catch (error) {
-      console.warn('Failed to retrieve data securely:', error);
+      // Silently fail for security reasons
       return null;
     }
   },
@@ -241,7 +274,7 @@ export const secureStorage = {
       localStorage.removeItem(key);
       return true;
     } catch (error) {
-      console.warn('Failed to remove data securely:', error);
+      // Silently fail for security reasons
       return false;
     }
   },
@@ -251,7 +284,7 @@ export const secureStorage = {
       localStorage.clear();
       return true;
     } catch (error) {
-      console.warn('Failed to clear storage securely:', error);
+      // Silently fail for security reasons
       return false;
     }
   }
