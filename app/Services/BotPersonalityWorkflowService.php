@@ -177,7 +177,6 @@ class BotPersonalityWorkflowService
             'waha_session_id' => $data['waha_session_id'],
             'knowledge_base_item_id' => $data['knowledge_base_item_id'],
             'n8n_workflow_id' => $data['n8n_workflow_id'],
-            'is_default' => false,
             'learning_enabled' => true,
             'enable_small_talk' => true,
             'typing_indicator' => true,

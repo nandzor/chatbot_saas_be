@@ -61,7 +61,6 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
     confidence_threshold: 0.8,
     learning_enabled: true,
     status: 'active',
-    is_default: false,
     // Assignment fields
     waha_session_id: null,
     knowledge_base_item_id: null
@@ -114,7 +113,6 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
         confidence_threshold: personality.confidence_threshold || 0.8,
         learning_enabled: personality.learning_enabled ?? true,
         status: personality.status || 'active',
-        is_default: personality.is_default || false,
         // Assignment fields
         waha_session_id: personality.waha_session_id || null,
         knowledge_base_item_id: personality.knowledge_base_item_id || null

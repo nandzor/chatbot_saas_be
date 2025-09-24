@@ -60,7 +60,6 @@ import {
   Clock,
   MessageSquare,
   Database,
-  Star,
 } from 'lucide-react';
 import CreateBotPersonalityDialog from './CreateBotPersonalityDialog';
 import EditBotPersonalityDialog from './EditBotPersonalityDialog';
@@ -81,7 +80,6 @@ const BotPersonalityList = React.memo(() => {
     pagination,
     statistics,
     loadBotPersonalities,
-    updateBotPersonality,
     deleteBotPersonality,
     toggleBotPersonalityStatus,
     updateFilters,
@@ -166,13 +164,12 @@ const BotPersonalityList = React.memo(() => {
 
       // Create CSV content
       const csvContent = [
-        ['Name', 'Code', 'Language', 'Status', 'Default', 'Created At'],
+        ['Name', 'Code', 'Language', 'Status', 'Created At'],
         ...botPersonalities.map(personality => [
           personality.name || '',
           personality.code || '',
           personality.language || '',
           personality.status || '',
-          personality.is_default ? 'Yes' : 'No',
           personality.created_at ? new Date(personality.created_at).toLocaleDateString() : ''
         ])
       ].map(row => row.join(',')).join('\n');
@@ -242,17 +239,6 @@ const BotPersonalityList = React.memo(() => {
     }
   }, [setLoading, announce, toggleBotPersonalityStatus]);
 
-  const handleSetAsDefault = useCallback(async (personality) => {
-    try {
-      setLoading('default', true);
-      await updateBotPersonality(personality.id, { is_default: true });
-      announce(`Bot personality ${personality.name} set as default successfully`);
-    } catch (err) {
-      handleError(err, { context: 'Set Default Bot Personality' });
-    } finally {
-      setLoading('default', false);
-    }
-  }, [setLoading, announce, updateBotPersonality]);
 
   const handleCopyPersonality = useCallback((personality) => {
     navigator.clipboard.writeText(personality.code);
@@ -276,12 +262,6 @@ const BotPersonalityList = React.memo(() => {
           <div>
             <div className="font-medium text-gray-900 flex items-center space-x-2">
               {personality.name}
-              {personality.is_default && (
-                <Badge variant="secondary" className="text-xs">
-                  <Star className="w-3 h-3 mr-1" />
-                  Default
-                </Badge>
-              )}
             </div>
             <div className="text-sm text-gray-500">{personality.code}</div>
           </div>
@@ -421,12 +401,6 @@ const BotPersonalityList = React.memo(() => {
               <Edit className="mr-2 h-4 w-4" />
               Edit Personality
             </DropdownMenuItem>
-            {!personality.is_default && (
-              <DropdownMenuItem onClick={() => handleSetAsDefault(personality)}>
-                <Star className="mr-2 h-4 w-4" />
-                Set as Default
-              </DropdownMenuItem>
-            )}
             <DropdownMenuItem onClick={() => handleToggleStatus(personality)}>
               {personality.status === 'active' ? (
                 <>
@@ -456,7 +430,7 @@ const BotPersonalityList = React.memo(() => {
         </DropdownMenu>
       )
     }
-  ], [handleViewPersonality, handleEditPersonality, handleDeletePersonality, handleToggleStatus, handleSetAsDefault, handleCopyPersonality]);
+  ], [handleViewPersonality, handleEditPersonality, handleDeletePersonality, handleToggleStatus, handleCopyPersonality]);
 
   // Focus management on mount
   useEffect(() => {

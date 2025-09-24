@@ -51,7 +51,6 @@ class BotPersonality extends Model
         'total_conversations',
         'avg_satisfaction_score',
         'success_rate',
-        'is_default',
         'status',
         'n8n_workflow_id',
         'waha_session_id',
@@ -74,7 +73,6 @@ class BotPersonality extends Model
         'last_trained_at' => 'datetime',
         'avg_satisfaction_score' => 'decimal:2',
         'success_rate' => 'decimal:2',
-        'is_default' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -167,13 +165,6 @@ class BotPersonality extends Model
         return $this->knowledgeBaseItem?->title;
     }
 
-    /**
-     * Check if this is the default personality.
-     */
-    public function isDefault(): bool
-    {
-        return $this->is_default;
-    }
 
     /**
      * Check if learning is enabled.
@@ -303,18 +294,6 @@ class BotPersonality extends Model
         }
     }
 
-    /**
-     * Set as default personality.
-     */
-    public function setAsDefault(): void
-    {
-        // Remove default from other personalities in the same organization
-        static::where('organization_id', $this->organization_id)
-              ->where('id', '!=', $this->id)
-              ->update(['is_default' => false]);
-
-        $this->update(['is_default' => true]);
-    }
 
     /**
      * Add training data source.
@@ -371,13 +350,6 @@ class BotPersonality extends Model
         return $freshness === null || $freshness > $maxDays;
     }
 
-    /**
-     * Scope for default personalities.
-     */
-    public function scopeDefault($query)
-    {
-        return $query->where('is_default', true);
-    }
 
     /**
      * Scope for specific language.

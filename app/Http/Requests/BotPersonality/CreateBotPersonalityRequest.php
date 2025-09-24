@@ -58,7 +58,6 @@ class CreateBotPersonalityRequest extends BaseRequest
             'learning_enabled' => ['nullable', 'boolean'],
             'training_data_sources' => ['nullable', 'array'],
             'last_trained_at' => ['nullable', 'date'],
-            'is_default' => ['nullable', 'boolean'],
             'status' => ['nullable', 'string', Rule::in(['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])],
             // Workflow integration fields
             'n8n_workflow_id' => ['nullable', 'uuid', 'exists:n8n_workflows,id'],

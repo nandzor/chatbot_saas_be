@@ -73,9 +73,6 @@ const BotPersonalityBulkActions = ({
         return <CheckCircle2 className="w-4 h-4" />;
       case 'deactivate':
         return <XCircle className="w-4 h-4" />;
-      case 'set-default':
-        return <Star className="w-4 h-4" />;
-      case 'remove-default':
         return <StarOff className="w-4 h-4" />;
       case 'delete':
         return <Trash2 className="w-4 h-4" />;
@@ -92,9 +89,6 @@ const BotPersonalityBulkActions = ({
         return 'Activate Selected';
       case 'deactivate':
         return 'Deactivate Selected';
-      case 'set-default':
-        return 'Set as Default';
-      case 'remove-default':
         return 'Remove Default';
       case 'delete':
         return 'Delete Selected';
@@ -107,7 +101,6 @@ const BotPersonalityBulkActions = ({
 
   const activeCount = selectedPersonalities.filter(p => p.status === 'active').length;
   const inactiveCount = selectedPersonalities.filter(p => p.status === 'inactive').length;
-  const defaultCount = selectedPersonalities.filter(p => p.is_default).length;
 
   return (
     <Card className="border-blue-200 bg-blue-50">
@@ -172,12 +165,6 @@ const BotPersonalityBulkActions = ({
               <div className="flex items-center gap-2">
                 <XCircle className="w-4 h-4" />
                 Deactivate Selected
-              </div>
-            </SelectItem>
-            <SelectItem value="set-default">
-              <div className="flex items-center gap-2">
-                <Star className="w-4 h-4" />
-                Set as Default
               </div>
             </SelectItem>
             <SelectItem value="remove-default">

@@ -68,12 +68,6 @@ const ViewBotPersonalityDetailsDialog = ({ open, onOpenChange, personality }) =>
               {personality.name?.charAt(0)?.toUpperCase() || 'B'}
             </div>
             {personality.name}
-            {personality.is_default && (
-              <Badge variant="secondary" className="ml-2">
-                <Star className="w-3 h-3 mr-1" />
-                Default
-              </Badge>
-            )}
           </DialogTitle>
           <DialogDescription>
             View detailed information about this bot personality

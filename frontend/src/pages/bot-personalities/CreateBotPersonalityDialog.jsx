@@ -61,7 +61,6 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
     confidence_threshold: 0.8,
     learning_enabled: true,
     status: 'active',
-    is_default: false,
     // Assignment fields
     waha_session_id: null,
     knowledge_base_item_id: null
@@ -141,7 +140,6 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
         confidence_threshold: 0.8,
         learning_enabled: true,
         status: 'active',
-        is_default: false,
         waha_session_id: null,
         knowledge_base_item_id: null
       });

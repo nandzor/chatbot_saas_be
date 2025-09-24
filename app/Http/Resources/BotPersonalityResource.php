@@ -47,7 +47,6 @@ class BotPersonalityResource extends JsonResource
             'total_conversations' => $this->total_conversations,
             'avg_satisfaction_score' => $this->avg_satisfaction_score,
             'success_rate' => $this->success_rate,
-            'is_default' => $this->is_default,
             'status' => $this->status,
             // Workflow integration fields
             'n8n_workflow_id' => $this->n8n_workflow_id,

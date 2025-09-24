@@ -59,7 +59,6 @@ class CreateBotPersonalityWorkflowRequest extends BaseRequest
             'enable_small_talk' => ['nullable', 'boolean'],
             'confidence_threshold' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'learning_enabled' => ['nullable', 'boolean'],
-            'is_default' => ['nullable', 'boolean'],
             'status' => ['nullable', 'string', Rule::in(['active', 'inactive', 'suspended', 'deleted', 'pending', 'draft', 'published', 'archived'])],
         ];
     }
