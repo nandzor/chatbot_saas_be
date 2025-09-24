@@ -21,7 +21,7 @@ import Dashboard from '@/pages/dashboard/Dashboard';
 import Inbox from '@/pages/inbox/Inbox';
 import Analytics from '@/pages/analytics/Analytics';
 import Knowledge from '@/pages/knowledge/Knowledge';
-import Automations from '@/pages/automations/Automations';
+import N8nAutomations from '@/pages/n8n-automations/N8nAutomations';
 import Settings from '@/pages/settings/Settings';
 import ProfileSettings from '@/features/shared/ProfileSettings';
 import WhatsAppIntegration from '@/pages/WhatsAppIntegration';
@@ -156,14 +156,6 @@ export const router = createBrowserRouter([
             )
           },
           {
-            path: 'automations',
-            element: (
-              <RoleBasedRoute requiredPermission="manage_settings">
-                <Automations />
-              </RoleBasedRoute>
-            )
-          },
-          {
             path: 'settings',
             element: (
               <RoleBasedRoute requiredPermission="manage_settings">
@@ -253,6 +245,7 @@ export const router = createBrowserRouter([
           { path: 'client-health', element: <ClientHealthDashboard /> },
           { path: 'onboarding', element: <OnboardingPipeline /> },
           { path: 'automation', element: <AutomationPlaybooks /> },
+          { path: 'n8n-automations', element: <N8nAutomations /> },
           { path: 'communication', element: <ClientCommunicationCenter /> },
 
           // Platform Engineering & DevOps Routes

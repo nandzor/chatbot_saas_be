@@ -30,7 +30,7 @@ export const PERMISSIONS = {
   MANAGE_SETTINGS: 'manage_settings',
   VIEW_ANALYTICS: 'view_analytics',
   MANAGE_BILLING: 'manage_billing',
-  MANAGE_AUTOMATIONS: 'manage_automations',
+  MANAGE_N8N_AUTOMATIONS: 'manage_n8n_automations',
   MANAGE_KNOWLEDGE_BASE: 'manage_knowledge_base',
 
   // Agent Permissions
@@ -51,7 +51,7 @@ export const ROUTES = {
   INBOX: '/dashboard/inbox',
   ANALYTICS: '/dashboard/analytics',
   KNOWLEDGE: '/dashboard/knowledge',
-  AUTOMATIONS: '/dashboard/automations',
+  N8N_AUTOMATIONS: '/superadmin/n8n-automations',
   SETTINGS: '/dashboard/settings',
 
   // Super Admin Routes

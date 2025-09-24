@@ -34,6 +34,7 @@ const Sidebar = ({ role, isCollapsed, isMobile }) => {
           { id: 'client-health', label: 'Client Health Dashboard', icon: Heart, href: '/superadmin/client-health' },
           { id: 'onboarding', label: 'Onboarding Pipeline', icon: UserPlus, href: '/superadmin/onboarding' },
           { id: 'automation', label: 'Automation & Playbooks', icon: Zap, href: '/superadmin/automation' },
+          { id: 'n8n-automations', label: 'N8N Automations', icon: Workflow, href: '/superadmin/n8n-automations' },
           { id: 'system', label: 'System Administration', icon: Shield, href: '/superadmin/system' },
           { id: 'platform', label: 'Platform Engineering & DevOps', icon: Settings, href: '/superadmin/platform/configuration' }
         ];
@@ -44,7 +45,6 @@ const Sidebar = ({ role, isCollapsed, isMobile }) => {
           { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/dashboard/analytics' },
           { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, href: '/dashboard/knowledge' },
           { id: 'bot-personalities', label: 'Bot Personalities', icon: Brain, href: '/dashboard/bot-personalities' },
-          { id: 'automations', label: 'Automations', icon: Workflow, href: '/dashboard/automations' },
           { id: 'whatsapp', label: 'WhatsApp Integration', icon: Smartphone, href: '/dashboard/whatsapp' },
           { id: 'users', label: 'User Management', icon: Users, href: '/dashboard/users' },
           { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' },

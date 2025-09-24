@@ -26,7 +26,7 @@ const PERMISSIONS = {
     'manage_chatbots',
     'view_analytics',
     'manage_billing',
-    'manage_automations',
+    'manage_n8n_automations',
     'manage_knowledge_base',
     'manage_settings'
   ],

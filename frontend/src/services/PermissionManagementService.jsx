@@ -220,7 +220,7 @@ class PermissionManagementService {
       'billing',
       'api_management',
       'workflows',
-      'automations'
+      'n8n-automations'
     ];
   }
 
@@ -240,7 +240,7 @@ class PermissionManagementService {
       'billing',
       'api_keys',
       'workflows',
-      'automations'
+      'n8n-automations'
     ];
   }
 

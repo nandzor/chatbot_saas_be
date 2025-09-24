@@ -67,7 +67,7 @@
 - **Inbox:** Requires `handle_chats` permission (Agents)
 - **Analytics:** Requires `view_analytics` permission (Org Admin+)
 - **Knowledge:** All authenticated users
-- **Automations:** Requires `manage_settings` permission (Org Admin+)
+- **N8N Automations:** Requires `manage_n8n_automations` permission (Super Admin only)
 - **Settings:** Requires `manage_settings` permission (Org Admin+)
 
 ## Role Hierarchy

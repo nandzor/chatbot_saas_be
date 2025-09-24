@@ -34,7 +34,7 @@ const CATEGORY_OPTIONS = [
   { value: 'billing', label: 'Billing' },
   { value: 'api_management', label: 'API Management' },
   { value: 'workflows', label: 'Workflows' },
-  { value: 'automations', label: 'Automations' }
+  { value: 'n8n-automations', label: 'N8N Automations' }
 ];
 
 const RESOURCE_OPTIONS = [
@@ -49,7 +49,7 @@ const RESOURCE_OPTIONS = [
   { value: 'billing', label: 'Billing' },
   { value: 'api_keys', label: 'API Keys' },
   { value: 'workflows', label: 'Workflows' },
-  { value: 'automations', label: 'Automations' }
+  { value: 'n8n-automations', label: 'N8N Automations' }
 ];
 
 const ACTION_OPTIONS = [

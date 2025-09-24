@@ -6,6 +6,7 @@
 // Shared Components
 export { default as Analytics } from './Analytics';
 export { default as Automations } from './Automations';
+export { default as N8nAutomations } from './N8nAutomations';
 export { default as BillingTab } from './BillingTab';
 export { default as BotPersonalitiesTab } from './BotPersonalitiesTab';
 export { default as ChannelsTab } from './ChannelsTab';
