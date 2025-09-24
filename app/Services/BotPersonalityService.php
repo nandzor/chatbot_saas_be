@@ -51,6 +51,19 @@ class BotPersonalityService extends BaseService
     public function createForOrganization(array $data, string $organizationId): BotPersonality
     {
         $data['organization_id'] = $organizationId;
+
+        // Auto-fill n8n_workflow_id from waha_session_id if not provided
+        if (empty($data['n8n_workflow_id']) && !empty($data['waha_session_id'])) {
+            $wahaSession = \App\Models\WahaSession::find($data['waha_session_id']);
+            if ($wahaSession && $wahaSession->n8n_workflow_id) {
+                $data['n8n_workflow_id'] = $wahaSession->n8n_workflow_id;
+                Log::info('Auto-filled n8n_workflow_id from waha_session', [
+                    'waha_session_id' => $data['waha_session_id'],
+                    'n8n_workflow_id' => $wahaSession->n8n_workflow_id,
+                ]);
+            }
+        }
+
         $personality = $this->create($data);
 
         // Sync with workflow if it has workflow-related fields
@@ -87,6 +100,18 @@ class BotPersonalityService extends BaseService
         $personality = $this->getForOrganization($id, $organizationId);
         if (!$personality) {
             return null;
+        }
+
+        // Auto-fill n8n_workflow_id from waha_session_id if not provided
+        if (empty($data['n8n_workflow_id']) && !empty($data['waha_session_id'])) {
+            $wahaSession = \App\Models\WahaSession::find($data['waha_session_id']);
+            if ($wahaSession && $wahaSession->n8n_workflow_id) {
+                $data['n8n_workflow_id'] = $wahaSession->n8n_workflow_id;
+                Log::info('Auto-filled n8n_workflow_id from waha_session during update', [
+                    'waha_session_id' => $data['waha_session_id'],
+                    'n8n_workflow_id' => $wahaSession->n8n_workflow_id,
+                ]);
+            }
         }
 
         $updatedPersonality = $this->update($personality->id, $data);
