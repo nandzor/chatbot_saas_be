@@ -50,9 +50,13 @@ class AiInstructionService
             return '';
         }
 
-        $knowledgeBaseItem = KnowledgeBaseItem::find($botPersonality->knowledge_base_item_id);
+        $knowledgeBaseItem = KnowledgeBaseItem::with(['activeQaItems'])->find($botPersonality->knowledge_base_item_id);
 
-        return $knowledgeBaseItem?->content ?? '';
+        if (!$knowledgeBaseItem) {
+            return '';
+        }
+
+        return $this->combineKnowledgeBaseContent($knowledgeBaseItem);
     }
 
     /**
@@ -60,9 +64,52 @@ class AiInstructionService
      */
     private function getKnowledgeBaseContentById(string $knowledgeBaseId): string
     {
-        $knowledgeBaseItem = KnowledgeBaseItem::find($knowledgeBaseId);
+        $knowledgeBaseItem = KnowledgeBaseItem::with(['activeQaItems'])->find($knowledgeBaseId);
 
-        return $knowledgeBaseItem?->content ?? '';
+        if (!$knowledgeBaseItem) {
+            return '';
+        }
+
+        return $this->combineKnowledgeBaseContent($knowledgeBaseItem);
+    }
+
+    /**
+     * Combine knowledge base content with QA items
+     */
+    private function combineKnowledgeBaseContent(KnowledgeBaseItem $knowledgeBaseItem): string
+    {
+        $combinedContent = [];
+
+        // Add main knowledge base content
+        if (!empty(trim($knowledgeBaseItem->content))) {
+            $combinedContent[] = "=== KNOWLEDGE BASE CONTENT ===";
+            $combinedContent[] = trim($knowledgeBaseItem->content);
+        }
+
+        // Add QA items if available
+        $qaItems = $knowledgeBaseItem->activeQaItems;
+        if ($qaItems->isNotEmpty()) {
+            $combinedContent[] = "\n=== FREQUENTLY ASKED QUESTIONS ===";
+
+            foreach ($qaItems as $index => $qaItem) {
+                $qaNumber = $index + 1;
+                $combinedContent[] = "\nQ{$qaNumber}: {$qaItem->question}";
+                $combinedContent[] = "A{$qaNumber}: {$qaItem->answer}";
+
+                // Add context if available
+                if (!empty(trim($qaItem->context))) {
+                    $combinedContent[] = "Context: {$qaItem->context}";
+                }
+
+                // Add keywords if available
+                if (!empty($qaItem->keywords) && is_array($qaItem->keywords)) {
+                    $keywords = implode(', ', $qaItem->keywords);
+                    $combinedContent[] = "Keywords: {$keywords}";
+                }
+            }
+        }
+
+        return implode("\n", $combinedContent);
     }
 
     /**

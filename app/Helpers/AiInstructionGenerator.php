@@ -99,7 +99,7 @@ class AiInstructionGenerator
             'formal_persona' => 'You are a professional and informative AI assistant.',
             'casual_persona' => 'You are a casual and approachable AI assistant.',
             'language_mandate' => 'You must always communicate in English.',
-            'kb_header' => 'Use the following information as your primary knowledge base to answer user queries. If the answer is not in this knowledge base, say that you don\'t know.',
+            'kb_header' => 'Use the following information as your primary knowledge base to answer user queries. This includes both general content and frequently asked questions. Prioritize answers from the FAQ section when relevant, then use the general content. If the answer is not found in this knowledge base, say that you don\'t know.',
         ];
     }
 
@@ -110,7 +110,7 @@ class AiInstructionGenerator
             'formal_persona' => 'Anda adalah seorang asisten AI yang profesional dan informatif.',
             'casual_persona' => 'Anda adalah asisten AI yang santai dan mudah didekati.',
             'language_mandate' => 'Anda harus selalu berkomunikasi menggunakan Bahasa Indonesia.',
-            'kb_header' => 'Gunakan informasi berikut sebagai basis pengetahuan utama Anda untuk menjawab pertanyaan pengguna. Jika jawaban tidak ditemukan dalam informasi ini, katakan bahwa Anda tidak mengetahuinya.',
+            'kb_header' => 'Gunakan informasi berikut sebagai basis pengetahuan utama Anda untuk menjawab pertanyaan pengguna. Informasi ini mencakup konten umum dan pertanyaan yang sering diajukan. Prioritaskan jawaban dari bagian FAQ jika relevan, kemudian gunakan konten umum. Jika jawaban tidak ditemukan dalam basis pengetahuan ini, katakan bahwa Anda tidak mengetahuinya.',
         ];
     }
 
@@ -121,7 +121,7 @@ class AiInstructionGenerator
             'formal_persona' => 'Njenengan inggih punika setunggaling asisten AI ingkang profesional lan tansah paring informasi.',
             'casual_persona' => 'Sampeyan iku asisten AI sing santai lan gampang diajak ngomong.',
             'language_mandate' => 'Sampeyan kedah tansah mangsuli pitakonan nganggo Basa Jawa.',
-            'kb_header' => 'Gunakake informasi ing ngisor iki minangka dhasar kawruh utama kanggo njawab pitakonan. Menawa wangsulane ora ana ing informasi iki, matura yen sampeyan ora ngerti.',
+            'kb_header' => 'Gunakake informasi ing ngisor iki minangka dhasar kawruh utama kanggo njawab pitakonan. Informasi iki kalebu konten umum lan pitakonan sing asring ditakoni. Utamakake jawaban saka bagian FAQ yen relevan, banjur gunakake konten umum. Menawa wangsulane ora ana ing dhasar kawruh iki, matura yen sampeyan ora ngerti.',
         ];
     }
 
@@ -132,7 +132,7 @@ class AiInstructionGenerator
             'formal_persona' => 'Anjeun teh asisten AI anu profesional tur informatif.',
             'casual_persona' => 'Anjeun teh asisten AI anu santai tur gampang diajak ngobrol.',
             'language_mandate' => 'Anjeun kedah salawasna ngobrol ngagunakeun Basa Sunda.',
-            'kb_header' => 'Anggo inpormasi di handap ieu salaku dasar pangaweruh utama pikeun ngajawab patarosan. Upami jawabanana teu aya dina inpormasi ieu, nyarios yén anjeun henteu terang.',
+            'kb_header' => 'Anggo inpormasi di handap ieu salaku dasar pangaweruh utama pikeun ngajawab patarosan. Inpormasi ieu kalebet konten umum sareng patarosan anu sering ditaroskeun. Utamakeun jawaban tina bagian FAQ upami relevan, teras anggo konten umum. Upami jawabanana teu aya dina dasar pangaweruh ieu, nyarios yén anjeun henteu terang.',
         ];
     }
 }
