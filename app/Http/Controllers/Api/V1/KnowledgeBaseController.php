@@ -501,7 +501,22 @@ class KnowledgeBaseController extends BaseApiController
     {
         $filters = [];
 
-        // Category filter
+        // Status filter (from URL parameter)
+        if ($request->filled('status') && $request->get('status') !== 'all') {
+            $filters['status'] = $request->get('status');
+        }
+
+        // Category filter (from URL parameter)
+        if ($request->filled('category') && $request->get('category') !== 'all') {
+            $filters['category_id'] = $request->get('category');
+        }
+
+        // Type filter (from URL parameter)
+        if ($request->filled('type') && $request->get('type') !== 'all') {
+            $filters['content_type'] = $request->get('type');
+        }
+
+        // Category filter (legacy parameter)
         if ($request->has('category_id')) {
             $filters['category_id'] = $request->get('category_id');
         }

@@ -537,6 +537,11 @@ class KnowledgeBaseService extends BaseService
      */
     protected function applyKnowledgeFilters($query, array $filters): void
     {
+        // Status filter
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
         if (isset($filters['category_id'])) {
             $query->byCategory($filters['category_id']);
         }
