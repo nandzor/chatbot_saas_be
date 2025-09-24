@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\BotPersonality;
+use App\Services\AiInstructionService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,11 +12,16 @@ class BotPersonalityService extends BaseService
 {
     protected BotPersonality $model;
     protected WorkflowSyncService $workflowSyncService;
+    protected AiInstructionService $aiInstructionService;
 
-    public function __construct(BotPersonality $model, WorkflowSyncService $workflowSyncService)
-    {
+    public function __construct(
+        BotPersonality $model,
+        WorkflowSyncService $workflowSyncService,
+        AiInstructionService $aiInstructionService
+    ) {
         $this->model = $model;
         $this->workflowSyncService = $workflowSyncService;
+        $this->aiInstructionService = $aiInstructionService;
     }
 
     protected function getModel(): Model
@@ -88,12 +94,17 @@ class BotPersonalityService extends BaseService
 
         $personality = $this->create($data);
 
-        // Sync with workflow if it has workflow-related fields
+        // Generate and sync AI instruction with workflow
         if ($personality->n8n_workflow_id || $personality->waha_session_id || $personality->knowledge_base_item_id) {
             try {
-                $this->workflowSyncService->syncBotPersonalityWorkflow($personality);
+                // Generate AI instruction
+                $aiInstruction = $this->aiInstructionService->generateForBotPersonality($personality);
+
+                // Sync with workflow including AI instruction
+                $this->workflowSyncService->syncBotPersonalityWorkflow($personality, $aiInstruction);
+
             } catch (\Exception $e) {
-                Log::warning('Failed to sync workflow after bot personality creation', [
+                Log::warning('Failed to sync workflow with AI instruction after bot personality creation', [
                     'bot_personality_id' => $personality->id,
                     'error' => $e->getMessage(),
                 ]);
@@ -139,12 +150,17 @@ class BotPersonalityService extends BaseService
 
         $updatedPersonality = $this->update($personality->id, $data);
 
-        // Sync with workflow after update
+        // Generate and sync AI instruction with workflow after update
         if ($updatedPersonality && ($updatedPersonality->n8n_workflow_id || $updatedPersonality->waha_session_id || $updatedPersonality->knowledge_base_item_id)) {
             try {
-                $this->workflowSyncService->syncBotPersonalityWorkflow($updatedPersonality);
+                // Generate AI instruction
+                $aiInstruction = $this->aiInstructionService->generateForBotPersonality($updatedPersonality);
+
+                // Sync with workflow including AI instruction
+                $this->workflowSyncService->syncBotPersonalityWorkflow($updatedPersonality, $aiInstruction);
+
             } catch (\Exception $e) {
-                Log::warning('Failed to sync workflow after bot personality update', [
+                Log::warning('Failed to sync workflow with AI instruction after bot personality update', [
                     'bot_personality_id' => $updatedPersonality->id,
                     'error' => $e->getMessage(),
                 ]);

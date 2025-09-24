@@ -46,7 +46,7 @@ class WorkflowSyncService
      * This method is called whenever a bot personality is updated
      * to ensure the workflow stays in sync.
      */
-    public function syncBotPersonalityWorkflow(BotPersonality $botPersonality): array
+    public function syncBotPersonalityWorkflow(BotPersonality $botPersonality, ?string $aiInstruction = null): array
     {
         try {
             Log::info('Starting bot personality workflow sync', [
@@ -58,8 +58,10 @@ class WorkflowSyncService
 
             $results = [];
 
-            // Sync system message if knowledge base item exists
-            if ($botPersonality->knowledge_base_item_id) {
+            // Sync system message with AI instruction
+            if ($aiInstruction) {
+                $results['system_message_sync'] = $this->syncSystemMessageWithAiInstruction($botPersonality, $aiInstruction);
+            } elseif ($botPersonality->knowledge_base_item_id) {
                 $results['system_message_sync'] = $this->syncSystemMessageFromKnowledgeBase($botPersonality);
             }
 
@@ -129,6 +131,34 @@ class WorkflowSyncService
             return [
                 'success' => false,
                 'message' => 'Failed to sync system message from knowledge base',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Sync system message with AI instruction
+     */
+    protected function syncSystemMessageWithAiInstruction(BotPersonality $botPersonality, string $aiInstruction): array
+    {
+        try {
+            if (!$botPersonality->n8n_workflow_id) {
+                throw new Exception("Bot personality {$botPersonality->id} has no associated N8N workflow");
+            }
+
+
+            return $this->syncSystemMessage($botPersonality->n8n_workflow_id, $aiInstruction);
+
+        } catch (Exception $e) {
+            Log::error('Failed to sync system message with AI instruction', [
+                'bot_personality_id' => $botPersonality->id,
+                'n8n_workflow_id' => $botPersonality->n8n_workflow_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to sync system message with AI instruction',
                 'error' => $e->getMessage(),
             ];
         }

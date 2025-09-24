@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\BelongsToOrganization;
+use App\Traits\GeneratesAiInstruction;
 use App\Traits\HasStatus;
 use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BotPersonality extends Model
 {
-    use HasFactory, HasUuid, BelongsToOrganization, HasStatus;
+    use HasFactory, HasUuid, BelongsToOrganization, HasStatus, GeneratesAiInstruction;
 
     protected $table = 'bot_personalities';
 
