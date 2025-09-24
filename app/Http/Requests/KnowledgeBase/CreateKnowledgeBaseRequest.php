@@ -57,7 +57,7 @@ class CreateKnowledgeBaseRequest extends FormRequest
             'content' => [
                 'required',
                 'string',
-                'min:50'
+                'min:7000'
             ],
             'summary' => [
                 'nullable',
@@ -279,7 +279,7 @@ class CreateKnowledgeBaseRequest extends FormRequest
             'content_type.required' => 'Content type is required.',
             'content_type.in' => 'Invalid content type selected.',
             'content.required' => 'Content is required.',
-            'content.min' => 'Content must be at least 50 characters.',
+            'content.min' => 'Content must be at least 7000 characters.',
             'language.in' => 'Invalid language selected.',
             'difficulty_level.in' => 'Invalid difficulty level selected.',
             'priority.in' => 'Invalid priority selected.',

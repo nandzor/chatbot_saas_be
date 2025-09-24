@@ -61,7 +61,7 @@ class UpdateKnowledgeBaseRequest extends FormRequest
             'content' => [
                 'sometimes',
                 'string',
-                'min:50'
+                'min:7000'
             ],
             'summary' => [
                 'nullable',
@@ -278,7 +278,7 @@ class UpdateKnowledgeBaseRequest extends FormRequest
             'description.min' => 'Description must be at least 10 characters.',
             'description.max' => 'Description cannot exceed 1000 characters.',
             'content_type.in' => 'Invalid content type selected.',
-            'content.min' => 'Content must be at least 50 characters.',
+            'content.min' => 'Content must be at least 7000 characters.',
             'language.in' => 'Invalid language selected.',
             'difficulty_level.in' => 'Invalid difficulty level selected.',
             'priority.in' => 'Invalid priority selected.',

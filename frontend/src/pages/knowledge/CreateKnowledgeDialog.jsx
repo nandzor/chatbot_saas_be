@@ -159,8 +159,11 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
     if (formData.content_type === 'article') {
       if (!formData.content.trim()) {
         newErrors.content = 'Content is required for articles';
-      } else if (formData.content.length < 50) {
-        newErrors.content = 'Content must be at least 50 characters';
+      } else {
+        const minLength = Math.max(7000 - formData.content.length, 0);
+        if (formData.content.length < 7000) {
+          newErrors.content = `Content must be at least ${minLength} more characters (${formData.content.length}/7000)`;
+        }
       }
     } else if (formData.content_type === 'qa_collection') {
       const validQAItems = qaItems.filter(item =>
@@ -584,9 +587,16 @@ const CreateKnowledgeDialog = ({ open, onOpenChange, onKnowledgeCreated, categor
                         </p>
                       )}
                       <div className="flex justify-between text-sm text-gray-500">
-                        <span>Jumlah karakter: {formData.content.length}</span>
-                        <span>Minimal 50 karakter</span>
+                        <span>Minimal 7000 karakter</span>
+                        <span className={formData.content.length >= 7000 ? 'text-green-600' : 'text-red-600'}>
+                          {formData.content.length}/7000 karakter
+                        </span>
                       </div>
+                      {formData.content.length < 7000 && (
+                        <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                          <strong>Perhatian:</strong> Masih perlu {7000 - formData.content.length} karakter lagi untuk memenuhi syarat minimum.
+                        </div>
+                      )}
                     </div>
 
                     {/* Testing Tips - Below content knowledge field */}

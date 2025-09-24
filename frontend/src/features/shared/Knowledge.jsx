@@ -583,8 +583,11 @@ const Knowledge = () => {
     } else {
       if (!formData.content.trim()) {
         errors.content = 'Konten knowledge wajib diisi';
-      } else if (formData.content.length < 100) {
-        errors.content = 'Konten minimal 100 karakter';
+      } else {
+        const minLength = Math.max(7000 - formData.content.length, 0);
+        if (formData.content.length < 7000) {
+          errors.content = `Konten minimal ${minLength} karakter lagi (${formData.content.length}/7000)`;
+        }
       }
     }
 
@@ -1465,9 +1468,16 @@ const Knowledge = () => {
                           required
                         />
                         <div className="flex justify-between text-sm text-gray-500">
-                          <span>{charCount} karakter</span>
-                          <span>{MAX_CHARS - charCount} tersisa</span>
+                          <span>Minimal {MAX_CHARS} karakter</span>
+                          <span className={charCount >= MAX_CHARS ? 'text-green-600' : 'text-red-600'}>
+                            {charCount}/{MAX_CHARS} karakter
+                          </span>
                         </div>
+                        {charCount < MAX_CHARS && (
+                          <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                            <strong>Perhatian:</strong> Masih perlu {MAX_CHARS - charCount} karakter lagi untuk memenuhi syarat minimum.
+                          </div>
+                        )}
 
                         {/* Testing Tips - Moved here below Konten Knowledge */}
                         <div className="space-y-3 pt-4 border-t border-gray-200">
