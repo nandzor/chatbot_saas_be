@@ -374,4 +374,17 @@ class MockWahaResponses
             'message' => 'Chat messages retrieved successfully'
         ];
     }
+
+    /**
+     * Get mock session restart response
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function getSessionRestart(): array
+    {
+        return [
+            'success' => true,
+            'message' => 'Session restarted successfully'
+        ];
+    }
 }

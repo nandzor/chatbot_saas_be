@@ -3,7 +3,7 @@
  * Dialog untuk melihat detail knowledge item
  */
 
-import React from 'react';
+// import React from 'react'; // Unused
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ import {
   Target,
   AlertCircle,
   Copy,
-  ExternalLink
+  // ExternalLink // Unused
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 

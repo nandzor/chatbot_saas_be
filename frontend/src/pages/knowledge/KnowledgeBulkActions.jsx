@@ -3,7 +3,7 @@
  * Component untuk bulk actions pada knowledge items
  */
 
-import React from 'react';
+// import React from 'react'; // Unused
 import {
   Card,
   CardContent,
@@ -18,14 +18,14 @@ import {
 } from '@/components/ui';
 import {
   CheckCircle,
-  XCircle,
+  // XCircle, // Unused
   Trash2,
   MoreHorizontal,
-  Zap,
+  // Zap, // Unused
   Shield,
   Globe,
-  Clock,
-  AlertTriangle
+  Clock
+  // AlertTriangle // Unused
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
