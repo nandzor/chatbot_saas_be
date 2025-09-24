@@ -139,6 +139,121 @@ class BotPersonalityController extends BaseApiController
 
         return $this->successResponse('Bot personality deleted successfully');
     }
+
+    /**
+     * Sync bot personality with its workflow
+     */
+    public function syncWorkflow(string $id): JsonResponse
+    {
+        $user = $this->getCurrentUser();
+        if (!$user) {
+            return $this->unauthorizedResponse('Authentication required');
+        }
+
+        $result = $this->service->syncWorkflow($id, $user->organization_id);
+
+        if ($result['success']) {
+            $this->logApiAction('bot_personality_workflow_synced', [
+                'bot_personality_id' => $id,
+                'organization_id' => $user->organization_id,
+                'user_id' => $user->id,
+            ]);
+
+            return $this->successResponse(
+                $result['message'],
+                $result['results'] ?? null
+            );
+        }
+
+        return $this->errorResponse($result['message'], 500);
+    }
+
+    /**
+     * Get sync status for bot personality
+     */
+    public function getSyncStatus(string $id): JsonResponse
+    {
+        $user = $this->getCurrentUser();
+        if (!$user) {
+            return $this->unauthorizedResponse('Authentication required');
+        }
+
+        $result = $this->service->getSyncStatus($id, $user->organization_id);
+
+        if ($result['success']) {
+            return $this->successResponse(
+                'Sync status retrieved successfully',
+                $result['data']
+            );
+        }
+
+        return $this->errorResponse($result['message'], 404);
+    }
+
+    /**
+     * Bulk sync multiple bot personalities
+     */
+    public function bulkSyncWorkflows(Request $request): JsonResponse
+    {
+        $user = $this->getCurrentUser();
+        if (!$user) {
+            return $this->unauthorizedResponse('Authentication required');
+        }
+
+        $request->validate([
+            'bot_personality_ids' => 'required|array|min:1',
+            'bot_personality_ids.*' => 'uuid|exists:bot_personalities,id',
+        ]);
+
+        $result = $this->service->bulkSyncWorkflows(
+            $request->input('bot_personality_ids'),
+            $user->organization_id
+        );
+
+        $this->logApiAction('bot_personalities_bulk_sync', [
+            'bot_personality_ids' => $request->input('bot_personality_ids'),
+            'organization_id' => $user->organization_id,
+            'user_id' => $user->id,
+            'summary' => $result['summary'] ?? null,
+        ]);
+
+        if ($result['success']) {
+            return $this->successResponse(
+                $result['message'],
+                $result['summary']
+            );
+        }
+
+        return $this->errorResponse($result['message'], 500);
+    }
+
+    /**
+     * Sync all bot personalities for organization
+     */
+    public function syncOrganizationWorkflows(): JsonResponse
+    {
+        $user = $this->getCurrentUser();
+        if (!$user) {
+            return $this->unauthorizedResponse('Authentication required');
+        }
+
+        $result = $this->service->syncOrganizationWorkflows($user->organization_id);
+
+        $this->logApiAction('organization_bot_personalities_sync', [
+            'organization_id' => $user->organization_id,
+            'user_id' => $user->id,
+            'summary' => $result['summary'] ?? null,
+        ]);
+
+        if ($result['success']) {
+            return $this->successResponse(
+                $result['message'],
+                $result['summary']
+            );
+        }
+
+        return $this->errorResponse($result['message'], 500);
+    }
 }
 
 

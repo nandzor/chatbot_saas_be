@@ -1,0 +1,379 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\BotPersonality;
+use App\Models\WahaSession;
+use App\Models\KnowledgeBaseItem;
+use App\Models\N8nWorkflow;
+use App\Traits\HasWorkflowIntegration;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
+use Exception;
+
+/**
+ * WorkflowSyncService
+ *
+ * Centralized service for handling workflow synchronization operations.
+ * This service ensures that bot personality updates trigger corresponding
+ * workflow updates in both N8N and database.
+ */
+class WorkflowSyncService
+{
+    use HasWorkflowIntegration;
+
+    /**
+     * Sync bot personality with its associated workflow
+     *
+     * This method is called whenever a bot personality is updated
+     * to ensure the workflow stays in sync.
+     */
+    public function syncBotPersonalityWorkflow(BotPersonality $botPersonality): array
+    {
+        try {
+            Log::info('Starting bot personality workflow sync', [
+                'bot_personality_id' => $botPersonality->id,
+                'waha_session_id' => $botPersonality->waha_session_id,
+                'knowledge_base_item_id' => $botPersonality->knowledge_base_item_id,
+                'n8n_workflow_id' => $botPersonality->n8n_workflow_id,
+            ]);
+
+            $results = [];
+
+            // Sync system message if knowledge base item exists
+            if ($botPersonality->knowledge_base_item_id) {
+                $results['system_message_sync'] = $this->syncSystemMessageFromKnowledgeBase($botPersonality);
+            }
+
+            // Sync workflow configuration
+            if ($botPersonality->n8n_workflow_id) {
+                $results['workflow_config_sync'] = $this->syncWorkflowConfiguration($botPersonality);
+            }
+
+            // Update workflow status if needed
+            if ($botPersonality->status === 'active' && $botPersonality->n8n_workflow_id) {
+                $results['workflow_activation'] = $this->activateWorkflowIfNeeded($botPersonality->n8n_workflow_id);
+            }
+
+            Log::info('Bot personality workflow sync completed', [
+                'bot_personality_id' => $botPersonality->id,
+                'results' => $results,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Bot personality workflow sync completed',
+                'results' => $results,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Bot personality workflow sync failed', [
+                'bot_personality_id' => $botPersonality->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Bot personality workflow sync failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Sync system message from knowledge base item
+     */
+    protected function syncSystemMessageFromKnowledgeBase(BotPersonality $botPersonality): array
+    {
+        try {
+            $knowledgeBaseItem = KnowledgeBaseItem::find($botPersonality->knowledge_base_item_id);
+
+            if (!$knowledgeBaseItem) {
+                throw new Exception("KnowledgeBaseItem {$botPersonality->knowledge_base_item_id} not found");
+            }
+
+            $systemMessage = $this->getSystemMessageFromKnowledgeBase($knowledgeBaseItem);
+
+            if (!$botPersonality->n8n_workflow_id) {
+                throw new Exception("Bot personality {$botPersonality->id} has no associated N8N workflow");
+            }
+
+            return $this->syncSystemMessage($botPersonality->n8n_workflow_id, $systemMessage);
+
+        } catch (Exception $e) {
+            Log::error('Failed to sync system message from knowledge base', [
+                'bot_personality_id' => $botPersonality->id,
+                'knowledge_base_item_id' => $botPersonality->knowledge_base_item_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to sync system message from knowledge base',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Sync workflow configuration
+     */
+    protected function syncWorkflowConfiguration(BotPersonality $botPersonality): array
+    {
+        try {
+            $configurationData = [
+                'bot_personality_id' => $botPersonality->id,
+                'personality_name' => $botPersonality->name,
+                'personality_code' => $botPersonality->code,
+                'language' => $botPersonality->language,
+                'tone' => $botPersonality->tone,
+                'communication_style' => $botPersonality->communication_style,
+                'formality_level' => $botPersonality->formality_level,
+                'greeting_message' => $botPersonality->greeting_message,
+                'farewell_message' => $botPersonality->farewell_message,
+                'personality_traits' => $botPersonality->personality_traits,
+                'response_delay_ms' => $botPersonality->response_delay_ms,
+                'typing_indicator' => $botPersonality->typing_indicator,
+                'max_response_length' => $botPersonality->max_response_length,
+                'enable_small_talk' => $botPersonality->enable_small_talk,
+                'confidence_threshold' => $botPersonality->confidence_threshold,
+                'learning_enabled' => $botPersonality->learning_enabled,
+                'last_sync_at' => now()->toISOString(),
+            ];
+
+            return $this->updateDatabaseWorkflowConfiguration($botPersonality->n8n_workflow_id, $configurationData);
+
+        } catch (Exception $e) {
+            Log::error('Failed to sync workflow configuration', [
+                'bot_personality_id' => $botPersonality->id,
+                'n8n_workflow_id' => $botPersonality->n8n_workflow_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to sync workflow configuration',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Activate workflow if needed
+     */
+    protected function activateWorkflowIfNeeded(string $n8nWorkflowId): array
+    {
+        try {
+            // Check current workflow status
+            $statusResult = $this->getN8nWorkflowStatus($n8nWorkflowId);
+
+            if (!$statusResult['success']) {
+                return $statusResult;
+            }
+
+            $workflowData = $statusResult['data'];
+            $isActive = $workflowData['active'] ?? false;
+
+            if (!$isActive) {
+                return $this->activateN8nWorkflow($n8nWorkflowId);
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Workflow is already active',
+                'was_already_active' => true,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to check/activate workflow', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to check/activate workflow',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Bulk sync multiple bot personalities
+     */
+    public function bulkSyncBotPersonalities(array $botPersonalityIds): array
+    {
+        $results = [];
+        $successCount = 0;
+        $failureCount = 0;
+
+        foreach ($botPersonalityIds as $botPersonalityId) {
+            try {
+                $botPersonality = BotPersonality::find($botPersonalityId);
+
+                if (!$botPersonality) {
+                    $results[$botPersonalityId] = [
+                        'success' => false,
+                        'message' => 'Bot personality not found',
+                    ];
+                    $failureCount++;
+                    continue;
+                }
+
+                $result = $this->syncBotPersonalityWorkflow($botPersonality);
+                $results[$botPersonalityId] = $result;
+
+                if ($result['success']) {
+                    $successCount++;
+                } else {
+                    $failureCount++;
+                }
+
+            } catch (Exception $e) {
+                $results[$botPersonalityId] = [
+                    'success' => false,
+                    'message' => 'Sync failed with exception',
+                    'error' => $e->getMessage(),
+                ];
+                $failureCount++;
+            }
+        }
+
+        return [
+            'success' => $failureCount === 0,
+            'message' => "Bulk sync completed: {$successCount} successful, {$failureCount} failed",
+            'summary' => [
+                'total' => count($botPersonalityIds),
+                'successful' => $successCount,
+                'failed' => $failureCount,
+            ],
+            'results' => $results,
+        ];
+    }
+
+    /**
+     * Sync all bot personalities for an organization
+     */
+    public function syncOrganizationBotPersonalities(string $organizationId): array
+    {
+        try {
+            $botPersonalities = BotPersonality::where('organization_id', $organizationId)
+                ->whereNotNull('n8n_workflow_id')
+                ->get();
+
+            if ($botPersonalities->isEmpty()) {
+                return [
+                    'success' => true,
+                    'message' => 'No bot personalities with workflows found for organization',
+                    'summary' => [
+                        'total' => 0,
+                        'successful' => 0,
+                        'failed' => 0,
+                    ],
+                ];
+            }
+
+            $botPersonalityIds = $botPersonalities->pluck('id')->toArray();
+
+            return $this->bulkSyncBotPersonalities($botPersonalityIds);
+
+        } catch (Exception $e) {
+            Log::error('Failed to sync organization bot personalities', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to sync organization bot personalities',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get sync status for a bot personality
+     */
+    public function getSyncStatus(BotPersonality $botPersonality): array
+    {
+        try {
+            $status = [
+                'bot_personality_id' => $botPersonality->id,
+                'has_waha_session' => !is_null($botPersonality->waha_session_id),
+                'has_knowledge_base_item' => !is_null($botPersonality->knowledge_base_item_id),
+                'has_n8n_workflow' => !is_null($botPersonality->n8n_workflow_id),
+                'last_sync_at' => null,
+                'workflow_status' => null,
+                'sync_health' => 'unknown',
+            ];
+
+            // Get last sync time from workflow settings
+            if ($botPersonality->n8n_workflow_id) {
+                $n8nWorkflow = N8nWorkflow::where('workflow_id', $botPersonality->n8n_workflow_id)->first();
+
+                if ($n8nWorkflow && isset($n8nWorkflow->settings['last_sync_at'])) {
+                    $status['last_sync_at'] = $n8nWorkflow->settings['last_sync_at'];
+                }
+
+                // Get workflow status from N8N
+                $workflowStatus = $this->getN8nWorkflowStatus($botPersonality->n8n_workflow_id);
+                if ($workflowStatus['success']) {
+                    $status['workflow_status'] = $workflowStatus['data']['active'] ?? false;
+                }
+            }
+
+            // Determine sync health
+            $status['sync_health'] = $this->determineSyncHealth($status);
+
+            return [
+                'success' => true,
+                'data' => $status,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get sync status', [
+                'bot_personality_id' => $botPersonality->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get sync status',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Determine sync health based on status
+     */
+    protected function determineSyncHealth(array $status): string
+    {
+        if (!$status['has_n8n_workflow']) {
+            return 'no_workflow';
+        }
+
+        if (!$status['has_waha_session'] || !$status['has_knowledge_base_item']) {
+            return 'incomplete_config';
+        }
+
+        if (is_null($status['last_sync_at'])) {
+            return 'never_synced';
+        }
+
+        $lastSync = \Carbon\Carbon::parse($status['last_sync_at']);
+        $hoursSinceSync = $lastSync->diffInHours(now());
+
+        if ($hoursSinceSync > 24) {
+            return 'stale';
+        }
+
+        if ($status['workflow_status'] === false) {
+            return 'inactive_workflow';
+        }
+
+        return 'healthy';
+    }
+}

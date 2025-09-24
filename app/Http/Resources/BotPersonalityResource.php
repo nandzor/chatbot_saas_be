@@ -49,6 +49,10 @@ class BotPersonalityResource extends JsonResource
             'success_rate' => $this->success_rate,
             'is_default' => $this->is_default,
             'status' => $this->status,
+            // Workflow integration fields
+            'n8n_workflow_id' => $this->n8n_workflow_id,
+            'waha_session_id' => $this->waha_session_id,
+            'knowledge_base_item_id' => $this->knowledge_base_item_id,
             'created_at' => optional($this->created_at)->toISOString(),
             'updated_at' => optional($this->updated_at)->toISOString(),
         ];

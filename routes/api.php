@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\OrganizationAuditController;
 use App\Http\Controllers\Api\V1\OrganizationNotificationController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\BotPersonalityController;
+use App\Http\Controllers\Api\V1\BotPersonalityWorkflowController;
 use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
 use App\Http\Controllers\Api\V1\WebhookEventController;
 use App\Http\Controllers\Api\V1\SystemConfigurationController;
@@ -765,6 +766,19 @@ Route::prefix('v1')->group(function () {
                 Route::put('/{id}', [BotPersonalityController::class, 'update']);
                 Route::patch('/{id}', [BotPersonalityController::class, 'update']);
                 Route::delete('/{id}', [BotPersonalityController::class, 'destroy']);
+
+                // Workflow endpoints
+                Route::post('/workflow/execute', [BotPersonalityWorkflowController::class, 'executeWorkflow']);
+                Route::get('/workflow/{id}/status', [BotPersonalityWorkflowController::class, 'getWorkflowStatus']);
+                Route::post('/workflow/retry', [BotPersonalityWorkflowController::class, 'retryWorkflow']);
+                Route::delete('/workflow/{id}/cancel', [BotPersonalityWorkflowController::class, 'cancelWorkflow']);
+                Route::get('/workflow/{id}/history', [BotPersonalityWorkflowController::class, 'getWorkflowHistory']);
+
+                // Sync endpoints
+                Route::post('/{id}/sync', [BotPersonalityController::class, 'syncWorkflow']);
+                Route::get('/{id}/sync-status', [BotPersonalityController::class, 'getSyncStatus']);
+                Route::post('/bulk-sync', [BotPersonalityController::class, 'bulkSyncWorkflows']);
+                Route::post('/sync-organization', [BotPersonalityController::class, 'syncOrganizationWorkflows']);
             });
 
         // ====================================================================
