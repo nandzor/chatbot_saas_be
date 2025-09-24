@@ -4,6 +4,7 @@ namespace App\Services\N8n;
 
 use App\Services\Http\BaseHttpClient;
 use App\Services\N8n\Exceptions\N8nException;
+use App\Helpers\StringHelper;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -869,6 +870,9 @@ class N8nService extends BaseHttpClient
     {
         $defaultNodeId = '153caa6f-c7eb-4556-8f62-deed794bb2b7'; // Default AI Agent node ID
         $targetNodeId = $nodeId ?? $defaultNodeId;
+
+        // Clean HTML content from system message
+        $systemMessage = StringHelper::cleanHtmlAndReplaceWithNewline($systemMessage);
 
         // Get current workflow
         $workflow = $this->getWorkflow($workflowId);

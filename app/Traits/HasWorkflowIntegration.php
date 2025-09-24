@@ -5,6 +5,7 @@ namespace App\Traits;
 use App\Models\N8nWorkflow;
 use App\Models\WahaSession;
 use App\Models\KnowledgeBaseItem;
+use App\Helpers\StringHelper;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Exception;
@@ -90,7 +91,7 @@ trait HasWorkflowIntegration
             throw new Exception("No content found in KnowledgeBaseItem {$knowledgeBaseItem->id}");
         }
 
-        return $knowledgeBaseItem->content;
+        return StringHelper::cleanHtmlAndReplaceWithNewline($knowledgeBaseItem->content);
     }
 
     /**
@@ -396,7 +397,7 @@ trait HasWorkflowIntegration
 
             // Update system message in nodes
             if (isset($configurationData['system_message'])) {
-                $systemMessage = $configurationData['system_message'];
+                $systemMessage = StringHelper::cleanHtmlAndReplaceWithNewline($configurationData['system_message']);
 
                 // Find and update the AI Agent node (ID: 153caa6f-c7eb-4556-8f62-deed794bb2b7)
                 foreach ($currentNodes as &$node) {
