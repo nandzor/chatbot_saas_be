@@ -23,6 +23,23 @@ class WorkflowSyncService
 {
     use HasWorkflowIntegration;
 
+    protected ?\App\Services\Waha\WahaService $wahaService = null;
+
+    /**
+     * Initialize WahaService instance
+     */
+    protected function getWahaService(): \App\Services\Waha\WahaService
+    {
+        if ($this->wahaService === null) {
+            $this->wahaService = new \App\Services\Waha\WahaService([
+                'base_url' => config('waha.server.base_url', 'http://localhost:3000'),
+                'api_key' => config('waha.server.api_key', ''),
+                'timeout' => config('waha.server.timeout', 30),
+            ]);
+        }
+        return $this->wahaService;
+    }
+
     /**
      * Sync bot personality with its associated workflow
      *
@@ -166,35 +183,48 @@ class WorkflowSyncService
     protected function activateWorkflowIfNeeded(string $n8nWorkflowId): array
     {
         try {
-            // Check current workflow status
-            $statusResult = $this->getN8nWorkflowStatus($n8nWorkflowId);
-
-            if (!$statusResult['success']) {
-                return $statusResult;
+            // First, check database status
+            $n8nWorkflow = N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                throw new Exception("N8N workflow with ID {$n8nWorkflowId} not found in database");
             }
 
-            $workflowData = $statusResult['data'];
-            $isActive = $workflowData['active'] ?? false;
+            // Always try to activate workflow to ensure it's active
+            $activationResult = $this->activateN8nWorkflow($n8nWorkflowId);
 
-            if (!$isActive) {
-                return $this->activateN8nWorkflow($n8nWorkflowId);
+            if ($activationResult['success']) {
+                // Refresh the workflow from database to get updated status
+                $n8nWorkflow->refresh();
+
+                return [
+                    'success' => true,
+                    'message' => 'Workflow activated successfully',
+                    'was_already_active' => false,
+                    'database_status' => [
+                        'is_enabled' => $n8nWorkflow->is_enabled,
+                        'status' => $n8nWorkflow->status,
+                        'updated_at' => $n8nWorkflow->updated_at,
+                    ],
+                    'activation_result' => $activationResult,
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'message' => 'Failed to activate workflow',
+                    'error' => $activationResult['error'] ?? 'Unknown error',
+                    'activation_result' => $activationResult,
+                ];
             }
-
-            return [
-                'success' => true,
-                'message' => 'Workflow is already active',
-                'was_already_active' => true,
-            ];
 
         } catch (Exception $e) {
-            Log::error('Failed to check/activate workflow', [
+            Log::error('Failed to activate workflow if needed', [
                 'n8n_workflow_id' => $n8nWorkflowId,
                 'error' => $e->getMessage(),
             ]);
 
             return [
                 'success' => false,
-                'message' => 'Failed to check/activate workflow',
+                'message' => 'Failed to activate workflow if needed',
                 'error' => $e->getMessage(),
             ];
         }
@@ -306,6 +336,8 @@ class WorkflowSyncService
                 'has_n8n_workflow' => !is_null($botPersonality->n8n_workflow_id),
                 'last_sync_at' => null,
                 'workflow_status' => null,
+                'waha_session_status' => null,
+                'waha_session_connected' => false,
                 'sync_health' => 'unknown',
             ];
 
@@ -317,11 +349,22 @@ class WorkflowSyncService
                     $status['last_sync_at'] = $n8nWorkflow->settings['last_sync_at'];
                 }
 
-                // Get workflow status from N8N
+                // Get workflow status from N8N using N8nService
                 $workflowStatus = $this->getN8nWorkflowStatus($botPersonality->n8n_workflow_id);
                 if ($workflowStatus['success']) {
                     $status['workflow_status'] = $workflowStatus['data']['active'] ?? false;
                 }
+            }
+
+            // Get WAHA session status using WahaService
+            if ($botPersonality->waha_session_id) {
+                $wahaStatus = $this->getWahaSessionStatus($botPersonality->waha_session_id);
+                if ($wahaStatus['success']) {
+                    $status['waha_session_status'] = $wahaStatus['data'];
+                }
+
+                // Check if WAHA session is connected using WahaService
+                $status['waha_session_connected'] = $this->isWahaSessionConnected($botPersonality->waha_session_id);
             }
 
             // Determine sync health
@@ -347,6 +390,374 @@ class WorkflowSyncService
     }
 
     /**
+     * Get N8N workflow status using existing N8nService
+     */
+    protected function getN8nWorkflowStatus(string $n8nWorkflowId): array
+    {
+        try {
+            // First, find the N8N workflow in database to get the actual workflow_id
+            $n8nWorkflow = N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                throw new Exception("N8N workflow with ID {$n8nWorkflowId} not found in database");
+            }
+
+            $actualWorkflowId = $n8nWorkflow->workflow_id;
+
+            // Use existing N8nService
+            $n8nService = $this->getN8nService();
+            $result = $n8nService->getWorkflow($actualWorkflowId);
+
+            Log::info('N8N workflow status retrieved successfully', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'actual_workflow_id' => $actualWorkflowId,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'N8N workflow status retrieved successfully',
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get N8N workflow status', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get N8N workflow status',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get WAHA session status using existing WahaService
+     */
+    protected function getWahaSessionStatus(string $wahaSessionId): array
+    {
+        try {
+            // First, find the WAHA session in database to get the session details
+            $wahaSession = WahaSession::find($wahaSessionId);
+            if (!$wahaSession) {
+                throw new Exception("WAHA session with ID {$wahaSessionId} not found in database");
+            }
+
+            // Use existing WahaService
+            $wahaService = $this->getWahaService();
+            $result = $wahaService->getSessionStatus($wahaSession->session_name);
+
+            Log::info('WAHA session status retrieved successfully', [
+                'waha_session_id' => $wahaSessionId,
+                'session_name' => $wahaSession->session_name,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'WAHA session status retrieved successfully',
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get WAHA session status', [
+                'waha_session_id' => $wahaSessionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get WAHA session status',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Check if WAHA session is connected using existing WahaService
+     */
+    protected function isWahaSessionConnected(string $wahaSessionId): bool
+    {
+        try {
+            // First, find the WAHA session in database to get the session details
+            $wahaSession = WahaSession::find($wahaSessionId);
+            if (!$wahaSession) {
+                return false;
+            }
+
+            // Use existing WahaService
+            $wahaService = $this->getWahaService();
+            return $wahaService->isSessionConnected($wahaSession->session_name);
+
+        } catch (Exception $e) {
+            Log::error('Failed to check WAHA session connection', [
+                'waha_session_id' => $wahaSessionId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get WAHA session health using existing WahaService
+     */
+    protected function getWahaSessionHealth(string $wahaSessionId): array
+    {
+        try {
+            // First, find the WAHA session in database to get the session details
+            $wahaSession = WahaSession::find($wahaSessionId);
+            if (!$wahaSession) {
+                throw new Exception("WAHA session with ID {$wahaSessionId} not found in database");
+            }
+
+            // Use existing WahaService
+            $wahaService = $this->getWahaService();
+            $result = $wahaService->getSessionHealth($wahaSession->session_name);
+
+            Log::info('WAHA session health retrieved successfully', [
+                'waha_session_id' => $wahaSessionId,
+                'session_name' => $wahaSession->session_name,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'WAHA session health retrieved successfully',
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get WAHA session health', [
+                'waha_session_id' => $wahaSessionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get WAHA session health',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Check if N8N workflow is active using existing N8nService
+     */
+    protected function isN8nWorkflowActive(string $n8nWorkflowId): bool
+    {
+        try {
+            // First, find the N8N workflow in database to get the actual workflow_id
+            $n8nWorkflow = N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                return false;
+            }
+
+            $actualWorkflowId = $n8nWorkflow->workflow_id;
+
+            // Use existing N8nService
+            $n8nService = $this->getN8nService();
+            return $n8nService->isWorkflowActive($actualWorkflowId);
+
+        } catch (Exception $e) {
+            Log::error('Failed to check N8N workflow active status', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get N8N workflow statistics using existing N8nService
+     */
+    protected function getN8nWorkflowStats(string $n8nWorkflowId): array
+    {
+        try {
+            // First, find the N8N workflow in database to get the actual workflow_id
+            $n8nWorkflow = N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                throw new Exception("N8N workflow with ID {$n8nWorkflowId} not found in database");
+            }
+
+            $actualWorkflowId = $n8nWorkflow->workflow_id;
+
+            // Use existing N8nService
+            $n8nService = $this->getN8nService();
+            $result = $n8nService->getWorkflowStats($actualWorkflowId);
+
+            Log::info('N8N workflow statistics retrieved successfully', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'actual_workflow_id' => $actualWorkflowId,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'N8N workflow statistics retrieved successfully',
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get N8N workflow statistics', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get N8N workflow statistics',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Test N8N connection using existing N8nService
+     */
+    protected function testN8nConnection(): array
+    {
+        try {
+            // Use existing N8nService
+            $n8nService = $this->getN8nService();
+            $result = $n8nService->testConnection();
+
+            Log::info('N8N connection test completed', [
+                'result' => $result,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'N8N connection test completed',
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to test N8N connection', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to test N8N connection',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Test WAHA connection using existing WahaService
+     */
+    protected function testWahaConnection(): array
+    {
+        try {
+            // Use existing WahaService
+            $wahaService = $this->getWahaService();
+            $result = $wahaService->testConnection();
+
+            Log::info('WAHA connection test completed', [
+                'result' => $result,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'WAHA connection test completed',
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to test WAHA connection', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to test WAHA connection',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Restart WAHA session using existing WahaService
+     */
+    protected function restartWahaSession(string $wahaSessionId): array
+    {
+        try {
+            // First, find the WAHA session in database to get the session details
+            $wahaSession = WahaSession::find($wahaSessionId);
+            if (!$wahaSession) {
+                throw new Exception("WAHA session with ID {$wahaSessionId} not found in database");
+            }
+
+            // Use existing WahaService
+            $wahaService = $this->getWahaService();
+            $result = $wahaService->restartSession($wahaSession->session_name);
+
+            Log::info('WAHA session restarted successfully', [
+                'waha_session_id' => $wahaSessionId,
+                'session_name' => $wahaSession->session_name,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'WAHA session restarted successfully',
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to restart WAHA session', [
+                'waha_session_id' => $wahaSessionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to restart WAHA session',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get WAHA session info using existing WahaService
+     */
+    protected function getWahaSessionInfo(string $wahaSessionId): array
+    {
+        try {
+            // First, find the WAHA session in database to get the session details
+            $wahaSession = WahaSession::find($wahaSessionId);
+            if (!$wahaSession) {
+                throw new Exception("WAHA session with ID {$wahaSessionId} not found in database");
+            }
+
+            // Use existing WahaService
+            $wahaService = $this->getWahaService();
+            $result = $wahaService->getSessionInfo($wahaSession->session_name);
+
+            Log::info('WAHA session info retrieved successfully', [
+                'waha_session_id' => $wahaSessionId,
+                'session_name' => $wahaSession->session_name,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'WAHA session info retrieved successfully',
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get WAHA session info', [
+                'waha_session_id' => $wahaSessionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get WAHA session info',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Determine sync health based on status
      */
     protected function determineSyncHealth(array $status): string
@@ -357,6 +768,11 @@ class WorkflowSyncService
 
         if (!$status['has_waha_session'] || !$status['has_knowledge_base_item']) {
             return 'incomplete_config';
+        }
+
+        // Check WAHA session connection
+        if (!$status['waha_session_connected']) {
+            return 'waha_session_disconnected';
         }
 
         if (is_null($status['last_sync_at'])) {

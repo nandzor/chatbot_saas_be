@@ -20,16 +20,21 @@ use Exception;
  */
 trait HasWorkflowIntegration
 {
-    protected ?string $n8nBaseUrl = null;
-    protected ?string $n8nApiKey = null;
+    protected ?\App\Services\N8n\N8nService $n8nService = null;
 
     /**
-     * Initialize N8N configuration
+     * Initialize N8N service
      */
-    protected function initializeN8nConfig(): void
+    protected function getN8nService(): \App\Services\N8n\N8nService
     {
-        $this->n8nBaseUrl = config('services.n8n.base_url', 'http://100.81.120.54:5678');
-        $this->n8nApiKey = config('services.n8n.api_key', 'default-api-key');
+        if ($this->n8nService === null) {
+            $this->n8nService = new \App\Services\N8n\N8nService([
+                'base_url' => config('n8n.server.base_url', 'http://100.81.120.54:5678'),
+                'api_key' => config('n8n.server.api_key', ''),
+                'timeout' => config('n8n.server.timeout', 30),
+            ]);
+        }
+        return $this->n8nService;
     }
 
     /**
@@ -89,32 +94,71 @@ trait HasWorkflowIntegration
     }
 
     /**
-     * Activate N8N workflow
+     * Activate N8N workflow using existing N8nService
      */
     protected function activateN8nWorkflow(string $n8nWorkflowId): array
     {
-        $this->initializeN8nConfig();
-
         try {
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->n8nApiKey,
-                'Content-Type' => 'application/json',
-            ])->post("{$this->n8nBaseUrl}/api/v1/workflows/{$n8nWorkflowId}/activate");
+            // First, find the N8N workflow in database to get the actual workflow_id
+            $n8nWorkflow = N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                throw new Exception("N8N workflow with ID {$n8nWorkflowId} not found in database");
+            }
 
-            if ($response->successful()) {
-                Log::info('N8N workflow activated successfully', [
-                    'n8n_workflow_id' => $n8nWorkflowId,
-                    'response' => $response->json(),
+            $actualWorkflowId = $n8nWorkflow->workflow_id;
+
+            // Use existing N8nService
+            $n8nService = $this->getN8nService();
+            $result = $n8nService->activateWorkflow($actualWorkflowId);
+
+            // Check if activation was successful by looking at the workflow data
+            $isActivated = false;
+            if (isset($result['active']) && $result['active'] === true) {
+                $isActivated = true;
+            } elseif (isset($result['data']['active']) && $result['data']['active'] === true) {
+                $isActivated = true;
+            } elseif (isset($result['success']) && $result['success'] === true) {
+                $isActivated = true;
+            }
+
+            // Update database status based on activation result
+            if ($isActivated) {
+                $n8nWorkflow->update([
+                    'is_enabled' => true,
+                    'status' => 'active',
+                    'updated_at' => now(),
                 ]);
 
-                return [
-                    'success' => true,
-                    'message' => 'N8N workflow activated successfully',
-                    'response' => $response->json(),
-                ];
+                Log::info('N8N workflow activated and database updated successfully', [
+                    'n8n_workflow_id' => $n8nWorkflowId,
+                    'actual_workflow_id' => $actualWorkflowId,
+                    'database_updated' => true,
+                    'is_activated' => $isActivated,
+                    'result' => $result,
+                ]);
             } else {
-                throw new Exception("Failed to activate N8N workflow: {$response->body()}");
+                // If N8N activation failed, update database to reflect error
+                $n8nWorkflow->update([
+                    'is_enabled' => false,
+                    'status' => 'error',
+                    'updated_at' => now(),
+                ]);
+
+                Log::error('N8N workflow activation failed, database updated to error status', [
+                    'n8n_workflow_id' => $n8nWorkflowId,
+                    'actual_workflow_id' => $actualWorkflowId,
+                    'is_activated' => $isActivated,
+                    'error' => $result['error'] ?? 'Unknown error',
+                    'result' => $result,
+                ]);
             }
+
+            return [
+                'success' => $isActivated,
+                'message' => $isActivated ? 'N8N workflow activated successfully' : 'Failed to activate N8N workflow',
+                'result' => $result,
+                'database_updated' => true,
+            ];
 
         } catch (Exception $e) {
             Log::error('Failed to activate N8N workflow', [
@@ -145,13 +189,7 @@ trait HasWorkflowIntegration
             $actualWorkflowId = $n8nWorkflow->workflow_id;
 
             // Use existing N8nService
-            $n8nService = new \App\Services\N8n\N8nService([
-                'base_url' => config('n8n.server.base_url', 'http://100.81.120.54:5678'),
-                'api_key' => config('n8n.server.api_key', ''),
-                'timeout' => config('n8n.server.timeout', 30),
-            ]);
-
-            // Use the existing updateWorkflow method
+            $n8nService = $this->getN8nService();
             $result = $n8nService->updateWorkflow($actualWorkflowId, $updatePayload);
 
             Log::info('N8N workflow configuration updated successfully', [
@@ -195,13 +233,7 @@ trait HasWorkflowIntegration
             $actualWorkflowId = $n8nWorkflow->workflow_id;
 
             // Use existing N8nService with updateSystemMessage method
-            $n8nService = new \App\Services\N8n\N8nService([
-                'base_url' => config('n8n.server.base_url', 'http://100.81.120.54:5678'),
-                'api_key' => config('n8n.server.api_key', ''),
-                'timeout' => config('n8n.server.timeout', 30),
-            ]);
-
-            // Use the existing updateSystemMessage method
+            $n8nService = $this->getN8nService();
             $result = $n8nService->updateSystemMessage($actualWorkflowId, $systemMessage);
 
             Log::info('N8N system message updated successfully', [
@@ -228,6 +260,120 @@ trait HasWorkflowIntegration
                 'message' => 'Failed to update N8N system message',
                 'error' => $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Deactivate N8N workflow using existing N8nService
+     */
+    protected function deactivateN8nWorkflow(string $n8nWorkflowId): array
+    {
+        try {
+            // First, find the N8N workflow in database to get the actual workflow_id
+            $n8nWorkflow = N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                throw new Exception("N8N workflow with ID {$n8nWorkflowId} not found in database");
+            }
+
+            $actualWorkflowId = $n8nWorkflow->workflow_id;
+
+            // Use existing N8nService
+            $n8nService = $this->getN8nService();
+            $result = $n8nService->deactivateWorkflow($actualWorkflowId);
+
+            Log::info('N8N workflow deactivated successfully', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'actual_workflow_id' => $actualWorkflowId,
+                'result' => $result,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'N8N workflow deactivated successfully',
+                'result' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to deactivate N8N workflow', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to deactivate N8N workflow',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get N8N workflow using existing N8nService
+     */
+    protected function getN8nWorkflow(string $n8nWorkflowId): array
+    {
+        try {
+            // First, find the N8N workflow in database to get the actual workflow_id
+            $n8nWorkflow = N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                throw new Exception("N8N workflow with ID {$n8nWorkflowId} not found in database");
+            }
+
+            $actualWorkflowId = $n8nWorkflow->workflow_id;
+
+            // Use existing N8nService
+            $n8nService = $this->getN8nService();
+            $result = $n8nService->getWorkflow($actualWorkflowId);
+
+            Log::info('N8N workflow retrieved successfully', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'actual_workflow_id' => $actualWorkflowId,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'N8N workflow retrieved successfully',
+                'result' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get N8N workflow', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get N8N workflow',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Check if N8N workflow is active using existing N8nService
+     */
+    protected function isN8nWorkflowActive(string $n8nWorkflowId): bool
+    {
+        try {
+            // First, find the N8N workflow in database to get the actual workflow_id
+            $n8nWorkflow = N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                return false;
+            }
+
+            $actualWorkflowId = $n8nWorkflow->workflow_id;
+
+            // Use existing N8nService
+            $n8nService = $this->getN8nService();
+            return $n8nService->isWorkflowActive($actualWorkflowId);
+
+        } catch (Exception $e) {
+            Log::error('Failed to check N8N workflow status', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
         }
     }
 
