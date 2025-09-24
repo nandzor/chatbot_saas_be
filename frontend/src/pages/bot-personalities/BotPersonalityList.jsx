@@ -61,7 +61,6 @@ import {
   MessageSquare,
   Database,
   Star,
-  Zap
 } from 'lucide-react';
 import CreateBotPersonalityDialog from './CreateBotPersonalityDialog';
 import EditBotPersonalityDialog from './EditBotPersonalityDialog';
@@ -82,7 +81,6 @@ const BotPersonalityList = React.memo(() => {
     pagination,
     statistics,
     loadBotPersonalities,
-    createBotPersonality,
     updateBotPersonality,
     deleteBotPersonality,
     toggleBotPersonalityStatus,
@@ -730,14 +728,12 @@ const BotPersonalityList = React.memo(() => {
         <CreateBotPersonalityDialog
           open={isCreateDialogOpen}
           onOpenChange={setIsCreateDialogOpen}
-          onPersonalityCreated={async (newPersonality) => {
-            try {
-              await createBotPersonality(newPersonality);
-              announce('New bot personality created successfully');
-              setIsCreateDialogOpen(false);
-            } catch (err) {
-              // Error already handled in hook
-            }
+          onPersonalityCreated={async (_newPersonality) => {
+            // Just refresh the list and close dialog
+            // The dialog already handles the creation
+            await loadBotPersonalities();
+            announce('New bot personality created successfully');
+            setIsCreateDialogOpen(false);
           }}
         />
 
@@ -745,14 +741,12 @@ const BotPersonalityList = React.memo(() => {
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           personality={selectedPersonality}
-          onPersonalityUpdated={async (updatedPersonality) => {
-            try {
-              await updateBotPersonality(updatedPersonality.id, updatedPersonality);
-              announce('Bot personality updated successfully');
-              setIsEditDialogOpen(false);
-            } catch (err) {
-              // Error already handled in hook
-            }
+          onPersonalityUpdated={async (_updatedPersonality) => {
+            // Just refresh the list and close dialog
+            // The dialog already handles the update
+            await loadBotPersonalities();
+            announce('Bot personality updated successfully');
+            setIsEditDialogOpen(false);
           }}
         />
 
