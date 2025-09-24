@@ -36,13 +36,14 @@ class BotPersonalityService extends BaseService
             $search = $request->get('search');
             return $this->model
                 ->newQuery()
+                ->with(['wahaSession', 'knowledgeBaseItem'])
                 ->where('organization_id', $organizationId)
                 ->search($search)
                 ->orderBy($request->get('sort_by', 'created_at'), $request->get('sort_order', 'desc'))
                 ->paginate(min(100, max(1, (int) $request->get('per_page', 15))));
         }
 
-        return $this->getPaginated($request, $filters);
+        return $this->getPaginated($request, $filters, ['wahaSession', 'knowledgeBaseItem']);
     }
 
     /**
@@ -87,6 +88,7 @@ class BotPersonalityService extends BaseService
     public function getForOrganization(string $id, string $organizationId): ?BotPersonality
     {
         return $this->model->newQuery()
+            ->with(['wahaSession', 'knowledgeBaseItem'])
             ->where('id', $id)
             ->where('organization_id', $organizationId)
             ->first();

@@ -53,6 +53,19 @@ class BotPersonalityResource extends JsonResource
             'n8n_workflow_id' => $this->n8n_workflow_id,
             'waha_session_id' => $this->waha_session_id,
             'knowledge_base_item_id' => $this->knowledge_base_item_id,
+            // Integration details for professional display
+            'waha_session' => $this->when($this->relationLoaded('wahaSession'), [
+                'id' => $this->wahaSession?->id,
+                'session_name' => $this->wahaSession?->session_name,
+                'status' => $this->wahaSession?->status,
+                'phone_number' => $this->wahaSession?->phone_number,
+            ]),
+            'knowledge_base_item' => $this->when($this->relationLoaded('knowledgeBaseItem'), [
+                'id' => $this->knowledgeBaseItem?->id,
+                'title' => $this->knowledgeBaseItem?->title,
+                'status' => $this->knowledgeBaseItem?->status,
+                'category' => $this->knowledgeBaseItem?->category,
+            ]),
             'created_at' => optional($this->created_at)->toISOString(),
             'updated_at' => optional($this->updated_at)->toISOString(),
         ];

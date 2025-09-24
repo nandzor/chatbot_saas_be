@@ -338,21 +338,51 @@ const BotPersonalityList = React.memo(() => {
       title: 'Integrations',
       sortable: false,
       render: (value, personality) => (
-        <div className="flex items-center space-x-2">
-          {personality.waha_session_id && (
-            <Badge variant="outline" className="text-xs">
-              <MessageSquare className="w-3 h-3 mr-1" />
-              WhatsApp
-            </Badge>
+        <div className="w-full max-w-xs">
+          {personality.waha_session && (
+            <div className="mb-2 last:mb-0">
+              <div className="flex items-start space-x-2">
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 flex-shrink-0 mt-0.5">
+                  <MessageSquare className="w-3 h-3 mr-1" />
+                  WhatsApp
+                </Badge>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-gray-900 truncate" title={personality.waha_session.session_name || 'Unknown Session'}>
+                    {personality.waha_session.session_name || 'Unknown Session'}
+                  </div>
+                  {personality.waha_session.phone_number && (
+                    <div className="text-xs text-gray-500 truncate" title={personality.waha_session.phone_number}>
+                      {personality.waha_session.phone_number}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
-          {personality.knowledge_base_item_id && (
-            <Badge variant="outline" className="text-xs">
-              <Database className="w-3 h-3 mr-1" />
-              KB
-            </Badge>
+          {personality.knowledge_base_item && (
+            <div className="mb-2 last:mb-0">
+              <div className="flex items-start space-x-2">
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 flex-shrink-0 mt-0.5">
+                  <Database className="w-3 h-3 mr-1" />
+                  KB
+                </Badge>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-gray-900 truncate" title={personality.knowledge_base_item.title || 'Untitled Item'}>
+                    {personality.knowledge_base_item.title || 'Untitled Item'}
+                  </div>
+                  {personality.knowledge_base_item.category && (
+                    <div className="text-xs text-gray-500 truncate" title={personality.knowledge_base_item.category}>
+                      {personality.knowledge_base_item.category}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
-          {!personality.waha_session_id && !personality.knowledge_base_item_id && (
-            <span className="text-xs text-gray-400">None</span>
+          {!personality.waha_session && !personality.knowledge_base_item && (
+            <div className="flex items-center justify-center py-2">
+              <span className="text-xs text-gray-400 italic">No integrations</span>
+            </div>
           )}
         </div>
       )
