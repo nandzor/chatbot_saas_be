@@ -32,13 +32,34 @@ class BotPersonalityService extends BaseService
             'organization_id' => $organizationId,
         ];
 
+        // Add filter parameters
+        if ($request->filled('status')) {
+            $filters['status'] = $request->get('status');
+        }
+        if ($request->filled('language')) {
+            $filters['language'] = $request->get('language');
+        }
+        if ($request->filled('formality_level')) {
+            $filters['formality_level'] = $request->get('formality_level');
+        }
+
         if ($request->filled('search')) {
             $search = $request->get('search');
-            return $this->model
+            $query = $this->model
                 ->newQuery()
                 ->with(['wahaSession', 'knowledgeBaseItem'])
                 ->where('organization_id', $organizationId)
-                ->search($search)
+                ->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('code', 'like', "%{$search}%")
+                      ->orWhere('display_name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+
+            // Apply additional filters
+            $this->applyFilters($query, $filters);
+
+            return $query
                 ->orderBy($request->get('sort_by', 'created_at'), $request->get('sort_order', 'desc'))
                 ->paginate(min(100, max(1, (int) $request->get('per_page', 15))));
         }

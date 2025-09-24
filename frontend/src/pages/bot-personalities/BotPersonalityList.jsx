@@ -18,6 +18,7 @@ import {
 import {
   sanitizeInput
 } from '@/utils/securityUtils';
+import { useDebounce } from '@/utils/performanceOptimization';
 import { toast } from 'react-hot-toast';
 import {
   Card,
@@ -96,6 +97,9 @@ const BotPersonalityList = React.memo(() => {
   const [selectedPersonalities, setSelectedPersonalities] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
 
+  // Debounced search query
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -120,29 +124,53 @@ const BotPersonalityList = React.memo(() => {
   const handleSearch = useCallback((e) => {
     const value = sanitizeInput(e.target.value);
     setSearchQuery(value);
-    updateFilters({ search: value });
-  }, [updateFilters]);
+  }, []);
+
+  // Update filters when debounced search query changes
+  useEffect(() => {
+    updateFilters({ search: debouncedSearchQuery });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchQuery]); // Remove updateFilters from deps to prevent infinite loop
 
   // Handle status filter change
   const handleStatusFilterChange = useCallback((value) => {
     setStatusFilter(value);
     updateFilters({ status: value === 'all' ? '' : value });
     announce(`Filtering by status: ${value}`);
-  }, [updateFilters, announce]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [announce]); // Remove updateFilters from deps
 
   // Handle language filter change
   const handleLanguageFilterChange = useCallback((value) => {
     setLanguageFilter(value);
     updateFilters({ language: value === 'all' ? '' : value });
     announce(`Filtering by language: ${value}`);
-  }, [updateFilters, announce]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [announce]); // Remove updateFilters from deps
 
   // Handle formality filter change
   const handleFormalityFilterChange = useCallback((value) => {
     setFormalityFilter(value);
     updateFilters({ formality_level: value === 'all' ? '' : value });
     announce(`Filtering by formality level: ${value}`);
-  }, [updateFilters, announce]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [announce]); // Remove updateFilters from deps
+
+  // Clear all filters
+  const clearAllFilters = useCallback(() => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setLanguageFilter('all');
+    setFormalityFilter('all');
+    updateFilters({
+      search: '',
+      status: '',
+      language: '',
+      formality_level: ''
+    });
+    announce('All filters cleared');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [announce]); // Remove updateFilters from deps
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -580,28 +608,38 @@ const BotPersonalityList = React.memo(() => {
         {/* Filters */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center">
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Clear All
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Search Personalities</label>
+                <label className="text-sm font-medium text-gray-700">Search Personalities</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search by name, code, or description..."
                     value={searchQuery}
                     onChange={handleSearch}
-                    className="pl-10"
+                    className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
+                <label className="text-sm font-medium text-gray-700">Status</label>
                 <Select
                   value={statusFilter}
                   onValueChange={handleStatusFilterChange}
@@ -614,7 +652,7 @@ const BotPersonalityList = React.memo(() => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Language</label>
+                <label className="text-sm font-medium text-gray-700">Language</label>
                 <Select
                   value={languageFilter}
                   onValueChange={handleLanguageFilterChange}
@@ -629,7 +667,7 @@ const BotPersonalityList = React.memo(() => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Formality Level</label>
+                <label className="text-sm font-medium text-gray-700">Formality Level</label>
                 <Select
                   value={formalityFilter}
                   onValueChange={handleFormalityFilterChange}
@@ -642,6 +680,35 @@ const BotPersonalityList = React.memo(() => {
                 </Select>
               </div>
             </div>
+
+            {/* Active Filters Display */}
+            {(searchQuery || statusFilter !== 'all' || languageFilter !== 'all' || formalityFilter !== 'all') && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-gray-600">Active filters:</span>
+                  {searchQuery && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      Search: &quot;{searchQuery}&quot;
+                    </Badge>
+                  )}
+                  {statusFilter !== 'all' && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      Status: {statusFilter}
+                    </Badge>
+                  )}
+                  {languageFilter !== 'all' && (
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                      Language: {languageFilter}
+                    </Badge>
+                  )}
+                  {formalityFilter !== 'all' && (
+                    <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                      Formality: {formalityFilter}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

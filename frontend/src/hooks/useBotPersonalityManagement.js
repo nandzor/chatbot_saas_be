@@ -126,14 +126,21 @@ export const useBotPersonalityManagement = () => {
     }
   });
 
-  // Load initial data - only run once on mount
+  // Load initial data and handle filter changes with debounce
   useEffect(() => {
     if (!initialLoadDone.current) {
       initialLoadDone.current = true;
       loadBotPersonalities.current();
+    } else {
+      // Debounce filter changes to prevent multiple API calls
+      const timeoutId = setTimeout(() => {
+        loadBotPersonalities.current();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+  }, [filters]); // Run on mount and when filters change
 
   // Create bot personality
   const createBotPersonality = useCallback(async (data) => {
@@ -226,7 +233,14 @@ export const useBotPersonalityManagement = () => {
 
   // Update filters
   const updateFilters = useCallback((newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    setFilters(prev => {
+      const updated = { ...prev, ...newFilters };
+      // Only update if filters actually changed
+      if (JSON.stringify(updated) !== JSON.stringify(prev)) {
+        return updated;
+      }
+      return prev;
+    });
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   }, []);
 
