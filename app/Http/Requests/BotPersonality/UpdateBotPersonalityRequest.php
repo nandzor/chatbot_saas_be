@@ -36,7 +36,7 @@ class UpdateBotPersonalityRequest extends BaseRequest
             'language' => ['sometimes', Rule::in(['indonesia', 'english', 'javanese', 'sundanese', 'balinese', 'minang', 'chinese', 'japanese', 'korean', 'spanish', 'french', 'german', 'arabic', 'thai', 'vietnamese'])],
             'tone' => ['nullable', 'string', 'max:50'],
             'communication_style' => ['nullable', 'string', 'max:50'],
-            'formality_level' => ['nullable', 'string', Rule::in(['formal','informal'])],
+            'formality_level' => ['nullable', 'string', Rule::in(['formal','informal','casual','friendly'])],
             'avatar_url' => ['nullable', 'url', 'max:500'],
             'color_scheme' => ['nullable', 'array'],
             'color_scheme.primary' => ['nullable', 'string', 'max:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],

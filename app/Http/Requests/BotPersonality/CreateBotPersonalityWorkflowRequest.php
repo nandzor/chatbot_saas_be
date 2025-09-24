@@ -49,7 +49,7 @@ class CreateBotPersonalityWorkflowRequest extends BaseRequest
             'language' => ['nullable', Rule::in(['indonesia', 'english', 'javanese', 'sundanese', 'balinese', 'minang', 'chinese', 'japanese', 'korean', 'spanish', 'french', 'german', 'arabic', 'thai', 'vietnamese'])],
             'tone' => ['nullable', 'string', 'max:50'],
             'communication_style' => ['nullable', 'string', 'max:50'],
-            'formality_level' => ['nullable', 'string', Rule::in(['formal','informal'])],
+            'formality_level' => ['nullable', 'string', Rule::in(['formal','informal','casual','friendly'])],
             'greeting_message' => ['nullable', 'string'],
             'farewell_message' => ['nullable', 'string'],
             'personality_traits' => ['nullable', 'array'],
