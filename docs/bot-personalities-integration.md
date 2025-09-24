@@ -12,6 +12,7 @@
 8. [Testing](#testing)
 9. [Troubleshooting](#troubleshooting)
 10. [Best Practices](#best-practices)
+11. [Frontend Enhancements](#frontend-enhancements)
 
 ---
 
@@ -27,6 +28,9 @@ Bot Personalities Integration adalah sistem yang memungkinkan pembuatan, pengelo
 - ✅ **Knowledge Base**: Integrasi dengan knowledge base items
 - ✅ **Real-time Sync**: Sinkronisasi real-time antara sistem
 - ✅ **Health Monitoring**: Monitoring status dan kesehatan sistem
+- ✅ **Auto-fill Enhancement**: Otomatis mengisi n8n_workflow_id dari waha_session_id
+- ✅ **Professional UI**: Tampilan integrations yang professional dan informatif
+- ✅ **Responsive Design**: Layout yang adaptif dengan text truncation dan tooltips
 
 ---
 
@@ -550,6 +554,96 @@ echo 'Status: ' . \$workflow->status . PHP_EOL;
 
 ---
 
+## 🎨 Frontend Enhancements
+
+### Professional Integrations Display
+
+The bot personalities list now features a professional and precise integrations display that shows detailed information about connected services.
+
+#### Enhanced Features
+
+1. **Professional Layout**: Clean, organized display with proper spacing and alignment
+2. **Color-coded Badges**: Visual distinction between different integration types
+3. **Detailed Information**: Shows session names, phone numbers, and knowledge base titles
+4. **Responsive Design**: Adapts to different screen sizes with proper truncation
+5. **Tooltip Support**: Full information available on hover for truncated text
+
+#### Integration Display Structure
+
+```jsx
+// WhatsApp Integration
+🟢 WhatsApp
+   8467680a-333a-4402-8791-7ba71bff8567_session-6g0s
+   +6285123945816
+
+// Knowledge Base Integration  
+🔵 KB
+   Panduan Lengkap: Technical Support
+   [Category if available]
+
+// No Integrations
+No integrations
+```
+
+#### Technical Implementation
+
+**Backend Changes:**
+- Enhanced `BotPersonalityResource` to include detailed integration data
+- Updated `BotPersonalityService` to load relations efficiently
+- Added eager loading for `wahaSession` and `knowledgeBaseItem` relations
+
+**Frontend Changes:**
+- Improved cell layout with precise spacing and alignment
+- Added text truncation with tooltip support
+- Implemented color-coded badges for better visual distinction
+- Enhanced responsive design with proper width controls
+
+#### API Response Enhancement
+
+The API now returns detailed integration information:
+
+```json
+{
+  "waha_session": {
+    "id": "4d4724c2-693c-4880-9253-cb3aecceb528",
+    "session_name": "8467680a-333a-4402-8791-7ba71bff8567_session-6g0s",
+    "status": "working",
+    "phone_number": "+6285123945816"
+  },
+  "knowledge_base_item": {
+    "id": "47d60d28-0bd3-4a4b-8954-fb3915b67ecc",
+    "title": "Panduan Lengkap: Technical Support",
+    "status": "published",
+    "category": "Technical Support"
+  }
+}
+```
+
+### Auto-fill n8n_workflow_id Enhancement
+
+The system now automatically fills the `n8n_workflow_id` field when creating or updating bot personalities with a `waha_session_id`.
+
+#### Implementation Details
+
+**Service Layer Enhancement:**
+```php
+// Auto-fill n8n_workflow_id from waha_session_id if not provided
+if (empty($data['n8n_workflow_id']) && !empty($data['waha_session_id'])) {
+    $wahaSession = \App\Models\WahaSession::find($data['waha_session_id']);
+    if ($wahaSession && $wahaSession->n8n_workflow_id) {
+        $data['n8n_workflow_id'] = $wahaSession->n8n_workflow_id;
+    }
+}
+```
+
+**Benefits:**
+- ✅ **Improved UX**: Users don't need to manually input `n8n_workflow_id`
+- ✅ **Data Consistency**: Ensures correct workflow association
+- ✅ **Error Prevention**: Reduces manual input errors
+- ✅ **Workflow Sync**: Automatic workflow synchronization
+
+---
+
 ## 📞 Support
 
 For technical support or questions regarding Bot Personalities Integration:
@@ -562,4 +656,13 @@ For technical support or questions regarding Bot Personalities Integration:
 ---
 
 *Last Updated: September 24, 2025*
-*Version: 1.0.0*
+*Version: 1.1.0*
+
+### Recent Updates (v1.1.0)
+
+- ✅ **Frontend Enhancements**: Professional integrations display with detailed information
+- ✅ **Auto-fill n8n_workflow_id**: Automatic workflow ID population from WAHA sessions
+- ✅ **Enhanced API Response**: Detailed integration data in API responses
+- ✅ **Improved Layout**: Precise spacing, alignment, and responsive design
+- ✅ **Color-coded Badges**: Visual distinction between integration types
+- ✅ **Text Truncation**: Proper handling of long text with tooltip support
