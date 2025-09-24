@@ -126,7 +126,7 @@ class KnowledgeBaseItemResource extends JsonResource
                         'icon' => $tag->icon,
                         'pivot' => [
                             'assigned_by' => $tag->pivot->assigned_by ?? null,
-                            'assigned_at' => $tag->pivot->assigned_at?->toISOString(),
+                            'assigned_at' => $tag->pivot->assigned_at ? (is_string($tag->pivot->assigned_at) ? $tag->pivot->assigned_at : $tag->pivot->assigned_at->toISOString()) : null,
                             'is_auto_assigned' => $tag->pivot->is_auto_assigned ?? false,
                             'confidence_score' => $tag->pivot->confidence_score ?? null
                         ]

@@ -28,7 +28,9 @@ class KnowledgeBaseOrganizationAccessMiddleware
             'knowledge-base.index',
             'knowledge-base.search',
             'knowledge-base.categories',
-            'knowledge-base.store'
+            'knowledge-base.store',
+            'knowledge-base.byCategory',
+            'knowledge-base.byTag'
         ];
 
         if (in_array($routeName, $skipValidationRoutes)) {

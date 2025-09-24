@@ -749,8 +749,8 @@ Route::prefix('v1')->group(function () {
             });
 
             // Category and tag filtering
-            Route::get('/category/{categoryId}', [KnowledgeBaseController::class, 'byCategory']);
-            Route::get('/tag/{tagId}', [KnowledgeBaseController::class, 'byTag']);
+            Route::get('/category/{categoryId}', [KnowledgeBaseController::class, 'byCategory'])->name('knowledge-base.byCategory');
+            Route::get('/tag/{tagId}', [KnowledgeBaseController::class, 'byTag'])->name('knowledge-base.byTag');
         });
 
         // ====================================================================
