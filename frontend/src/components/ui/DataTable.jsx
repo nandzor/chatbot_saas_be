@@ -272,7 +272,7 @@ const DataTable = ({
                 </TableCell>
               ))}
               {actions.length > 0 && (
-                <TableCell className="text-right">
+                <TableCell className="text-right relative z-50">
                   <div className="flex items-center justify-end space-x-2">
                     {/* {console.log('DataTable rendering actions:', actions.length, 'for row:', row)} */}
                     {actions.map((action, actionIndex) => {
@@ -285,7 +285,7 @@ const DataTable = ({
                       // If customComponent is provided, render it instead of default button
                       if (action.customComponent) {
                         return (
-                          <div key={actionIndex} className="flex items-center">
+                          <div key={actionIndex} className="flex items-center relative z-50">
                             {action.customComponent(row)}
                           </div>
                         );
@@ -387,7 +387,7 @@ const DataTable = ({
                     </TableHead>
                   ))}
                   {actions.length > 0 && (
-                    <TableHead className="text-right">
+                    <TableHead className="text-right relative z-50">
                       <span>Actions</span>
                     </TableHead>
                   )}

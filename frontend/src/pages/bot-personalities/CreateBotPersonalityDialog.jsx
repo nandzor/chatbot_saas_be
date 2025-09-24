@@ -52,7 +52,7 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
     description: '',
     language: 'english',
     formality_level: 'formal',
-    color_scheme: { primary: '#3B82F6' },
+    color_scheme: { primary: '#3B82F6', secondary: '#10B981' },
     personality_traits: [],
     response_delay_ms: 1000,
     typing_indicator: true,
@@ -131,7 +131,7 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
         description: '',
         language: 'english',
         formality_level: 'formal',
-        color_scheme: { primary: '#3B82F6' },
+        color_scheme: { primary: '#3B82F6', secondary: '#10B981' },
         personality_traits: [],
         response_delay_ms: 1000,
         typing_indicator: true,
@@ -345,6 +345,60 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                     <SelectItem value="casual">Casual</SelectItem>
                     <SelectItem value="friendly">Friendly</SelectItem>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Color Scheme</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="primary_color" className="text-sm text-gray-600">Primary Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          id="primary_color"
+                          value={formData.color_scheme?.primary || '#3B82F6'}
+                          onChange={(e) => handleInputChange('color_scheme', {
+                            ...formData.color_scheme,
+                            primary: e.target.value
+                          })}
+                          className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                        />
+                        <Input
+                          value={formData.color_scheme?.primary || '#3B82F6'}
+                          onChange={(e) => handleInputChange('color_scheme', {
+                            ...formData.color_scheme,
+                            primary: e.target.value
+                          })}
+                          placeholder="#3B82F6"
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="secondary_color" className="text-sm text-gray-600">Secondary Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          id="secondary_color"
+                          value={formData.color_scheme?.secondary || '#10B981'}
+                          onChange={(e) => handleInputChange('color_scheme', {
+                            ...formData.color_scheme,
+                            secondary: e.target.value
+                          })}
+                          className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                        />
+                        <Input
+                          value={formData.color_scheme?.secondary || '#10B981'}
+                          onChange={(e) => handleInputChange('color_scheme', {
+                            ...formData.color_scheme,
+                            secondary: e.target.value
+                          })}
+                          placeholder="#10B981"
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">

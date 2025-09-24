@@ -39,6 +39,8 @@ class CreateBotPersonalityRequest extends BaseRequest
             'formality_level' => ['nullable', 'string', Rule::in(['formal','informal'])],
             'avatar_url' => ['nullable', 'url', 'max:500'],
             'color_scheme' => ['nullable', 'array'],
+            'color_scheme.primary' => ['nullable', 'string', 'max:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'color_scheme.secondary' => ['nullable', 'string', 'max:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'greeting_message' => ['nullable', 'string'],
             'farewell_message' => ['nullable', 'string'],
             'error_message' => ['nullable', 'string'],
@@ -63,6 +65,14 @@ class CreateBotPersonalityRequest extends BaseRequest
             'n8n_workflow_id' => ['nullable', 'uuid', 'exists:n8n_workflows,id'],
             'waha_session_id' => ['nullable', 'uuid', 'exists:waha_sessions,id'],
             'knowledge_base_item_id' => ['nullable', 'uuid', 'exists:knowledge_base_items,id'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'color_scheme.primary.regex' => 'Primary color must be a valid hex color code (e.g., #3B82F6).',
+            'color_scheme.secondary.regex' => 'Secondary color must be a valid hex color code (e.g., #10B981).',
         ];
     }
 }
