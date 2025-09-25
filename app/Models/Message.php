@@ -49,6 +49,7 @@ class Message extends Model
         'context',
         'processing_time_ms',
         'metadata',
+        'waha_session_id',
     ];
 
     protected $casts = [

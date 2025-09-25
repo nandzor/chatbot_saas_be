@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Services\InboxService;
 use App\Services\WhatsAppMessageProcessor;
+use App\Events\WhatsAppMessageReceived;
 use App\Models\ChatSession;
 use App\Models\Customer;
 use App\Models\Organization;
@@ -25,7 +26,7 @@ class WhatsAppWebhookController extends Controller
     }
 
     /**
-     * Handle incoming WhatsApp messages
+     * Handle incoming WhatsApp messages using event-driven architecture
      */
     public function handleMessage(Request $request): JsonResponse
     {
@@ -47,14 +48,31 @@ class WhatsAppWebhookController extends Controller
                 return response()->json(['error' => 'Invalid message format'], 400);
             }
 
-            // Process the message
-            $result = $this->messageProcessor->processIncomingMessage($messageData);
+            // Extract organization ID from message data
+            $organizationId = $this->extractOrganizationId($messageData);
 
+            if (!$organizationId) {
+                Log::error('Organization ID not found in message data', [
+                    'message_data' => $messageData
+                ]);
+                return response()->json(['error' => 'Organization ID not found'], 400);
+            }
+
+            // Fire event for asynchronous processing
+            event(new WhatsAppMessageReceived($messageData, $organizationId));
+
+            Log::info('WhatsApp message event fired', [
+                'organization_id' => $organizationId,
+                'message_id' => $messageData['message_id'] ?? 'unknown',
+                'from' => $messageData['from'] ?? 'unknown',
+            ]);
+
+            // Return immediate response to WAHA
             return response()->json([
-                'status' => 'success',
-                'message' => 'Message processed successfully',
-                'session_id' => $result['session_id'] ?? null,
-                'response_sent' => $result['response_sent'] ?? false
+                'status' => 'accepted',
+                'message' => 'Message received and queued for processing',
+                'message_id' => $messageData['message_id'] ?? null,
+                'organization_id' => $organizationId
             ]);
 
         } catch (\Exception $e) {
@@ -129,6 +147,32 @@ class WhatsAppWebhookController extends Controller
                 'customer_name' => $contact['profile']['name'] ?? null,
                 'raw_data' => $data
             ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract organization ID from message data
+     */
+    private function extractOrganizationId(array $messageData): ?string
+    {
+        // First try to get from message data directly
+        if (isset($messageData['organization_id'])) {
+            return $messageData['organization_id'];
+        }
+
+        // Try to get from phone number
+        if (isset($messageData['to'])) {
+            return $this->getOrganizationFromPhone($messageData['to']);
+        }
+
+        // Try to get from session name if available
+        if (isset($messageData['session_name'])) {
+            $wahaSession = \App\Models\WahaSession::where('session_name', $messageData['session_name'])->first();
+            if ($wahaSession) {
+                return $wahaSession->organization_id;
+            }
         }
 
         return null;

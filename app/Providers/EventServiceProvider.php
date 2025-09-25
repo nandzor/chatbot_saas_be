@@ -6,9 +6,12 @@ use App\Events\OrganizationCreated;
 use App\Events\OrganizationUpdated;
 use App\Events\OrganizationDeleted;
 use App\Events\NotificationSent;
+use App\Events\WhatsAppMessageReceived;
+use App\Events\MessageProcessed;
 use App\Listeners\LogOrganizationActivity;
 use App\Listeners\SendOrganizationNotification;
 use App\Listeners\ProcessNotification;
+use App\Listeners\ProcessWhatsAppMessageListener;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -45,6 +48,11 @@ class EventServiceProvider extends ServiceProvider
         // Notification Events
         NotificationSent::class => [
             ProcessNotification::class,
+        ],
+
+        // WhatsApp Message Events
+        WhatsAppMessageReceived::class => [
+            ProcessWhatsAppMessageListener::class,
         ],
     ];
 

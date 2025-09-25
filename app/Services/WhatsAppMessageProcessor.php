@@ -94,6 +94,8 @@ class WhatsAppMessageProcessor
                 'email' => null,
                 'status' => 'active',
                 'source' => 'whatsapp',
+                'channel' => 'whatsapp',
+                'channel_user_id' => $phone,
                 'metadata' => [
                     'whatsapp_id' => $phone,
                     'first_contact' => now()->toISOString(),
@@ -215,12 +217,13 @@ class WhatsAppMessageProcessor
     {
         $message = Message::create([
             'organization_id' => $session->organization_id,
-            'chat_session_id' => $session->id,
+            'session_id' => $session->id,
             'sender_type' => 'customer',
             'sender_id' => $session->customer_id,
             'sender_name' => $session->customer->name,
             'message_type' => $messageData['message_type'] ?? 'text',
-            'content' => $messageData['text'] ?? '',
+            'message_text' => $messageData['text'] ?? '',
+            'waha_session_id' => $messageData['waha_session'] ?? null,
             'metadata' => [
                 'whatsapp_message_id' => $messageData['message_id'] ?? null,
                 'phone_number' => $messageData['from'] ?? null,

@@ -1,8 +1,9 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -12,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         // Check if columns already exist and are UUID type
-        $columns = \DB::select("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'webhook_events' AND column_name IN ('organization_id', 'subscription_id')");
+        $columns = DB::select("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'webhook_events' AND column_name IN ('organization_id', 'subscription_id')");
 
         $needsUpdate = false;
         foreach ($columns as $column) {
@@ -26,7 +27,7 @@ return new class extends Migration
             // Columns are already UUID, just ensure the index exists
             Schema::table('webhook_events', function (Blueprint $table) {
                 // Check if index exists before creating
-                $indexExists = \DB::select("SELECT indexname FROM pg_indexes WHERE tablename = 'webhook_events' AND indexname LIKE '%organization_id%gateway%status%'");
+                $indexExists = DB::select("SELECT indexname FROM pg_indexes WHERE tablename = 'webhook_events' AND indexname LIKE '%organization_id%gateway%status%'");
                 if (empty($indexExists)) {
                     $table->index(['organization_id', 'gateway', 'status']);
                 }

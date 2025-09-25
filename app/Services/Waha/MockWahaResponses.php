@@ -387,4 +387,44 @@ class MockWahaResponses
             'message' => 'Session restarted successfully'
         ];
     }
+
+    /**
+     * Get mock webhook configured response
+     *
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getWebhookConfigured(): array
+    {
+        return [
+            'success' => true,
+            'data' => [
+                'webhook' => [
+                    'url' => 'https://example.com/webhook',
+                    'events' => ['message', 'session.status'],
+                    'webhook_by_events' => false,
+                ]
+            ],
+            'message' => 'Webhook configured successfully'
+        ];
+    }
+
+    /**
+     * Get mock webhook config response
+     *
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getWebhookConfig(): array
+    {
+        return [
+            'success' => true,
+            'data' => [
+                'webhook' => [
+                    'url' => 'https://example.com/webhook',
+                    'events' => ['message', 'session.status'],
+                    'webhook_by_events' => false,
+                ]
+            ],
+            'message' => 'Webhook configuration retrieved successfully'
+        ];
+    }
 }

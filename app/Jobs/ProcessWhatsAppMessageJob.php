@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Events\MessageProcessed;
+use App\Services\WhatsAppMessageProcessor;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
+class ProcessWhatsAppMessageJob implements ShouldQueue
+{
+    use Queueable, InteractsWithQueue, SerializesModels;
+
+    /**
+     * The number of times the job may be attempted.
+     */
+    public int $tries = 3;
+
+    /**
+     * The maximum number of seconds the job can run.
+     */
+    public int $timeout = 120;
+
+    /**
+     * The message data from WAHA webhook
+     */
+    public array $messageData;
+
+    /**
+     * The organization ID
+     */
+    public string $organizationId;
+
+    /**
+     * The timestamp when job was created
+     */
+    public \Carbon\Carbon $createdAt;
+
+    /**
+     * Create a new job instance.
+     */
+    public function __construct(array $messageData, string $organizationId)
+    {
+        $this->messageData = $messageData;
+        $this->organizationId = $organizationId;
+        $this->createdAt = now();
+
+        // Set queue name based on organization for better load balancing
+        $this->onQueue('whatsapp-messages');
+    }
+
+    /**
+     * Execute the job.
+     */
+    public function handle(WhatsAppMessageProcessor $messageProcessor): void
+    {
+        $startTime = microtime(true);
+
+        try {
+            Log::info('Processing WhatsApp message job started', [
+                'organization_id' => $this->organizationId,
+                'message_id' => $this->messageData['message_id'] ?? 'unknown',
+                'from' => $this->messageData['from'] ?? 'unknown',
+                'job_created_at' => $this->createdAt,
+            ]);
+
+            // Check for duplicate message processing
+            if ($this->isDuplicateMessage()) {
+                Log::warning('Duplicate message detected, skipping processing', [
+                    'message_id' => $this->messageData['message_id'] ?? 'unknown',
+                    'organization_id' => $this->organizationId,
+                ]);
+                return;
+            }
+
+            // Process the message
+            $result = DB::transaction(function () use ($messageProcessor) {
+                return $messageProcessor->processIncomingMessage($this->messageData);
+            });
+
+            // Calculate processing time
+            $processingTime = microtime(true) - $startTime;
+
+            // Fire event for real-time updates
+            if (isset($result['session_id']) && isset($result['message_id'])) {
+                $session = \App\Models\ChatSession::find($result['session_id']);
+                $message = \App\Models\Message::find($result['message_id']);
+
+                if ($session && $message) {
+                    event(new MessageProcessed($session, $message, [
+                        'processing_time' => $processingTime,
+                        'response_sent' => $result['response_sent'] ?? false,
+                        'bot_response' => $result['bot_response'] ?? null,
+                    ]));
+                }
+            }
+
+            Log::info('WhatsApp message job completed successfully', [
+                'organization_id' => $this->organizationId,
+                'session_id' => $result['session_id'] ?? null,
+                'message_id' => $result['message_id'] ?? null,
+                'processing_time' => $processingTime,
+                'response_sent' => $result['response_sent'] ?? false,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('WhatsApp message job failed', [
+                'organization_id' => $this->organizationId,
+                'message_id' => $this->messageData['message_id'] ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'attempt' => $this->attempts(),
+            ]);
+
+            // Re-throw exception to trigger retry mechanism
+            throw $e;
+        }
+    }
+
+    /**
+     * Check if this message has already been processed
+     */
+    private function isDuplicateMessage(): bool
+    {
+        if (!isset($this->messageData['message_id'])) {
+            return false;
+        }
+
+        return \App\Models\Message::where('metadata->whatsapp_message_id', $this->messageData['message_id'])
+            ->where('organization_id', $this->organizationId)
+            ->exists();
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('WhatsApp message job failed permanently', [
+            'organization_id' => $this->organizationId,
+            'message_id' => $this->messageData['message_id'] ?? 'unknown',
+            'error' => $exception->getMessage(),
+            'attempts' => $this->attempts(),
+        ]);
+
+        // You can add additional failure handling here, such as:
+        // - Sending notification to administrators
+        // - Storing failed message for manual review
+        // - Updating metrics/analytics
+    }
+}
