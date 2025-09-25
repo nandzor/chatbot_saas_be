@@ -345,10 +345,10 @@ class ConversationService extends BaseService
             // Use Laravel 12 optimized single query with selectRaw for better performance
             $stats = $query->selectRaw('
                 COUNT(*) as total_conversations,
-                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_conversations,
-                SUM(CASE WHEN is_bot_session = 1 THEN 1 ELSE 0 END) as bot_sessions,
-                SUM(CASE WHEN is_bot_session = 0 THEN 1 ELSE 0 END) as agent_sessions,
-                SUM(CASE WHEN is_resolved = 1 THEN 1 ELSE 0 END) as resolved_conversations,
+                SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active_conversations,
+                SUM(CASE WHEN is_bot_session = true THEN 1 ELSE 0 END) as bot_sessions,
+                SUM(CASE WHEN is_bot_session = false THEN 1 ELSE 0 END) as agent_sessions,
+                SUM(CASE WHEN is_resolved = true THEN 1 ELSE 0 END) as resolved_conversations,
                 AVG(CASE WHEN resolution_time IS NOT NULL THEN resolution_time END) as avg_resolution_time,
                 AVG(CASE WHEN response_time_avg IS NOT NULL THEN response_time_avg END) as avg_response_time,
                 AVG(CASE WHEN satisfaction_rating IS NOT NULL THEN satisfaction_rating END) as avg_satisfaction_rating
@@ -534,8 +534,8 @@ class ConversationService extends BaseService
     protected function getOptimizedRelations(?Request $request = null): array
     {
         $baseRelations = [
-            'customer:id,full_name,email,phone',
-            'agent:id,full_name,email'
+            'customer:id,name,email,phone',
+            'agent:id,display_name'
         ];
 
         if ($request) {
@@ -641,7 +641,7 @@ class ConversationService extends BaseService
                 if ($includeMetadata) {
                     $data['metadata'] = [
                         'sender_id' => $message->sender_id,
-                        'sender_name' => $message->sender?->full_name ?? $message->sender?->name ?? 'Unknown',
+                        'sender_name' => $message->sender?->display_name ?? $message->sender?->name ?? 'Unknown',
                         'message_id' => $message->id,
                         'chat_session_id' => $message->chat_session_id,
                         'created_at' => $message->created_at->toISOString(),
@@ -851,7 +851,7 @@ class ConversationService extends BaseService
     /**
      * Get conversation templates
      */
-    public function getTemplates(string $organizationId, string $category = 'all'): Collection
+    public function getTemplates(string $organizationId, string $category = 'all'): \Illuminate\Support\Collection
     {
         // This would typically query from a templates table
         // For now, return sample templates

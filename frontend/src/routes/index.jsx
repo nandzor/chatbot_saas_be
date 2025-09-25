@@ -135,9 +135,9 @@ export const router = createBrowserRouter([
           {
             path: 'modern-inbox',
             element: (
-              <RoleBasedRoute requiredPermission="inbox.view">
+              // <RoleBasedRoute requiredPermission="inbox.view">
                 <ModernInbox />
-              </RoleBasedRoute>
+              // </RoleBasedRoute>
             )
           },
           {

@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -16,12 +17,13 @@ return new class extends Migration
         $permissions = [
             // Inbox Management Permissions
             [
-                'id' => 'inbox.view',
+                'id' => Str::uuid(),
+                'code' => 'inbox.view',
                 'name' => 'inbox.view',
                 'display_name' => 'View Inbox',
                 'description' => 'View modern inbox dashboard and conversations',
-                'resource' => 'inbox',
-                'action' => 'view',
+                'resource' => 'chat_sessions',
+                'action' => 'read',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -32,12 +34,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.conversations.assign',
+                'id' => Str::uuid(),
+                'code' => 'inbox.conversations.assign',
                 'name' => 'inbox.conversations.assign',
                 'display_name' => 'Assign Conversations',
                 'description' => 'Assign conversations to agents',
-                'resource' => 'inbox',
-                'action' => 'conversations.assign',
+                'resource' => 'chat_sessions',
+                'action' => 'update',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -48,12 +51,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.conversations.bulk_actions',
+                'id' => Str::uuid(),
+                'code' => 'inbox.conversations.bulk_actions',
                 'name' => 'inbox.conversations.bulk_actions',
                 'display_name' => 'Bulk Actions',
                 'description' => 'Perform bulk actions on conversations',
-                'resource' => 'inbox',
-                'action' => 'conversations.bulk_actions',
+                'resource' => 'chat_sessions',
+                'action' => 'update',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -64,12 +68,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.agents.view',
+                'id' => Str::uuid(),
+                'code' => 'inbox.agents.view',
                 'name' => 'inbox.agents.view',
                 'display_name' => 'View Agents',
                 'description' => 'View available agents and their status',
-                'resource' => 'inbox',
-                'action' => 'agents.view',
+                'resource' => 'chat_sessions',
+                'action' => 'read',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -80,12 +85,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.agents.performance',
+                'id' => Str::uuid(),
+                'code' => 'inbox.agents.performance',
                 'name' => 'inbox.agents.performance',
                 'display_name' => 'View Agent Performance',
                 'description' => 'View agent performance metrics and analytics',
-                'resource' => 'inbox',
-                'action' => 'agents.performance',
+                'resource' => 'chat_sessions',
+                'action' => 'read',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -96,12 +102,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.templates.view',
+                'id' => Str::uuid(),
+                'code' => 'inbox.templates.view',
                 'name' => 'inbox.templates.view',
                 'display_name' => 'View Templates',
                 'description' => 'View conversation templates',
-                'resource' => 'inbox',
-                'action' => 'templates.view',
+                'resource' => 'chat_sessions',
+                'action' => 'read',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -112,12 +119,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.templates.create',
+                'id' => Str::uuid(),
+                'code' => 'inbox.templates.create',
                 'name' => 'inbox.templates.create',
                 'display_name' => 'Create Templates',
                 'description' => 'Create and manage conversation templates',
-                'resource' => 'inbox',
-                'action' => 'templates.create',
+                'resource' => 'chat_sessions',
+                'action' => 'create',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -128,12 +136,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.analytics.cost_statistics',
+                'id' => Str::uuid(),
+                'code' => 'inbox.analytics.cost_statistics',
                 'name' => 'inbox.analytics.cost_statistics',
                 'display_name' => 'View Cost Statistics',
                 'description' => 'View AI cost statistics and optimization metrics',
-                'resource' => 'inbox',
-                'action' => 'analytics.cost_statistics',
+                'resource' => 'chat_sessions',
+                'action' => 'read',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -144,12 +153,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.ai.suggestions',
+                'id' => Str::uuid(),
+                'code' => 'inbox.ai.suggestions',
                 'name' => 'inbox.ai.suggestions',
                 'display_name' => 'AI Suggestions',
                 'description' => 'Access AI-powered conversation suggestions',
-                'resource' => 'inbox',
-                'action' => 'ai.suggestions',
+                'resource' => 'chat_sessions',
+                'action' => 'read',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -160,12 +170,13 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
             [
-                'id' => 'inbox.ai.coaching',
+                'id' => Str::uuid(),
+                'code' => 'inbox.ai.coaching',
                 'name' => 'inbox.ai.coaching',
                 'display_name' => 'AI Coaching',
                 'description' => 'Access AI-powered agent coaching and feedback',
-                'resource' => 'inbox',
-                'action' => 'ai.coaching',
+                'resource' => 'chat_sessions',
+                'action' => 'read',
                 'category' => 'inbox_management',
                 'scope' => 'organization',
                 'is_system_permission' => true,
@@ -183,14 +194,38 @@ return new class extends Migration
         foreach ($organizations as $organization) {
             foreach ($permissions as $permission) {
                 $permission['organization_id'] = $organization->id;
-                DB::table('permissions')->insert($permission);
+                $permission['id'] = Str::uuid(); // Generate new UUID for each insert
+
+                // Check if permission already exists based on unique constraint
+                $exists = DB::table('permissions')
+                    ->where('resource', $permission['resource'])
+                    ->where('action', $permission['action'])
+                    ->where('scope', $permission['scope'])
+                    ->where('organization_id', $organization->id)
+                    ->exists();
+
+                if (!$exists) {
+                    DB::table('permissions')->insert($permission);
+                }
             }
         }
 
         // Also insert global permissions (for super admin)
         foreach ($permissions as $permission) {
             $permission['organization_id'] = null;
-            DB::table('permissions')->insert($permission);
+            $permission['id'] = Str::uuid(); // Generate new UUID for each insert
+
+            // Check if global permission already exists based on unique constraint
+            $exists = DB::table('permissions')
+                ->where('resource', $permission['resource'])
+                ->where('action', $permission['action'])
+                ->where('scope', $permission['scope'])
+                ->whereNull('organization_id')
+                ->exists();
+
+            if (!$exists) {
+                DB::table('permissions')->insert($permission);
+            }
         }
     }
 

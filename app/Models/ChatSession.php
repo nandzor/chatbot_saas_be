@@ -179,14 +179,6 @@ class ChatSession extends Model
     }
 
     /**
-     * Get the bot personality for this chat session.
-     */
-    public function botPersonality(): BelongsTo
-    {
-        return $this->belongsTo(BotPersonality::class);
-    }
-
-    /**
      * Get the messages for this chat session.
      */
     public function messages(): HasMany

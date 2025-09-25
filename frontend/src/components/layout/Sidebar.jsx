@@ -44,7 +44,7 @@ const Sidebar = ({ role, isCollapsed, isMobile }) => {
         return [
           { id: 'dashboard', label: 'Dashboard', icon: Home, href: '/dashboard' },
           { id: 'inbox', label: 'Inbox', icon: MessageSquare, href: '/dashboard/inbox' },
-          { id: 'modern-inbox', label: 'Modern Inbox', icon: Inbox, href: '/dashboard/modern-inbox', permission: 'inbox.view' },
+          { id: 'modern-inbox', label: 'Modern Inbox', icon: Inbox, href: '/dashboard/modern-inbox'},
           { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/dashboard/analytics' },
           { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, href: '/dashboard/knowledge' },
           { id: 'bot-personalities', label: 'Bot Personalities', icon: Brain, href: '/dashboard/bot-personalities' },
@@ -57,7 +57,7 @@ const Sidebar = ({ role, isCollapsed, isMobile }) => {
         return [
           { id: 'dashboard', label: 'My Dashboard', icon: Home, href: '/agent' },
           { id: 'inbox', label: 'Inbox (Percakapan)', icon: MessageSquare, href: '/agent/inbox' },
-          { id: 'modern-inbox', label: 'Modern Inbox', icon: MessageCircle, href: '/agent/modern-inbox', permission: 'inbox.view' },
+          { id: 'modern-inbox', label: 'Modern Inbox', icon: MessageCircle, href: '/agent/modern-inbox'},
           { id: 'profile', label: 'My Profile & Settings', icon: User, href: '/agent/profile' }
         ];
       default:

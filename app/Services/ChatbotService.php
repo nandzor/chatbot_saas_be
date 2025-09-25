@@ -396,7 +396,7 @@ class ChatbotService extends BaseService
                 ->where('bot_personality_id', $chatbot->id)
                 ->selectRaw('
                     COUNT(*) as total_sessions,
-                    SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_sessions,
+                    SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active_sessions,
                     AVG(response_time_avg) as avg_response_time,
                     AVG(satisfaction_rating) as satisfaction_score
                 ')

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useApi } from './useApi';
+import { useApiEndpoint } from './useApi';
 
 /**
  * Custom hook for Modern Inbox API operations
@@ -9,20 +9,20 @@ export const useModernInbox = () => {
   const [loading, setLoading] = useState(false);
 
   // API hooks for different endpoints
-  const { get: getDashboard } = useApi('/modern-inbox/dashboard');
-  const { get: getAvailableAgents } = useApi('/modern-inbox/agents/available');
-  const { get: getConversationFilters } = useApi('/modern-inbox/conversations/filters');
-  const { get: getConversations } = useApi('/modern-inbox/conversations');
-  const { get: getTemplates } = useApi('/modern-inbox/templates');
-  const { get: getAgentPerformance } = useApi('/modern-inbox/agents/performance');
-  const { get: getAssignmentRules } = useApi('/modern-inbox/assignment-rules');
-  const { get: getCostStatistics } = useApi('/modern-inbox/cost-statistics');
+  const { get: getDashboard } = useApiEndpoint('/modern-inbox/dashboard');
+  const { get: getAvailableAgents } = useApiEndpoint('/modern-inbox/agents/available');
+  const { get: getConversationFilters } = useApiEndpoint('/modern-inbox/conversations/filters');
+  const { get: getConversations } = useApiEndpoint('/modern-inbox/conversations');
+  const { get: getTemplates } = useApiEndpoint('/modern-inbox/templates');
+  const { get: getAgentPerformance } = useApiEndpoint('/modern-inbox/agents/performance');
+  const { get: getAssignmentRules } = useApiEndpoint('/modern-inbox/assignment-rules');
+  const { get: getCostStatistics } = useApiEndpoint('/modern-inbox/cost-statistics');
 
-  const { post: assignConversation } = useApi('/modern-inbox/conversations/assign');
-  const { post: applyBulkActions } = useApi('/modern-inbox/conversations/bulk-actions');
-  const { post: saveTemplate } = useApi('/modern-inbox/templates');
-  const { post: sendMessage } = useApi('/modern-inbox/conversations/send-message');
-  const { post: getAiSuggestions } = useApi('/modern-inbox/conversations/ai-suggestions');
+  const { post: assignConversation } = useApiEndpoint('/modern-inbox/conversations/assign', { method: 'POST' });
+  const { post: applyBulkActions } = useApiEndpoint('/modern-inbox/conversations/bulk-actions', { method: 'POST' });
+  const { post: saveTemplate } = useApiEndpoint('/modern-inbox/templates', { method: 'POST' });
+  const { post: sendMessage } = useApiEndpoint('/modern-inbox/conversations/send-message', { method: 'POST' });
+  const { post: getAiSuggestions } = useApiEndpoint('/modern-inbox/conversations/ai-suggestions', { method: 'POST' });
 
   // Dashboard operations
   const loadDashboard = useCallback(async () => {
@@ -48,7 +48,7 @@ export const useModernInbox = () => {
       console.error('Failed to load available agents');
       throw error;
     }
-  }, [getAvailableAgents, toast]);
+  }, [getAvailableAgents]);
 
   const assignConversationToAgent = useCallback(async (conversationId, agentId, reason = '') => {
     try {
@@ -73,7 +73,7 @@ export const useModernInbox = () => {
     } finally {
       setLoading(false);
     }
-  }, [assignConversation, toast]);
+  }, [assignConversation]);
 
   // Conversation operations
   const loadConversations = useCallback(async (filters = {}) => {
@@ -85,7 +85,7 @@ export const useModernInbox = () => {
       console.error('Failed to load conversations');
       throw error;
     }
-  }, [getConversations, toast]);
+  }, [getConversations]);
 
   const loadConversationFilters = useCallback(async () => {
     try {
@@ -96,7 +96,7 @@ export const useModernInbox = () => {
       console.error('Failed to load conversation filters');
       throw error;
     }
-  }, [getConversationFilters, toast]);
+  }, [getConversationFilters]);
 
   const performBulkActions = useCallback(async (conversationIds, action, actionData = {}) => {
     try {
@@ -121,7 +121,7 @@ export const useModernInbox = () => {
     } finally {
       setLoading(false);
     }
-  }, [applyBulkActions, toast]);
+  }, [applyBulkActions]);
 
   // Template operations
   const loadTemplates = useCallback(async (category = 'all') => {
@@ -133,7 +133,7 @@ export const useModernInbox = () => {
       console.error('Failed to load templates');
       throw error;
     }
-  }, [getTemplates, toast]);
+  }, [getTemplates]);
 
   const saveConversationTemplate = useCallback(async (templateData) => {
     try {
@@ -166,7 +166,7 @@ export const useModernInbox = () => {
       console.error('Failed to load agent performance');
       throw error;
     }
-  }, [getAgentPerformance, toast]);
+  }, [getAgentPerformance]);
 
   // AI operations
   const getAiSuggestionsForConversation = useCallback(async (sessionId) => {

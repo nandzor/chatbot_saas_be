@@ -235,7 +235,7 @@ const ModernInboxDashboard = () => {
     );
   }
 
-  const { overview, ai_insights, agent_performance, conversation_health, predictive_analytics, real_time_alerts } = dashboardData;
+  const { overview, ai_insights, agent_performance, conversation_health, predictive_analytics, real_time_alerts } = dashboardData || {};
 
   return (
     <div className="space-y-6">
@@ -261,7 +261,7 @@ const ModernInboxDashboard = () => {
       </div>
 
       {/* Real-time Alerts */}
-      {real_time_alerts && real_time_alerts.length > 0 && (
+      {real_time_alerts && real_time_alerts?.length > 0 && (
         <div className="space-y-2">
           {real_time_alerts.map((alert, index) => (
             <div
@@ -310,7 +310,7 @@ const ModernInboxDashboard = () => {
                 <MessageCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{overview.total_conversations}</div>
+                <div className="text-2xl font-bold">{overview?.total_conversations || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   +12% from last hour
                 </p>
@@ -323,9 +323,9 @@ const ModernInboxDashboard = () => {
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{overview.active_conversations}</div>
+                <div className="text-2xl font-bold">{overview?.active_conversations || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                  {overview.pending_conversations} pending
+                  {overview?.pending_conversations || 0} pending
                 </p>
               </CardContent>
             </Card>
@@ -336,7 +336,7 @@ const ModernInboxDashboard = () => {
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{overview.resolved_today}</div>
+                <div className="text-2xl font-bold">{overview?.resolved_today || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   +8% from yesterday
                 </p>
@@ -349,8 +349,8 @@ const ModernInboxDashboard = () => {
                 <Brain className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{(ai_insights.ai_confidence * 100).toFixed(0)}%</div>
-                <Progress value={ai_insights.ai_confidence * 100} className="mt-2" />
+                <div className="text-2xl font-bold">{((ai_insights?.ai_confidence || 0) * 100).toFixed(0)}%</div>
+                <Progress value={(ai_insights?.ai_confidence || 0) * 100} className="mt-2" />
               </CardContent>
             </Card>
           </div>
@@ -367,19 +367,19 @@ const ModernInboxDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-green-600">
-                    {conversation_health.healthy_conversations}%
+                    {conversation_health?.healthy_conversations || 0}%
                   </div>
                   <p className="text-sm text-muted-foreground">Healthy</p>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-yellow-600">
-                    {conversation_health.at_risk_conversations}%
+                    {conversation_health?.at_risk_conversations || 0}%
                   </div>
                   <p className="text-sm text-muted-foreground">At Risk</p>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-red-600">
-                    {conversation_health.escalated_conversations}%
+                    {conversation_health?.escalated_conversations || 0}%
                   </div>
                   <p className="text-sm text-muted-foreground">Escalated</p>
                 </div>
@@ -387,13 +387,13 @@ const ModernInboxDashboard = () => {
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Average Resolution Time</span>
-                  <span>{conversation_health.average_resolution_time} min</span>
+                  <span>{conversation_health?.average_resolution_time || 0} min</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Satisfaction Score</span>
                   <span className="flex items-center">
                     <Star className="h-4 w-4 mr-1 fill-yellow-400 text-yellow-400" />
-                    {conversation_health.satisfaction_score}/5
+                    {conversation_health?.satisfaction_score || 0}/5
                   </span>
                 </div>
               </div>
@@ -419,16 +419,16 @@ const ModernInboxDashboard = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Overall Sentiment</span>
-                    <Badge variant={ai_insights.sentiment_trend === 'positive' ? 'default' : 'secondary'}>
-                      {ai_insights.sentiment_trend}
+                    <Badge variant={(ai_insights?.sentiment_trend || 'neutral') === 'positive' ? 'default' : 'secondary'}>
+                      {ai_insights?.sentiment_trend || 'neutral'}
                     </Badge>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Escalation Rate</span>
-                      <span>{(ai_insights.escalation_rate * 100).toFixed(1)}%</span>
+                      <span>{((ai_insights?.escalation_rate || 0) * 100).toFixed(1)}%</span>
                     </div>
-                    <Progress value={ai_insights.escalation_rate * 100} />
+                    <Progress value={(ai_insights?.escalation_rate || 0) * 100} />
                   </div>
                 </div>
               </CardContent>
@@ -447,7 +447,7 @@ const ModernInboxDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {ai_insights.common_intents.map((intent, index) => (
+                  {(ai_insights?.common_intents || []).map((intent, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <span className="text-sm capitalize">
                         {intent.replace('_', ' ')}
@@ -474,7 +474,7 @@ const ModernInboxDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {ai_insights.recommendations.map((recommendation, index) => (
+                  {(ai_insights?.recommendations || []).map((recommendation, index) => (
                     <div key={index} className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50">
                       <Lightbulb className="h-4 w-4 mt-0.5 text-yellow-500" />
                       <p className="text-sm">{recommendation}</p>
@@ -506,24 +506,24 @@ const ModernInboxDashboard = () => {
                     <span className="text-sm font-medium">Satisfaction Rating</span>
                     <div className="flex items-center">
                       <Star className="h-4 w-4 mr-1 fill-yellow-400 text-yellow-400" />
-                      <span className="font-bold">{agent_performance.satisfaction_rating}</span>
+                      <span className="font-bold">{agent_performance?.satisfaction_rating || 0}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Response Time</span>
-                    <span className="font-bold">{agent_performance.response_time}s</span>
+                    <span className="font-bold">{agent_performance?.response_time || 0}s</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Conversations Handled</span>
-                    <span className="font-bold">{agent_performance.conversations_handled}</span>
+                    <span className="font-bold">{agent_performance?.conversations_handled || 0}</span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Current Load</span>
-                      <span>{agent_performance.current_load}/{agent_performance.max_capacity}</span>
+                      <span>{agent_performance?.current_load || 0}/{agent_performance?.max_capacity || 1}</span>
                     </div>
                     <Progress
-                      value={(agent_performance.current_load / agent_performance.max_capacity) * 100}
+                      value={((agent_performance?.current_load || 0) / (agent_performance?.max_capacity || 1)) * 100}
                     />
                   </div>
                 </div>
@@ -548,15 +548,15 @@ const ModernInboxDashboard = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Next Hour</span>
-                        <span>{predictive_analytics.predicted_volume.next_hour}</span>
+                        <span>{predictive_analytics?.predicted_volume?.next_hour || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Next 4 Hours</span>
-                        <span>{predictive_analytics.predicted_volume.next_4_hours}</span>
+                        <span>{predictive_analytics?.predicted_volume?.next_4_hours || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Next 24 Hours</span>
-                        <span>{predictive_analytics.predicted_volume.next_24_hours}</span>
+                        <span>{predictive_analytics?.predicted_volume?.next_24_hours || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -565,14 +565,14 @@ const ModernInboxDashboard = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Current Capacity</span>
-                        <span>{predictive_analytics.capacity_forecast.current_capacity}%</span>
+                        <span>{predictive_analytics?.capacity_forecast?.current_capacity || 0}%</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Predicted Need</span>
-                        <span>{predictive_analytics.capacity_forecast.predicted_need}%</span>
+                        <span>{predictive_analytics?.capacity_forecast?.predicted_need || 0}%</span>
                       </div>
                       <div className="p-2 rounded bg-muted text-sm">
-                        <strong>Recommendation:</strong> {predictive_analytics.capacity_forecast.recommendation}
+                        <strong>Recommendation:</strong> {predictive_analytics?.capacity_forecast?.recommendation || 'No recommendation available'}
                       </div>
                     </div>
                   </div>

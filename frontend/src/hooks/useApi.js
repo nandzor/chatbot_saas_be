@@ -3,8 +3,9 @@
  * Reusable hooks untuk API operations
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { debounce } from '@/utils/helpers';
+import api from '@/services/api';
 
 /**
  * Generic API hook
@@ -73,7 +74,7 @@ export const useApi = (apiFunction, options = {}) => {
     if (immediate) {
       execute();
     }
-  }, [immediate, execute, ...dependencies]);
+  }, [immediate, execute, dependencies]);
 
   return {
     data,
@@ -223,35 +224,37 @@ export const useSearchApi = (apiFunction, options = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const debouncedSearch = useCallback(
-    debounce(async (searchQuery) => {
-      if (searchQuery.length < minLength) {
-        setResults([]);
-        return;
+  const searchFunction = useCallback(async (searchQuery) => {
+    if (searchQuery.length < minLength) {
+      setResults([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await apiFunction({ q: searchQuery });
+
+      if (result.success) {
+        setResults(result.data);
+        onSuccess?.(result.data);
+      } else {
+        setError(result.error);
+        onError?.(result.error);
       }
+    } catch (err) {
+      const errorMessage = err.message || 'Search failed';
+      setError(errorMessage);
+      onError?.(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiFunction, minLength, onSuccess, onError]);
 
-      setLoading(true);
-      setError(null);
-
-      try {
-        const result = await apiFunction({ q: searchQuery });
-
-        if (result.success) {
-          setResults(result.data);
-          onSuccess?.(result.data);
-        } else {
-          setError(result.error);
-          onError?.(result.error);
-        }
-      } catch (err) {
-        const errorMessage = err.message || 'Search failed';
-        setError(errorMessage);
-        onError?.(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    }, debounceDelay),
-    [apiFunction, debounceDelay, minLength, onSuccess, onError]
+  const debouncedSearch = useMemo(
+    () => debounce(searchFunction, debounceDelay),
+    [searchFunction, debounceDelay]
   );
 
   const handleSearch = useCallback((searchQuery) => {
@@ -531,20 +534,20 @@ export const useFormApi = (apiFunction, options = {}) => {
         onSuccess?.(result.data);
         setSubmitted(false);
       } else {
-        setError(result.error);
+        setFormError(result.error);
         onError?.(result.error);
       }
 
       return result;
     } catch (err) {
       const errorMessage = err.message || 'Submit failed';
-      setError(errorMessage);
+      setFormError(errorMessage);
       onError?.(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  }, [apiFunction, data, validate, onSuccess, onError]);
+  }, [apiFunction, data, validate, onSuccess, onError, setFormError]);
 
   const reset = useCallback(() => {
     setData(initialData);
@@ -552,7 +555,7 @@ export const useFormApi = (apiFunction, options = {}) => {
     setSubmitted(false);
   }, [initialData]);
 
-  const setError = useCallback((error) => {
+  const setFormError = useCallback((error) => {
     setErrors(prev => ({ ...prev, general: error }));
   }, []);
 
@@ -566,12 +569,100 @@ export const useFormApi = (apiFunction, options = {}) => {
     reset,
     setData,
     setErrors,
-    setError
+    setError: setFormError
   };
+};
+
+/**
+ * Simple API hook for endpoint-based requests
+ * Supports both GET and POST methods
+ */
+export const useApiEndpoint = (endpoint, options = {}) => {
+  const { method = 'GET' } = options;
+
+  const get = useCallback(async (params = {}) => {
+    try {
+      const response = await api.get(endpoint, { params });
+      return {
+        success: true,
+        data: response.data,
+        message: response.data.message || 'Success'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Request failed',
+        data: null
+      };
+    }
+  }, [endpoint]);
+
+  const post = useCallback(async (data = {}) => {
+    try {
+      const response = await api.post(endpoint, data);
+      return {
+        success: true,
+        data: response.data,
+        message: response.data.message || 'Success'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Request failed',
+        data: null
+      };
+    }
+  }, [endpoint]);
+
+  const put = useCallback(async (data = {}) => {
+    try {
+      const response = await api.put(endpoint, data);
+      return {
+        success: true,
+        data: response.data,
+        message: response.data.message || 'Success'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Request failed',
+        data: null
+      };
+    }
+  }, [endpoint]);
+
+  const del = useCallback(async () => {
+    try {
+      const response = await api.delete(endpoint);
+      return {
+        success: true,
+        data: response.data,
+        message: response.data.message || 'Success'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Request failed',
+        data: null
+      };
+    }
+  }, [endpoint]);
+
+  // Return the appropriate method based on the method option
+  if (method === 'POST') {
+    return { post };
+  } else if (method === 'PUT') {
+    return { put };
+  } else if (method === 'DELETE') {
+    return { del };
+  } else {
+    return { get };
+  }
 };
 
 export default {
   useApi,
+  useApiEndpoint,
   usePaginatedApi,
   useSearchApi,
   useCrudApi,

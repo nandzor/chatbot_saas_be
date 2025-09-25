@@ -32,6 +32,13 @@ Route::prefix('modern-inbox')->middleware(['unified.auth', 'organization', 'perm
     // ====================================================================
 
     /**
+     * Get conversations list
+     * GET /api/modern-inbox/conversations
+     */
+    Route::get('/conversations', [ModernInboxController::class, 'getConversations'])
+        ->name('modern-inbox.conversations');
+
+    /**
      * Get AI suggestions for conversation
      * GET /api/modern-inbox/conversations/{sessionId}/ai-suggestions
      */
