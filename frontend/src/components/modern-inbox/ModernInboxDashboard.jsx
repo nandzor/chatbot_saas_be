@@ -74,6 +74,8 @@ const ModernInboxDashboard = () => {
 
   // Modern Inbox hook
   const {
+    loading: hookLoading,
+    error: hookError,
     loadDashboard,
     loadAvailableAgents,
     loadConversations,
@@ -260,31 +262,66 @@ const ModernInboxDashboard = () => {
         </div>
       </div>
 
+      {/* Error Display */}
+      {hookError && (
+        <div className="p-4 rounded-lg border border-red-200 bg-red-50">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 mr-2 text-red-600" />
+            <div>
+              <p className="font-medium text-red-800">Error Loading Data</p>
+              <p className="text-sm text-red-700">{hookError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Real-time Alerts */}
-      {real_time_alerts && real_time_alerts?.length > 0 && (
+      {real_time_alerts && (
         <div className="space-y-2">
-          {real_time_alerts.map((alert, index) => (
-            <div
-              key={index}
-              className={`p-4 rounded-lg border-l-4 ${
-                alert.priority === 'high'
-                  ? 'border-red-500 bg-red-50 dark:bg-red-950'
-                  : alert.priority === 'medium'
-                  ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950'
-                  : 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-              }`}
-            >
+          {real_time_alerts.high_priority_conversations > 0 && (
+            <div className="p-4 rounded-lg border-l-4 border-red-500 bg-red-50 dark:bg-red-950">
               <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2" />
+                <AlertTriangle className="h-5 w-5 mr-2 text-red-600" />
                 <div>
-                  <p className="font-medium">{alert.message}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(alert.timestamp).toLocaleTimeString()}
-                  </p>
+                  <p className="font-medium text-red-800">High Priority Conversations</p>
+                  <p className="text-sm text-red-700">{real_time_alerts.high_priority_conversations} conversations need immediate attention</p>
                 </div>
               </div>
             </div>
-          ))}
+          )}
+          {real_time_alerts.overdue_conversations > 0 && (
+            <div className="p-4 rounded-lg border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 mr-2 text-yellow-600" />
+                <div>
+                  <p className="font-medium text-yellow-800">Overdue Conversations</p>
+                  <p className="text-sm text-yellow-700">{real_time_alerts.overdue_conversations} conversations are overdue</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {real_time_alerts.agent_capacity_alerts > 0 && (
+            <div className="p-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 mr-2 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-800">Agent Capacity Alerts</p>
+                  <p className="text-sm text-blue-700">{real_time_alerts.agent_capacity_alerts} agents at capacity</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {real_time_alerts.escalation_alerts > 0 && (
+            <div className="p-4 rounded-lg border-l-4 border-purple-500 bg-purple-50 dark:bg-purple-950">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 mr-2 text-purple-600" />
+                <div>
+                  <p className="font-medium text-purple-800">Escalation Alerts</p>
+                  <p className="text-sm text-purple-700">{real_time_alerts.escalation_alerts} conversations escalated</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -336,7 +373,7 @@ const ModernInboxDashboard = () => {
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{overview?.resolved_today || 0}</div>
+                <div className="text-2xl font-bold">{overview?.resolved_conversations || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   +8% from yesterday
                 </p>
@@ -345,12 +382,12 @@ const ModernInboxDashboard = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">AI Confidence</CardTitle>
+                <CardTitle className="text-sm font-medium">Customer Satisfaction</CardTitle>
                 <Brain className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{((ai_insights?.ai_confidence || 0) * 100).toFixed(0)}%</div>
-                <Progress value={(ai_insights?.ai_confidence || 0) * 100} className="mt-2" />
+                <div className="text-2xl font-bold">{ai_insights?.customer_satisfaction || 0}/5</div>
+                <Progress value={((ai_insights?.customer_satisfaction || 0) / 5) * 100} className="mt-2" />
               </CardContent>
             </Card>
           </div>
@@ -367,35 +404,36 @@ const ModernInboxDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-green-600">
-                    {conversation_health?.healthy_conversations || 0}%
+                    {conversation_health?.health_score || 0}%
                   </div>
-                  <p className="text-sm text-muted-foreground">Healthy</p>
+                  <p className="text-sm text-muted-foreground">Health Score</p>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-yellow-600">
-                    {conversation_health?.at_risk_conversations || 0}%
+                    {Object.keys(conversation_health?.bottlenecks || {}).length}
                   </div>
-                  <p className="text-sm text-muted-foreground">At Risk</p>
+                  <p className="text-sm text-muted-foreground">Bottlenecks</p>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-red-600">
-                    {conversation_health?.escalated_conversations || 0}%
+                  <div className="text-3xl font-bold text-blue-600">
+                    {Object.keys(conversation_health?.improvement_areas || {}).length}
                   </div>
-                  <p className="text-sm text-muted-foreground">Escalated</p>
+                  <p className="text-sm text-muted-foreground">Improvement Areas</p>
                 </div>
               </div>
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Average Resolution Time</span>
-                  <span>{conversation_health?.average_resolution_time || 0} min</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Satisfaction Score</span>
-                  <span className="flex items-center">
-                    <Star className="h-4 w-4 mr-1 fill-yellow-400 text-yellow-400" />
-                    {conversation_health?.satisfaction_score || 0}/5
-                  </span>
-                </div>
+              <div className="mt-4 space-y-3">
+                {conversation_health?.bottlenecks && Object.entries(conversation_health.bottlenecks).map(([key, value], index) => (
+                  <div key={index} className="p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                    <div className="text-sm font-medium text-yellow-800 capitalize">{key.replace('_', ' ')}</div>
+                    <div className="text-sm text-yellow-700">{value}</div>
+                  </div>
+                ))}
+                {conversation_health?.improvement_areas && Object.entries(conversation_health.improvement_areas).map(([key, value], index) => (
+                  <div key={index} className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                    <div className="text-sm font-medium text-blue-800 capitalize">{key.replace('_', ' ')}</div>
+                    <div className="text-sm text-blue-700">{value}</div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -418,68 +456,89 @@ const ModernInboxDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Overall Sentiment</span>
-                    <Badge variant={(ai_insights?.sentiment_trend || 'neutral') === 'positive' ? 'default' : 'secondary'}>
-                      {ai_insights?.sentiment_trend || 'neutral'}
+                    <span className="text-sm font-medium">Total Conversations</span>
+                    <Badge variant="default">
+                      {ai_insights?.total_conversations || 0}
                     </Badge>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Escalation Rate</span>
-                      <span>{((ai_insights?.escalation_rate || 0) * 100).toFixed(1)}%</span>
+                      <span>Active Conversations</span>
+                      <span>{ai_insights?.active_conversations || 0}</span>
                     </div>
-                    <Progress value={(ai_insights?.escalation_rate || 0) * 100} />
+                    <div className="flex justify-between text-sm">
+                      <span>Avg Response Time</span>
+                      <span>{ai_insights?.avg_response_time || 0}s</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Customer Satisfaction</span>
+                      <span>{ai_insights?.customer_satisfaction || 0}/5</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Common Intents */}
+            {/* Performance Metrics */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Target className="h-5 w-5 mr-2" />
-                  Common Intents
+                  Performance Metrics
                 </CardTitle>
                 <CardDescription>
-                  Most frequent customer intents
+                  Key performance indicators
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {(ai_insights?.common_intents || []).map((intent, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span className="text-sm capitalize">
-                        {intent.replace('_', ' ')}
-                      </span>
-                      <Badge variant="outline">
-                        {Math.floor(Math.random() * 30) + 10}%
-                      </Badge>
-                    </div>
-                  ))}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Response Time</span>
+                    <Badge variant="outline">
+                      {ai_insights?.avg_response_time || 0}s
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Satisfaction</span>
+                    <Badge variant="outline">
+                      {ai_insights?.customer_satisfaction || 0}/5
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Active Chats</span>
+                    <Badge variant="outline">
+                      {ai_insights?.active_conversations || 0}
+                    </Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* AI Recommendations */}
+            {/* Summary */}
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Lightbulb className="h-5 w-5 mr-2" />
-                  AI Recommendations
+                  AI Insights Summary
                 </CardTitle>
                 <CardDescription>
-                  Intelligent suggestions for improving customer service
+                  Overview of AI-powered analytics
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {(ai_insights?.recommendations || []).map((recommendation, index) => (
-                    <div key={index} className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50">
-                      <Lightbulb className="h-4 w-4 mt-0.5 text-yellow-500" />
-                      <p className="text-sm">{recommendation}</p>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 rounded-lg bg-blue-50">
+                    <div className="text-2xl font-bold text-blue-600">{ai_insights?.total_conversations || 0}</div>
+                    <div className="text-sm text-blue-800">Total Conversations</div>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-green-50">
+                    <div className="text-2xl font-bold text-green-600">{ai_insights?.active_conversations || 0}</div>
+                    <div className="text-sm text-green-800">Active Now</div>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-purple-50">
+                    <div className="text-2xl font-bold text-purple-600">{ai_insights?.customer_satisfaction || 0}/5</div>
+                    <div className="text-sm text-purple-800">Satisfaction</div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -501,32 +560,36 @@ const ModernInboxDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Satisfaction Rating</span>
-                    <div className="flex items-center">
-                      <Star className="h-4 w-4 mr-1 fill-yellow-400 text-yellow-400" />
-                      <span className="font-bold">{agent_performance?.satisfaction_rating || 0}</span>
-                    </div>
+                {agent_performance && agent_performance.length > 0 ? (
+                  <div className="space-y-4">
+                    {agent_performance.map((agent, index) => (
+                      <div key={index} className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">{agent.name || 'Agent'}</span>
+                          <Badge variant="outline">{agent.status || 'Active'}</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Satisfaction:</span>
+                            <span className="ml-2 font-medium">{agent.satisfaction || 0}/5</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Response Time:</span>
+                            <span className="ml-2 font-medium">{agent.response_time || 0}s</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Response Time</span>
-                    <span className="font-bold">{agent_performance?.response_time || 0}s</span>
+                ) : (
+                  <div className="text-center py-8">
+                    <UserCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No agent performance data available</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Performance metrics will appear here once agents start handling conversations
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Conversations Handled</span>
-                    <span className="font-bold">{agent_performance?.conversations_handled || 0}</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Current Load</span>
-                      <span>{agent_performance?.current_load || 0}/{agent_performance?.max_capacity || 1}</span>
-                    </div>
-                    <Progress
-                      value={((agent_performance?.current_load || 0) / (agent_performance?.max_capacity || 1)) * 100}
-                    />
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -544,35 +607,38 @@ const ModernInboxDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-medium mb-2">Predicted Volume</h4>
+                    <h4 className="text-sm font-medium mb-2">Volume Forecast</h4>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Next Hour</span>
-                        <span>{predictive_analytics?.predicted_volume?.next_hour || 0}</span>
+                        <span>Next Week</span>
+                        <span>{predictive_analytics?.volume_forecast?.next_week || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Next 4 Hours</span>
-                        <span>{predictive_analytics?.predicted_volume?.next_4_hours || 0}</span>
+                        <span>Next Month</span>
+                        <span>{predictive_analytics?.volume_forecast?.next_month || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Next 24 Hours</span>
-                        <span>{predictive_analytics?.predicted_volume?.next_24_hours || 0}</span>
+                        <span>Trend</span>
+                        <Badge variant={predictive_analytics?.volume_forecast?.trend === 'increasing' ? 'default' : 'secondary'}>
+                          {predictive_analytics?.volume_forecast?.trend || 'stable'}
+                        </Badge>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium mb-2">Capacity Forecast</h4>
+                    <h4 className="text-sm font-medium mb-2">Capacity Planning</h4>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Current Capacity</span>
-                        <span>{predictive_analytics?.capacity_forecast?.current_capacity || 0}%</span>
+                        <span>Current Agents</span>
+                        <span>{predictive_analytics?.capacity_planning?.current_agents || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Predicted Need</span>
-                        <span>{predictive_analytics?.capacity_forecast?.predicted_need || 0}%</span>
+                        <span>Recommended Agents</span>
+                        <span>{predictive_analytics?.capacity_planning?.recommended_agents || 0}</span>
                       </div>
-                      <div className="p-2 rounded bg-muted text-sm">
-                        <strong>Recommendation:</strong> {predictive_analytics?.capacity_forecast?.recommendation || 'No recommendation available'}
+                      <div className="flex justify-between text-sm">
+                        <span>Utilization Rate</span>
+                        <span>{((predictive_analytics?.capacity_planning?.utilization_rate || 0) * 100).toFixed(1)}%</span>
                       </div>
                     </div>
                   </div>

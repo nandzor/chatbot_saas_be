@@ -7,6 +7,7 @@ import { useApiEndpoint } from './useApi';
  */
 export const useModernInbox = () => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // API hooks for different endpoints
   const { get: getDashboard } = useApiEndpoint('/modern-inbox/dashboard');
@@ -28,10 +29,11 @@ export const useModernInbox = () => {
   const loadDashboard = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await getDashboard();
       return response;
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      setError(error.message || 'Failed to load dashboard data');
       throw error;
     } finally {
       setLoading(false);
@@ -41,11 +43,11 @@ export const useModernInbox = () => {
   // Agent operations
   const loadAvailableAgents = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       const response = await getAvailableAgents(filters);
       return response;
     } catch (error) {
-      console.error('Error loading available agents:', error);
-      console.error('Failed to load available agents');
+      setError(error.message || 'Failed to load available agents');
       throw error;
     }
   }, [getAvailableAgents]);
@@ -59,17 +61,11 @@ export const useModernInbox = () => {
         assignment_reason: reason
       });
 
-      if (response.success) {
-      console.log('Conversation assigned successfully');
-      } else {
-      console.error(response.message || 'Failed to assign conversation');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to assign conversation');
       }
 
       return response;
-    } catch (error) {
-      console.error('Error assigning conversation:', error);
-      console.error('Failed to assign conversation');
-      throw error;
     } finally {
       setLoading(false);
     }
@@ -78,24 +74,18 @@ export const useModernInbox = () => {
   // Conversation operations
   const loadConversations = useCallback(async (filters = {}) => {
     try {
+      setError(null);
       const response = await getConversations(filters);
       return response;
     } catch (error) {
-      console.error('Error loading conversations:', error);
-      console.error('Failed to load conversations');
+      setError(error.message || 'Failed to load conversations');
       throw error;
     }
   }, [getConversations]);
 
   const loadConversationFilters = useCallback(async () => {
-    try {
-      const response = await getConversationFilters();
-      return response;
-    } catch (error) {
-      console.error('Error loading conversation filters:', error);
-      console.error('Failed to load conversation filters');
-      throw error;
-    }
+    const response = await getConversationFilters();
+    return response;
   }, [getConversationFilters]);
 
   const performBulkActions = useCallback(async (conversationIds, action, actionData = {}) => {
@@ -107,17 +97,11 @@ export const useModernInbox = () => {
         action_data: actionData
       });
 
-      if (response.success) {
-      console.log(`Bulk action completed: ${response.data.success_count} successful, ${response.data.error_count} failed`);
-      } else {
-      console.error(response.message || 'Failed to apply bulk action');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to apply bulk action');
       }
 
       return response;
-    } catch (error) {
-      console.error('Error applying bulk action:', error);
-      console.error('Failed to apply bulk action');
-      throw error;
     } finally {
       setLoading(false);
     }
@@ -126,11 +110,11 @@ export const useModernInbox = () => {
   // Template operations
   const loadTemplates = useCallback(async (category = 'all') => {
     try {
+      setError(null);
       const response = await getTemplates({ category });
       return response;
     } catch (error) {
-      console.error('Error loading templates:', error);
-      console.error('Failed to load templates');
+      setError(error.message || 'Failed to load templates');
       throw error;
     }
   }, [getTemplates]);
@@ -140,17 +124,11 @@ export const useModernInbox = () => {
       setLoading(true);
       const response = await saveTemplate(templateData);
 
-      if (response.success) {
-      console.log('Template saved successfully');
-      } else {
-        console.error(response.message || 'Failed to save template');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to save template');
       }
 
       return response;
-    } catch (error) {
-      console.error('Error saving template:', error);
-      console.error('Failed to save template');
-      throw error;
     } finally {
       setLoading(false);
     }
@@ -158,26 +136,14 @@ export const useModernInbox = () => {
 
   // Performance operations
   const loadAgentPerformance = useCallback(async (agentId = null) => {
-    try {
-      const response = await getAgentPerformance({ agent_id: agentId });
-      return response;
-    } catch (error) {
-      console.error('Error loading agent performance:', error);
-      console.error('Failed to load agent performance');
-      throw error;
-    }
+    const response = await getAgentPerformance({ agent_id: agentId });
+    return response;
   }, [getAgentPerformance]);
 
   // AI operations
   const getAiSuggestionsForConversation = useCallback(async (sessionId) => {
-    try {
-      const response = await getAiSuggestions({ session_id: sessionId });
-      return response;
-    } catch (error) {
-      console.error('Error getting AI suggestions:', error);
-      console.error('Failed to get AI suggestions');
-      throw error;
-    }
+    const response = await getAiSuggestions({ session_id: sessionId });
+    return response;
   }, [getAiSuggestions]);
 
   const sendMessageToConversation = useCallback(async (sessionId, content, messageType = 'text') => {
@@ -189,17 +155,11 @@ export const useModernInbox = () => {
         message_type: messageType
       });
 
-      if (response.success) {
-        console.log('Message sent successfully');
-      } else {
-        console.error(response.message || 'Failed to send message');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to send message');
       }
 
       return response;
-    } catch (error) {
-      console.error('Error sending message:', error);
-      console.error('Failed to send message');
-      throw error;
     } finally {
       setLoading(false);
     }
@@ -207,29 +167,18 @@ export const useModernInbox = () => {
 
   // Analytics operations
   const loadCostStatistics = useCallback(async () => {
-    try {
-      const response = await getCostStatistics();
-      return response;
-    } catch (error) {
-      console.error('Error loading cost statistics:', error);
-      console.error('Failed to load cost statistics');
-      throw error;
-    }
+    const response = await getCostStatistics();
+    return response;
   }, [getCostStatistics]);
 
   const loadAssignmentRules = useCallback(async () => {
-    try {
-      const response = await getAssignmentRules();
-      return response;
-    } catch (error) {
-      console.error('Error loading assignment rules:', error);
-      console.error('Failed to load assignment rules');
-      throw error;
-    }
+    const response = await getAssignmentRules();
+    return response;
   }, [getAssignmentRules]);
 
   return {
     loading,
+    error,
 
     // Dashboard
     loadDashboard,

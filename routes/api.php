@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\OrganizationAuditController;
 use App\Http\Controllers\Api\V1\OrganizationNotificationController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\BotPersonalityController;
+use App\Http\Controllers\Api\V1\AgentManagementController;
 use App\Http\Controllers\Api\V1\BotPersonalityWorkflowController;
 use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
 use App\Http\Controllers\Api\V1\WebhookEventController;
@@ -996,6 +997,12 @@ Route::middleware(['unified.auth', 'organization'])->group(function () {
         Route::post('/workers/restart', [QueueController::class, 'restartWorkers'])->name('restart-workers');
     });
 });
+
+// ============================================================================
+// AGENT MANAGEMENT ROUTES
+// ============================================================================
+
+require __DIR__.'/agent-management.php';
 
 // ============================================================================
 // FALLBACK ROUTE

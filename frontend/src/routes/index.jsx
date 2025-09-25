@@ -28,6 +28,7 @@ import ProfileSettings from '@/features/shared/ProfileSettings';
 import WhatsAppIntegration from '@/pages/WhatsAppIntegration';
 import UserList from '@/pages/org-user-management/UserList';
 import BotPersonalityList from '@/pages/bot-personalities/BotPersonalityList';
+import AgentManagementPage from '@/pages/AgentManagementPage';
 
 // Role Management Pages
 import RoleList from '@/pages/roles/RoleList';
@@ -161,6 +162,14 @@ export const router = createBrowserRouter([
             element: (
               <RoleBasedRoute requiredPermission="bot_personalities.view">
                 <BotPersonalityList />
+              </RoleBasedRoute>
+            )
+          },
+          {
+            path: 'agent-management',
+            element: (
+              <RoleBasedRoute requiredPermission="agents.view">
+                <AgentManagementPage />
               </RoleBasedRoute>
             )
           },
