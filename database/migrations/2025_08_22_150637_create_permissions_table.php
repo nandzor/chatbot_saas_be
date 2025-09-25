@@ -22,7 +22,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             
             // Permission Details
-            $table->enum('resource', ['users', 'agents', 'customers', 'chat_sessions', 'messages', 'knowledge_articles', 'knowledge_categories', 'bot_personalities', 'channel_configs', 'ai_models', 'workflows', 'analytics', 'billing', 'subscriptions', 'api_keys', 'webhooks', 'system_logs', 'organizations', 'roles', 'permissions']);
+            $table->enum('resource', ['users', 'agents', 'customers', 'chat_sessions', 'messages', 'knowledge_articles', 'knowledge_categories', 'bot_personalities', 'channel_configs', 'ai_models', 'workflows', 'analytics', 'billing', 'subscriptions', 'api_keys', 'webhooks', 'system_logs', 'organizations', 'roles', 'permissions', 'inbox']);
             $table->enum('action', ['create', 'read', 'update', 'delete', 'execute', 'approve', 'publish', 'export', 'import', 'manage', 'view_all', 'view_own', 'edit_all', 'edit_own']);
             $table->enum('scope', ['global', 'organization', 'department', 'team', 'personal'])->default('organization');
             

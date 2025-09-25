@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\RoleManagementController;
 use App\Http\Controllers\Api\V1\PermissionManagementController;
 use App\Http\Controllers\Api\V1\ChatbotController;
 use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\InboxController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 
 use App\Http\Controllers\Api\V1\KnowledgeBaseController;
@@ -21,11 +22,13 @@ use App\Http\Controllers\Api\V1\BotPersonalityController;
 use App\Http\Controllers\Api\V1\BotPersonalityWorkflowController;
 use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
 use App\Http\Controllers\Api\V1\WebhookEventController;
+use App\Http\Controllers\Api\V1\WhatsAppWebhookController;
 use App\Http\Controllers\Api\V1\SystemConfigurationController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\QueueController;
 use App\Http\Controllers\Api\V1\PermissionSyncController;
 use App\Http\Controllers\Api\V1\OrganizationApprovalController;
+use App\Http\Controllers\Api\V1\EscalationController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmailVerificationController;
 
@@ -47,6 +50,15 @@ require_once __DIR__ . '/waha.php';
 // ============================================================================
 // PUBLIC ROUTES (No Authentication Required)
 // ============================================================================
+
+// WhatsApp Webhook Routes
+Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handleMessage'])
+    ->name('webhook.whatsapp.message');
+
+// WAHA Webhook Routes (for direct webhook URL from WAHA)
+Route::post('/webhook/message', [\App\Http\Controllers\Api\V1\WahaController::class, 'handleMessageWebhook'])
+    ->name('webhook.waha.message')
+    ->withoutMiddleware(['unified.auth', 'waha.organization']);
 
 /**
  * Health Check Endpoint
@@ -165,6 +177,58 @@ Route::prefix('v1')->group(function () {
             // Routes requiring additional permissions
             Route::middleware(['permission:conversations.create'])->post('/', [ConversationController::class, 'store']);
             Route::middleware(['permission:conversations.send_message'])->post('/{id}/messages', [ConversationController::class, 'sendMessage']);
+        });
+
+        // ====================================================================
+        // INBOX MANAGEMENT (With Permission Middleware)
+        // ====================================================================
+
+        Route::prefix('inbox')
+            ->middleware(['permission:inbox.view', 'organization'])
+            ->group(function () {
+
+            // Statistics and overview
+            Route::get('/statistics', [InboxController::class, 'statistics']);
+            Route::get('/export', [InboxController::class, 'export']);
+
+            // Session management
+            Route::get('/sessions', [InboxController::class, 'sessions']);
+            Route::get('/sessions/active', [InboxController::class, 'activeSessions']);
+            Route::get('/sessions/pending', [InboxController::class, 'pendingSessions']);
+
+            // Individual session operations
+            Route::prefix('sessions/{id}')->group(function () {
+                Route::get('/', [InboxController::class, 'showSession']);
+                Route::get('/messages', [InboxController::class, 'sessionMessages']);
+                Route::get('/analytics', [InboxController::class, 'sessionAnalytics']);
+                Route::post('/messages', [InboxController::class, 'sendMessage']);
+                Route::post('/transfer', [InboxController::class, 'transferSession']);
+                Route::post('/end', [InboxController::class, 'endSession']);
+            });
+
+            // Message operations
+            Route::post('/sessions/{sessionId}/messages/{messageId}/read', [InboxController::class, 'markMessageRead']);
+
+            // Bot personality endpoints
+            Route::get('/bot-personalities', [InboxController::class, 'botPersonalities']);
+            Route::get('/bot-personalities/available', [InboxController::class, 'availableBotPersonalities']);
+            Route::get('/bot-personalities/statistics', [InboxController::class, 'botPersonalityStatistics']);
+            Route::get('/bot-personalities/{personalityId}/performance', [InboxController::class, 'botPersonalityPerformance']);
+
+            // Bot personality session operations
+            Route::post('/sessions/{sessionId}/assign-personality', [InboxController::class, 'assignBotPersonality']);
+            Route::post('/sessions/{sessionId}/generate-ai-response', [InboxController::class, 'generateAiResponse']);
+
+            // Escalation operations
+            Route::post('/sessions/{sessionId}/escalate', [EscalationController::class, 'escalateSession']);
+            Route::get('/escalation/config', [EscalationController::class, 'getEscalationConfig']);
+            Route::put('/escalation/config', [EscalationController::class, 'updateEscalationConfig']);
+            Route::get('/escalation/stats', [EscalationController::class, 'getEscalationStats']);
+            Route::get('/escalation/available-agents', [EscalationController::class, 'getAvailableAgents']);
+
+            // Routes requiring additional permissions
+            Route::middleware(['permission:inbox.create'])->post('/sessions', [InboxController::class, 'createSession']);
+            Route::middleware(['permission:inbox.update'])->put('/sessions/{id}', [InboxController::class, 'updateSession']);
         });
 
         // ====================================================================

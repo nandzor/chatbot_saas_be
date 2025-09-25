@@ -42,6 +42,33 @@ return [
         'session_timeout' => env('WAHA_SESSION_TIMEOUT', 3600),
     ],
 
+    // Webhook Configuration
+    'webhook' => [
+        'validate_signature' => env('WAHA_WEBHOOK_VALIDATE_SIGNATURE', false),
+        'secret' => env('WAHA_WEBHOOK_SECRET', ''),
+        'url' => env('WAHA_WEBHOOK_URL', ''),
+        'events' => [
+            'message',
+            'message.reaction',
+            'message.ack',
+            'message.revoked',
+            'message.edited',
+            'group.v2.join',
+            'group.v2.leave',
+            'group.v2.update',
+            'group.v2.participants',
+            'chat.archive',
+            'presence.update',
+            'poll.vote',
+            'call.received',
+            'call.accepted',
+            'call.rejected',
+            'session.status',
+        ],
+        'timeout' => env('WAHA_WEBHOOK_TIMEOUT', 30),
+        'retry_attempts' => env('WAHA_WEBHOOK_RETRY_ATTEMPTS', 3),
+    ],
+
     // Message Configuration
     'messages' => [
         'default_limit' => 50,

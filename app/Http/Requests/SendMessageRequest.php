@@ -11,7 +11,7 @@ class SendMessageRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->hasPermission('conversations.send_message');
+        return true;
     }
 
     /**
@@ -23,105 +23,51 @@ class SendMessageRequest extends FormRequest
     {
         return [
             'content' => 'required|string|max:5000',
-            'sender_type' => 'required|string|in:customer,agent,bot,system',
-            'sender_id' => 'nullable|uuid',
-            'message_type' => 'nullable|string|in:text,image,file,audio,video,location,contact,sticker',
-            'status' => 'nullable|string|in:sent,delivered,read,failed',
-            'is_read' => 'nullable|boolean',
-            'metadata' => 'nullable|array',
-            'metadata.attachments' => 'nullable|array',
-            'metadata.attachments.*.type' => 'nullable|string|max:50',
-            'metadata.attachments.*.url' => 'nullable|url|max:500',
-            'metadata.attachments.*.name' => 'nullable|string|max:255',
-            'metadata.attachments.*.size' => 'nullable|integer|min:0',
-            'metadata.reactions' => 'nullable|array',
-            'metadata.reactions.*.type' => 'nullable|string|max:20',
-            'metadata.reactions.*.user_id' => 'nullable|uuid',
-            'metadata.reactions.*.created_at' => 'nullable|date',
-            'metadata.quick_replies' => 'nullable|array',
-            'metadata.quick_replies.*' => 'nullable|string|max:100',
-            'metadata.buttons' => 'nullable|array',
-            'metadata.buttons.*.text' => 'nullable|string|max:50',
-            'metadata.buttons.*.action' => 'nullable|string|max:100',
-            'metadata.buttons.*.url' => 'nullable|url|max:500',
-            'metadata.buttons.*.payload' => 'nullable|string|max:500',
-            'sentiment_score' => 'nullable|numeric|min:-1|max:1',
+            'message_type' => 'nullable|string|in:text,image,video,audio,file,location,contact,sticker',
+            'media_url' => 'nullable|url|max:500',
+            'media_type' => 'nullable|string|max:50',
+            'media_size' => 'nullable|integer|min:0',
+            'media_metadata' => 'nullable|array',
+            'thumbnail_url' => 'nullable|url|max:500',
+            'quick_replies' => 'nullable|array',
+            'buttons' => 'nullable|array',
+            'template_data' => 'nullable|array',
             'intent' => 'nullable|string|max:100',
             'entities' => 'nullable|array',
-            'confidence_score' => 'nullable|numeric|min:0|max:1',
+            'confidence_score' => 'nullable|numeric|between:0,1',
+            'ai_generated' => 'nullable|boolean',
+            'ai_model_used' => 'nullable|string|max:100',
+            'sentiment_score' => 'nullable|numeric|between:-1,1',
+            'sentiment_label' => 'nullable|string|in:positive,negative,neutral',
+            'emotion_scores' => 'nullable|array',
+            'reply_to_message_id' => 'nullable|uuid|exists:messages,id',
+            'thread_id' => 'nullable|uuid',
+            'context' => 'nullable|array',
+            'metadata' => 'nullable|array',
         ];
     }
 
     /**
      * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
      */
     public function messages(): array
     {
         return [
             'content.required' => 'Message content is required.',
-            'content.max' => 'Message content cannot exceed 5000 characters.',
-            'sender_type.required' => 'Sender type is required.',
-            'sender_type.in' => 'Sender type must be one of: customer, agent, bot, system.',
-            'sender_id.uuid' => 'Sender ID must be a valid UUID.',
-            'message_type.in' => 'Message type must be one of: text, image, file, audio, video, location, contact, sticker.',
-            'status.in' => 'Status must be one of: sent, delivered, read, failed.',
-            'metadata.attachments.*.type.max' => 'Attachment type cannot exceed 50 characters.',
-            'metadata.attachments.*.url.url' => 'Attachment URL must be a valid URL.',
-            'metadata.attachments.*.url.max' => 'Attachment URL cannot exceed 500 characters.',
-            'metadata.attachments.*.name.max' => 'Attachment name cannot exceed 255 characters.',
-            'metadata.attachments.*.size.min' => 'Attachment size cannot be negative.',
-            'metadata.reactions.*.type.max' => 'Reaction type cannot exceed 20 characters.',
-            'metadata.reactions.*.user_id.uuid' => 'Reaction user ID must be a valid UUID.',
-            'metadata.reactions.*.created_at.date' => 'Reaction created at must be a valid date.',
-            'metadata.quick_replies.*.max' => 'Quick reply cannot exceed 100 characters.',
-            'metadata.buttons.*.text.max' => 'Button text cannot exceed 50 characters.',
-            'metadata.buttons.*.action.max' => 'Button action cannot exceed 100 characters.',
-            'metadata.buttons.*.url.url' => 'Button URL must be a valid URL.',
-            'metadata.buttons.*.url.max' => 'Button URL cannot exceed 500 characters.',
-            'metadata.buttons.*.payload.max' => 'Button payload cannot exceed 500 characters.',
-            'sentiment_score.min' => 'Sentiment score must be between -1 and 1.',
-            'sentiment_score.max' => 'Sentiment score must be between -1 and 1.',
-            'intent.max' => 'Intent cannot exceed 100 characters.',
-            'confidence_score.min' => 'Confidence score must be between 0 and 1.',
-            'confidence_score.max' => 'Confidence score must be between 0 and 1.',
+            'content.max' => 'Message content must not exceed 5000 characters.',
+            'message_type.in' => 'Message type must be one of: text, image, video, audio, file, location, contact, sticker.',
+            'media_url.url' => 'Media URL must be a valid URL.',
+            'media_url.max' => 'Media URL must not exceed 500 characters.',
+            'thumbnail_url.url' => 'Thumbnail URL must be a valid URL.',
+            'thumbnail_url.max' => 'Thumbnail URL must not exceed 500 characters.',
+            'confidence_score.between' => 'Confidence score must be between 0 and 1.',
+            'sentiment_score.between' => 'Sentiment score must be between -1 and 1.',
+            'sentiment_label.in' => 'Sentiment label must be one of: positive, negative, neutral.',
+            'reply_to_message_id.uuid' => 'Reply to message ID must be a valid UUID.',
+            'reply_to_message_id.exists' => 'Reply to message not found.',
+            'thread_id.uuid' => 'Thread ID must be a valid UUID.',
         ];
-    }
-
-    /**
-     * Get custom attributes for validator errors.
-     */
-    public function attributes(): array
-    {
-        return [
-            'sender_type' => 'sender type',
-            'sender_id' => 'sender ID',
-            'message_type' => 'message type',
-            'metadata.attachments' => 'attachments',
-            'metadata.reactions' => 'reactions',
-            'metadata.quick_replies' => 'quick replies',
-            'metadata.buttons' => 'buttons',
-            'sentiment_score' => 'sentiment score',
-            'confidence_score' => 'confidence score',
-        ];
-    }
-
-    /**
-     * Prepare the data for validation.
-     */
-    protected function prepareForValidation(): void
-    {
-        // Set default values
-        $this->merge([
-            'message_type' => $this->message_type ?? 'text',
-            'status' => $this->status ?? 'sent',
-            'is_read' => $this->is_read ?? false,
-        ]);
-
-        // Trim content
-        if ($this->has('content')) {
-            $this->merge([
-                'content' => trim($this->content)
-            ]);
-        }
     }
 }

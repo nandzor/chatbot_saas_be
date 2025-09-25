@@ -138,7 +138,8 @@ class RolePermissionSeeder extends Seeder
                     'billing.view',
                     'api_keys.view', 'api_keys.create', 'api_keys.update',
                     'webhooks.view', 'webhooks.create', 'webhooks.update',
-                    'workflows.view', 'workflows.create', 'workflows.update', 'workflows.execute'
+                    'workflows.view', 'workflows.create', 'workflows.update', 'workflows.execute',
+                    'inbox.view', 'inbox.create', 'inbox.update', 'inbox.manage', 'inbox.export'
                 ];
 
                 foreach ($permissions as $permission) {
@@ -168,7 +169,8 @@ class RolePermissionSeeder extends Seeder
                     'knowledge_articles.view',
                     'bot_personalities.view',
                     'channel_configs.view',
-                    'analytics.view'
+                    'analytics.view',
+                    'inbox.view', 'inbox.create', 'inbox.update'
                 ];
 
                 foreach ($permissions as $permission) {

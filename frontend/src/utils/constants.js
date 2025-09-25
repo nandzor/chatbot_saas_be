@@ -184,6 +184,16 @@ export const API_ENDPOINTS = {
     BASE: '/conversations',
     STATISTICS: '/conversations/statistics',
     HISTORY: '/conversations/history'
+  },
+
+  // Inbox
+  INBOX: {
+    BASE: '/inbox',
+    STATISTICS: '/inbox/statistics',
+    SESSIONS: '/inbox/sessions',
+    ACTIVE_SESSIONS: '/inbox/sessions/active',
+    PENDING_SESSIONS: '/inbox/sessions/pending',
+    EXPORT: '/inbox/export'
   }
 };
 

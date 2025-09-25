@@ -3,7 +3,7 @@
  * Reusable hooks untuk API operations
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { debounce } from '@/utils/helpers';
 
 /**
@@ -24,28 +24,46 @@ export const useApi = (apiFunction, options = {}) => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Use refs to store current values without causing re-renders
+  const apiFunctionRef = useRef(apiFunction);
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  // Update refs when values change
+  useEffect(() => {
+    apiFunctionRef.current = apiFunction;
+  }, [apiFunction]);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
   const execute = useCallback(async (params = {}) => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await apiFunction(params);
+      const result = await apiFunctionRef.current(params);
 
       if (result.success) {
         setData(result.data);
-        onSuccess?.(result.data);
+        onSuccessRef.current?.(result.data);
       } else {
         setError(result.error);
-        onError?.(result.error);
+        onErrorRef.current?.(result.error);
       }
     } catch (err) {
       const errorMessage = err.message || 'An error occurred';
       setError(errorMessage);
-      onError?.(errorMessage);
+      onErrorRef.current?.(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [apiFunction, onSuccess, onError]);
+  }, []);
 
   const refresh = useCallback(async (params = {}) => {
     setRefreshing(true);
@@ -73,7 +91,7 @@ export const useApi = (apiFunction, options = {}) => {
     if (immediate) {
       execute();
     }
-  }, [immediate, execute, ...dependencies]);
+  }, [immediate, ...dependencies]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     data,
@@ -119,12 +137,30 @@ export const usePaginatedApi = (apiFunction, options = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Use refs to store current values without causing re-renders
+  const apiFunctionRef = useRef(apiFunction);
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  // Update refs when values change
+  useEffect(() => {
+    apiFunctionRef.current = apiFunction;
+  }, [apiFunction]);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
   const fetchData = useCallback(async (params = {}) => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await apiFunction({
+      const result = await apiFunctionRef.current({
         page: pagination.currentPage,
         per_page: pagination.itemsPerPage,
         search,
@@ -138,24 +174,24 @@ export const usePaginatedApi = (apiFunction, options = {}) => {
         setData(result.data.data || result.data);
         setPagination(prev => ({
           ...prev,
-          currentPage: result.data.current_page || result.data.page || pagination.currentPage,
+          currentPage: result.data.current_page || result.data.page || prev.currentPage,
           totalPages: result.data.last_page || result.data.total_pages || 1,
           totalItems: result.data.total || result.data.total_items || 0,
-          itemsPerPage: result.data.per_page || result.data.items_per_page || pagination.itemsPerPage
+          itemsPerPage: result.data.per_page || result.data.items_per_page || prev.itemsPerPage
         }));
-        onSuccess?.(result.data);
+        onSuccessRef.current?.(result.data);
       } else {
         setError(result.error);
-        onError?.(result.error);
+        onErrorRef.current?.(result.error);
       }
     } catch (err) {
       const errorMessage = err.message || 'An error occurred';
       setError(errorMessage);
-      onError?.(errorMessage);
+      onErrorRef.current?.(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [apiFunction, pagination.currentPage, pagination.itemsPerPage, search, sort, filters, onSuccess, onError]);
+  }, [pagination.currentPage, pagination.itemsPerPage, search, sort.field, sort.direction, filters]);
 
   const handlePageChange = useCallback((page) => {
     setPagination(prev => ({ ...prev, currentPage: page }));
@@ -186,7 +222,7 @@ export const usePaginatedApi = (apiFunction, options = {}) => {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [pagination.currentPage, pagination.itemsPerPage, search, sort.field, sort.direction, filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     data,
@@ -223,35 +259,37 @@ export const useSearchApi = (apiFunction, options = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const debouncedSearch = useCallback(
-    debounce(async (searchQuery) => {
-      if (searchQuery.length < minLength) {
-        setResults([]);
-        return;
+  const searchFunction = useCallback(async (searchQuery) => {
+    if (searchQuery.length < minLength) {
+      setResults([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await apiFunction({ q: searchQuery });
+
+      if (result.success) {
+        setResults(result.data);
+        onSuccess?.(result.data);
+      } else {
+        setError(result.error);
+        onError?.(result.error);
       }
+    } catch (err) {
+      const errorMessage = err.message || 'Search failed';
+      setError(errorMessage);
+      onError?.(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiFunction, minLength, onSuccess, onError]);
 
-      setLoading(true);
-      setError(null);
-
-      try {
-        const result = await apiFunction({ q: searchQuery });
-
-        if (result.success) {
-          setResults(result.data);
-          onSuccess?.(result.data);
-        } else {
-          setError(result.error);
-          onError?.(result.error);
-        }
-      } catch (err) {
-        const errorMessage = err.message || 'Search failed';
-        setError(errorMessage);
-        onError?.(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    }, debounceDelay),
-    [apiFunction, debounceDelay, minLength, onSuccess, onError]
+  const debouncedSearch = useMemo(
+    () => debounce(searchFunction, debounceDelay),
+    [searchFunction, debounceDelay]
   );
 
   const handleSearch = useCallback((searchQuery) => {
@@ -544,7 +582,7 @@ export const useFormApi = (apiFunction, options = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [apiFunction, data, validate, onSuccess, onError]);
+  }, [apiFunction, data, validate, onSuccess, onError, setError]);
 
   const reset = useCallback(() => {
     setData(initialData);

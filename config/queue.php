@@ -119,6 +119,15 @@ return [
             'after_commit' => false,
         ],
 
+        'whatsapp-messages' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_WHATSAPP_QUEUE_CONNECTION', 'default'),
+            'queue' => env('REDIS_WHATSAPP_QUEUE', 'whatsapp-messages'),
+            'retry_after' => (int) env('REDIS_WHATSAPP_QUEUE_RETRY_AFTER', 120),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
     ],
 
     /*

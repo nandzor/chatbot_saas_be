@@ -665,7 +665,7 @@ class WahaService extends BaseHttpClient
             if ($response->successful()) {
                 // WAHA server returns JSON with QR code data
                 $responseData = $response->json();
-                
+
                 if (isset($responseData['data']) && isset($responseData['mimetype'])) {
                     // WAHA server returns QR code as base64 data in JSON format
                     return [
@@ -1275,5 +1275,162 @@ class WahaService extends BaseHttpClient
         }
 
         return $data;
+    }
+
+    /**
+     * Configure webhook for a session
+     *
+     * @param string $sessionName
+     * @param string $webhookUrl
+     * @param array $events
+     * @param array $options
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function configureWebhook(string $sessionName, string $webhookUrl, array $events = ['message'], array $options = []): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getWebhookConfigured();
+        }
+
+        try {
+            $payload = [
+                'webhook' => [
+                    'url' => $webhookUrl,
+                    'events' => $events,
+                    'webhook_by_events' => $options['webhook_by_events'] ?? false,
+                ]
+            ];
+
+            // Add additional options
+            if (!empty($options)) {
+                $payload = array_merge($payload, $options);
+            }
+
+            $response = $this->post(sprintf("/api/sessions/%s/webhook", $sessionName), $payload);
+
+            $data = $this->handleResponse($response, 'configure webhook');
+
+            return [
+                'success' => true,
+                'data' => $data,
+                'message' => 'Webhook configured successfully'
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to configure webhook', [
+                'session' => $sessionName,
+                'webhook_url' => $webhookUrl,
+                'events' => $events,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'data' => [],
+                'message' => 'Failed to configure webhook: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get webhook configuration for a session
+     *
+     * @param string $sessionName
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function getWebhookConfig(string $sessionName): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->getWebhookConfig();
+        }
+
+        try {
+            $response = $this->get(sprintf("/api/sessions/%s/webhook", $sessionName));
+
+            $data = $this->handleResponse($response, 'get webhook config');
+
+            return [
+                'success' => true,
+                'data' => $data,
+                'message' => 'Webhook configuration retrieved successfully'
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get webhook config', [
+                'session' => $sessionName,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'data' => [],
+                'message' => 'Failed to get webhook config: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Create session with webhook configuration
+     *
+     * @param string $sessionName
+     * @param string $webhookUrl
+     * @param array $sessionConfig
+     * @return array{success: bool, data: array, message: string}
+     */
+    public function createSessionWithWebhook(string $sessionName, string $webhookUrl, array $sessionConfig = []): array
+    {
+        try {
+            // Default session configuration
+            $defaultConfig = [
+                'webhook' => [
+                    'url' => $webhookUrl,
+                    'events' => ['message', 'session.status'],
+                    'webhook_by_events' => false,
+                ],
+                'noweb' => [
+                    'store' => [
+                        'enabled' => true,
+                        'fullHistory' => false
+                    ]
+                ]
+            ];
+
+            // Merge with provided config
+            $config = array_merge_recursive($defaultConfig, $sessionConfig);
+
+            // Create session
+            $sessionData = [
+                'name' => $sessionName,
+                'start' => true,
+                'config' => $config
+            ];
+            $createResult = $this->createSession($sessionData);
+
+            if (!$createResult['success']) {
+                return $createResult;
+            }
+
+            // Start session
+            $startResult = $this->startSession($sessionName, $config);
+
+            return [
+                'success' => $startResult['success'],
+                'data' => array_merge($createResult['data'], $startResult['data']),
+                'message' => $startResult['success'] ? 'Session created and started with webhook' : 'Session created but failed to start'
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to create session with webhook', [
+                'session' => $sessionName,
+                'webhook_url' => $webhookUrl,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'data' => [],
+                'message' => 'Failed to create session with webhook: ' . $e->getMessage()
+            ];
+        }
     }
 }

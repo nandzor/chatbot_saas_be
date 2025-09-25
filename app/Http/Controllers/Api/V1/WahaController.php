@@ -970,6 +970,71 @@ class WahaController extends BaseApiController
     }
 
     /**
+     * Handle incoming WhatsApp webhooks from WAHA (all event types)
+     */
+    public function handleMessageWebhook(Request $request): JsonResponse
+    {
+        try {
+            $payload = $request->all();
+
+            Log::info('WAHA webhook received', [
+                'event' => $payload['event'] ?? 'unknown',
+                'session' => $payload['session'] ?? 'unknown',
+                'timestamp' => now()
+            ]);
+
+            // Validate webhook signature if configured
+            if (!$this->validateWahaWebhookSignature($request)) {
+                Log::warning('Invalid WAHA webhook signature', [
+                    'payload' => $payload
+                ]);
+                return $this->errorResponse('Invalid webhook signature', 401);
+            }
+
+            // Extract organization ID from session name
+            $organizationId = $this->extractOrganizationFromSession($payload['session'] ?? null);
+
+            if (!$organizationId) {
+                Log::error('Organization ID not found for WAHA webhook', [
+                    'session' => $payload['session'] ?? null,
+                    'event' => $payload['event'] ?? 'unknown'
+                ]);
+                return $this->errorResponse('Organization not found', 400);
+            }
+
+            // Handle different webhook event types
+            $result = $this->handleWahaWebhookEvent($payload, $organizationId);
+
+            if (!$result['success']) {
+                return $this->errorResponse($result['message'], $result['code'] ?? 400);
+            }
+
+            Log::info('WAHA webhook processed successfully', [
+                'event' => $payload['event'] ?? 'unknown',
+                'session' => $payload['session'] ?? 'unknown',
+                'organization_id' => $organizationId,
+                'result' => $result
+            ]);
+
+            // Return immediate response to WAHA
+            return $this->successResponse('Webhook processed successfully', [
+                'event' => $payload['event'] ?? 'unknown',
+                'session' => $payload['session'] ?? 'unknown',
+                'organization_id' => $organizationId,
+                'status' => 'accepted'
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('WAHA webhook processing failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'payload' => $request->all()
+            ]);
+            return $this->errorResponse('Webhook processing failed', 500);
+        }
+    }
+
+    /**
      * Sync session status from WAHA server to database
      */
     public function syncSessionStatus(string $sessionId): JsonResponse
@@ -1445,5 +1510,736 @@ class WahaController extends BaseApiController
             ]);
             return $this->errorResponse('Failed to send chat message: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Extract message data from WAHA webhook payload
+     */
+    private function extractWahaMessageData(array $payload): ?array
+    {
+        try {
+
+            // Standard WAHA webhook format (from documentation)
+            if (isset($payload['event']) && in_array($payload['event'], ['message', 'message.any']) && isset($payload['payload'])) {
+                $message = $payload['payload'];
+
+                return [
+                    'message_id' => $message['id'] ?? \Illuminate\Support\Str::uuid(),
+                    'from' => $message['from'] ?? null,
+                    'to' => $message['to'] ?? null,
+                    'text' => $message['body'] ?? null,
+                    'message_type' => $this->determineMessageType($message),
+                    'timestamp' => $message['timestamp'] ?? now()->timestamp,
+                    'session_name' => $payload['session'] ?? null,
+                    'customer_phone' => $this->extractPhoneNumber($message['from'] ?? null),
+                    'customer_name' => $this->extractCustomerName($message),
+                    'raw_data' => $payload,
+                    'waha_message_id' => $message['id'] ?? null,
+                    'waha_session' => $payload['session'] ?? null,
+                    'waha_event_id' => $payload['id'] ?? null,
+                    'from_me' => $message['fromMe'] ?? false,
+                    'source' => $message['source'] ?? 'unknown',
+                    'participant' => $message['participant'] ?? null,
+                    'has_media' => $message['hasMedia'] ?? false,
+                    'media' => $message['media'] ?? null,
+                    'ack' => $message['ack'] ?? -1,
+                    'ack_name' => $message['ackName'] ?? null,
+                    'author' => $message['author'] ?? null,
+                    'location' => $message['location'] ?? null,
+                    'v_cards' => $message['vCards'] ?? [],
+                    'reply_to' => $message['replyTo'] ?? null,
+                    'me' => $payload['me'] ?? null,
+                    'environment' => $payload['environment'] ?? null,
+                ];
+            }
+
+            // Legacy WAHA format (backward compatibility)
+            if (isset($payload['message']) && isset($payload['session'])) {
+                $message = $payload['message'];
+
+                return [
+                    'message_id' => $message['id'] ?? \Illuminate\Support\Str::uuid(),
+                    'from' => $message['from'] ?? null,
+                    'to' => $message['to'] ?? null,
+                    'text' => $message['text']['body'] ?? $message['body'] ?? null,
+                    'message_type' => $message['type'] ?? 'text',
+                    'timestamp' => $message['timestamp'] ?? now()->timestamp,
+                    'session_name' => $payload['session'] ?? null,
+                    'customer_phone' => $this->extractPhoneNumber($message['from'] ?? null),
+                    'customer_name' => $message['contact']['name'] ?? null,
+                    'raw_data' => $payload,
+                    'waha_message_id' => $message['id'] ?? null,
+                    'waha_session' => $payload['session'] ?? null,
+                ];
+            }
+
+            return null;
+
+        } catch (Exception $e) {
+            Log::error('Failed to extract WAHA message data', [
+                'error' => $e->getMessage(),
+                'payload' => $payload
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Determine message type from WAHA message data
+     */
+    private function determineMessageType(array $message): string
+    {
+        if (isset($message['hasMedia']) && $message['hasMedia']) {
+            if (isset($message['media']['mimetype'])) {
+                $mimetype = $message['media']['mimetype'];
+                if (str_starts_with($mimetype, 'image/')) return 'image';
+                if (str_starts_with($mimetype, 'video/')) return 'video';
+                if (str_starts_with($mimetype, 'audio/')) return 'audio';
+                if (str_starts_with($mimetype, 'application/')) return 'document';
+            }
+            return 'media';
+        }
+
+        if (isset($message['location'])) return 'location';
+        if (isset($message['vCards']) && !empty($message['vCards'])) return 'contact';
+        if (isset($message['body']) && empty($message['body'])) return 'system';
+
+        return 'text';
+    }
+
+    /**
+     * Extract phone number from WAHA format
+     */
+    private function extractPhoneNumber(?string $from): ?string
+    {
+        if (!$from) return null;
+
+        // Remove @c.us suffix if present
+        return str_replace('@c.us', '', $from);
+    }
+
+    /**
+     * Extract customer name from message data
+     */
+    private function extractCustomerName(array $message): ?string
+    {
+
+        // Try different possible locations for customer name
+        if (isset($message['contact']['name'])) {
+            return $message['contact']['name'];
+        }
+
+        if (isset($message['author'])) {
+            return $message['author'];
+        }
+
+        if (isset($message['pushName'])) {
+            return $message['pushName'];
+        }
+
+        // Check in _data.notifyName (real WAHA data)
+        if (isset($message['_data']['notifyName'])) {
+            return $message['_data']['notifyName'];
+        }
+
+        // Check in media._data.notifyName (real WAHA data structure)
+        if (isset($message['media']['_data']['notifyName'])) {
+            return $message['media']['_data']['notifyName'];
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract organization ID from session name
+     */
+    private function extractOrganizationFromSession(?string $sessionName): ?string
+    {
+        if (!$sessionName) {
+            return null;
+        }
+
+        try {
+            // Find organization by session name
+            $wahaSession = \App\Models\WahaSession::where('session_name', $sessionName)->first();
+
+            if ($wahaSession) {
+                return $wahaSession->organization_id;
+            }
+
+            // Try to extract from session name pattern (e.g., "session_orgId_kbId")
+            if (str_starts_with($sessionName, 'session_')) {
+                $parts = explode('_', $sessionName);
+                if (count($parts) >= 2) {
+                    $potentialOrgId = $parts[1];
+                    // Verify if this is a valid organization ID
+                    $organization = \App\Models\Organization::find($potentialOrgId);
+                    if ($organization) {
+                        return $organization->id;
+                    }
+                }
+            }
+
+            return null;
+
+        } catch (Exception $e) {
+            Log::error('Failed to extract organization from session', [
+                'session_name' => $sessionName,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Get webhook configuration for a session
+     */
+    public function getWebhookConfig(string $sessionId): JsonResponse
+    {
+        try {
+            // Get current organization
+            $organization = $this->getCurrentOrganization();
+            if (!$organization) {
+                return $this->handleUnauthorizedAccess('get webhook config');
+            }
+
+            // Verify session belongs to current organization
+            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
+            if (!$localSession) {
+                return $this->handleResourceNotFound('WAHA session', $sessionId);
+            }
+
+            $sessionName = $localSession->session_name;
+            $result = $this->wahaService->getWebhookConfig($sessionName);
+
+            return $this->successResponse(
+                $result['message'] ?? 'Webhook configuration retrieved successfully',
+                $result['data'] ?? []
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to get webhook config', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to get webhook config: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Configure webhook for a session
+     */
+    public function configureWebhook(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            // Get current organization
+            $organization = $this->getCurrentOrganization();
+            if (!$organization) {
+                return $this->handleUnauthorizedAccess('configure webhook');
+            }
+
+            // Verify session belongs to current organization
+            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
+            if (!$localSession) {
+                return $this->handleResourceNotFound('WAHA session', $sessionId);
+            }
+
+            // Validate request
+            $request->validate([
+                'webhook_url' => 'required|url',
+                'events' => 'array',
+                'events.*' => 'string|in:message,session.status,message.status',
+                'webhook_by_events' => 'boolean',
+            ]);
+
+            $sessionName = $localSession->session_name;
+            $webhookUrl = $request->input('webhook_url');
+            $events = $request->input('events', ['message', 'session.status']);
+            $options = $request->only(['webhook_by_events']);
+
+            $result = $this->wahaService->configureWebhook($sessionName, $webhookUrl, $events, $options);
+
+            return $this->successResponse(
+                $result['message'] ?? 'Webhook configured successfully',
+                $result['data'] ?? []
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to configure webhook', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to configure webhook: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Update webhook configuration for a session
+     */
+    public function updateWebhookConfig(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            // Get current organization
+            $organization = $this->getCurrentOrganization();
+            if (!$organization) {
+                return $this->handleUnauthorizedAccess('update webhook config');
+            }
+
+            // Verify session belongs to current organization
+            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
+            if (!$localSession) {
+                return $this->handleResourceNotFound('WAHA session', $sessionId);
+            }
+
+            // Validate request
+            $request->validate([
+                'webhook_url' => 'sometimes|url',
+                'events' => 'sometimes|array',
+                'events.*' => 'string|in:message,session.status,message.status',
+                'webhook_by_events' => 'sometimes|boolean',
+            ]);
+
+            $sessionName = $localSession->session_name;
+            $webhookUrl = $request->input('webhook_url');
+            $events = $request->input('events', ['message', 'session.status']);
+            $options = $request->only(['webhook_by_events']);
+
+            $result = $this->wahaService->configureWebhook($sessionName, $webhookUrl, $events, $options);
+
+            return $this->successResponse(
+                $result['message'] ?? 'Webhook configuration updated successfully',
+                $result['data'] ?? []
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to update webhook config', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->errorResponse('Failed to update webhook config: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Handle different types of WAHA webhook events
+     */
+    private function handleWahaWebhookEvent(array $payload, string $organizationId): array
+    {
+        $eventType = $payload['event'] ?? 'unknown';
+
+        try {
+            switch ($eventType) {
+                case 'message':
+                case 'message.any':
+                    return $this->handleMessageEvent($payload, $organizationId);
+
+                case 'message.reaction':
+                    return $this->handleMessageReactionEvent($payload, $organizationId);
+
+                case 'message.ack':
+                    return $this->handleMessageAckEvent($payload, $organizationId);
+
+                case 'message.revoked':
+                    return $this->handleMessageRevokedEvent($payload, $organizationId);
+
+                case 'message.edited':
+                    return $this->handleMessageEditedEvent($payload, $organizationId);
+
+                case 'group.v2.join':
+                case 'group.v2.leave':
+                case 'group.v2.update':
+                case 'group.v2.participants':
+                    return $this->handleGroupEvent($payload, $organizationId);
+
+                case 'chat.archive':
+                    return $this->handleChatArchiveEvent($payload, $organizationId);
+
+                case 'presence.update':
+                    return $this->handlePresenceUpdateEvent($payload, $organizationId);
+
+                case 'poll.vote':
+                    return $this->handlePollVoteEvent($payload, $organizationId);
+
+                case 'call.received':
+                case 'call.accepted':
+                case 'call.rejected':
+                    return $this->handleCallEvent($payload, $organizationId);
+
+                default:
+                    Log::info('Unhandled WAHA webhook event type', [
+                        'event' => $eventType,
+                        'organization_id' => $organizationId
+                    ]);
+                    return [
+                        'success' => true,
+                        'message' => 'Event type not handled but acknowledged'
+                    ];
+            }
+        } catch (Exception $e) {
+            Log::error('Failed to handle WAHA webhook event', [
+                'event' => $eventType,
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'message' => 'Failed to handle webhook event: ' . $e->getMessage(),
+                'code' => 500
+            ];
+        }
+    }
+
+    /**
+     * Handle message events
+     */
+    private function handleMessageEvent(array $payload, string $organizationId): array
+    {
+        // Extract message data from WAHA webhook format
+        $messageData = $this->extractWahaMessageData($payload);
+
+        if (!$messageData) {
+            return [
+                'success' => false,
+                'message' => 'Invalid message format',
+                'code' => 400
+            ];
+        }
+
+        // Add organization_id to message data
+        $messageData['organization_id'] = $organizationId;
+
+        // Check if this is an outgoing message (from our system)
+        $isOutgoing = $messageData['from_me'] ?? false;
+
+        if ($isOutgoing) {
+            // Handle outgoing message (from bot/agent)
+            Log::info('Outgoing message detected', [
+                'message_id' => $messageData['message_id'],
+                'to' => $messageData['to'],
+                'text' => $messageData['text'],
+                'organization_id' => $organizationId
+            ]);
+
+            // Save outgoing message to database
+            $this->saveOutgoingMessage($messageData, $organizationId);
+
+            return [
+                'success' => true,
+                'message' => 'Outgoing message processed',
+                'data' => [
+                    'message_id' => $messageData['message_id'] ?? null,
+                    'to' => $messageData['to'] ?? null,
+                    'direction' => 'outgoing'
+                ]
+            ];
+        } else {
+            // Handle incoming message (from customer)
+            Log::info('Incoming message detected', [
+                'message_id' => $messageData['message_id'],
+                'from' => $messageData['from'],
+                'text' => $messageData['text'],
+                'organization_id' => $organizationId
+            ]);
+
+            // Fire event for asynchronous processing
+            event(new \App\Events\WhatsAppMessageReceived($messageData, $organizationId));
+
+            return [
+                'success' => true,
+                'message' => 'Incoming message event processed',
+                'data' => [
+                    'message_id' => $messageData['message_id'] ?? null,
+                    'from' => $messageData['from'] ?? null,
+                    'direction' => 'incoming'
+                ]
+            ];
+        }
+    }
+
+    /**
+     * Save outgoing message to database
+     */
+    private function saveOutgoingMessage(array $messageData, string $organizationId): void
+    {
+        try {
+            // Find the session based on customer phone number
+            $customerPhone = $messageData['to'] ?? null;
+            if (!$customerPhone) {
+                Log::warning('Cannot save outgoing message: no customer phone found', [
+                    'message_data' => $messageData
+                ]);
+                return;
+            }
+
+            // Find customer (try both formats: with and without @c.us)
+            $customer = \App\Models\Customer::where('organization_id', $organizationId)
+                ->where(function($query) use ($customerPhone) {
+                    $query->where('phone', $customerPhone)
+                          ->orWhere('phone', str_replace('@c.us', '', $customerPhone))
+                          ->orWhere('phone', $customerPhone . '@c.us');
+                })
+                ->first();
+
+            if (!$customer) {
+                Log::warning('Cannot save outgoing message: customer not found', [
+                    'phone' => $customerPhone,
+                    'organization_id' => $organizationId
+                ]);
+                return;
+            }
+
+            // Find active session
+            $session = \App\Models\ChatSession::where('organization_id', $organizationId)
+                ->where('customer_id', $customer->id)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$session) {
+                Log::warning('Cannot save outgoing message: no active session found', [
+                    'customer_id' => $customer->id,
+                    'organization_id' => $organizationId
+                ]);
+                return;
+            }
+
+            // Determine sender type and ID
+            $senderType = 'bot'; // Default to bot
+            $senderId = null;
+            $senderName = 'System Bot';
+
+            // Check if session has an assigned agent
+            if ($session->agent_id) {
+                $senderType = 'agent';
+                $senderId = $session->agent_id;
+                $senderName = $session->agent->display_name ?? 'Agent';
+            } else {
+                // Check if there's a bot personality for this organization
+                $botPersonality = \App\Models\BotPersonality::where('organization_id', $organizationId)
+                    ->where('status', 'active')
+                    ->where('is_default', true)
+                    ->first();
+
+                if ($botPersonality) {
+                    $senderId = $botPersonality->id;
+                    $senderName = $botPersonality->name;
+                }
+            }
+
+            // Create outgoing message
+            $message = \App\Models\Message::create([
+                'organization_id' => $organizationId,
+                'session_id' => $session->id,
+                'sender_type' => $senderType,
+                'sender_id' => $senderId,
+                'sender_name' => $senderName,
+                'message_type' => $messageData['message_type'] ?? 'text',
+                'message_text' => $messageData['text'] ?? '',
+                'waha_session_id' => $messageData['waha_session'] ?? null,
+                'metadata' => [
+                    'whatsapp_message_id' => $messageData['message_id'] ?? null,
+                    'phone_number' => $messageData['to'] ?? null,
+                    'timestamp' => $messageData['timestamp'] ?? now()->timestamp,
+                    'raw_data' => $messageData['raw_data'] ?? null,
+                    'direction' => 'outgoing',
+                    'from_me' => true
+                ],
+                'is_read' => true, // Outgoing messages are considered read
+                'read_at' => now(),
+                'delivered_at' => now(),
+                'created_at' => now()->addMilliseconds(rand(100, 500))
+            ]);
+
+            Log::info('Outgoing message saved successfully', [
+                'message_id' => $message->id,
+                'session_id' => $session->id,
+                'sender_type' => $senderType,
+                'sender_name' => $senderName,
+                'content' => $message->message_text
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to save outgoing message', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'message_data' => $messageData
+            ]);
+        }
+    }
+
+    /**
+     * Handle message reaction events
+     */
+    private function handleMessageReactionEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Message reaction event received', [
+            'organization_id' => $organizationId,
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement message reaction handling
+        return [
+            'success' => true,
+            'message' => 'Message reaction event processed'
+        ];
+    }
+
+    /**
+     * Handle message acknowledgment events
+     */
+    private function handleMessageAckEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Message ACK event received', [
+            'organization_id' => $organizationId,
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement message ACK handling
+        return [
+            'success' => true,
+            'message' => 'Message ACK event processed'
+        ];
+    }
+
+    /**
+     * Handle message revoked events
+     */
+    private function handleMessageRevokedEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Message revoked event received', [
+            'organization_id' => $organizationId,
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement message revocation handling
+        return [
+            'success' => true,
+            'message' => 'Message revoked event processed'
+        ];
+    }
+
+    /**
+     * Handle message edited events
+     */
+    private function handleMessageEditedEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Message edited event received', [
+            'organization_id' => $organizationId,
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement message edit handling
+        return [
+            'success' => true,
+            'message' => 'Message edited event processed'
+        ];
+    }
+
+    /**
+     * Handle group events
+     */
+    private function handleGroupEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Group event received', [
+            'organization_id' => $organizationId,
+            'event' => $payload['event'] ?? 'unknown',
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement group event handling
+        return [
+            'success' => true,
+            'message' => 'Group event processed'
+        ];
+    }
+
+    /**
+     * Handle chat archive events
+     */
+    private function handleChatArchiveEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Chat archive event received', [
+            'organization_id' => $organizationId,
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement chat archive handling
+        return [
+            'success' => true,
+            'message' => 'Chat archive event processed'
+        ];
+    }
+
+    /**
+     * Handle presence update events
+     */
+    private function handlePresenceUpdateEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Presence update event received', [
+            'organization_id' => $organizationId,
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement presence update handling
+        return [
+            'success' => true,
+            'message' => 'Presence update event processed'
+        ];
+    }
+
+    /**
+     * Handle poll vote events
+     */
+    private function handlePollVoteEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Poll vote event received', [
+            'organization_id' => $organizationId,
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement poll vote handling
+        return [
+            'success' => true,
+            'message' => 'Poll vote event processed'
+        ];
+    }
+
+    /**
+     * Handle call events
+     */
+    private function handleCallEvent(array $payload, string $organizationId): array
+    {
+        Log::info('Call event received', [
+            'organization_id' => $organizationId,
+            'event' => $payload['event'] ?? 'unknown',
+            'payload' => $payload
+        ]);
+
+        // TODO: Implement call event handling
+        return [
+            'success' => true,
+            'message' => 'Call event processed'
+        ];
+    }
+
+    /**
+     * Validate WAHA webhook signature
+     */
+    private function validateWahaWebhookSignature(Request $request): bool
+    {
+        // Check if webhook signature validation is enabled
+        if (!config('waha.webhook.validate_signature', false)) {
+            return true; // Skip validation if not configured
+        }
+
+        $signature = $request->header('X-WAHA-Signature');
+        $payload = $request->getContent();
+        $secret = config('waha.webhook.secret');
+
+        if (!$signature || !$secret) {
+            return false;
+        }
+
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
+        return hash_equals($expectedSignature, $signature);
     }
 }

@@ -1,699 +1,669 @@
-import React, { useState, useMemo } from 'react';
-import InboxManagement from './InboxManagement';
-import { 
-  Search, 
-  Send, 
-  MessageCircle, 
-  Globe, 
-  Users, 
-  Send as SendIcon,
-  Smile,
-  AlertCircle,
-  Filter,
-  Tag,
-  Clock,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  FileText,
-  Image,
-  Download,
-  X,
-  Plus,
-  UserCheck,
-  Settings,
+/**
+ * Session Manager Component
+ * Manages chat sessions with real API integration using DataTable
+ */
+
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import {
+  useLoadingStates
+} from '@/utils/loadingStates';
+import {
+  handleError,
+  withErrorHandling
+} from '@/utils/errorHandler';
+import {
+  useAnnouncement,
+  useFocusManagement
+} from '@/utils/accessibilityUtils';
+import { inboxService } from '@/services/InboxService';
+import { usePaginatedApi } from '@/hooks/useApi';
+import {
+  Button,
+  Badge,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Input,
+  Alert,
+  AlertDescription,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Textarea,
+  Label,
+  DataTable,
+  Pagination
+} from '@/components/ui';
+import {
   MessageSquare,
-  Info,
-  ChevronDown,
-  Upload
+  RefreshCw,
+  Bot,
+  Clock,
+  AlertCircle,
+  Phone,
+  Video,
+  Mail,
+  Eye,
+  MessageCircle,
+  ArrowRightLeft,
+  X,
+  Tag
 } from 'lucide-react';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Input, Button, Avatar, AvatarFallback, AvatarImage, Select, SelectItem, Tabs, TabsContent, TabsList, TabsTrigger, Textarea} from '@/components/ui';
-import { 
-  chatSessionsData, 
-  customersData, 
-  channelConfigsData, 
-  agentsData, 
-  sessionsMessagesData 
-} from '@/data/sampleData';
-import { formatTimeAgo, formatTime } from '@/utils/dateUtils';
 
-const SessionManager = () => {
-  // Main view state
-  const [activeView, setActiveView] = useState('sessions'); // 'sessions' or 'manage-inbox'
-  
-  // State untuk panel kiri
+const SessionManagerComponent = () => {
+  const { announce } = useAnnouncement();
+  const { focusRef } = useFocusManagement();
+  const { setLoading, getLoadingState } = useLoadingStates();
+
+  // State management
   const [selectedSession, setSelectedSession] = useState(null);
-  const [filterChannel, setFilterChannel] = useState('all');
-  const [filterAgent, setFilterAgent] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterTags, setFilterTags] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [showPersonalityDialog, setShowPersonalityDialog] = useState(false);
+  const [showAiResponseDialog, setShowAiResponseDialog] = useState(false);
+  const [transferData, setTransferData] = useState({
+    agent_id: '',
+    reason: '',
+    notes: ''
+  });
+  const [aiResponseData, setAiResponseData] = useState({
+    message: '',
+    personality_id: '',
+    context: {}
+  });
+  const [availablePersonalities, setAvailablePersonalities] = useState([]);
 
-  // State untuk panel tengah
-  const [messageInput, setMessageInput] = useState('');
-  const [replyMode, setReplyMode] = useState('text');
+  // Create stable reference for API function
+  const getSessions = useCallback((params) => inboxService.getSessions(params), []);
 
-  // State untuk panel kanan
-  const [rightPanelTab, setRightPanelTab] = useState('info');
-  const [newTag, setNewTag] = useState('');
-  const [sessionStatus, setSessionStatus] = useState('');
-  const [assignedAgent, setAssignedAgent] = useState('');
-
-  // Gabungkan data untuk sesi lengkap
-  const enrichedSessions = useMemo(() => {
-    return chatSessionsData.map(session => {
-      const customer = customersData.find(c => c.id === session.customer_id);
-      const channelConfig = channelConfigsData.find(cc => cc.id === session.channel_config_id);
-      const agent = agentsData.find(a => a.id === session.agent_id);
-      const messages = sessionsMessagesData.filter(m => m.session_id === session.id);
-      const lastMessage = messages[messages.length - 1];
-      
-      return {
-        ...session,
-        customer,
-        channelConfig,
-        agent,
-        messages,
-        lastMessage,
-        unreadCount: messages.filter(m => m.sender_type === 'customer' && m.created_at > (session.last_read_at || '2024-03-20T14:00:00Z')).length
-      };
+  // Create stable references for initial values
+  const initialFilters = useMemo(() => ({}), []);
+  const onErrorCallback = useCallback((err) => {
+    handleError(err, {
+      context: 'Sessions Loading',
+      showToast: true
     });
   }, []);
 
-  // Filter sesi berdasarkan kriteria
-  const filteredSessions = useMemo(() => {
-    return enrichedSessions.filter(session => {
-      // Filter berdasarkan channel
-      if (filterChannel !== 'all' && session.channelConfig?.channel_type !== filterChannel) {
-        return false;
-      }
-      
-      // Filter berdasarkan agent
-      if (filterAgent !== 'all') {
-        if (filterAgent === 'unassigned' && session.agent_id !== null) return false;
-        if (filterAgent !== 'unassigned' && session.agent_id !== parseInt(filterAgent)) return false;
-      }
-      
-      // Filter berdasarkan status
-      if (filterStatus !== 'all' && session.status !== filterStatus) {
-        return false;
-      }
-      
-      // Filter berdasarkan tags
-      if (filterTags && !session.tags.some(tag => tag.toLowerCase().includes(filterTags.toLowerCase()))) {
-        return false;
-      }
-      
-      // Filter berdasarkan pencarian
-      if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase();
-        const customerName = session.customer?.name?.toLowerCase() || '';
-        const lastMessageContent = session.lastMessage?.content?.toLowerCase() || '';
-        
-        if (!customerName.includes(searchLower) && !lastMessageContent.includes(searchLower)) {
-          return false;
-        }
-      }
-      
-      return true;
-    });
-  }, [enrichedSessions, filterChannel, filterAgent, filterStatus, filterTags, searchQuery]);
+  // API hooks for sessions
+  const {
+    data: sessions,
+    pagination,
+    loading: sessionsLoading,
+    error: sessionsError,
+    handlePageChange,
+    handleSearch,
+    refresh
+  } = usePaginatedApi(getSessions, {
+    initialPage: 1,
+    initialPerPage: 15,
+    initialSearch: '',
+    initialSort: 'last_activity_at',
+    initialSortDirection: 'desc',
+    initialFilters,
+    onError: onErrorCallback
+  });
 
-  // Fungsi untuk mendapatkan ikon kanal
-  const getChannelIcon = (channelType) => {
-    switch(channelType) {
-      case 'whatsapp': 
-        return <MessageCircle className="w-4 h-4 text-green-500" />;
-      case 'web': 
-        return <Globe className="w-4 h-4 text-blue-500" />;
-      case 'facebook': 
-        return <Users className="w-4 h-4 text-blue-600" />;
-      case 'telegram': 
-        return <SendIcon className="w-4 h-4 text-sky-500" />;
-      default: 
-        return <MessageCircle className="w-4 h-4" />;
+
+  // Helper functions for DataTable columns
+  const getSessionTypeIcon = useCallback((sessionType) => {
+    switch (sessionType) {
+      case 'voice': return <Phone className="h-4 w-4" />;
+      case 'video': return <Video className="h-4 w-4" />;
+      case 'email': return <Mail className="h-4 w-4" />;
+      default: return <MessageSquare className="h-4 w-4" />;
     }
-  };
+  }, []);
 
-  // Fungsi untuk mendapatkan warna status
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'active': return 'destructive';
-      case 'bot_handled': return 'default';
-      case 'agent_handled': return 'secondary';
-      case 'completed': return 'outline';
-      default: return 'default';
+  const getPriorityBadgeVariant = useCallback((priority) => {
+    switch (priority) {
+      case 'urgent': return 'destructive';
+      case 'high': return 'default';
+      case 'medium': return 'secondary';
+      case 'low': return 'outline';
+      default: return 'outline';
     }
-  };
+  }, []);
 
-  // Fungsi untuk upload file
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file && selectedSession) {
-      // Implementasi upload file akan ditambahkan di sini
+  const getStatusBadgeVariant = useCallback((session) => {
+    if (!session.is_active) return 'secondary';
+    if (session.is_bot_session) return 'default';
+    if (session.agent_id) return 'default';
+    return 'destructive';
+  }, []);
+
+  const formatTimeAgo = useCallback((date) => {
+    if (!date) return 'Unknown';
+    const now = new Date();
+    const diff = now - new Date(date);
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return 'Just now';
+  }, []);
+
+  // Define columns for DataTable
+  const columns = useMemo(() => [
+    {
+      key: 'customer',
+      header: 'Customer',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center space-x-3">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={row.customer?.avatar_url} />
+            <AvatarFallback>
+              {row.customer?.name?.charAt(0) || 'C'}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="font-medium text-sm">
+              {row.customer?.name || 'Unknown Customer'}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {row.session_token}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'session_type',
+      header: 'Type',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center space-x-2">
+          {getSessionTypeIcon(row.session_type)}
+          <span className="capitalize text-sm">{row.session_type}</span>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center space-x-2">
+          <Badge variant={getStatusBadgeVariant(row)}>
+            {row.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+          {row.priority && (
+            <Badge variant={getPriorityBadgeVariant(row.priority)}>
+              {row.priority}
+            </Badge>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'agent',
+      header: 'Agent',
+      sortable: true,
+      render: (value, row) => (
+        row.agent ? (
+          <div className="text-sm">
+            <div className="font-medium">{row.agent.name}</div>
+            <div className="text-xs text-muted-foreground">Agent</div>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">Unassigned</span>
+        )
+      )
+    },
+    {
+      key: 'last_activity_at',
+      header: 'Last Activity',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+          <Clock className="h-3 w-3" />
+          <span>{formatTimeAgo(row.last_activity_at)}</span>
+        </div>
+      )
+    },
+    {
+      key: 'total_messages',
+      header: 'Messages',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center space-x-1 text-sm">
+          <MessageCircle className="h-3 w-3" />
+          <span>{row.total_messages || 0}</span>
+        </div>
+      )
+    },
+    {
+      key: 'intent',
+      header: 'Intent',
+      sortable: false,
+      render: (value, row) => (
+        row.intent ? (
+          <Badge variant="outline" className="text-xs">
+            <Tag className="h-3 w-3 mr-1" />
+            {row.intent}
+          </Badge>
+        ) : null
+      )
     }
-  };
+  ], [getSessionTypeIcon, getStatusBadgeVariant, getPriorityBadgeVariant, formatTimeAgo]);
 
-  // Fungsi untuk mengirim pesan
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedSession) return;
-    
-    setMessageInput('');
-  };
+  // Handle session selection
+  const handleSessionSelect = useCallback((session) => {
+    setSelectedSession(session);
+    announce(`Selected session ${session.session_token}`);
+  }, [announce]);
 
-  // Fungsi untuk mengubah status sesi
-  const handleStatusChange = (newStatus) => {
-    if (!selectedSession) return;
-    
-    setSessionStatus(newStatus);
-  };
+  // Handle end session
+  const handleEndSession = useCallback(async (sessionId, resolutionType = 'resolved') => {
+    try {
+      setLoading('end', true);
+      const result = await inboxService.endSession(sessionId, { resolution_type: resolutionType });
 
-  // Fungsi untuk menetapkan agen
-  const handleAssignAgent = (agentId) => {
-    if (!selectedSession) return;
-    
-    setAssignedAgent(agentId);
-  };
+      if (result.success) {
+        announce('Session ended successfully');
+        refresh();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      handleError(err, { context: 'End Session' });
+    } finally {
+      setLoading('end', false);
+    }
+  }, [setLoading, announce, refresh]);
 
-  // Fungsi untuk menambah tag
-  const handleAddTag = () => {
-    if (!newTag.trim() || !selectedSession) return;
-    
-    setNewTag('');
-  };
+  // Define actions for DataTable
+  const actions = useMemo(() => [
+    {
+      label: 'View Details',
+      icon: Eye,
+      onClick: (row) => handleSessionSelect(row)
+    },
+    {
+      label: 'Transfer',
+      icon: ArrowRightLeft,
+      onClick: (row) => {
+        setSelectedSession(row);
+        setShowTransferDialog(true);
+      }
+    },
+    {
+      label: 'Assign Bot',
+      icon: Bot,
+      onClick: (row) => {
+        setSelectedSession(row);
+        setShowPersonalityDialog(true);
+      }
+    },
+    {
+      label: 'AI Response',
+      icon: MessageSquare,
+      onClick: (row) => {
+        setSelectedSession(row);
+        setShowAiResponseDialog(true);
+      }
+    },
+    {
+      label: 'End Session',
+      icon: X,
+      onClick: (row) => handleEndSession(row.id),
+      disabled: (row) => !row.is_active
+    }
+  ], [handleSessionSelect, handleEndSession]);
 
-  // Component untuk render pesan
-  const MessageItem = ({ message, session }) => {
-    const isCustomer = message.sender_type === 'customer';
-    const isBot = message.sender_type === 'bot';
-    const isAgent = message.sender_type === 'agent';
-    
-    const senderName = isCustomer 
-      ? session.customer?.name 
-      : isBot 
-        ? 'Bot'
-        : agentsData.find(a => a.id === message.sender_id)?.name || 'Agent';
+  // Load available personalities
+  const loadAvailablePersonalities = useCallback(async () => {
+    try {
+      const result = await inboxService.getAvailableBotPersonalities();
+      if (result.success) {
+        setAvailablePersonalities(result.data);
+      }
+    } catch (err) {
+      handleError(err, { context: 'Load Personalities' });
+    }
+  }, []);
+
+  // Load personalities on mount
+  useEffect(() => {
+    loadAvailablePersonalities();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle transfer session
+  const handleTransferSession = useCallback(async () => {
+    if (!selectedSession || !transferData.agent_id) return;
+
+    try {
+      setLoading('transfer', true);
+      const result = await inboxService.transferSession(selectedSession.id, transferData);
+
+      if (result.success) {
+        announce('Session transferred successfully');
+        setShowTransferDialog(false);
+        setTransferData({ agent_id: '', reason: '', notes: '' });
+        refresh();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      handleError(err, { context: 'Session Transfer' });
+    } finally {
+      setLoading('transfer', false);
+    }
+  }, [selectedSession, transferData, setLoading, announce, refresh]);
+
+  // Handle assign bot personality
+  const handleAssignPersonality = useCallback(async () => {
+    if (!selectedSession || !aiResponseData.personality_id) return;
+
+    try {
+      setLoading('assign', true);
+      const result = await inboxService.assignBotPersonality(selectedSession.id, aiResponseData.personality_id);
+
+      if (result.success) {
+        announce('Bot personality assigned successfully');
+        setShowPersonalityDialog(false);
+        setAiResponseData({ message: '', personality_id: '', context: {} });
+        refresh();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      handleError(err, { context: 'Assign Personality' });
+    } finally {
+      setLoading('assign', false);
+    }
+  }, [selectedSession, aiResponseData.personality_id, setLoading, announce, refresh]);
+
+  // Handle generate AI response
+  const handleGenerateAiResponse = useCallback(async () => {
+    if (!selectedSession || !aiResponseData.message || !aiResponseData.personality_id) return;
+
+    try {
+      setLoading('ai', true);
+      const result = await inboxService.generateAiResponse(
+        selectedSession.id,
+        aiResponseData.message,
+        aiResponseData.personality_id,
+        aiResponseData.context
+      );
+
+      if (result.success) {
+        announce('AI response generated successfully');
+        setShowAiResponseDialog(false);
+        setAiResponseData({ message: '', personality_id: '', context: {} });
+        refresh();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      handleError(err, { context: 'Generate AI Response' });
+    } finally {
+      setLoading('ai', false);
+    }
+  }, [selectedSession, aiResponseData, setLoading, announce, refresh]);
+
 
     return (
-      <div className={`flex mb-4 ${isCustomer ? 'justify-end' : 'justify-start'}`}>
-        <div className={`max-w-[70%] ${isCustomer ? 'order-2' : 'order-1'}`}>
-          {!isCustomer && (
-            <p className="text-xs text-muted-foreground mb-1 px-1">{senderName}</p>
-          )}
-          
-          <div className={`rounded-lg px-4 py-2 ${
-            isCustomer 
-              ? 'bg-primary text-primary-foreground' 
-              : isAgent
-                ? 'bg-secondary text-secondary-foreground'
-                : 'bg-muted text-muted-foreground'
-          }`}>
-            {message.message_type === 'text' && (
-              <p className="text-sm">{message.content}</p>
-            )}
-            
-            {message.message_type === 'image' && (
+    <div className="space-y-6" ref={focusRef}>
+      {/* Header and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
-                <p className="text-sm mb-2">{message.content}</p>
-                <img 
-                  src={message.media_url} 
-                  alt="Image message" 
-                  className="max-w-full rounded-md cursor-pointer hover:opacity-80"
-                  onClick={() => window.open(message.media_url, '_blank')}
-                />
-              </div>
-            )}
-            
-            {message.message_type === 'document' && (
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                <div>
-                  <p className="text-sm">{message.content}</p>
-                  <a 
-                    href={message.media_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs underline flex items-center gap-1 mt-1"
-                  >
-                    <Download className="w-3 h-3" />
-                    Download
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {message.quick_replies && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {message.quick_replies.map((reply, index) => (
-                <Button 
-                  key={index} 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-xs h-7"
-                  onClick={() => setMessageInput(reply)}
-                >
-                  {reply}
-                </Button>
-              ))}
-            </div>
-          )}
-          
-          <p className="text-xs text-muted-foreground mt-1 text-center">
-            {formatTime(message.created_at)}
+          <h2 className="text-2xl font-bold">Session Manager</h2>
+          <p className="text-muted-foreground">
+            Manage and monitor chat sessions
           </p>
         </div>
-      </div>
-    );
-  };
 
-  // Conditional rendering based on activeView
-  if (activeView === 'manage-inbox') {
-    return <InboxManagement />;
-  }
-
-  return (
-    <div className="h-[calc(100vh-6rem)] flex gap-4">
-      {/* Panel Kiri - Daftar Sesi */}
-      <Card className="w-80 flex flex-col">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Session Manager</CardTitle>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {filteredSessions.filter(s => s.status === 'active').length} Aktif
-              </Badge>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setActiveView('manage-inbox')}
+              <Button
+                variant="outline"
+            onClick={refresh}
+            disabled={sessionsLoading}
+            aria-label="Refresh sessions"
               >
-                <Settings className="w-4 h-4" />
+            <RefreshCw className={`h-4 w-4 mr-2 ${sessionsLoading ? 'animate-spin' : ''}`} />
+            Refresh
               </Button>
             </div>
           </div>
-          
-          {/* Pencarian */}
-          <div className="mt-4 space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Cari sesi..." 
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+
+
+      {/* Error Alert */}
+      {sessionsError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{sessionsError}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Sessions DataTable */}
+      <DataTable
+        data={sessions || []}
+        columns={columns}
+        actions={actions}
+        loading={sessionsLoading}
+        error={sessionsError}
+        onSort={(_sortConfig) => {
+          // Handle sorting if needed
+          // TODO: Implement sorting logic
+        }}
+        onFilter={(searchQuery) => {
+          handleSearch(searchQuery);
+        }}
+        onRowClick={(row) => handleSessionSelect(row)}
+        pagination={pagination ? {
+          currentPage: pagination.currentPage,
+          totalPages: pagination.totalPages,
+          totalItems: pagination.totalItems,
+          perPage: pagination.itemsPerPage,
+          onPageChange: handlePageChange,
+          onPerPageChange: (_newPerPage) => {
+            // Handle per page change if needed
+            // TODO: Implement per page change logic
+          }
+        } : null}
+        searchable={true}
+        className="w-full"
+        ariaLabel="Sessions Table"
+      />
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          perPage={pagination.itemsPerPage}
+          onPageChange={handlePageChange}
+          variant="table"
+          showPerPageSelector={true}
+          perPageOptions={[10, 15, 25, 50]}
+        />
+      )}
+
+      {/* Transfer Dialog */}
+      <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transfer Session</DialogTitle>
+            <DialogDescription>
+              Transfer this session to another agent.
+            </DialogDescription>
+          </DialogHeader>
+              <div className="space-y-4">
+            <div>
+              <Label htmlFor="agent_id">Agent</Label>
+              <Input
+                id="agent_id"
+                value={transferData.agent_id}
+                onChange={(e) => setTransferData(prev => ({ ...prev, agent_id: e.target.value }))}
+                placeholder="Enter agent ID"
+              />
+              </div>
+            <div>
+              <Label htmlFor="reason">Reason (Optional)</Label>
+              <Input
+                id="reason"
+                value={transferData.reason}
+                onChange={(e) => setTransferData(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Reason for transfer"
               />
             </div>
-            
-            {/* Filter Kanal */}
-            <Select value={filterChannel} onValueChange={setFilterChannel} placeholder="Filter berdasarkan kanal">
-              <SelectItem value="all">Semua Kanal</SelectItem>
-                <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                <SelectItem value="web">Website</SelectItem>
-                <SelectItem value="telegram">Telegram</SelectItem>
-                <SelectItem value="facebook">Facebook</SelectItem>
-</Select>
-            
-            {/* Filter Status */}
-            <Select value={filterStatus} onValueChange={setFilterStatus} placeholder="Filter berdasarkan status">
-              <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="active">Aktif</SelectItem>
-                <SelectItem value="bot_handled">Ditangani Bot</SelectItem>
-                <SelectItem value="agent_handled">Ditangani Agent</SelectItem>
-                <SelectItem value="completed">Selesai</SelectItem>
-</Select>
-            
-            {/* Filter Agent */}
-            <Select value={filterAgent} onValueChange={setFilterAgent} placeholder="Filter berdasarkan agent">
-              <SelectItem value="all">Semua Agent</SelectItem>
-                <SelectItem value="unassigned">Belum Ditugaskan</SelectItem>
-                {agentsData.map(agent => (
-                  <SelectItem key={agent.id} value={agent.id.toString()}>
-                    {agent.name}
-                  </SelectItem>
-                ))}
-</Select>
-            
-            {/* Filter Tags */}
-            <Input 
-              placeholder="Filter berdasarkan tag..." 
-              value={filterTags}
-              onChange={(e) => setFilterTags(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        
-        <CardContent className="flex-1 overflow-y-auto p-2">
-          <div className="space-y-2">
-            {filteredSessions.map(session => (
-              <div
-                key={session.id}
-                onClick={() => setSelectedSession(session)}
-                className={`p-3 rounded-lg cursor-pointer transition-all ${
-                  selectedSession?.id === session.id 
-                    ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-primary/20' 
-                    : 'hover:bg-accent'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback>
-                        {session.customer?.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {session.customer?.name || 'Unknown User'}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        {getChannelIcon(session.channelConfig?.channel_type)}
-                        <span className="text-xs text-muted-foreground">
-                          {session.channelConfig?.channel_type || 'Unknown'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge variant={getStatusColor(session.status)} className="text-xs">
-                      {session.status === 'active' ? 'Aktif' :
-                       session.status === 'bot_handled' ? 'Bot' :
-                       session.status === 'agent_handled' ? 'Agent' : 'Selesai'}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(session.lastMessage?.created_at || session.started_at)}
-                    </span>
-                    {session.unreadCount > 0 && (
-                      <Badge variant="destructive" className="text-xs">
-                        {session.unreadCount}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                  {session.lastMessage?.content || 'Tidak ada pesan'}
-                </p>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    {session.agent && (
-                      <div className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span className="text-xs text-muted-foreground">
-                          {session.agent.name}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1">
-                    {session.tags.slice(0, 2).map(tag => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {session.tags.length > 2 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{session.tags.length - 2}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Panel Tengah - Jendela Percakapan */}
-      <Card className="flex-1 flex flex-col">
-        {selectedSession ? (
-          <>
-            {/* Header Percakapan */}
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarFallback>
-                      {selectedSession.customer?.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">
-                      {selectedSession.customer?.name || 'Unknown User'}
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      {getChannelIcon(selectedSession.channelConfig?.channel_type)}
-                      <span className="text-sm text-muted-foreground">
-                        {selectedSession.channelConfig?.name || 'Unknown Channel'}
-                      </span>
-                      <Badge variant={getStatusColor(selectedSession.status)} className="text-xs">
-                        {selectedSession.status === 'active' ? 'Aktif' :
-                         selectedSession.status === 'bot_handled' ? 'Ditangani Bot' :
-                         selectedSession.status === 'agent_handled' ? 'Ditangani Agent' : 'Selesai'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {selectedSession.handover_reason && (
-                    <Badge variant="outline" className="text-xs">
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                      Eskalasi
-                    </Badge>
-                  )}
-                  <Button variant="outline" size="sm">
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            
-            {/* Area Percakapan */}
-            <CardContent className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-4">
-                {selectedSession.messages.map(message => (
-                  <MessageItem 
-                    key={message.id} 
-                    message={message} 
-                    session={selectedSession}
-                  />
-                ))}
-              </div>
-            </CardContent>
-            
-            {/* Input Pesan */}
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Textarea
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    placeholder="Ketik pesan Anda..."
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    className="min-h-[60px] resize-none"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <Upload className="w-4 h-4" />
-                      <input
-                        id="file-upload"
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileUpload}
-                        accept="image/*,.pdf,.doc,.docx"
-                      />
-                    </label>
-                  </Button>
-                  <Button onClick={handleSendMessage} size="sm">
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <MessageSquare className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Pilih Sesi untuk Memulai</h3>
-              <p className="text-muted-foreground">
-                Pilih sesi dari daftar di sebelah kiri untuk melihat percakapan dan mengelola sesi.
-              </p>
+            <div>
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                value={transferData.notes}
+                onChange={(e) => setTransferData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Additional notes"
+              />
             </div>
           </div>
-        )}
-      </Card>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowTransferDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleTransferSession}
+              disabled={!transferData.agent_id || getLoadingState('transfer')}
+            >
+              {getLoadingState('transfer') ? 'Transferring...' : 'Transfer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Panel Kanan - Manajemen Sesi & Konteks */}
-      <Card className="w-80 flex flex-col">
-        {selectedSession ? (
-          <>
-            <CardHeader>
-              <CardTitle className="text-lg">Manajemen Sesi</CardTitle>
-            </CardHeader>
-            
-            <CardContent className="flex-1 overflow-y-auto">
-              <Tabs value={rightPanelTab} onValueChange={setRightPanelTab}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="info">Info Pelanggan</TabsTrigger>
-                  <TabsTrigger value="manage">Kelola Sesi</TabsTrigger>
-                </TabsList>
-                
-                {/* Tab Info Pelanggan */}
-                <TabsContent value="info" className="space-y-4">
+      {/* Bot Personality Assignment Dialog */}
+      <Dialog open={showPersonalityDialog} onOpenChange={setShowPersonalityDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Bot Personality</DialogTitle>
+            <DialogDescription>
+              Assign a bot personality to handle this session automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
                   <div>
-                    <h4 className="font-semibold mb-3">Detail Pelanggan</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">{selectedSession.customer?.name || '-'}</span>
+              <Label htmlFor="personality_id">Bot Personality ID</Label>
+              <Input
+                id="personality_id"
+                value={aiResponseData.personality_id}
+                onChange={(e) => setAiResponseData(prev => ({ ...prev, personality_id: e.target.value }))}
+                placeholder="Enter bot personality ID"
+              />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">{selectedSession.customer?.email || '-'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">{selectedSession.customer?.phone || '-'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {selectedSession.customer?.metadata?.location || '-'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          Pelanggan sejak {selectedSession.customer?.metadata?.customer_since || '-'}
-                        </span>
-                      </div>
+            {aiResponseData.personality_id && (
+              <div className="p-3 bg-muted rounded-lg">
+                <h4 className="font-medium text-sm mb-2">Personality Details</h4>
+                {(() => {
+                  const personality = availablePersonalities.find(p => p.id === aiResponseData.personality_id);
+                  return personality ? (
+                    <div className="text-sm space-y-1">
+                      <p><strong>Language:</strong> {personality.language}</p>
+                      <p><strong>Tone:</strong> {personality.tone}</p>
+                      <p><strong>Style:</strong> {personality.communication_style}</p>
+                      <p><strong>Description:</strong> {personality.description}</p>
                     </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold mb-3">Riwayat Interaksi</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Ini adalah sesi #{selectedSession.id} untuk pelanggan ini.
-                    </p>
-                  </div>
-                </TabsContent>
-                
-                {/* Tab Kelola Sesi */}
-                <TabsContent value="manage" className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-3">Detail Sesi</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Dimulai:</span>
-                        <span>{formatTimeAgo(selectedSession.started_at)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Kanal:</span>
-                        <span>{selectedSession.channelConfig?.name}</span>
-                      </div>
-                      {selectedSession.handover_reason && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Alasan Eskalasi:</span>
-                          <span className="text-right">{selectedSession.handover_reason}</span>
+                  ) : null;
+                })()}
                         </div>
                       )}
                     </div>
-                  </div>
-                  
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowPersonalityDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignPersonality}
+              disabled={!aiResponseData.personality_id || getLoadingState('assign')}
+            >
+              {getLoadingState('assign') ? 'Assigning...' : 'Assign Bot'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Response Generation Dialog */}
+      <Dialog open={showAiResponseDialog} onOpenChange={setShowAiResponseDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate AI Response</DialogTitle>
+            <DialogDescription>
+              Generate an AI response using a bot personality for this session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
                   <div>
-                    <h4 className="font-semibold mb-3">Tetapkan Agent</h4>
-                    <Select 
-                      value={assignedAgent || selectedSession.agent_id?.toString() || ''} 
-                      onValueChange={handleAssignAgent}
-                     placeholder="Pilih agent...">
-              <SelectItem value="">Belum ditugaskan</SelectItem>
-                        {agentsData.filter(agent => agent.status === 'online').map(agent => (
-                          <SelectItem key={agent.id} value={agent.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              {agent.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-</Select>
+              <Label htmlFor="personality_id">Bot Personality ID</Label>
+              <Input
+                id="personality_id"
+                value={aiResponseData.personality_id}
+                onChange={(e) => setAiResponseData(prev => ({ ...prev, personality_id: e.target.value }))}
+                placeholder="Enter bot personality ID"
+              />
                   </div>
-                  
                   <div>
-                    <h4 className="font-semibold mb-3">Tags</h4>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {selectedSession.tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                          <X className="w-3 h-3 ml-1 cursor-pointer" />
-                        </Badge>
-                      ))}
+              <Label htmlFor="message">Message to Respond To</Label>
+              <Textarea
+                id="message"
+                value={aiResponseData.message}
+                onChange={(e) => setAiResponseData(prev => ({ ...prev, message: e.target.value }))}
+                placeholder="Enter the customer message to respond to..."
+                rows={4}
+              />
                     </div>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Tambah tag..."
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                        className="text-sm"
-                      />
-                      <Button size="sm" onClick={handleAddTag}>
-                        <Plus className="w-4 h-4" />
-                      </Button>
+            <div>
+              <Label htmlFor="context">Additional Context (Optional)</Label>
+              <Textarea
+                id="context"
+                value={JSON.stringify(aiResponseData.context, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const context = JSON.parse(e.target.value);
+                    setAiResponseData(prev => ({ ...prev, context }));
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                placeholder="Enter additional context as JSON..."
+                rows={3}
+              />
                     </div>
                   </div>
-                  
-                  <div>
-                    <h4 className="font-semibold mb-3">Status Sesi</h4>
-                    <div className="space-y-2">
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start"
-                        onClick={() => handleStatusChange('active')}
+          <DialogFooter>
+                      <Button
+                        variant="outline"
+              onClick={() => setShowAiResponseDialog(false)}
                       >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Aktifkan Sesi
+              Cancel
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start"
-                        onClick={() => handleStatusChange('completed')}
+                      <Button
+              onClick={handleGenerateAiResponse}
+              disabled={!aiResponseData.personality_id || !aiResponseData.message || getLoadingState('ai')}
                       >
-                        <UserCheck className="w-4 h-4 mr-2" />
-                        Tutup Sesi
+              {getLoadingState('ai') ? 'Generating...' : 'Generate Response'}
                       </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <Info className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Tidak Ada Sesi Dipilih</h3>
-              <p className="text-muted-foreground text-sm">
-                Pilih sesi untuk melihat detail pelanggan dan opsi manajemen.
-              </p>
-            </div>
-          </div>
-        )}
-      </Card>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+const SessionManager = withErrorHandling(SessionManagerComponent, {
+  context: 'Session Manager'
+});
 
 export default SessionManager;

@@ -93,6 +93,13 @@ class UserSeeder extends Seeder
                     'analytics.view' => true,
                     'billing.view' => true,
                     'reports.view' => true,
+                    'inbox.view' => true,
+                    'inbox.create' => true,
+                    'inbox.update' => true,
+                    'inbox.delete' => true,
+                    'inbox.manage' => true,
+                    'inbox.export' => true,
+                    'inbox.templates.create' => true
                 ];
             case 'agent':
                 return [
@@ -108,7 +115,10 @@ class UserSeeder extends Seeder
                     'messages.create' => true,
                     'messages.update' => true,
                     'analytics.view_own' => true,
-                    'reports.view' => true
+                    'reports.view' => true,
+                    'inbox.view' => true,
+                    'inbox.create' => true,
+                    'inbox.update' => true
                 ];
             case 'developer':
                 return [
@@ -480,7 +490,16 @@ class UserSeeder extends Seeder
 
                 // Reports
                 'reports.view' => true,
-                'reports.export' => true
+                'reports.export' => true,
+
+                // Inbox Management
+                'inbox.view' => true,
+                'inbox.create' => true,
+                'inbox.update' => true,
+                'inbox.delete' => true,
+                'inbox.manage' => true,
+                'inbox.export' => true,
+                'inbox.templates.create' => true
             ],
             'status' => 'active'
         ];
