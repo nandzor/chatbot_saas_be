@@ -1518,6 +1518,7 @@ class WahaController extends BaseApiController
     private function extractWahaMessageData(array $payload): ?array
     {
         try {
+
             // Standard WAHA webhook format (from documentation)
             if (isset($payload['event']) && $payload['event'] === 'message' && isset($payload['payload'])) {
                 $message = $payload['payload'];
@@ -1622,6 +1623,7 @@ class WahaController extends BaseApiController
      */
     private function extractCustomerName(array $message): ?string
     {
+
         // Try different possible locations for customer name
         if (isset($message['contact']['name'])) {
             return $message['contact']['name'];
@@ -1633,6 +1635,16 @@ class WahaController extends BaseApiController
 
         if (isset($message['pushName'])) {
             return $message['pushName'];
+        }
+
+        // Check in _data.notifyName (real WAHA data)
+        if (isset($message['_data']['notifyName'])) {
+            return $message['_data']['notifyName'];
+        }
+
+        // Check in media._data.notifyName (real WAHA data structure)
+        if (isset($message['media']['_data']['notifyName'])) {
+            return $message['media']['_data']['notifyName'];
         }
 
         return null;
@@ -1883,6 +1895,7 @@ class WahaController extends BaseApiController
     {
         // Extract message data from WAHA webhook format
         $messageData = $this->extractWahaMessageData($payload);
+
 
         if (!$messageData) {
             return [

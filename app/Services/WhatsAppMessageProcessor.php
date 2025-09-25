@@ -37,6 +37,10 @@ class WhatsAppMessageProcessor
                 'organization_id' => $messageData['organization_id'] ?? 'unknown'
             ]);
 
+            Log::info('Starting message processing flow', [
+                'message_data_keys' => array_keys($messageData)
+            ]);
+
             // 1. Get or create customer
             $customer = $this->getOrCreateCustomer($messageData);
 
@@ -47,7 +51,17 @@ class WhatsAppMessageProcessor
             $message = $this->createMessage($messageData, $session);
 
             // 4. Process with bot personality
+            Log::info('About to process with bot', [
+                'session_id' => $session->id,
+                'organization_id' => $session->organization_id
+            ]);
+
             $botResponse = $this->processWithBot($session, $messageData);
+
+            Log::info('Bot processing completed', [
+                'session_id' => $session->id,
+                'bot_response' => $botResponse
+            ]);
 
             // 5. Update session metrics
             $this->updateSessionMetrics($session);
@@ -73,6 +87,11 @@ class WhatsAppMessageProcessor
      */
     private function getOrCreateCustomer(array $messageData): Customer
     {
+        Log::info('Getting or creating customer', [
+            'phone' => $messageData['customer_phone'] ?? $messageData['from'],
+            'organization_id' => $messageData['organization_id']
+        ]);
+
         $phone = $messageData['customer_phone'] ?? $messageData['from'];
         $organizationId = $messageData['organization_id'];
 
@@ -87,9 +106,16 @@ class WhatsAppMessageProcessor
 
         if (!$customer) {
             // Create new customer
+            $customerName = $messageData['customer_name'] ?? 'WhatsApp User';
+            Log::info('Creating new customer with name', [
+                'phone' => $phone,
+                'organization_id' => $organizationId,
+                'customer_name' => $customerName
+            ]);
+
             $customer = Customer::create([
                 'organization_id' => $organizationId,
-                'name' => $messageData['customer_name'] ?? 'WhatsApp User',
+                'name' => $customerName,
                 'phone' => $phone,
                 'email' => null,
                 'status' => 'active',
@@ -118,6 +144,12 @@ class WhatsAppMessageProcessor
             ]);
         }
 
+        Log::info('Customer ready', [
+            'customer_id' => $customer->id,
+            'phone' => $customer->phone,
+            'organization_id' => $customer->organization_id
+        ]);
+
         return $customer;
     }
 
@@ -126,6 +158,11 @@ class WhatsAppMessageProcessor
      */
     private function getOrCreateSession(array $messageData, Customer $customer): ChatSession
     {
+        Log::info('Getting or creating session', [
+            'customer_id' => $customer->id,
+            'organization_id' => $customer->organization_id
+        ]);
+
         $organizationId = $customer->organization_id;
         $phone = $customer->phone;
 
@@ -207,6 +244,12 @@ class WhatsAppMessageProcessor
             'intent' => $session->intent
         ]);
 
+        Log::info('Session ready', [
+            'session_id' => $session->id,
+            'customer_id' => $customer->id,
+            'is_active' => $session->is_active
+        ]);
+
         return $session;
     }
 
@@ -215,6 +258,12 @@ class WhatsAppMessageProcessor
      */
     private function createMessage(array $messageData, ChatSession $session): Message
     {
+        Log::info('Creating message', [
+            'session_id' => $session->id,
+            'message_text' => $messageData['text'] ?? '',
+            'message_type' => $messageData['message_type'] ?? 'text'
+        ]);
+
         $message = Message::create([
             'organization_id' => $session->organization_id,
             'session_id' => $session->id,
@@ -233,7 +282,13 @@ class WhatsAppMessageProcessor
             'is_read' => false,
             'read_at' => null,
             'delivered_at' => now(),
-            'created_at' => now()
+            'created_at' => now()->addMicroseconds(rand(1, 999999))
+        ]);
+
+        Log::info('Message created successfully', [
+            'message_id' => $message->id,
+            'session_id' => $session->id,
+            'message_text' => $message->message_text
         ]);
 
         return $message;
@@ -245,6 +300,11 @@ class WhatsAppMessageProcessor
     private function processWithBot(ChatSession $session, array $messageData): array
     {
         try {
+            Log::info('Starting bot processing', [
+                'session_id' => $session->id,
+                'organization_id' => $session->organization_id
+            ]);
+
             // Get bot personality for this session
             $botPersonality = $this->getBotPersonality($session->organization_id);
 
@@ -262,7 +322,19 @@ class WhatsAppMessageProcessor
                 ['session_id' => $session->id, 'customer_id' => $session->customer_id]
             );
 
+            Log::info('Bot response generated successfully', [
+                'response' => $response,
+                'has_content' => isset($response['content']),
+                'content_length' => isset($response['content']) ? strlen($response['content']) : 0
+            ]);
+
             if ($response && isset($response['content'])) {
+                Log::info('Creating bot message', [
+                    'session_id' => $session->id,
+                    'bot_personality_id' => $botPersonality->id,
+                    'content' => $response['content']
+                ]);
+
                 // Create bot response message
                 $botMessage = Message::create([
                     'organization_id' => $session->organization_id,
@@ -281,7 +353,13 @@ class WhatsAppMessageProcessor
                     'is_read' => false,
                     'read_at' => null,
                     'delivered_at' => now(),
-                    'created_at' => now()
+                    'created_at' => now()->addMicroseconds(rand(1, 999999))
+                ]);
+
+                Log::info('Bot message created successfully', [
+                    'bot_message_id' => $botMessage->id,
+                    'session_id' => $session->id,
+                    'content' => $response['content']
                 ]);
 
                 // Send response to WhatsApp (implement based on your WAHA setup)
@@ -324,6 +402,10 @@ class WhatsAppMessageProcessor
      */
     private function getChannelConfig(string $organizationId, array $messageData): ?ChannelConfig
     {
+        Log::info('Getting channel config', [
+            'organization_id' => $organizationId
+        ]);
+
         $config = ChannelConfig::where('organization_id', $organizationId)
             ->where('channel', 'whatsapp')
             ->where('is_active', true)
@@ -348,6 +430,12 @@ class WhatsAppMessageProcessor
             ]);
         }
 
+        Log::info('Channel config found', [
+            'organization_id' => $organizationId,
+            'config_id' => $config ? $config->id : null,
+            'channel' => $config ? $config->channel : null
+        ]);
+
         return $config;
     }
 
@@ -356,10 +444,23 @@ class WhatsAppMessageProcessor
      */
     private function getBotPersonality(string $organizationId): ?BotPersonality
     {
-        return BotPersonality::where('organization_id', $organizationId)
+        Log::info('Getting bot personality', [
+            'organization_id' => $organizationId
+        ]);
+
+        $botPersonality = BotPersonality::where('organization_id', $organizationId)
             ->where('status', 'active')
             ->where('is_default', true)
             ->first();
+
+        Log::info('Bot personality found', [
+            'organization_id' => $organizationId,
+            'found' => $botPersonality ? true : false,
+            'bot_id' => $botPersonality ? $botPersonality->id : null,
+            'bot_name' => $botPersonality ? $botPersonality->name : null
+        ]);
+
+        return $botPersonality;
     }
 
     /**

@@ -54,6 +54,11 @@ require_once __DIR__ . '/waha.php';
 Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handleMessage'])
     ->name('webhook.whatsapp.message');
 
+// WAHA Webhook Routes (for direct webhook URL from WAHA)
+Route::post('/webhook/message', [\App\Http\Controllers\Api\V1\WahaController::class, 'handleMessageWebhook'])
+    ->name('webhook.waha.message')
+    ->withoutMiddleware(['unified.auth', 'waha.organization']);
+
 /**
  * Health Check Endpoint
  * Used for monitoring and health checks
