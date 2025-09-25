@@ -824,4 +824,105 @@ class ConversationService extends BaseService
             ];
         }
     }
+
+    // ====================================================================
+    // ENHANCED FILTERING & TEMPLATE METHODS
+    // ====================================================================
+
+    /**
+     * Get filter options for conversations
+     */
+    public function getFilterOptions(string $organizationId): array
+    {
+        return [
+            'status_options' => ['active', 'pending', 'resolved', 'closed', 'escalated'],
+            'priority_options' => ['low', 'normal', 'high', 'urgent'],
+            'channel_options' => ['whatsapp', 'webchat', 'facebook', 'email', 'telegram'],
+            'date_ranges' => ['today', 'yesterday', 'week', 'month', 'custom'],
+            'custom_filters' => [
+                'has_ai_suggestions' => 'boolean',
+                'requires_human' => 'boolean',
+                'assigned_agent' => 'string',
+                'customer_satisfaction' => 'string'
+            ]
+        ];
+    }
+
+    /**
+     * Get conversation templates
+     */
+    public function getTemplates(string $organizationId, string $category = 'all'): Collection
+    {
+        // This would typically query from a templates table
+        // For now, return sample templates
+        $templates = collect([
+            (object) [
+                'id' => 'template_1',
+                'name' => 'Greeting Template',
+                'category' => 'greeting',
+                'content' => 'Hello! How can I help you today?',
+                'variables' => ['customer_name'],
+                'usage_count' => 15,
+                'last_used' => now()->subHours(2),
+                'is_favorite' => true,
+                'tags' => ['welcome', 'friendly'],
+                'created_by' => 'system'
+            ],
+            (object) [
+                'id' => 'template_2',
+                'name' => 'Closing Template',
+                'category' => 'closing',
+                'content' => 'Thank you for contacting us. Have a great day!',
+                'variables' => [],
+                'usage_count' => 8,
+                'last_used' => now()->subHours(5),
+                'is_favorite' => false,
+                'tags' => ['closing', 'polite'],
+                'created_by' => 'system'
+            ],
+            (object) [
+                'id' => 'template_3',
+                'name' => 'Escalation Template',
+                'category' => 'escalation',
+                'content' => 'I understand your concern. Let me transfer you to a specialist who can better assist you.',
+                'variables' => ['issue_type'],
+                'usage_count' => 3,
+                'last_used' => now()->subDays(1),
+                'is_favorite' => false,
+                'tags' => ['escalation', 'professional'],
+                'created_by' => 'system'
+            ]
+        ]);
+
+        if ($category !== 'all') {
+            $templates = $templates->filter(function ($template) use ($category) {
+                return $template->category === $category;
+            });
+        }
+
+        return $templates;
+    }
+
+    /**
+     * Save conversation template
+     */
+    public function saveTemplate(array $data): object
+    {
+        // This would typically save to a templates table
+        // For now, return a mock template object
+        return (object) [
+            'id' => 'template_' . uniqid(),
+            'name' => $data['name'],
+            'category' => $data['category'],
+            'content' => $data['content'],
+            'variables' => $data['variables'] ?? [],
+            'tags' => $data['tags'] ?? [],
+            'is_favorite' => $data['is_favorite'] ?? false,
+            'created_by' => $data['created_by'],
+            'organization_id' => $data['organization_id'],
+            'created_at' => now(),
+            'updated_at' => now()
+        ];
+    }
+
 }

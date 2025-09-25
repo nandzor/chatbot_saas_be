@@ -18,6 +18,7 @@ class ChatSession extends Model
         'customer_id',
         'channel_config_id',
         'agent_id',
+        'assigned_agent_id',
         'session_token',
         'session_type',
         'started_at',
@@ -26,6 +27,9 @@ class ChatSession extends Model
         'first_response_at',
         'is_active',
         'is_bot_session',
+        'handling_mode',
+        'session_status',
+        'priority',
         'handover_reason',
         'handover_at',
         'total_messages',
@@ -42,7 +46,6 @@ class ChatSession extends Model
         'intent',
         'category',
         'subcategory',
-        'priority',
         'tags',
         'is_resolved',
         'resolved_at',
@@ -53,6 +56,28 @@ class ChatSession extends Model
         'topics_discussed',
         'session_data',
         'metadata',
+        // Human Agent Integration fields
+        'bot_personality_id',
+        'waha_session_id',
+        'bot_context',
+        'last_bot_response_at',
+        'bot_message_count',
+        'requires_human',
+        'human_requested_at',
+        'assigned_at',
+        'agent_started_at',
+        'agent_ended_at',
+        'agent_message_count',
+        'response_time_seconds',
+        'resolution_time_seconds',
+        'escalated_from_agent_id',
+        'transferred_to_agent_id',
+        'escalation_reason',
+        'transfer_notes',
+        'customer_name',
+        'customer_phone',
+        'customer_email',
+        'customer_metadata',
     ];
 
     protected $casts = [
@@ -74,6 +99,19 @@ class ChatSession extends Model
         'feedback_tags' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        // Human Agent Integration casts
+        'bot_context' => 'array',
+        'last_bot_response_at' => 'datetime',
+        'bot_message_count' => 'integer',
+        'requires_human' => 'boolean',
+        'human_requested_at' => 'datetime',
+        'assigned_at' => 'datetime',
+        'agent_started_at' => 'datetime',
+        'agent_ended_at' => 'datetime',
+        'agent_message_count' => 'integer',
+        'response_time_seconds' => 'integer',
+        'resolution_time_seconds' => 'integer',
+        'customer_metadata' => 'array',
     ];
 
     /**
@@ -90,6 +128,46 @@ class ChatSession extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    /**
+     * Get the assigned agent for this chat session (human agent integration).
+     */
+    public function assignedAgent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'assigned_agent_id');
+    }
+
+    /**
+     * Get the bot personality for this chat session.
+     */
+    public function botPersonality(): BelongsTo
+    {
+        return $this->belongsTo(BotPersonality::class);
+    }
+
+    /**
+     * Get the WAHA session for this chat session.
+     */
+    public function wahaSession(): BelongsTo
+    {
+        return $this->belongsTo(WahaSession::class);
+    }
+
+    /**
+     * Get the escalated from agent.
+     */
+    public function escalatedFromAgent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'escalated_from_agent_id');
+    }
+
+    /**
+     * Get the transferred to agent.
+     */
+    public function transferredToAgent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'transferred_to_agent_id');
     }
 
     /**
@@ -399,5 +477,324 @@ class ChatSession extends Model
     public function scopeByStartTime($query)
     {
         return $query->orderBy('started_at', 'desc');
+    }
+
+    // ====================================================================
+    // HUMAN AGENT INTEGRATION METHODS
+    // ====================================================================
+
+    /**
+     * Check if session requires human intervention.
+     */
+    public function requiresHuman(): bool
+    {
+        return $this->requires_human;
+    }
+
+    /**
+     * Check if session is assigned to a human agent.
+     */
+    public function isAssignedToAgent(): bool
+    {
+        return !is_null($this->assigned_agent_id);
+    }
+
+    /**
+     * Check if session is being handled by a human agent.
+     */
+    public function isHandledByAgent(): bool
+    {
+        return $this->session_status === 'agent_handling';
+    }
+
+    /**
+     * Check if session has been escalated.
+     */
+    public function isEscalated(): bool
+    {
+        return $this->session_status === 'escalated';
+    }
+
+    /**
+     * Request human intervention.
+     */
+    public function requestHumanIntervention(string $reason = null): void
+    {
+        $this->update([
+            'requires_human' => true,
+            'human_requested_at' => now(),
+            'session_status' => 'agent_assigned',
+        ]);
+
+        // Create queue entry for agent assignment
+        AgentQueue::create([
+            'organization_id' => $this->organization_id,
+            'chat_session_id' => $this->id,
+            'queue_type' => 'inbox',
+            'priority' => $this->priority,
+            'status' => 'pending',
+            'queued_at' => now(),
+            'assignment_notes' => $reason,
+            'customer_context' => [
+                'name' => $this->customer_name,
+                'phone' => $this->customer_phone,
+                'email' => $this->customer_email,
+                'metadata' => $this->customer_metadata,
+            ],
+            'bot_context' => $this->bot_context,
+        ]);
+    }
+
+    /**
+     * Assign session to a human agent.
+     */
+    public function assignToAgent(Agent $agent): bool
+    {
+        if (!$agent->canHandleMoreChats()) {
+            return false;
+        }
+
+        $this->update([
+            'assigned_agent_id' => $agent->id,
+            'assigned_at' => now(),
+            'session_status' => 'agent_assigned',
+        ]);
+
+        // Update agent queue
+        $queueItem = AgentQueue::where('chat_session_id', $this->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($queueItem) {
+            $queueItem->update([
+                'agent_id' => $agent->id,
+                'status' => 'assigned',
+                'assigned_at' => now(),
+            ]);
+        }
+
+        // Update agent availability
+        $agent->incrementActiveChats();
+
+        return true;
+    }
+
+    /**
+     * Start handling by human agent.
+     */
+    public function startAgentHandling(): void
+    {
+        $this->update([
+            'session_status' => 'agent_handling',
+            'agent_started_at' => now(),
+        ]);
+
+        // Update agent queue
+        $queueItem = AgentQueue::where('chat_session_id', $this->id)
+            ->where('agent_id', $this->assigned_agent_id)
+            ->first();
+
+        if ($queueItem) {
+            $queueItem->markAsInProgress();
+        }
+    }
+
+    /**
+     * End agent handling.
+     */
+    public function endAgentHandling(): void
+    {
+        $this->update([
+            'session_status' => 'resolved',
+            'agent_ended_at' => now(),
+            'is_resolved' => true,
+            'resolved_at' => now(),
+        ]);
+
+        // Update agent queue
+        $queueItem = AgentQueue::where('chat_session_id', $this->id)
+            ->where('agent_id', $this->assigned_agent_id)
+            ->first();
+
+        if ($queueItem) {
+            $queueItem->markAsCompleted();
+        }
+
+        // Update agent availability
+        if ($this->assignedAgent) {
+            $this->assignedAgent->decrementActiveChats();
+        }
+    }
+
+    /**
+     * Escalate session to another agent.
+     */
+    public function escalateToAgent(Agent $newAgent, string $reason): bool
+    {
+        if (!$newAgent->canHandleMoreChats()) {
+            return false;
+        }
+
+        $oldAgent = $this->assignedAgent;
+
+        $this->update([
+            'escalated_from_agent_id' => $this->assigned_agent_id,
+            'assigned_agent_id' => $newAgent->id,
+            'escalation_reason' => $reason,
+            'session_status' => 'escalated',
+            'assigned_at' => now(),
+        ]);
+
+        // Update agent availability
+        if ($oldAgent) {
+            $oldAgent->decrementActiveChats();
+        }
+        $newAgent->incrementActiveChats();
+
+        // Create new queue entry for escalation
+        AgentQueue::create([
+            'organization_id' => $this->organization_id,
+            'agent_id' => $newAgent->id,
+            'chat_session_id' => $this->id,
+            'queue_type' => 'escalated',
+            'priority' => 'high',
+            'status' => 'assigned',
+            'queued_at' => now(),
+            'assigned_at' => now(),
+            'assignment_notes' => "Escalated from {$oldAgent->display_name}: {$reason}",
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Transfer session to another agent.
+     */
+    public function transferToAgent(Agent $newAgent, string $notes = null): bool
+    {
+        if (!$newAgent->canHandleMoreChats()) {
+            return false;
+        }
+
+        $oldAgent = $this->assignedAgent;
+
+        $this->update([
+            'transferred_to_agent_id' => $newAgent->id,
+            'assigned_agent_id' => $newAgent->id,
+            'transfer_notes' => $notes,
+            'assigned_at' => now(),
+        ]);
+
+        // Update agent availability
+        if ($oldAgent) {
+            $oldAgent->decrementActiveChats();
+        }
+        $newAgent->incrementActiveChats();
+
+        // Create new queue entry for transfer
+        AgentQueue::create([
+            'organization_id' => $this->organization_id,
+            'agent_id' => $newAgent->id,
+            'chat_session_id' => $this->id,
+            'queue_type' => 'transferred',
+            'priority' => $this->priority,
+            'status' => 'assigned',
+            'queued_at' => now(),
+            'assigned_at' => now(),
+            'assignment_notes' => $notes,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Get session status color for UI.
+     */
+    public function getStatusColorAttribute(): string
+    {
+        return match($this->session_status) {
+            'bot_handled' => 'blue',
+            'agent_assigned' => 'yellow',
+            'agent_handling' => 'green',
+            'escalated' => 'orange',
+            'resolved' => 'gray',
+            'closed' => 'red',
+            default => 'gray',
+        };
+    }
+
+    /**
+     * Get priority color for UI.
+     */
+    public function getPriorityColorAttribute(): string
+    {
+        return match($this->priority) {
+            'urgent' => 'red',
+            'high' => 'orange',
+            'medium' => 'yellow',
+            'low' => 'green',
+            default => 'gray',
+        };
+    }
+
+    /**
+     * Get handling mode color for UI.
+     */
+    public function getHandlingModeColorAttribute(): string
+    {
+        return match($this->handling_mode) {
+            'bot_only' => 'blue',
+            'human_only' => 'green',
+            'hybrid' => 'purple',
+            default => 'gray',
+        };
+    }
+
+    /**
+     * Scope for sessions requiring human intervention.
+     */
+    public function scopeRequiresHuman($query)
+    {
+        return $query->where('requires_human', true);
+    }
+
+    /**
+     * Scope for sessions assigned to agents.
+     */
+    public function scopeAssignedToAgents($query)
+    {
+        return $query->whereNotNull('assigned_agent_id');
+    }
+
+    /**
+     * Scope for sessions by status.
+     */
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('session_status', $status);
+    }
+
+    /**
+     * Scope for sessions by priority.
+     */
+    public function scopeByPriority($query, string $priority)
+    {
+        return $query->where('priority', $priority);
+    }
+
+    /**
+     * Scope for high priority sessions.
+     */
+    public function scopeHighPriority($query)
+    {
+        return $query->whereIn('priority', ['high', 'urgent']);
+    }
+
+    /**
+     * Scope for sessions by handling mode.
+     */
+    public function scopeByHandlingMode($query, string $mode)
+    {
+        return $query->where('handling_mode', $mode);
     }
 }

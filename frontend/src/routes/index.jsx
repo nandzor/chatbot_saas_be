@@ -19,6 +19,7 @@ import SuperAdminLogin from '@/pages/auth/SuperAdminLogin';
 // Dashboard Pages
 import Dashboard from '@/pages/dashboard/Dashboard';
 import Inbox from '@/pages/inbox/Inbox';
+import ModernInbox from '@/pages/inbox/ModernInbox';
 import Analytics from '@/pages/analytics/Analytics';
 import Knowledge from '@/pages/knowledge/Knowledge';
 import N8nAutomations from '@/pages/n8n-automations/N8nAutomations';
@@ -128,6 +129,14 @@ export const router = createBrowserRouter([
             element: (
               <RoleBasedRoute requiredPermission="handle_chats">
                 <Inbox />
+              </RoleBasedRoute>
+            )
+          },
+          {
+            path: 'modern-inbox',
+            element: (
+              <RoleBasedRoute requiredPermission="inbox.view">
+                <ModernInbox />
               </RoleBasedRoute>
             )
           },
@@ -275,6 +284,14 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <AgentDashboard /> },
           { path: 'inbox', element: <AgentInbox /> },
+          {
+            path: 'modern-inbox',
+            element: (
+              <RoleBasedRoute requiredPermission="inbox.view">
+                <ModernInbox />
+              </RoleBasedRoute>
+            )
+          },
           { path: 'profile', element: <AgentProfile /> },
         ],
       },

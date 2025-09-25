@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\EmailVerificationController;
 // Include additional route files
 require_once __DIR__ . '/n8n.php';
 require_once __DIR__ . '/waha.php';
+require_once __DIR__ . '/modern-inbox.php';
 
 /*
 |--------------------------------------------------------------------------
