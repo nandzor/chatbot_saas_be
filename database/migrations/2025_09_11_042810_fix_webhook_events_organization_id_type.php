@@ -11,10 +11,42 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Check if columns already exist and are UUID type
+        $columns = \DB::select("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'webhook_events' AND column_name IN ('organization_id', 'subscription_id')");
+
+        $needsUpdate = false;
+        foreach ($columns as $column) {
+            if ($column->data_type !== 'uuid') {
+                $needsUpdate = true;
+                break;
+            }
+        }
+
+        if (!$needsUpdate) {
+            // Columns are already UUID, just ensure the index exists
+            Schema::table('webhook_events', function (Blueprint $table) {
+                // Check if index exists before creating
+                $indexExists = \DB::select("SELECT indexname FROM pg_indexes WHERE tablename = 'webhook_events' AND indexname LIKE '%organization_id%gateway%status%'");
+                if (empty($indexExists)) {
+                    $table->index(['organization_id', 'gateway', 'status']);
+                }
+            });
+            return;
+        }
+
         Schema::table('webhook_events', function (Blueprint $table) {
-            // Drop the existing foreign key constraints
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['subscription_id']);
+            // Drop the existing foreign key constraints if they exist
+            try {
+                $table->dropForeign(['organization_id']);
+            } catch (\Exception $e) {
+                // Foreign key might not exist
+            }
+
+            try {
+                $table->dropForeign(['subscription_id']);
+            } catch (\Exception $e) {
+                // Foreign key might not exist
+            }
 
             // Drop the existing columns
             $table->dropColumn(['organization_id', 'subscription_id']);
@@ -36,9 +68,18 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('webhook_events', function (Blueprint $table) {
-            // Drop the UUID foreign key constraints
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['subscription_id']);
+            // Drop the UUID foreign key constraints if they exist
+            try {
+                $table->dropForeign(['organization_id']);
+            } catch (\Exception $e) {
+                // Foreign key might not exist
+            }
+
+            try {
+                $table->dropForeign(['subscription_id']);
+            } catch (\Exception $e) {
+                // Foreign key might not exist
+            }
 
             // Drop the UUID columns
             $table->dropColumn(['organization_id', 'subscription_id']);
