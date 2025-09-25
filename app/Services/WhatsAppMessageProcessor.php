@@ -232,8 +232,8 @@ class WhatsAppMessageProcessor
             ],
             'is_read' => false,
             'read_at' => null,
-            'sent_at' => now(),
-            'delivered_at' => now()
+            'delivered_at' => now(),
+            'created_at' => now()
         ]);
 
         return $message;
@@ -256,22 +256,22 @@ class WhatsAppMessageProcessor
             }
 
             // Generate AI response
-            $response = $this->botPersonalityService->generateResponse(
-                $botPersonality,
+            $response = $this->botPersonalityService->generateAiResponse(
+                $botPersonality->id,
                 $messageData['text'] ?? '',
-                $session
+                ['session_id' => $session->id, 'customer_id' => $session->customer_id]
             );
 
             if ($response && isset($response['content'])) {
                 // Create bot response message
                 $botMessage = Message::create([
                     'organization_id' => $session->organization_id,
-                    'chat_session_id' => $session->id,
+                    'session_id' => $session->id,
                     'sender_type' => 'bot',
                     'sender_id' => $botPersonality->id,
                     'sender_name' => $botPersonality->name,
                     'message_type' => 'text',
-                    'content' => $response['content'],
+                    'message_text' => $response['content'],
                     'metadata' => [
                         'bot_personality_id' => $botPersonality->id,
                         'ai_model' => $response['ai_model'] ?? null,
@@ -280,8 +280,8 @@ class WhatsAppMessageProcessor
                     ],
                     'is_read' => false,
                     'read_at' => null,
-                    'sent_at' => now(),
-                    'delivered_at' => now()
+                    'delivered_at' => now(),
+                    'created_at' => now()
                 ]);
 
                 // Send response to WhatsApp (implement based on your WAHA setup)
@@ -324,10 +324,31 @@ class WhatsAppMessageProcessor
      */
     private function getChannelConfig(string $organizationId, array $messageData): ?ChannelConfig
     {
-        return ChannelConfig::where('organization_id', $organizationId)
+        $config = ChannelConfig::where('organization_id', $organizationId)
             ->where('channel', 'whatsapp')
             ->where('is_active', true)
             ->first();
+
+        // If no specific WhatsApp config, try to get default channel config
+        if (!$config) {
+            $config = ChannelConfig::where('organization_id', $organizationId)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        // If still no config, create a default one
+        if (!$config) {
+            $config = ChannelConfig::create([
+                'organization_id' => $organizationId,
+                'channel' => 'whatsapp',
+                'channel_identifier' => 'whatsapp_' . $organizationId,
+                'name' => 'Default WhatsApp Config',
+                'config' => [],
+                'is_active' => true
+            ]);
+        }
+
+        return $config;
     }
 
     /**
@@ -348,19 +369,19 @@ class WhatsAppMessageProcessor
     {
         $text = strtolower($text);
 
-        if (str_contains($text, ['help', 'support', 'problem', 'issue'])) {
+        if (str_contains($text, 'help') || str_contains($text, 'support') || str_contains($text, 'problem') || str_contains($text, 'issue')) {
             return 'support';
         }
 
-        if (str_contains($text, ['price', 'cost', 'payment', 'billing'])) {
+        if (str_contains($text, 'price') || str_contains($text, 'cost') || str_contains($text, 'payment') || str_contains($text, 'billing')) {
             return 'billing_question';
         }
 
-        if (str_contains($text, ['buy', 'purchase', 'order'])) {
+        if (str_contains($text, 'buy') || str_contains($text, 'purchase') || str_contains($text, 'order')) {
             return 'purchase_inquiry';
         }
 
-        if (str_contains($text, ['thank', 'thanks', 'appreciate'])) {
+        if (str_contains($text, 'thank') || str_contains($text, 'thanks') || str_contains($text, 'appreciate')) {
             return 'compliment';
         }
 

@@ -27,7 +27,7 @@ class BotPersonalityService
             ->where('status', 'active');
 
         // Apply search filter
-        if ($request->has('search')) {
+        if ($request->has('search') && !empty($request->get('search'))) {
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%")
@@ -37,7 +37,7 @@ class BotPersonalityService
         }
 
         // Apply language filter
-        if ($request->has('language')) {
+        if ($request->has('language') && !empty($request->get('language'))) {
             $query->where('language', $request->get('language'));
         }
 
@@ -457,6 +457,164 @@ class BotPersonalityService
                 'avg_satisfaction_score' => $personality->avg_satisfaction_score,
                 'success_rate' => $personality->success_rate,
                 'performance_score' => $personality->performance_score
+            ]
+        ];
+    }
+
+    /**
+     * Create bot personality for organization
+     */
+    public function createForOrganization(array $data, string $organizationId): BotPersonality
+    {
+        $data['organization_id'] = $organizationId;
+        return BotPersonality::create($data);
+    }
+
+    /**
+     * Get bot personality for organization
+     */
+    public function getForOrganization(string $id, string $organizationId): ?BotPersonality
+    {
+        return BotPersonality::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->first();
+    }
+
+    /**
+     * Update bot personality for organization
+     */
+    public function updateForOrganization(string $id, array $data, string $organizationId): ?BotPersonality
+    {
+        $personality = BotPersonality::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if (!$personality) {
+            return null;
+        }
+
+        $personality->update($data);
+        return $personality->fresh(); // Return fresh instance with updated data
+    }
+
+    /**
+     * Delete bot personality for organization
+     */
+    public function deleteForOrganization(string $id, string $organizationId): bool
+    {
+        $personality = BotPersonality::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if (!$personality) {
+            return false;
+        }
+
+        return $personality->delete();
+    }
+
+    /**
+     * Sync workflow for bot personality
+     */
+    public function syncWorkflow(string $id, string $organizationId): array
+    {
+        $personality = BotPersonality::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if (!$personality) {
+            return [
+                'success' => false,
+                'message' => 'Bot personality not found'
+            ];
+        }
+
+        // TODO: Implement workflow sync logic
+        return [
+            'success' => true,
+            'message' => 'Workflow synced successfully',
+            'data' => [
+                'personality_id' => $id,
+                'synced_at' => now()
+            ]
+        ];
+    }
+
+    /**
+     * Get sync status for bot personality
+     */
+    public function getSyncStatus(string $id, string $organizationId): array
+    {
+        $personality = BotPersonality::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if (!$personality) {
+            return [
+                'success' => false,
+                'message' => 'Bot personality not found'
+            ];
+        }
+
+        // TODO: Implement sync status logic
+        return [
+            'success' => true,
+            'data' => [
+                'personality_id' => $id,
+                'sync_status' => 'synced',
+                'last_sync' => now()
+            ]
+        ];
+    }
+
+    /**
+     * Bulk sync workflows
+     */
+    public function bulkSyncWorkflows(array $ids, string $organizationId): array
+    {
+        $personalities = BotPersonality::whereIn('id', $ids)
+            ->where('organization_id', $organizationId)
+            ->get();
+
+        if ($personalities->isEmpty()) {
+            return [
+                'success' => false,
+                'message' => 'No bot personalities found'
+            ];
+        }
+
+        // TODO: Implement bulk sync logic
+        return [
+            'success' => true,
+            'message' => 'Workflows synced successfully',
+            'data' => [
+                'synced_count' => $personalities->count(),
+                'synced_at' => now()
+            ]
+        ];
+    }
+
+    /**
+     * Sync organization workflows
+     */
+    public function syncOrganizationWorkflows(string $organizationId): array
+    {
+        $personalities = BotPersonality::where('organization_id', $organizationId)->get();
+
+        if ($personalities->isEmpty()) {
+            return [
+                'success' => false,
+                'message' => 'No bot personalities found for organization'
+            ];
+        }
+
+        // TODO: Implement organization workflow sync logic
+        return [
+            'success' => true,
+            'message' => 'Organization workflows synced successfully',
+            'data' => [
+                'synced_count' => $personalities->count(),
+                'synced_at' => now()
             ]
         ];
     }

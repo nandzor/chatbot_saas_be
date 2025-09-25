@@ -12,15 +12,16 @@ class Message extends Model
 {
     use HasFactory, HasUuid, BelongsToOrganization;
 
+    public $timestamps = false; // Disable automatic timestamps
+
     protected $fillable = [
-        'chat_session_id',
+        'session_id',
         'organization_id',
         'sender_type',
         'sender_id',
         'sender_name',
-        'content',
+        'message_text',
         'message_type',
-        'status',
         'media_url',
         'media_type',
         'media_size',
@@ -39,8 +40,6 @@ class Message extends Model
         'emotion_scores',
         'is_read',
         'read_at',
-        'is_edited',
-        'edited_at',
         'delivered_at',
         'failed_at',
         'failed_reason',
@@ -50,6 +49,7 @@ class Message extends Model
         'processing_time_ms',
         'metadata',
         'waha_session_id',
+        'created_at',
     ];
 
     protected $casts = [
@@ -71,7 +71,6 @@ class Message extends Model
         'context' => 'array',
         'metadata' => 'array',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime',
     ];
 
     /**
@@ -79,7 +78,7 @@ class Message extends Model
      */
     public function chatSession(): BelongsTo
     {
-        return $this->belongsTo(ChatSession::class, 'chat_session_id');
+        return $this->belongsTo(ChatSession::class, 'session_id');
     }
 
     /**

@@ -32,7 +32,7 @@ class BotPersonalityController extends BaseApiController
 
         $organizationId = $user->organization_id;
 
-        $list = $this->service->listForOrganization($request, $organizationId);
+        $list = $this->service->getPersonalitiesForInbox($request, $organizationId);
 
         return $this->successResponse(
             'Bot personalities retrieved successfully',
