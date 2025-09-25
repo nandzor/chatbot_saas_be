@@ -10,6 +10,7 @@ use App\Models\BotPersonality;
 use App\Models\Message;
 use App\Services\InboxService;
 use App\Services\BotPersonalityService;
+use App\Services\EscalationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -18,11 +19,16 @@ class WhatsAppMessageProcessor
 {
     protected $inboxService;
     protected $botPersonalityService;
+    protected $escalationService;
 
-    public function __construct(InboxService $inboxService, BotPersonalityService $botPersonalityService)
-    {
+    public function __construct(
+        InboxService $inboxService,
+        BotPersonalityService $botPersonalityService,
+        EscalationService $escalationService
+    ) {
         $this->inboxService = $inboxService;
         $this->botPersonalityService = $botPersonalityService;
+        $this->escalationService = $escalationService;
     }
 
     /**
@@ -47,8 +53,7 @@ class WhatsAppMessageProcessor
             // 2. Get or create chat session
             $session = $this->getOrCreateSession($messageData, $customer);
 
-            // 3. Create message record
-            $message = $this->createMessage($messageData, $session);
+            // 3. Customer message is now handled by webhook, skip creation here
 
             // 4. Process with bot personality
             Log::info('About to process with bot', [
@@ -63,14 +68,19 @@ class WhatsAppMessageProcessor
                 'bot_response' => $botResponse
             ]);
 
-            // 5. Update session metrics
+            // 5. Check for escalation triggers
+            $escalationResult = $this->checkAndHandleEscalation($session, $messageData, $botResponse);
+
+            // 6. Update session metrics
             $this->updateSessionMetrics($session);
 
             return [
                 'session_id' => $session->id,
-                'message_id' => $message->id,
+                'message_id' => null, // Customer message now handled by webhook
                 'response_sent' => $botResponse['sent'] ?? false,
-                'bot_response' => $botResponse['content'] ?? null
+                'bot_response' => $botResponse['content'] ?? null,
+                'escalated' => $escalationResult['escalated'] ?? false,
+                'escalation_result' => $escalationResult
             ];
 
         } catch (\Exception $e) {
@@ -233,7 +243,8 @@ class WhatsAppMessageProcessor
                 'source' => 'whatsapp_webhook',
                 'created_via' => 'automatic',
                 'bot_personality_id' => $botPersonality?->id,
-                'channel_type' => 'whatsapp'
+                'channel_type' => 'whatsapp',
+                'session_name' => $messageData['session_name'] ?? null
             ]
         ]);
 
@@ -253,46 +264,6 @@ class WhatsAppMessageProcessor
         return $session;
     }
 
-    /**
-     * Create message record
-     */
-    private function createMessage(array $messageData, ChatSession $session): Message
-    {
-        Log::info('Creating message', [
-            'session_id' => $session->id,
-            'message_text' => $messageData['text'] ?? '',
-            'message_type' => $messageData['message_type'] ?? 'text'
-        ]);
-
-        $message = Message::create([
-            'organization_id' => $session->organization_id,
-            'session_id' => $session->id,
-            'sender_type' => 'customer',
-            'sender_id' => $session->customer_id,
-            'sender_name' => $session->customer->name,
-            'message_type' => $messageData['message_type'] ?? 'text',
-            'message_text' => $messageData['text'] ?? '',
-            'waha_session_id' => $messageData['waha_session'] ?? null,
-            'metadata' => [
-                'whatsapp_message_id' => $messageData['message_id'] ?? null,
-                'phone_number' => $messageData['from'] ?? null,
-                'timestamp' => $messageData['timestamp'] ?? now()->timestamp,
-                'raw_data' => $messageData['raw_data'] ?? null
-            ],
-            'is_read' => false,
-            'read_at' => null,
-            'delivered_at' => now(),
-            'created_at' => now()->addMicroseconds(rand(1, 999999))
-        ]);
-
-        Log::info('Message created successfully', [
-            'message_id' => $message->id,
-            'session_id' => $session->id,
-            'message_text' => $message->message_text
-        ]);
-
-        return $message;
-    }
 
     /**
      * Process message with bot personality
@@ -324,15 +295,15 @@ class WhatsAppMessageProcessor
 
             Log::info('Bot response generated successfully', [
                 'response' => $response,
-                'has_content' => isset($response['content']),
-                'content_length' => isset($response['content']) ? strlen($response['content']) : 0
+                'has_content' => isset($response['data']['content']),
+                'content_length' => isset($response['data']['content']) ? strlen($response['data']['content']) : 0
             ]);
 
-            if ($response && isset($response['content'])) {
+            if ($response && isset($response['data']['content'])) {
                 Log::info('Creating bot message', [
                     'session_id' => $session->id,
                     'bot_personality_id' => $botPersonality->id,
-                    'content' => $response['content']
+                    'content' => $response['data']['content']
                 ]);
 
                 // Create bot response message
@@ -343,31 +314,31 @@ class WhatsAppMessageProcessor
                     'sender_id' => $botPersonality->id,
                     'sender_name' => $botPersonality->name,
                     'message_type' => 'text',
-                    'message_text' => $response['content'],
+                    'message_text' => $response['data']['content'],
                     'metadata' => [
                         'bot_personality_id' => $botPersonality->id,
-                        'ai_model' => $response['ai_model'] ?? null,
-                        'confidence' => $response['confidence'] ?? null,
-                        'processing_time' => $response['processing_time'] ?? null
+                        'ai_model' => $response['data']['ai_model_used'] ?? null,
+                        'confidence' => $response['data']['confidence'] ?? null,
+                        'processing_time' => $response['data']['processing_time_ms'] ?? null
                     ],
                     'is_read' => false,
                     'read_at' => null,
                     'delivered_at' => now(),
-                    'created_at' => now()->addMicroseconds(rand(1, 999999))
+                    'created_at' => now()->addSeconds(rand(1, 3))
                 ]);
 
                 Log::info('Bot message created successfully', [
                     'bot_message_id' => $botMessage->id,
                     'session_id' => $session->id,
-                    'content' => $response['content']
+                    'content' => $response['data']['content']
                 ]);
 
                 // Send response to WhatsApp (implement based on your WAHA setup)
-                $this->sendWhatsAppResponse($session, $response['content']);
+                $this->sendWhatsAppResponse($session, $response['data']['content']);
 
                 return [
                     'sent' => true,
-                    'content' => $response['content'],
+                    'content' => $response['data']['content'],
                     'message_id' => $botMessage->id
                 ];
             }
@@ -535,19 +506,156 @@ class WhatsAppMessageProcessor
      */
     private function sendWhatsAppResponse(ChatSession $session, string $content): void
     {
-        // Implement based on your WAHA setup
-        // This is a placeholder - you'll need to integrate with your WAHA service
+        try {
+            Log::info('Sending WhatsApp response', [
+                'session_id' => $session->id,
+                'content' => $content,
+                'to' => $session->customer->phone
+            ]);
 
-        Log::info('Sending WhatsApp response', [
-            'session_id' => $session->id,
-            'content' => $content,
-            'to' => $session->customer->phone
-        ]);
+            // Get WAHA session name from session metadata
+            $wahaSessionName = $session->metadata['session_name'] ?? null;
+            if (!$wahaSessionName) {
+                Log::warning('No WAHA session name found in session metadata', [
+                    'session_id' => $session->id,
+                    'metadata' => $session->metadata
+                ]);
+                return;
+            }
 
-        // Example implementation:
-        // $this->wahaService->sendMessage($session->metadata['session_name'], [
-        //     'to' => $session->customer->phone,
-        //     'text' => $content
-        // ]);
+            // Use WAHA service to send message
+            $wahaService = app(\App\Services\Waha\WahaService::class);
+
+            $result = $wahaService->sendTextMessage(
+                $wahaSessionName,
+                $session->customer->phone,
+                $content
+            );
+
+            if ($result['success']) {
+                Log::info('WhatsApp response sent successfully', [
+                    'session_id' => $session->id,
+                    'waha_message_id' => $result['data']['id'] ?? null,
+                    'to' => $session->customer->phone
+                ]);
+            } else {
+                Log::error('Failed to send WhatsApp response', [
+                    'session_id' => $session->id,
+                    'error' => $result['error'] ?? 'Unknown error',
+                    'to' => $session->customer->phone
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Exception while sending WhatsApp response', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    /**
+     * Check for escalation triggers and handle escalation if needed
+     */
+    private function checkAndHandleEscalation(ChatSession $session, array $messageData, array $botResponse): array
+    {
+        try {
+            // Skip escalation if session is already handled by human agent
+            if (!$session->is_bot_session || $session->agent_id) {
+                return [
+                    'escalated' => false,
+                    'reason' => 'Session already handled by human agent'
+                ];
+            }
+
+            // Get escalation configuration
+            $escalationConfig = $this->escalationService->getEscalationConfig($session->organization_id);
+
+            if (!$escalationConfig['enabled']) {
+                return [
+                    'escalated' => false,
+                    'reason' => 'Escalation disabled'
+                ];
+            }
+
+            // Prepare context for escalation check
+            $context = [
+                'escalation_timeout_minutes' => $escalationConfig['escalation_timeout_minutes'],
+                'max_failed_responses' => $escalationConfig['max_failed_responses'],
+                'bot_response_failed' => !($botResponse['sent'] ?? false)
+            ];
+
+            // Check if escalation should be triggered
+            $escalationCheck = $this->escalationService->shouldEscalate($session, $messageData, $context);
+
+            if (!$escalationCheck['should_escalate']) {
+                return [
+                    'escalated' => false,
+                    'reason' => 'No escalation triggers detected',
+                    'triggers_checked' => $escalationCheck['triggers']
+                ];
+            }
+
+            Log::info('Escalation triggers detected', [
+                'session_id' => $session->id,
+                'triggers' => $escalationCheck['triggers'],
+                'reason' => $escalationCheck['reason'],
+                'priority' => $escalationCheck['priority']
+            ]);
+
+            // Perform escalation
+            $escalationResult = $this->escalationService->escalateToAgent(
+                $session,
+                $escalationCheck['reason'],
+                $context
+            );
+
+            if ($escalationResult['success']) {
+                Log::info('Session successfully escalated to human agent', [
+                    'session_id' => $session->id,
+                    'agent_id' => $escalationResult['agent_id'],
+                    'agent_name' => $escalationResult['agent_name'],
+                    'reason' => $escalationResult['reason']
+                ]);
+
+                return [
+                    'escalated' => true,
+                    'success' => true,
+                    'agent_id' => $escalationResult['agent_id'],
+                    'agent_name' => $escalationResult['agent_name'],
+                    'reason' => $escalationResult['reason'],
+                    'triggers' => $escalationCheck['triggers'],
+                    'priority' => $escalationCheck['priority']
+                ];
+            } else {
+                Log::warning('Failed to escalate session to human agent', [
+                    'session_id' => $session->id,
+                    'error' => $escalationResult['error'],
+                    'reason' => $escalationCheck['reason']
+                ]);
+
+                return [
+                    'escalated' => false,
+                    'success' => false,
+                    'error' => $escalationResult['error'],
+                    'reason' => $escalationCheck['reason'],
+                    'triggers' => $escalationCheck['triggers']
+                ];
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error during escalation check', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'escalated' => false,
+                'success' => false,
+                'error' => 'Escalation check failed: ' . $e->getMessage()
+            ];
+        }
     }
 }

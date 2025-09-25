@@ -1520,7 +1520,7 @@ class WahaController extends BaseApiController
         try {
 
             // Standard WAHA webhook format (from documentation)
-            if (isset($payload['event']) && $payload['event'] === 'message' && isset($payload['payload'])) {
+            if (isset($payload['event']) && in_array($payload['event'], ['message', 'message.any']) && isset($payload['payload'])) {
                 $message = $payload['payload'];
 
                 return [
@@ -1830,6 +1830,7 @@ class WahaController extends BaseApiController
         try {
             switch ($eventType) {
                 case 'message':
+                case 'message.any':
                     return $this->handleMessageEvent($payload, $organizationId);
 
                 case 'message.reaction':
@@ -1896,7 +1897,6 @@ class WahaController extends BaseApiController
         // Extract message data from WAHA webhook format
         $messageData = $this->extractWahaMessageData($payload);
 
-
         if (!$messageData) {
             return [
                 'success' => false,
@@ -1908,17 +1908,162 @@ class WahaController extends BaseApiController
         // Add organization_id to message data
         $messageData['organization_id'] = $organizationId;
 
-        // Fire event for asynchronous processing
-        event(new \App\Events\WhatsAppMessageReceived($messageData, $organizationId));
+        // Check if this is an outgoing message (from our system)
+        $isOutgoing = $messageData['from_me'] ?? false;
 
-        return [
-            'success' => true,
-            'message' => 'Message event processed',
-            'data' => [
-                'message_id' => $messageData['message_id'] ?? null,
-                'from' => $messageData['from'] ?? null
-            ]
-        ];
+        if ($isOutgoing) {
+            // Handle outgoing message (from bot/agent)
+            Log::info('Outgoing message detected', [
+                'message_id' => $messageData['message_id'],
+                'to' => $messageData['to'],
+                'text' => $messageData['text'],
+                'organization_id' => $organizationId
+            ]);
+
+            // Save outgoing message to database
+            $this->saveOutgoingMessage($messageData, $organizationId);
+
+            return [
+                'success' => true,
+                'message' => 'Outgoing message processed',
+                'data' => [
+                    'message_id' => $messageData['message_id'] ?? null,
+                    'to' => $messageData['to'] ?? null,
+                    'direction' => 'outgoing'
+                ]
+            ];
+        } else {
+            // Handle incoming message (from customer)
+            Log::info('Incoming message detected', [
+                'message_id' => $messageData['message_id'],
+                'from' => $messageData['from'],
+                'text' => $messageData['text'],
+                'organization_id' => $organizationId
+            ]);
+
+            // Fire event for asynchronous processing
+            event(new \App\Events\WhatsAppMessageReceived($messageData, $organizationId));
+
+            return [
+                'success' => true,
+                'message' => 'Incoming message event processed',
+                'data' => [
+                    'message_id' => $messageData['message_id'] ?? null,
+                    'from' => $messageData['from'] ?? null,
+                    'direction' => 'incoming'
+                ]
+            ];
+        }
+    }
+
+    /**
+     * Save outgoing message to database
+     */
+    private function saveOutgoingMessage(array $messageData, string $organizationId): void
+    {
+        try {
+            // Find the session based on customer phone number
+            $customerPhone = $messageData['to'] ?? null;
+            if (!$customerPhone) {
+                Log::warning('Cannot save outgoing message: no customer phone found', [
+                    'message_data' => $messageData
+                ]);
+                return;
+            }
+
+            // Find customer (try both formats: with and without @c.us)
+            $customer = \App\Models\Customer::where('organization_id', $organizationId)
+                ->where(function($query) use ($customerPhone) {
+                    $query->where('phone', $customerPhone)
+                          ->orWhere('phone', str_replace('@c.us', '', $customerPhone))
+                          ->orWhere('phone', $customerPhone . '@c.us');
+                })
+                ->first();
+
+            if (!$customer) {
+                Log::warning('Cannot save outgoing message: customer not found', [
+                    'phone' => $customerPhone,
+                    'organization_id' => $organizationId
+                ]);
+                return;
+            }
+
+            // Find active session
+            $session = \App\Models\ChatSession::where('organization_id', $organizationId)
+                ->where('customer_id', $customer->id)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$session) {
+                Log::warning('Cannot save outgoing message: no active session found', [
+                    'customer_id' => $customer->id,
+                    'organization_id' => $organizationId
+                ]);
+                return;
+            }
+
+            // Determine sender type and ID
+            $senderType = 'bot'; // Default to bot
+            $senderId = null;
+            $senderName = 'System Bot';
+
+            // Check if session has an assigned agent
+            if ($session->agent_id) {
+                $senderType = 'agent';
+                $senderId = $session->agent_id;
+                $senderName = $session->agent->display_name ?? 'Agent';
+            } else {
+                // Check if there's a bot personality for this organization
+                $botPersonality = \App\Models\BotPersonality::where('organization_id', $organizationId)
+                    ->where('status', 'active')
+                    ->where('is_default', true)
+                    ->first();
+
+                if ($botPersonality) {
+                    $senderId = $botPersonality->id;
+                    $senderName = $botPersonality->name;
+                }
+            }
+
+            // Create outgoing message
+            $message = \App\Models\Message::create([
+                'organization_id' => $organizationId,
+                'session_id' => $session->id,
+                'sender_type' => $senderType,
+                'sender_id' => $senderId,
+                'sender_name' => $senderName,
+                'message_type' => $messageData['message_type'] ?? 'text',
+                'message_text' => $messageData['text'] ?? '',
+                'waha_session_id' => $messageData['waha_session'] ?? null,
+                'metadata' => [
+                    'whatsapp_message_id' => $messageData['message_id'] ?? null,
+                    'phone_number' => $messageData['to'] ?? null,
+                    'timestamp' => $messageData['timestamp'] ?? now()->timestamp,
+                    'raw_data' => $messageData['raw_data'] ?? null,
+                    'direction' => 'outgoing',
+                    'from_me' => true
+                ],
+                'is_read' => true, // Outgoing messages are considered read
+                'read_at' => now(),
+                'delivered_at' => now(),
+                'created_at' => now()->addMilliseconds(rand(100, 500))
+            ]);
+
+            Log::info('Outgoing message saved successfully', [
+                'message_id' => $message->id,
+                'session_id' => $session->id,
+                'sender_type' => $senderType,
+                'sender_name' => $senderName,
+                'content' => $message->message_text
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to save outgoing message', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'message_data' => $messageData
+            ]);
+        }
     }
 
     /**

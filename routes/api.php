@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\QueueController;
 use App\Http\Controllers\Api\V1\PermissionSyncController;
 use App\Http\Controllers\Api\V1\OrganizationApprovalController;
+use App\Http\Controllers\Api\V1\EscalationController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmailVerificationController;
 
@@ -217,6 +218,13 @@ Route::prefix('v1')->group(function () {
             // Bot personality session operations
             Route::post('/sessions/{sessionId}/assign-personality', [InboxController::class, 'assignBotPersonality']);
             Route::post('/sessions/{sessionId}/generate-ai-response', [InboxController::class, 'generateAiResponse']);
+
+            // Escalation operations
+            Route::post('/sessions/{sessionId}/escalate', [EscalationController::class, 'escalateSession']);
+            Route::get('/escalation/config', [EscalationController::class, 'getEscalationConfig']);
+            Route::put('/escalation/config', [EscalationController::class, 'updateEscalationConfig']);
+            Route::get('/escalation/stats', [EscalationController::class, 'getEscalationStats']);
+            Route::get('/escalation/available-agents', [EscalationController::class, 'getAvailableAgents']);
 
             // Routes requiring additional permissions
             Route::middleware(['permission:inbox.create'])->post('/sessions', [InboxController::class, 'createSession']);
