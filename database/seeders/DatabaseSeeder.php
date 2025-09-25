@@ -21,6 +21,15 @@ class DatabaseSeeder extends Seeder
             // Other seeders
             ChatbotSaasSeeder::class,
 
+            // AI Model Seeder (required for bot personalities)
+            AiModelSeeder::class,
+
+            // Bot Personality Seeder (for inbox/bot-personalities endpoint)
+            SimpleBotPersonalitySeeder::class,
+
+            // Chat Session Seeder (for inbox/sessions endpoint)
+            SimpleChatSessionSeeder::class,
+
             // Knowledge Base Seeder
             KnowledgeBaseSeeder::class,
 

@@ -3,244 +3,461 @@
 namespace App\Services;
 
 use App\Models\BotPersonality;
-use App\Services\AiInstructionService;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\ChatSession;
+use App\Models\Message;
+use App\Models\Customer;
+use App\Models\AiModel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
-class BotPersonalityService extends BaseService
+class BotPersonalityService
 {
-    protected BotPersonality $model;
-    protected WorkflowSyncService $workflowSyncService;
-    protected AiInstructionService $aiInstructionService;
-
-    public function __construct(
-        BotPersonality $model,
-        WorkflowSyncService $workflowSyncService,
-        AiInstructionService $aiInstructionService
-    ) {
-        $this->model = $model;
-        $this->workflowSyncService = $workflowSyncService;
-        $this->aiInstructionService = $aiInstructionService;
-    }
-
-    protected function getModel(): Model
-    {
-        return $this->model;
-    }
-
     /**
-     * Get paginated personalities for the current organization.
+     * Get all bot personalities for organization
      */
-    public function listForOrganization(Request $request, string $organizationId)
+    public function getPersonalitiesForInbox(Request $request, string $organizationId): LengthAwarePaginator
     {
-        $filters = [
-            'organization_id' => $organizationId,
-        ];
-
-        // Add filter parameters
-        if ($request->filled('status')) {
-            $filters['status'] = $request->get('status');
-        }
-        if ($request->filled('language')) {
-            $filters['language'] = $request->get('language');
-        }
-        if ($request->filled('formality_level')) {
-            $filters['formality_level'] = $request->get('formality_level');
-        }
-
-        if ($request->filled('search')) {
-            $search = $request->get('search');
-            $query = $this->model
-                ->newQuery()
-                ->with(['wahaSession', 'knowledgeBaseItem'])
-                ->where('organization_id', $organizationId)
-                ->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('code', 'like', "%{$search}%")
-                      ->orWhere('display_name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
-                });
-
-            // Apply additional filters
-            $this->applyFilters($query, $filters);
-
-            return $query
-                ->orderBy($request->get('sort_by', 'created_at'), $request->get('sort_order', 'desc'))
-                ->paginate(min(100, max(1, (int) $request->get('per_page', 15))));
-        }
-
-        return $this->getPaginated($request, $filters, ['wahaSession', 'knowledgeBaseItem']);
-    }
-
-    /**
-     * Create a new personality within the organization enforcing unique constraints.
-     */
-    public function createForOrganization(array $data, string $organizationId): BotPersonality
-    {
-        $data['organization_id'] = $organizationId;
-
-        // Auto-fill n8n_workflow_id from waha_session_id if not provided
-        if (empty($data['n8n_workflow_id']) && !empty($data['waha_session_id'])) {
-            $wahaSession = \App\Models\WahaSession::find($data['waha_session_id']);
-            if ($wahaSession && $wahaSession->n8n_workflow_id) {
-                $data['n8n_workflow_id'] = $wahaSession->n8n_workflow_id;
-                Log::info('Auto-filled n8n_workflow_id from waha_session', [
-                    'waha_session_id' => $data['waha_session_id'],
-                    'n8n_workflow_id' => $wahaSession->n8n_workflow_id,
-                ]);
-            }
-        }
-
-        $personality = $this->create($data);
-
-        // Generate and sync AI instruction with workflow
-        if ($personality->n8n_workflow_id || $personality->waha_session_id || $personality->knowledge_base_item_id) {
-            try {
-                // Generate AI instruction
-                $aiInstruction = $this->aiInstructionService->generateForBotPersonality($personality);
-
-                // Sync with workflow including AI instruction
-                $this->workflowSyncService->syncBotPersonalityWorkflow($personality, $aiInstruction);
-
-            } catch (\Exception $e) {
-                Log::warning('Failed to sync workflow with AI instruction after bot personality creation', [
-                    'bot_personality_id' => $personality->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        return $personality;
-    }
-
-    /**
-     * Get a personality by ID ensuring it belongs to the organization.
-     */
-    public function getForOrganization(string $id, string $organizationId): ?BotPersonality
-    {
-        return $this->model->newQuery()
-            ->with(['wahaSession', 'knowledgeBaseItem'])
-            ->where('id', $id)
+        $query = BotPersonality::query()
             ->where('organization_id', $organizationId)
+            ->where('status', 'active');
+
+        // Apply search filter
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('display_name', 'LIKE', "%{$search}%")
+                  ->orWhere('description', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Apply language filter
+        if ($request->has('language')) {
+            $query->where('language', $request->get('language'));
+        }
+
+        // Apply AI model filter
+        if ($request->has('ai_model_id')) {
+            $query->where('ai_model_id', $request->get('ai_model_id'));
+        }
+
+        // Apply performance filter
+        if ($request->has('min_performance')) {
+            $minScore = $request->get('min_performance');
+            $query->whereRaw('(avg_satisfaction_score * 20 * 0.6 + success_rate * 0.4) >= ?', [$minScore]);
+        }
+
+        // Apply learning enabled filter
+        if ($request->has('learning_enabled')) {
+            $query->where('learning_enabled', $request->get('learning_enabled'));
+        }
+
+        // Apply sorting
+        $sortBy = $request->get('sort_by', 'performance');
+        $sortDirection = $request->get('sort_direction', 'desc');
+
+        switch ($sortBy) {
+            case 'performance':
+                $query->orderByRaw('(avg_satisfaction_score * 20 * 0.6 + success_rate * 0.4) DESC');
+                break;
+            case 'usage':
+                $query->orderBy('total_conversations', $sortDirection);
+                break;
+            case 'name':
+                $query->orderBy('name', $sortDirection);
+                break;
+            case 'created_at':
+                $query->orderBy('created_at', $sortDirection);
+                break;
+            default:
+                $query->orderBy('created_at', 'desc');
+        }
+
+        // Apply pagination
+        $perPage = $request->get('per_page', 15);
+        return $query->with(['aiModel', 'n8nWorkflow', 'wahaSession', 'knowledgeBaseItem'])
+                    ->paginate($perPage);
+    }
+
+    /**
+     * Get bot personality by ID for inbox
+     */
+    public function getPersonalityForInbox(string $id, string $organizationId): ?BotPersonality
+    {
+        return BotPersonality::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->where('status', 'active')
+            ->with(['aiModel', 'n8nWorkflow', 'wahaSession', 'knowledgeBaseItem'])
             ->first();
     }
 
     /**
-     * Update a personality within the organization.
+     * Get available personalities for session assignment
      */
-    public function updateForOrganization(string $id, array $data, string $organizationId): ?BotPersonality
+    public function getAvailablePersonalities(string $organizationId, array $filters = []): array
     {
-        $personality = $this->getForOrganization($id, $organizationId);
-        if (!$personality) {
-            return null;
+        $query = BotPersonality::query()
+            ->where('organization_id', $organizationId)
+            ->where('status', 'active');
+
+        // Apply filters
+        if (isset($filters['language'])) {
+            $query->where('language', $filters['language']);
         }
 
-        // Auto-fill n8n_workflow_id from waha_session_id if not provided
-        if (empty($data['n8n_workflow_id']) && !empty($data['waha_session_id'])) {
-            $wahaSession = \App\Models\WahaSession::find($data['waha_session_id']);
-            if ($wahaSession && $wahaSession->n8n_workflow_id) {
-                $data['n8n_workflow_id'] = $wahaSession->n8n_workflow_id;
-                Log::info('Auto-filled n8n_workflow_id from waha_session during update', [
-                    'waha_session_id' => $data['waha_session_id'],
-                    'n8n_workflow_id' => $wahaSession->n8n_workflow_id,
-                ]);
-            }
+        if (isset($filters['ai_model_id'])) {
+            $query->where('ai_model_id', $filters['ai_model_id']);
         }
 
-        $updatedPersonality = $this->update($personality->id, $data);
-
-        // Generate and sync AI instruction with workflow after update
-        if ($updatedPersonality && ($updatedPersonality->n8n_workflow_id || $updatedPersonality->waha_session_id || $updatedPersonality->knowledge_base_item_id)) {
-            try {
-                // Generate AI instruction
-                $aiInstruction = $this->aiInstructionService->generateForBotPersonality($updatedPersonality);
-
-                // Sync with workflow including AI instruction
-                $this->workflowSyncService->syncBotPersonalityWorkflow($updatedPersonality, $aiInstruction);
-
-            } catch (\Exception $e) {
-                Log::warning('Failed to sync workflow with AI instruction after bot personality update', [
-                    'bot_personality_id' => $updatedPersonality->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+        if (isset($filters['min_performance'])) {
+            $minScore = $filters['min_performance'];
+            $query->whereRaw('(avg_satisfaction_score * 20 * 0.6 + success_rate * 0.4) >= ?', [$minScore]);
         }
 
-        return $updatedPersonality;
+        return $query->orderByRaw('(avg_satisfaction_score * 20 * 0.6 + success_rate * 0.4) DESC')
+                    ->get()
+                    ->map(function ($personality) {
+                        return [
+                            'id' => $personality->id,
+                            'name' => $personality->name,
+                            'display_name' => $personality->display_name,
+                            'description' => $personality->description,
+                            'language' => $personality->language,
+                            'tone' => $personality->tone,
+                            'communication_style' => $personality->communication_style,
+                            'performance_score' => $personality->performance_score,
+                            'total_conversations' => $personality->total_conversations,
+                            'avg_satisfaction_score' => $personality->avg_satisfaction_score,
+                            'success_rate' => $personality->success_rate,
+                            'ai_model' => $personality->aiModel ? [
+                                'id' => $personality->aiModel->id,
+                                'name' => $personality->aiModel->name,
+                                'provider' => $personality->aiModel->provider
+                            ] : null,
+                            'has_workflow' => $personality->hasN8nWorkflow(),
+                            'has_waha_session' => $personality->hasWahaSession(),
+                            'has_knowledge_base' => $personality->hasKnowledgeBaseItem(),
+                        ];
+                    })
+                    ->toArray();
     }
 
     /**
-     * Delete a personality within the organization.
+     * Assign personality to session
      */
-    public function deleteForOrganization(string $id, string $organizationId): bool
+    public function assignPersonalityToSession(string $sessionId, string $personalityId, string $organizationId): bool
     {
-        $personality = $this->getForOrganization($id, $organizationId);
+        $session = ChatSession::where('id', $sessionId)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if (!$session) {
+            return false;
+        }
+
+        $personality = $this->getPersonalityForInbox($personalityId, $organizationId);
         if (!$personality) {
             return false;
         }
-        return $this->delete($personality->id);
+
+        $session->update([
+            'bot_personality_id' => $personalityId,
+            'is_bot_session' => true,
+            'last_activity_at' => now()
+        ]);
+
+        // Log the assignment
+        Log::info('Bot personality assigned to session', [
+            'session_id' => $sessionId,
+            'personality_id' => $personalityId,
+            'organization_id' => $organizationId
+        ]);
+
+        return true;
     }
 
     /**
-     * Sync bot personality with its workflow
+     * Generate AI response using bot personality
      */
-    public function syncWorkflow(string $id, string $organizationId): array
+    public function generateAiResponse(string $personalityId, string $message, array $context = []): array
     {
-        $personality = $this->getForOrganization($id, $organizationId);
+        $personality = BotPersonality::find($personalityId);
         if (!$personality) {
             return [
                 'success' => false,
-                'message' => 'Bot personality not found',
+                'error' => 'Bot personality not found'
             ];
         }
 
-        return $this->workflowSyncService->syncBotPersonalityWorkflow($personality);
+        try {
+            // Get AI model
+            $aiModel = $personality->aiModel;
+            if (!$aiModel) {
+                return [
+                    'success' => false,
+                    'error' => 'AI model not configured for this personality'
+                ];
+            }
+
+            // Prepare context for AI
+            $aiContext = $this->prepareAiContext($personality, $message, $context);
+
+            // Generate response using AI model
+            $response = $this->callAiModel($aiModel, $aiContext);
+
+            if ($response['success']) {
+                // Update personality statistics
+                $personality->increment('total_conversations');
+
+                // Log the interaction
+                Log::info('AI response generated', [
+                    'personality_id' => $personalityId,
+                    'message_length' => strlen($message),
+                    'response_length' => strlen($response['data']['content']),
+                    'confidence' => $response['data']['confidence'] ?? 0
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => [
+                        'content' => $response['data']['content'],
+                        'confidence' => $response['data']['confidence'] ?? 0,
+                        'intent' => $response['data']['intent'] ?? null,
+                        'sentiment' => $response['data']['sentiment'] ?? null,
+                        'personality_id' => $personalityId,
+                        'ai_model_used' => $aiModel->name,
+                        'processing_time_ms' => $response['data']['processing_time_ms'] ?? 0
+                    ]
+                ];
+            }
+
+            return $response;
+
+        } catch (\Exception $e) {
+            Log::error('AI response generation failed', [
+                'personality_id' => $personalityId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to generate AI response: ' . $e->getMessage()
+            ];
+        }
     }
 
     /**
-     * Get sync status for bot personality
+     * Prepare context for AI model
      */
-    public function getSyncStatus(string $id, string $organizationId): array
+    private function prepareAiContext(BotPersonality $personality, string $message, array $context = []): array
     {
-        $personality = $this->getForOrganization($id, $organizationId);
+        $aiContext = [
+            'personality' => [
+                'name' => $personality->name,
+                'tone' => $personality->tone,
+                'communication_style' => $personality->communication_style,
+                'formality_level' => $personality->formality_level,
+                'personality_traits' => $personality->personality_traits,
+                'custom_vocabulary' => $personality->custom_vocabulary,
+                'response_templates' => $personality->response_templates,
+                'greeting_message' => $personality->greeting_message,
+                'fallback_message' => $personality->fallback_message,
+                'error_message' => $personality->error_message,
+                'max_response_length' => $personality->max_response_length,
+                'confidence_threshold' => $personality->confidence_threshold
+            ],
+            'message' => $message,
+            'context' => $context,
+            'system_prompt' => $personality->system_message,
+            'language' => $personality->language
+        ];
+
+        // Add conversation history if available
+        if (isset($context['conversation_history'])) {
+            $aiContext['conversation_history'] = $context['conversation_history'];
+        }
+
+        // Add customer information if available
+        if (isset($context['customer'])) {
+            $aiContext['customer'] = $context['customer'];
+        }
+
+        // Add session information if available
+        if (isset($context['session'])) {
+            $aiContext['session'] = $context['session'];
+        }
+
+        return $aiContext;
+    }
+
+    /**
+     * Call AI model to generate response
+     */
+    private function callAiModel(AiModel $aiModel, array $context): array
+    {
+        // This is a simplified implementation
+        // In a real application, you would integrate with actual AI providers
+
+        try {
+            $startTime = microtime(true);
+
+            // Simulate AI processing
+            $response = $this->simulateAiResponse($aiModel, $context);
+
+            $processingTime = (microtime(true) - $startTime) * 1000;
+
+            return [
+                'success' => true,
+                'data' => [
+                    'content' => $response['content'],
+                    'confidence' => $response['confidence'],
+                    'intent' => $response['intent'],
+                    'sentiment' => $response['sentiment'],
+                    'processing_time_ms' => round($processingTime, 2)
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'AI model call failed: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Simulate AI response (replace with actual AI integration)
+     */
+    private function simulateAiResponse(AiModel $aiModel, array $context): array
+    {
+        $personality = $context['personality'];
+        $message = $context['message'];
+
+        // Simple response generation based on personality
+        $responses = [
+            'Hello! How can I help you today?',
+            'I understand your concern. Let me assist you with that.',
+            'Thank you for reaching out. I\'m here to help.',
+            'I appreciate your message. Let me provide you with the information you need.',
+            'That\'s a great question! Let me explain that for you.'
+        ];
+
+        $content = $responses[array_rand($responses)];
+
+        // Adjust response based on personality traits
+        if (isset($personality['tone']) && $personality['tone'] === 'friendly') {
+            $content = 'Hi there! ' . $content;
+        } elseif (isset($personality['tone']) && $personality['tone'] === 'professional') {
+            $content = 'Thank you for your inquiry. ' . $content;
+        }
+
+        return [
+            'content' => $content,
+            'confidence' => 0.85,
+            'intent' => 'general_inquiry',
+            'sentiment' => 'neutral'
+        ];
+    }
+
+    /**
+     * Get personality statistics for inbox
+     */
+    public function getPersonalityStatistics(string $organizationId, array $filters = []): array
+    {
+        $query = BotPersonality::query()
+            ->where('organization_id', $organizationId);
+
+        // Apply date filters
+        if (isset($filters['date_from'])) {
+            $query->where('created_at', '>=', Carbon::parse($filters['date_from']));
+        }
+        if (isset($filters['date_to'])) {
+            $query->where('created_at', '<=', Carbon::parse($filters['date_to']));
+        }
+
+        $personalities = $query->get();
+
+        $totalPersonalities = $personalities->count();
+        $activePersonalities = $personalities->where('status', 'active')->count();
+        $learningEnabled = $personalities->where('learning_enabled', true)->count();
+        $withWorkflows = $personalities->where('n8n_workflow_id', '!=', null)->count();
+        $withWahaSessions = $personalities->where('waha_session_id', '!=', null)->count();
+        $withKnowledgeBase = $personalities->where('knowledge_base_item_id', '!=', null)->count();
+
+        $avgPerformance = $personalities->avg('performance_score') ?? 0;
+        $avgSatisfaction = $personalities->avg('avg_satisfaction_score') ?? 0;
+        $avgSuccessRate = $personalities->avg('success_rate') ?? 0;
+        $totalConversations = $personalities->sum('total_conversations');
+
+        return [
+            'total_personalities' => $totalPersonalities,
+            'active_personalities' => $activePersonalities,
+            'learning_enabled' => $learningEnabled,
+            'with_workflows' => $withWorkflows,
+            'with_waha_sessions' => $withWahaSessions,
+            'with_knowledge_base' => $withKnowledgeBase,
+            'avg_performance_score' => round($avgPerformance, 2),
+            'avg_satisfaction_score' => round($avgSatisfaction, 2),
+            'avg_success_rate' => round($avgSuccessRate, 2),
+            'total_conversations' => $totalConversations,
+            'top_performers' => $personalities->sortByDesc('performance_score')->take(5)->values(),
+            'needs_retraining' => $personalities->filter(function ($p) {
+                return $p->needsRetraining();
+            })->count()
+        ];
+    }
+
+    /**
+     * Update personality performance metrics
+     */
+    public function updatePersonalityMetrics(string $personalityId, array $metrics): bool
+    {
+        $personality = BotPersonality::find($personalityId);
         if (!$personality) {
-            return [
-                'success' => false,
-                'message' => 'Bot personality not found',
-            ];
+            return false;
         }
 
-        return $this->workflowSyncService->getSyncStatus($personality);
+        $personality->updateConversationStats(
+            $metrics['satisfaction_score'] ?? null,
+            $metrics['successful'] ?? true
+        );
+
+        return true;
     }
 
     /**
-     * Bulk sync multiple bot personalities
+     * Get personality performance over time
      */
-    public function bulkSyncWorkflows(array $ids, string $organizationId): array
+    public function getPersonalityPerformance(string $personalityId, int $days = 30): array
     {
-        // Verify all personalities belong to the organization
-        $personalities = $this->model->whereIn('id', $ids)
-            ->where('organization_id', $organizationId)
-            ->get();
-
-        if ($personalities->count() !== count($ids)) {
-            return [
-                'success' => false,
-                'message' => 'Some bot personalities not found or do not belong to organization',
-            ];
+        $personality = BotPersonality::find($personalityId);
+        if (!$personality) {
+            return [];
         }
 
-        return $this->workflowSyncService->bulkSyncBotPersonalities($ids);
-    }
-
-    /**
-     * Sync all bot personalities for organization
-     */
-    public function syncOrganizationWorkflows(string $organizationId): array
-    {
-        return $this->workflowSyncService->syncOrganizationBotPersonalities($organizationId);
+        // This would typically query conversation logs
+        // For now, return mock data
+        return [
+            'personality_id' => $personalityId,
+            'name' => $personality->name,
+            'performance_over_time' => [
+                'dates' => [],
+                'satisfaction_scores' => [],
+                'success_rates' => [],
+                'conversation_counts' => []
+            ],
+            'current_metrics' => [
+                'total_conversations' => $personality->total_conversations,
+                'avg_satisfaction_score' => $personality->avg_satisfaction_score,
+                'success_rate' => $personality->success_rate,
+                'performance_score' => $personality->performance_score
+            ]
+        ];
     }
 }
-
-

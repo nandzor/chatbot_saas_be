@@ -16,140 +16,56 @@ class MessageResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'organization_id' => $this->organization_id,
             'chat_session_id' => $this->chat_session_id,
-
-            // Sender information
+            'organization_id' => $this->organization_id,
             'sender_type' => $this->sender_type,
             'sender_id' => $this->sender_id,
-            'sender_name' => $this->getSenderName(),
-
-            // Message content
-            'message_type' => $this->message_type,
+            'sender_name' => $this->sender_name,
             'content' => $this->content,
-            'content_preview' => $this->getContentPreview(),
-
-            // Message status
+            'message_type' => $this->message_type,
             'status' => $this->status,
-            'is_read' => $this->is_read,
-            'read_at' => $this->read_at,
-            'is_edited' => $this->is_edited,
-            'edited_at' => $this->edited_at,
-
-            // Message metadata
-            'metadata' => $this->metadata,
-            'attachments' => $this->getAttachments(),
-            'reactions' => $this->getReactions(),
-
-            // AI Analysis
-            'sentiment_score' => $this->sentiment_score,
-            'sentiment_label' => $this->getSentimentLabel(),
+            'media_url' => $this->media_url,
+            'media_type' => $this->media_type,
+            'media_size' => $this->media_size,
+            'media_metadata' => $this->media_metadata,
+            'thumbnail_url' => $this->thumbnail_url,
+            'quick_replies' => $this->quick_replies,
+            'buttons' => $this->buttons,
+            'template_data' => $this->template_data,
             'intent' => $this->intent,
             'entities' => $this->entities,
             'confidence_score' => $this->confidence_score,
+            'ai_generated' => $this->ai_generated,
+            'ai_model_used' => $this->ai_model_used,
+            'sentiment_score' => $this->sentiment_score,
+            'sentiment_label' => $this->sentiment_label,
+            'emotion_scores' => $this->emotion_scores,
+            'is_read' => $this->is_read,
+            'read_at' => $this->read_at?->toISOString(),
+            'is_edited' => $this->is_edited,
+            'edited_at' => $this->edited_at?->toISOString(),
+            'delivered_at' => $this->delivered_at?->toISOString(),
+            'failed_at' => $this->failed_at?->toISOString(),
+            'failed_reason' => $this->failed_reason,
+            'reply_to_message_id' => $this->reply_to_message_id,
+            'thread_id' => $this->thread_id,
+            'context' => $this->context,
+            'processing_time_ms' => $this->processing_time_ms,
+            'metadata' => $this->metadata,
+            'human_readable_media_size' => $this->human_readable_media_size,
+            'sentiment_text' => $this->sentiment_text,
+            'confidence_percentage' => $this->confidence_percentage,
+            'processing_time_human' => $this->processing_time_human,
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
 
-            // Timestamps
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
-
-            // Computed fields
-            'is_from_customer' => $this->sender_type === 'customer',
-            'is_from_agent' => $this->sender_type === 'agent',
-            'is_from_bot' => $this->sender_type === 'bot',
-            'time_ago' => $this->created_at->diffForHumans(),
-            'word_count' => $this->getWordCount(),
-            'character_count' => strlen($this->content ?? ''),
+            // Relationships
+            'chat_session' => new ChatSessionResource($this->whenLoaded('chatSession')),
+            'sender' => new UserResource($this->whenLoaded('sender')),
+            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'agent' => new AgentResource($this->whenLoaded('agent')),
+            'bot_personality' => new BotPersonalityResource($this->whenLoaded('botPersonality')),
+            'reply_to' => new MessageResource($this->whenLoaded('replyTo')),
         ];
-    }
-
-    /**
-     * Get sender name
-     */
-    private function getSenderName(): ?string
-    {
-        switch ($this->sender_type) {
-            case 'customer':
-                return $this->whenLoaded('customer', function () {
-                    return $this->customer->name ?? 'Customer';
-                });
-            case 'agent':
-                return $this->whenLoaded('agent', function () {
-                    return $this->agent->name ?? 'Agent';
-                });
-            case 'bot':
-                return $this->whenLoaded('botPersonality', function () {
-                    return $this->botPersonality->display_name ?? $this->botPersonality->name ?? 'Bot';
-                });
-            default:
-                return ucfirst($this->sender_type);
-        }
-    }
-
-    /**
-     * Get content preview (first 100 characters)
-     */
-    private function getContentPreview(): string
-    {
-        if (!$this->content) {
-            return '';
-        }
-
-        return strlen($this->content) > 100
-            ? substr($this->content, 0, 100) . '...'
-            : $this->content;
-    }
-
-    /**
-     * Get attachments from metadata
-     */
-    private function getAttachments(): array
-    {
-        if (!$this->metadata || !isset($this->metadata['attachments'])) {
-            return [];
-        }
-
-        return $this->metadata['attachments'];
-    }
-
-    /**
-     * Get reactions from metadata
-     */
-    private function getReactions(): array
-    {
-        if (!$this->metadata || !isset($this->metadata['reactions'])) {
-            return [];
-        }
-
-        return $this->metadata['reactions'];
-    }
-
-    /**
-     * Get sentiment label
-     */
-    private function getSentimentLabel(): ?string
-    {
-        if (!$this->sentiment_score) {
-            return null;
-        }
-
-        if ($this->sentiment_score >= 0.5) {
-            return 'positive';
-        } elseif ($this->sentiment_score <= -0.5) {
-            return 'negative';
-        }
-
-        return 'neutral';
-    }
-
-    /**
-     * Get word count
-     */
-    private function getWordCount(): int
-    {
-        if (!$this->content) {
-            return 0;
-        }
-
-        return str_word_count(strip_tags($this->content));
     }
 }

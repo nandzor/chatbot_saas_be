@@ -3,7 +3,7 @@
  * Inbox dengan enhanced components dan error handling
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   useLoadingStates,
   LoadingWrapper,
@@ -17,10 +17,12 @@ import {
   useAnnouncement,
   useFocusManagement
 } from '@/utils/accessibilityUtils';
-import {
-  sanitizeInput,
-  validateInput
-} from '@/utils/securityUtils';
+// import {
+//   sanitizeInput,
+//   validateInput
+// } from '@/utils/securityUtils';
+import { inboxService } from '@/services/InboxService';
+import { useApi } from '@/hooks/useApi';
 import SessionManager from '@/features/shared/SessionManager';
 import InboxManagement from '@/features/shared/InboxManagement';
 import {
@@ -30,7 +32,6 @@ import {
   TabsTrigger,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
   Button,
@@ -42,16 +43,13 @@ import {
   Settings,
   RefreshCw,
   Download,
-  Filter,
-  Search,
   AlertCircle,
   CheckCircle,
-  Users,
   Clock,
   Activity
 } from 'lucide-react';
 
-const InboxPage = () => {
+const InboxPageComponent = () => {
   const { announce } = useAnnouncement();
   const { focusRef, setFocus } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
@@ -59,44 +57,28 @@ const InboxPage = () => {
   // State management
   const [activeTab, setActiveTab] = useState('session-manager');
   const [error, setError] = useState(null);
-  const [inboxStats, setInboxStats] = useState({
-    totalSessions: 0,
-    activeSessions: 0,
-    pendingSessions: 0,
-    resolvedSessions: 0,
-    avgResponseTime: 0,
-    satisfactionRate: 0
+
+  // Create stable reference for API function
+  const getStatistics = useCallback(() => inboxService.getStatistics(), []);
+
+  // Create stable error callback
+  const onErrorCallback = useCallback((err) => {
+    const errorResult = handleError(err, {
+      context: 'Inbox Stats Loading',
+      showToast: true
+    });
+    setError(errorResult.message);
+  }, []);
+
+  // API hooks for statistics
+  const {
+    data: inboxStats,
+    loading: statsLoading,
+    refresh: refreshStats
+  } = useApi(getStatistics, {
+    immediate: true,
+    onError: onErrorCallback
   });
-
-  // Load inbox stats
-  const loadInboxStats = useCallback(async () => {
-    try {
-      setLoading('initial', true);
-      setError(null);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setInboxStats({
-        totalSessions: 1247,
-        activeSessions: 23,
-        pendingSessions: 8,
-        resolvedSessions: 1216,
-        avgResponseTime: 2.3,
-        satisfactionRate: 94.2
-      });
-
-      announce('Inbox stats loaded successfully');
-    } catch (err) {
-      const errorResult = handleError(err, {
-        context: 'Inbox Stats Loading',
-        showToast: true
-      });
-      setError(errorResult.message);
-    } finally {
-      setLoading('initial', false);
-    }
-  }, [setLoading, announce]);
 
   // Handle tab change
   const handleTabChange = useCallback((value) => {
@@ -108,14 +90,14 @@ const InboxPage = () => {
   const handleRefresh = useCallback(async () => {
     try {
       setLoading('refresh', true);
-      await loadInboxStats();
+      await refreshStats();
       announce('Inbox data refreshed successfully');
     } catch (err) {
       handleError(err, { context: 'Inbox Refresh' });
     } finally {
       setLoading('refresh', false);
     }
-  }, [loadInboxStats, setLoading, announce]);
+  }, [refreshStats, setLoading, announce]);
 
   // Handle export
   const handleExport = useCallback(async () => {
@@ -133,10 +115,7 @@ const InboxPage = () => {
     }
   }, [setLoading, announce]);
 
-  // Load data on mount
-  useEffect(() => {
-    loadInboxStats();
-  }, [loadInboxStats]);
+  // Data is loaded automatically by useApi with immediate: true
 
   // Focus management on mount
   useEffect(() => {
@@ -188,7 +167,7 @@ const InboxPage = () => {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <LoadingWrapper
-          isLoading={getLoadingState('initial')}
+          isLoading={statsLoading || getLoadingState('initial')}
           loadingComponent={<SkeletonCard />}
         >
           <Card>
@@ -198,7 +177,7 @@ const InboxPage = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {inboxStats.totalSessions.toLocaleString()}
+                {inboxStats?.total_sessions?.toLocaleString() || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 All time sessions
@@ -208,7 +187,7 @@ const InboxPage = () => {
         </LoadingWrapper>
 
         <LoadingWrapper
-          isLoading={getLoadingState('initial')}
+          isLoading={statsLoading || getLoadingState('initial')}
           loadingComponent={<SkeletonCard />}
         >
           <Card>
@@ -218,7 +197,7 @@ const InboxPage = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {inboxStats.activeSessions}
+                {inboxStats?.active_sessions || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Currently active
@@ -228,7 +207,7 @@ const InboxPage = () => {
         </LoadingWrapper>
 
         <LoadingWrapper
-          isLoading={getLoadingState('initial')}
+          isLoading={statsLoading || getLoadingState('initial')}
           loadingComponent={<SkeletonCard />}
         >
           <Card>
@@ -238,7 +217,7 @@ const InboxPage = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {inboxStats.pendingSessions}
+                {inboxStats?.pending_sessions || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Awaiting response
@@ -248,7 +227,7 @@ const InboxPage = () => {
         </LoadingWrapper>
 
         <LoadingWrapper
-          isLoading={getLoadingState('initial')}
+          isLoading={statsLoading || getLoadingState('initial')}
           loadingComponent={<SkeletonCard />}
         >
           <Card>
@@ -258,7 +237,7 @@ const InboxPage = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {inboxStats.satisfactionRate}%
+                {inboxStats?.satisfaction_rate?.toFixed(1) || 0}%
               </div>
               <p className="text-xs text-muted-foreground">
                 Customer satisfaction
@@ -305,6 +284,8 @@ const InboxPage = () => {
   );
 };
 
-export default withErrorHandling(InboxPage, {
+const InboxPage = withErrorHandling(InboxPageComponent, {
   context: 'Inbox Page'
 });
+
+export default InboxPage;
