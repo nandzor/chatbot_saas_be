@@ -47,12 +47,15 @@ class AuthService {
         return response;
       },
       async (error) => {
+        console.log('🔍 AuthService interceptor triggered:', error.response?.status, error.config?.url);
         const originalRequest = error.config;
 
-        // Don't try to refresh tokens for login requests or if already retrying
+        // Don't try to refresh tokens for login requests, refresh requests, or if already retrying
         const isLoginRequest = originalRequest.url?.includes('/auth/login');
+        const isRefreshRequest = originalRequest.url?.includes('/auth/refresh');
 
-        if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
+        if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest && !isRefreshRequest) {
+          console.log('🔄 Attempting token refresh for:', originalRequest.url);
           originalRequest._retry = true;
 
           try {
@@ -67,11 +70,25 @@ class AuthService {
 
             return this.api(originalRequest);
           } catch (refreshError) {
-            // Refresh failed, redirect to login
-            this.logout();
-            window.location.href = '/auth/login';
+            console.log('❌ Token refresh failed, redirecting to login');
+            // Refresh failed, clear tokens and redirect to login
+            this.clearTokens();
+            // Use setTimeout to ensure the redirect happens after the current execution
+            setTimeout(() => {
+              window.location.href = '/auth/login';
+            }, 0);
             return Promise.reject(refreshError);
           }
+        }
+
+        // Handle refresh request failures specifically
+        if (error.response?.status === 401 && isRefreshRequest) {
+          console.log('❌ Refresh token is invalid, redirecting to login');
+          this.clearTokens();
+          setTimeout(() => {
+            window.location.href = '/auth/login';
+          }, 0);
+          return Promise.reject(error);
         }
 
         return Promise.reject(error);
@@ -309,19 +326,39 @@ class AuthService {
     const jwtToken = localStorage.getItem('jwt_token');
     const sanctumToken = localStorage.getItem('sanctum_token');
     const tokenExpiresAt = localStorage.getItem('token_expires_at');
+    const refreshToken = localStorage.getItem('refresh_token');
     const savedUser = localStorage.getItem('chatbot_user');
+
+    console.log('🔍 isAuthenticated check:', {
+      hasJwtToken: !!jwtToken,
+      hasSanctumToken: !!sanctumToken,
+      hasRefreshToken: !!refreshToken,
+      hasSavedUser: !!savedUser,
+      tokenExpiresAt: tokenExpiresAt,
+      isExpired: jwtToken && tokenExpiresAt ? new Date(tokenExpiresAt) <= new Date() : false
+    });
 
     // Must have at least one token and user data
     if ((!jwtToken && !sanctumToken) || !savedUser) {
+      console.log('🔍 isAuthenticated: false - no tokens or user data');
       return false;
     }
 
     // Check if JWT token is expired
     if (jwtToken && tokenExpiresAt && new Date(tokenExpiresAt) <= new Date()) {
-      // JWT expired, but Sanctum might still be valid
-      return !!sanctumToken;
+      // JWT expired, check if we have a refresh token
+      if (refreshToken) {
+        // We have a refresh token, so we can try to refresh
+        console.log('🔍 isAuthenticated: true - JWT expired but has refresh token');
+        return true;
+      } else {
+        // No refresh token, check if Sanctum token is still valid
+        console.log('🔍 isAuthenticated:', !!sanctumToken, '- JWT expired, no refresh token, checking Sanctum');
+        return !!sanctumToken;
+      }
     }
 
+    console.log('🔍 isAuthenticated: true - tokens appear valid');
     return true;
   }
 

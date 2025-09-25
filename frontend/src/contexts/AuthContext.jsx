@@ -89,7 +89,8 @@ export const AuthProvider = ({ children }) => {
         }
 
         // First check if we have valid tokens
-        if (authService.isAuthenticated()) {
+        const hasValidTokens = authService.isAuthenticated();
+        if (hasValidTokens) {
           // Try to validate with API
           try {
             const userData = await authService.getCurrentUser();
@@ -101,14 +102,9 @@ export const AuthProvider = ({ children }) => {
               throw new Error('No user data from API');
             }
           } catch (apiError) {
-            console.warn('⚠️ API validation failed, checking local storage');
-
-            // Check if it's a token expired error
-            if (apiError.response?.status === 401) {
-              console.log('🔒 Token expired, redirecting to login');
-              // Clear auth data and redirect to login
-              localStorage.removeItem(STORAGE_KEYS.USER);
-              localStorage.removeItem(STORAGE_KEYS.SESSION);
+            // Check if it's a token expired or unauthorized error
+            if (apiError.response?.status === 401) {// Clear auth data and redirect to login
+              authService.clearTokens();
               setUser(null);
               setIsAuthenticated(false);
               setError('Session expired, please login again');
@@ -135,7 +131,6 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } else {
-          // No valid tokens, ensure clean state
           setUser(null);
           setIsAuthenticated(false);
         }
