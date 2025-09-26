@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('ai_conversations_log', function (Blueprint $table) {
             $table->uuid('id');
             $table->foreignUuid('organization_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('session_id')->nullable()->constrained('chat_sessions');
-            $table->foreignUuid('message_id')->nullable()->constrained('messages');
+            $table->uuid('session_id')->nullable(); // Remove foreign key constraint for now
+            $table->uuid('message_id')->nullable(); // Remove foreign key constraint for now
 
             // AI Request Details
             $table->foreignUuid('ai_model_id')->nullable()->constrained('ai_models');
@@ -46,6 +46,9 @@ return new class extends Migration
             // Add unique constraint on id for foreign key references
             $table->unique('id', 'ai_conversations_log_id_unique');
         });
+
+        // Add foreign key constraints after the referenced tables are created
+        // This will be handled by a separate migration that runs after chat_sessions and messages are created
     }
 
     /**

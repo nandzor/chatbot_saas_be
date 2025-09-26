@@ -51,7 +51,7 @@ return new class extends Migration
                 waha_session_id VARCHAR(255),
                 PRIMARY KEY (id, created_at),
                 UNIQUE (id),
-                FOREIGN KEY (session_id) REFERENCES chat_sessions(id),
+                -- FOREIGN KEY (session_id) REFERENCES chat_sessions(id), -- Will be added later
                 FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
                 CONSTRAINT messages_message_type_check CHECK (message_type IN (\'text\', \'image\', \'audio\', \'video\', \'file\', \'location\', \'contact\', \'sticker\', \'template\', \'quick_reply\', \'button\', \'list\', \'carousel\', \'poll\', \'form\'))
             )
