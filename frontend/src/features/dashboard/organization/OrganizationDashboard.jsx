@@ -124,9 +124,12 @@ const OrganizationDashboard = () => {
     );
   }
 
-  const overview = dashboardData?.data?.overview || {};
-  const sessionDistributionOverTime = dashboardData?.data?.session_distribution_over_time || [];
-  const intentAnalysis = dashboardData?.data?.intent_analysis || [];
+  const overview = dashboardData?.overview || {};
+  const sessionDistributionOverTime = dashboardData?.session_distribution_over_time || [];
+  const intentAnalysis = dashboardData?.intent_analysis || [];
+
+
+
 
   return (
     <div className="space-y-6">
@@ -307,10 +310,12 @@ const OrganizationDashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {/* Chart data visualization */}
-              <div className="h-64 bg-muted rounded-lg p-4">
+              <div className="h-80 bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-slate-200 relative shadow-sm">
                 <div className="h-full flex flex-col">
-                  <div className="flex-1 flex items-end space-x-1">
-                    {sessionDistributionOverTime.slice(0, 12).map((item, index) => {
+
+                  {sessionDistributionOverTime.length > 0 ? (
+                    <div className="flex-1 flex items-end space-x-1">
+                      {sessionDistributionOverTime.slice(0, 12).map((item, index) => {
                       const botValue = item.bot || 0;
                       const agentValue = item.agent || 0;
                       const allValues = sessionDistributionOverTime.map(d => Math.max(d.bot || 0, d.agent || 0));
@@ -322,62 +327,82 @@ const OrganizationDashboard = () => {
                         <div key={index} className="flex-1 flex flex-col items-center space-y-1">
                           <div className="w-full flex flex-col items-center space-y-1">
                             <div
-                              className="w-full bg-blue-500 rounded-t transition-all duration-300 hover:bg-blue-600"
-                              style={{ height: `${botHeight}%`, minHeight: botValue > 0 ? '4px' : '2px' }}
+                              className="w-full bg-gradient-to-t from-blue-600 to-blue-500 rounded-t-md transition-all duration-300 hover:from-blue-700 hover:to-blue-600 shadow-sm hover:shadow-md"
+                              style={{ height: `${Math.max(botHeight, 8)}%`, minHeight: '16px' }}
                               title={`Bot: ${botValue} sessions`}
                             ></div>
                             <div
-                              className="w-full bg-green-500 rounded-t transition-all duration-300 hover:bg-green-600"
-                              style={{ height: `${agentHeight}%`, minHeight: agentValue > 0 ? '4px' : '2px' }}
+                              className="w-full bg-gradient-to-t from-emerald-600 to-emerald-500 rounded-t-md transition-all duration-300 hover:from-emerald-700 hover:to-emerald-600 shadow-sm hover:shadow-md"
+                              style={{ height: `${Math.max(agentHeight, 8)}%`, minHeight: '16px' }}
                               title={`Agent: ${agentValue} sessions`}
                             ></div>
                           </div>
-                          <span className="text-xs text-muted-foreground transform -rotate-45 origin-left">
+                          <span className="text-xs text-slate-600 font-medium transform -rotate-45 origin-left">
                             {item.time}
                           </span>
                         </div>
                       );
-                    })}
-                  </div>
-                  <div className="flex justify-center space-x-4 mt-2">
-                    <div className="flex items-center space-x-1">
-                      <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                      <span className="text-xs text-muted-foreground">Bot ({sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0)})</span>
+                      })}
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <div className="w-3 h-3 bg-green-500 rounded"></div>
-                      <span className="text-xs text-muted-foreground">Agent ({sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0)})</span>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center text-slate-500">
+                        <div className="text-lg font-semibold mb-2">No data available</div>
+                        <div className="text-sm">Chart will appear when data is loaded</div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-center space-x-6 mt-4 pt-4 border-t border-slate-200">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 bg-gradient-to-r from-blue-600 to-blue-500 rounded-sm shadow-sm"></div>
+                      <span className="text-sm font-medium text-slate-700">Bot Sessions</span>
+                      <span className="text-sm font-bold text-blue-600">({sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0)})</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-sm shadow-sm"></div>
+                      <span className="text-sm font-medium text-slate-700">Agent Sessions</span>
+                      <span className="text-sm font-bold text-emerald-600">({sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0)})</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Distribution Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {(() => {
-                      const totalBot = sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0);
-                      const totalAgent = sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0);
-                      const total = totalBot + totalAgent;
-                      return total > 0 ? Math.round((totalBot / total) * 100) : 0;
-                    })()}%
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Bot Handled ({sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0)} sessions)
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-blue-700 mb-1">
+                      {(() => {
+                        const totalBot = sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0);
+                        const totalAgent = sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0);
+                        const total = totalBot + totalAgent;
+                        return total > 0 ? Math.round((totalBot / total) * 100) : 0;
+                      })()}%
+                    </div>
+                    <div className="text-sm font-medium text-blue-600">
+                      Bot Handled
+                    </div>
+                    <div className="text-xs text-blue-500 mt-1">
+                      {sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0)} sessions
+                    </div>
                   </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {(() => {
-                      const totalBot = sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0);
-                      const totalAgent = sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0);
-                      const total = totalBot + totalAgent;
-                      return total > 0 ? Math.round((totalAgent / total) * 100) : 0;
-                    })()}%
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Agent Handled ({sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0)} sessions)
+                <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-lg p-4 border border-emerald-200">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-emerald-700 mb-1">
+                      {(() => {
+                        const totalBot = sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0);
+                        const totalAgent = sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0);
+                        const total = totalBot + totalAgent;
+                        return total > 0 ? Math.round((totalAgent / total) * 100) : 0;
+                      })()}%
+                    </div>
+                    <div className="text-sm font-medium text-emerald-600">
+                      Agent Handled
+                    </div>
+                    <div className="text-xs text-emerald-500 mt-1">
+                      {sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0)} sessions
+                    </div>
                   </div>
                 </div>
               </div>
