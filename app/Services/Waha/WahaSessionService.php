@@ -320,10 +320,13 @@ class WahaSessionService
     {
         $n8nBaseUrl = config('n8n.server.base_url', 'http://localhost:5678');
         $baseUrl = rtrim($n8nBaseUrl, '/');
+        $appBaseUrl = config('app.url', 'http://localhost:9000');
 
         return [
             'test' => $baseUrl . '/webhook-test/' . $webhookId . '/waha',
-            'production' => $baseUrl . '/webhook/' . $webhookId . '/waha'
+            'production' => $baseUrl . '/webhook/' . $webhookId . '/waha',
+            'message_test' => $appBaseUrl . '/api/waha/webhook/' . $webhookId . '/message',
+            'message_production' => $appBaseUrl . '/api/waha/webhook/' . $webhookId . '/message'
         ];
     }
 
@@ -384,6 +387,19 @@ class WahaSessionService
                         'X-Webhook-Source' => 'WAHA-Session-Production',
                         'X-Organization-ID' => $organizationId,
                         'X-N8N-Webhook-ID' => $webhookId,
+                        'X-Environment' => 'production'
+                    ]
+                ],
+                [
+                    'url' => $webhookUrls['message_production'],
+                    'events' => ['session.status', 'message', 'message.any'],
+                    'hmac' => null,
+                    'retries' => null,
+                    'customHeaders' => [
+                        'X-Webhook-Source' => 'WAHA-Message-Handler',
+                        'X-Organization-ID' => $organizationId,
+                        'X-N8N-Webhook-ID' => $webhookId,
+                        'X-Webhook-Type' => 'message-handler',
                         'X-Environment' => 'production'
                     ]
                 ]
@@ -505,12 +521,25 @@ class WahaSessionService
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => null
+                ],
+                [
+                    'url' => $webhookUrls['message_production'],
+                    'events' => ['session.status', 'message', 'message.any'],
+                    'hmac' => null,
+                    'retries' => null,
+                    'customHeaders' => [
+                        'X-Webhook-Type' => 'message-handler',
+                        'X-Organization-ID' => $organization->id
+                    ]
                 ]
             ];
 
         } else {
             // Fallback to default webhook if no N8N webhook ID
             $defaultUrl = config('waha.webhooks.default_url', '');
+            $appBaseUrl = config('app.url', 'http://localhost:9000');
+            $sessionName = $sessionData['name'];
+
             if ($defaultUrl) {
                 $sessionData['config']['webhooks'] = [
                     [
@@ -519,6 +548,16 @@ class WahaSessionService
                         'hmac' => null,
                         'retries' => null,
                         'customHeaders' => null
+                    ],
+                    [
+                        'url' => $appBaseUrl . '/api/waha/webhook/' . $sessionName . '/message',
+                        'events' => ['session.status', 'message', 'message.any'],
+                        'hmac' => null,
+                        'retries' => null,
+                        'customHeaders' => [
+                            'X-Webhook-Type' => 'message-handler',
+                            'X-Organization-ID' => $organization->id
+                        ]
                     ]
                 ];
             }
