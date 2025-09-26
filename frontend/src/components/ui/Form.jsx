@@ -56,7 +56,8 @@ const Form = ({
   autoSave = false,
   autoSaveDelay = 2000,
   maxAttempts = 5,
-  className = ''
+  className = '',
+  externalErrors = {} // Add external errors prop
 }) => {
   const [values, setValues] = useState(initialValues);
 
@@ -65,6 +66,12 @@ const Form = ({
     setValues(initialValues);
   }, [initialValues]);
   const [errors, setErrors] = useState({});
+
+  // Merge external errors with internal errors
+  const allErrors = useMemo(() => ({
+    ...errors,
+    ...externalErrors
+  }), [errors, externalErrors]);
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setSubmitAttempts] = useState(0);
@@ -357,7 +364,7 @@ const Form = ({
 
   // Render field
   const renderField = useCallback((field) => {
-    const fieldError = errors[field.name];
+    const fieldError = allErrors[field.name];
     const fieldValue = getNestedValue(values, field.name);
 
     const commonProps = {

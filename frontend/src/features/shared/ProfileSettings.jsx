@@ -21,7 +21,8 @@ import {
   sanitizeInput,
   validateInput
 } from '@/utils/securityUtils';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Input, Label, Textarea, Select, SelectItem, Switch, Separator, Alert, AlertDescription, Tabs, TabsContent, TabsList, TabsTrigger, Progress, Avatar, AvatarFallback, AvatarImage, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, useToast, Form} from '@/components/ui';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge, Input, Label, Textarea, Select, SelectItem, Switch, Separator, Alert, AlertDescription, Tabs, TabsContent, TabsList, TabsTrigger, Progress, Avatar, AvatarFallback, AvatarImage, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Form} from '@/components/ui';
+import SafeAvatar from '@/components/ui/SafeAvatar';
 import ProfileService from '@/services/ProfileService';
 
 const profileService = new ProfileService();
@@ -54,7 +55,6 @@ import {
 
 const ProfileSettings = () => {
   const { user, updateUser } = useAuth();
-  const { toast } = useToast();
 
   // Loading states
   const {
@@ -65,7 +65,7 @@ const ProfileSettings = () => {
   } = useLoadingStates();
 
   // Accessibility
-  const { announce } = useAnnouncement();
+  const { announce, AnnouncementRegion } = useAnnouncement();
   const { manageFocus } = useFocusManagement();
 
   const [activeTab, setActiveTab] = useState('profile');
@@ -361,12 +361,12 @@ const ProfileSettings = () => {
       announce('Data profil berhasil dimuat');
     } catch (error) {
       console.error('Error loading profile data:', error);
-      handleError(error, 'Gagal memuat data profil', toast);
+      handleError(error, 'Gagal memuat data profil');
       announce('Gagal memuat data profil');
     } finally {
       setLoading('profile', false);
     }
-  }, [toast, announce, setLoading]);
+  }, [announce, setLoading]);
 
   // Load data on component mount
   useEffect(() => {
@@ -485,17 +485,11 @@ const ProfileSettings = () => {
       // Reset changes flag
       setHasProfileChanges(false);
 
-      // Show success message
-      toast({
-        title: 'Berhasil',
-        description: 'Profil berhasil diperbarui!',
-        variant: 'default'
-      });
-
-      announce('Profil berhasil diperbarui');
+      console.log('Announcing: Profil berhasil diperbarui'); // Debug log
+      announce('Profil berhasil diperbarui', 'success');
     } catch (error) {
-      handleError(error, 'Gagal menyimpan profil. Silakan coba lagi.', toast);
-      announce('Gagal menyimpan profil');
+      handleError(error, 'Gagal menyimpan profil. Silakan coba lagi.');
+      announce('Gagal menyimpan profil', 'error');
     } finally {
       setLoading('saveProfile', false);
     }
@@ -541,20 +535,13 @@ const ProfileSettings = () => {
       // Clear errors
       setErrors({});
 
-      // Show success message
-      toast({
-        title: 'Berhasil',
-        description: 'Kata sandi berhasil diubah! Semua sesi lain akan diakhiri.',
-        variant: 'default'
-      });
-
       // Logout all other sessions
       setActiveSessions(prev => prev.filter(session => session.isCurrent));
 
-      announce('Kata sandi berhasil diubah');
+      announce('Kata sandi berhasil diubah', 'success');
     } catch (error) {
-      handleError(error, 'Gagal mengubah kata sandi. Silakan coba lagi.', toast);
-      announce('Gagal mengubah kata sandi');
+      handleError(error, 'Gagal mengubah kata sandi. Silakan coba lagi.');
+      announce('Gagal mengubah kata sandi', 'error');
     } finally {
       setLoading('changePassword', false);
     }
@@ -566,26 +553,87 @@ const ProfileSettings = () => {
       setLoading('savePreferences', true);
       announce('Menyimpan preferensi...');
 
-      // Mock updatePreferences since backend endpoint doesn't exist
-      // await profileService.updatePreferences(values.preferences);
-      console.log('Preferences would be saved:', values.preferences);
+      // Convert nested preferences structure to backend format
+      const backendData = {
+        language: values.preferences?.language,
+        timezone: values.preferences?.timezone || 'Asia/Jakarta',
+        notifications: {
+          email: values.preferences?.notifications?.email?.weeklyReport ||
+                 values.preferences?.notifications?.email?.billing ||
+                 values.preferences?.notifications?.email?.securityAlerts || false,
+          push: values.preferences?.notifications?.inApp?.newTeamMember ||
+                values.preferences?.notifications?.inApp?.integrationStatus || false,
+          sms: false // Default to false as not implemented
+        }
+      };
+
+      // Update preferences using ProfileService
+      const updatedProfile = await profileService.updatePreferences(backendData);
+
+      // Update auth context with new preferences
+      updateUser(updatedProfile);
 
       // Reset changes flag
       setHasPreferenceChanges(false);
 
-      // Show success message
-      toast({
-        title: 'Berhasil',
-        description: 'Preferensi berhasil disimpan!',
-        variant: 'default'
-      });
-
-      announce('Preferensi berhasil disimpan');
+      announce('Preferensi berhasil disimpan', 'success');
     } catch (error) {
-      handleError(error, 'Gagal menyimpan preferensi. Silakan coba lagi.', toast);
-      announce('Gagal menyimpan preferensi');
+      handleError(error, 'Gagal menyimpan preferensi. Silakan coba lagi.');
+      announce('Gagal menyimpan preferensi', 'error');
     } finally {
       setLoading('savePreferences', false);
+    }
+  };
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (file) => {
+    try {
+      setLoading('avatarUpload', true);
+      announce('Mengunggah foto profil...');
+
+      // Mock avatar upload - replace with actual implementation
+      const avatarUrl = URL.createObjectURL(file);
+
+      // Update form data
+      setFormData(prev => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          avatar_url: avatarUrl
+        }
+      }));
+
+      announce('Foto profil berhasil diunggah', 'success');
+      setIsAvatarDialogOpen(false);
+    } catch (error) {
+      handleError(error, 'Gagal mengunggah foto profil. Silakan coba lagi.');
+      announce('Gagal mengunggah foto profil', 'error');
+    } finally {
+      setLoading('avatarUpload', false);
+    }
+  };
+
+  // Handle avatar delete
+  const handleDeleteAvatar = async () => {
+    try {
+      setLoading('avatarDelete', true);
+      announce('Menghapus foto profil...');
+
+      // Update form data
+      setFormData(prev => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          avatar_url: null
+        }
+      }));
+
+      announce('Foto profil berhasil dihapus', 'success');
+    } catch (error) {
+      handleError(error, 'Gagal menghapus foto profil. Silakan coba lagi.');
+      announce('Gagal menghapus foto profil', 'error');
+    } finally {
+      setLoading('avatarDelete', false);
     }
   };
 
@@ -601,18 +649,34 @@ const ProfileSettings = () => {
         // Remove all sessions except current
         setActiveSessions(prev => prev.filter(session => session.isCurrent));
 
-        toast({
-          title: 'Berhasil',
-          description: 'Berhasil keluar dari semua perangkat lain!',
-          variant: 'default'
-        });
-
-        announce('Berhasil keluar dari semua perangkat lain');
+        announce('Berhasil keluar dari semua perangkat lain', 'success');
       } catch (error) {
-        handleError(error, 'Gagal keluar dari semua perangkat. Silakan coba lagi.', toast);
-        announce('Gagal keluar dari semua perangkat');
+        handleError(error, 'Gagal keluar dari semua perangkat. Silakan coba lagi.');
+        announce('Gagal keluar dari semua perangkat', 'error');
       } finally {
         setLoading('logoutAll', false);
+      }
+    }
+  };
+
+  // Logout from specific session
+  const handleLogoutSession = async (sessionId) => {
+    if (window.confirm('Anda yakin ingin keluar dari sesi ini?')) {
+      try {
+        setLoading(`logoutSession-${sessionId}`, true);
+        announce('Keluar dari sesi...');
+
+        await profileService.logoutSession(sessionId);
+
+        // Remove the session from list
+        setActiveSessions(prev => prev.filter(session => session.id !== sessionId));
+
+        announce('Berhasil keluar dari sesi', 'success');
+      } catch (error) {
+        handleError(error, 'Gagal keluar dari sesi. Silakan coba lagi.');
+        announce('Gagal keluar dari sesi', 'error');
+      } finally {
+        setLoading(`logoutSession-${sessionId}`, false);
       }
     }
   };
@@ -663,6 +727,7 @@ const ProfileSettings = () => {
 
   return (
     <div className="space-y-6">
+      <AnnouncementRegion />
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -715,6 +780,7 @@ const ProfileSettings = () => {
                   showProgress={true}
                   autoSave={false}
                   loading={loadingStates.saveProfile}
+                  externalErrors={errors}
                 />
                 </div>
 
@@ -726,12 +792,12 @@ const ProfileSettings = () => {
                   </CardHeader>
                   <CardContent className="text-center">
                     <div className="relative inline-block">
-                      <Avatar className="w-32 h-32 mx-auto">
-                        <AvatarImage src={formData.profile.avatar_url} />
-                        <AvatarFallback className="text-2xl">
-                          {formData.profile.full_name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
+                      <SafeAvatar
+                        src={formData.profile.avatar_url}
+                        name={formData.profile.full_name}
+                        size="2xl"
+                        className="w-32 h-32 mx-auto"
+                      />
 
                       <Button
                         size="sm"
@@ -771,11 +837,13 @@ const ProfileSettings = () => {
                           size="sm"
                           variant="outline"
                           className="text-red-600 hover:text-red-700"
+                          onClick={handleDeleteAvatar}
+                          disabled={loadingStates.avatarDelete}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Hapus Foto
+                          {loadingStates.avatarDelete ? 'Menghapus...' : 'Hapus Foto'}
                         </Button>
-                      )}
+                        )}
                 </div>
               </div>
             </CardContent>
@@ -806,6 +874,7 @@ const ProfileSettings = () => {
               showProgress={true}
               autoSave={false}
               loading={loadingStates.changePassword}
+              externalErrors={errors}
             />
 
               <Separator />
@@ -886,6 +955,7 @@ const ProfileSettings = () => {
               showProgress={true}
               autoSave={false}
               loading={loadingStates.savePreferences}
+              externalErrors={errors}
             />
           </LoadingWrapper>
         </TabsContent>
@@ -910,11 +980,37 @@ const ProfileSettings = () => {
                 JPG, PNG atau GIF. Maksimal 2MB.
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button className="flex-1">Pilih File</Button>
-              <Button variant="outline" onClick={() => setIsAvatarDialogOpen(false)}>
-                Batal
-              </Button>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="avatar-upload" className="sr-only">
+                  Pilih Foto Profil
+                </Label>
+                <Input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleAvatarUpload(file);
+                    }
+                  }}
+                  disabled={loadingStates.avatarUpload}
+                  className="w-full"
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Pilih file gambar (JPG, PNG, GIF) maksimal 5MB
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAvatarDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Batal
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

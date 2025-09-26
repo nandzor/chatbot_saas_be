@@ -6,6 +6,7 @@
 import apiClient from './axios';
 import { HTTP_STATUS, API_ENDPOINTS } from '@/utils/constants';
 import { getErrorMessage, retry } from '@/utils/helpers';
+import { fixApiResponse } from '@/utils/urlFixer';
 
 /**
  * Base API Service Class
@@ -29,16 +30,17 @@ export class BaseApiService {
 
       // Check if response has success field (our API format)
       if (response.data && typeof response.data.success !== 'undefined') {
-        return response.data; // Return the API response as-is
+        return fixApiResponse(response.data); // Fix URLs in API response
       }
 
       // Fallback for non-standard responses
-      return {
+      const fallbackResponse = {
         success: true,
         data: response.data,
         status: response.status,
         headers: response.headers
       };
+      return fixApiResponse(fallbackResponse);
     } catch (error) {
       return {
         success: false,

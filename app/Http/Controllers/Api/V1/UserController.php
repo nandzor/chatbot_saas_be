@@ -38,12 +38,32 @@ class UserController extends BaseApiController
                 'notifications.sms' => 'nullable|boolean'
             ]);
 
-            $user = $this->userService->updateProfile($request->user()->id, $request->validated());
+            $success = $this->userService->updateProfile($request->user()->id, $request->only([
+                'full_name',
+                'email',
+                'phone',
+                'avatar_url',
+                'bio',
+                'timezone',
+                'language',
+                'notifications'
+            ]));
 
-            if ($user && is_object($user)) {
+            if ($success) {
+                $user = $this->userService->getById($request->user()->id);
+
                 $this->logApiAction('profile_updated', [
-                    'user_id' => $user->id,
-                    'updated_fields' => array_keys($request->validated())
+                    'user_id' => $request->user()->id,
+                    'updated_fields' => array_keys($request->only([
+                        'full_name',
+                        'email',
+                        'phone',
+                        'avatar_url',
+                        'bio',
+                        'timezone',
+                        'language',
+                        'notifications'
+                    ]))
                 ]);
 
                 return $this->successResponse(

@@ -213,6 +213,27 @@ class ProfileService {
       throw handleError(error);
     }
   }
+
+  /**
+   * Update user preferences
+   */
+  async updatePreferences(preferencesData) {
+    try {
+      // Use the existing updateProfile method with only preferences data
+      const response = await this._makeApiCall('PUT', '/me/profile', preferencesData);
+
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'No data received from server');
+      }
+
+      return response.data.data || response.data;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Error updating preferences:', error);
+      }
+      throw handleError(error);
+    }
+  }
 }
 
 export default ProfileService;
