@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Frontend Integration Test</h1>
+    <p>Testing the new conversation API endpoints integration with the frontend.</p>
+
+    <div class="test-section">
+        <h3>Authentication Test</h3>
+        <button onclick="testAuth()">Test Login</button>
+        <div id="auth-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Conversation API Tests</h3>
+        <button onclick="testConversationSummary()">Test Summary</button>
+        <button onclick="testConversationSearch()">Test Search</button>
+        <button onclick="testUnreadCount()">Test Unread Count</button>
+        <button onclick="testRecentMessages()">Test Recent Messages</button>
+        <div id="conversation-results"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+        const sessionId = 'a3253b82-ad04-4e98-9a5f-c5612250968b';
+        const apiBaseUrl = 'http://localhost:9000/api';
+
+        async function testAuth() {
+            const resultDiv = document.getElementById('auth-result');
+            resultDiv.innerHTML = '<div class="loading">Testing authentication...</div>';
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@test.com',
+                        password: 'Password123!'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    authToken = data.data.access_token;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Authentication Successful</h4>
+                            <p>Token received: ${authToken.substring(0, 50)}...</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Authentication Failed</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Authentication Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testConversationSummary() {
+            if (!authToken) {
+                alert('Please authenticate first!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('conversation-results');
+            resultDiv.innerHTML = '<div class="loading">Testing conversation summary...</div>';
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/conversations/${sessionId}/summary`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Conversation Summary Test Passed</h4>
+                            <p><strong>Customer:</strong> ${data.data.customer.name}</p>
+                            <p><strong>Total Messages:</strong> ${data.data.statistics.total_messages}</p>
+                            <p><strong>Session Duration:</strong> ${data.data.statistics.session_duration_minutes} minutes</p>
+                            <pre>${JSON.stringify(data.data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Conversation Summary Test Failed</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Conversation Summary Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testConversationSearch() {
+            if (!authToken) {
+                alert('Please authenticate first!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('conversation-results');
+            resultDiv.innerHTML = '<div class="loading">Testing conversation search...</div>';
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/conversations/${sessionId}/search?q=aaatest`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Conversation Search Test Passed</h4>
+                            <p><strong>Search Query:</strong> ${data.data.search_query}</p>
+                            <p><strong>Total Found:</strong> ${data.data.total_found}</p>
+                            <p><strong>Messages Found:</strong> ${data.data.messages.length}</p>
+                            <pre>${JSON.stringify(data.data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Conversation Search Test Failed</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Conversation Search Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testUnreadCount() {
+            if (!authToken) {
+                alert('Please authenticate first!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('conversation-results');
+            resultDiv.innerHTML = '<div class="loading">Testing unread count...</div>';
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/conversations/${sessionId}/unread-count`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Unread Count Test Passed</h4>
+                            <p><strong>Unread Count:</strong> ${data.data.unread_count}</p>
+                            <p><strong>Has Unread:</strong> ${data.data.has_unread ? 'Yes' : 'No'}</p>
+                            <pre>${JSON.stringify(data.data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Unread Count Test Failed</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Unread Count Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testRecentMessages() {
+            if (!authToken) {
+                alert('Please authenticate first!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('conversation-results');
+            resultDiv.innerHTML = '<div class="loading">Testing recent messages...</div>';
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/conversations/${sessionId}/recent?limit=2`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Recent Messages Test Passed</h4>
+                            <p><strong>Customer:</strong> ${data.data.conversation.customer.name}</p>
+                            <p><strong>Total Messages:</strong> ${data.data.conversation.statistics.total_messages}</p>
+                            <p><strong>Recent Messages Limit:</strong> ${data.data.recent_messages_limit}</p>
+                            <p><strong>Messages Returned:</strong> ${data.data.conversation.messages.length}</p>
+                            <pre>${JSON.stringify(data.data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Recent Messages Test Failed</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Recent Messages Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

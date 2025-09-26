@@ -62,5 +62,21 @@ Route::middleware(['unified.auth', 'organization'])->group(function () {
         // Send typing indicator
         Route::post('{sessionId}/typing', [ConversationController::class, 'sendTypingIndicator'])
             ->name('conversations.send-typing');
+
+        // Get conversation summary
+        Route::get('{sessionId}/summary', [ConversationController::class, 'getConversationSummary'])
+            ->name('conversations.summary');
+
+        // Search messages in conversation
+        Route::get('{sessionId}/search', [ConversationController::class, 'searchMessages'])
+            ->name('conversations.search-messages');
+
+        // Get unread message count
+        Route::get('{sessionId}/unread-count', [ConversationController::class, 'getUnreadCount'])
+            ->name('conversations.unread-count');
+
+        // Get conversation with recent messages
+        Route::get('{sessionId}/recent', [ConversationController::class, 'getConversationWithRecent'])
+            ->name('conversations.recent');
     });
 });

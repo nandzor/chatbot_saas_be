@@ -170,14 +170,32 @@ class MessageService
     /**
      * Search messages in a session
      */
-    public function searchMessages(string $sessionId, string $organizationId, string $searchTerm): \Illuminate\Database\Eloquent\Collection
+    public function searchMessages(string $sessionId, string $query, array $filters = [], int $perPage = 20)
     {
-        return Message::where('session_id', $sessionId)
-            ->where('organization_id', $organizationId)
-            ->where('message_text', 'LIKE', "%{$searchTerm}%")
-            ->with(['customer', 'agent'])
+        $queryBuilder = Message::where('session_id', $sessionId)
+            ->where('message_text', 'LIKE', "%{$query}%");
+
+        // Apply filters
+        if (!empty($filters['sender_type'])) {
+            $queryBuilder->where('sender_type', $filters['sender_type']);
+        }
+
+        if (!empty($filters['message_type'])) {
+            $queryBuilder->where('message_type', $filters['message_type']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $queryBuilder->where('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $queryBuilder->where('created_at', '<=', $filters['date_to']);
+        }
+
+        return $queryBuilder
+            ->with(['customer', 'agent', 'botPersonality'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($perPage);
     }
 
     /**
@@ -234,5 +252,58 @@ class MessageService
             $userName,
             $isTyping
         ));
+    }
+
+    /**
+     * Get unread message count for a session
+     */
+    public function getUnreadCount(string $sessionId): int
+    {
+        return Message::where('session_id', $sessionId)
+            ->where('is_read', false)
+            ->where('sender_type', '!=', 'agent') // Don't count agent messages as unread
+            ->count();
+    }
+
+    /**
+     * Get session messages with relations
+     */
+    public function getSessionMessages(string $sessionId, $request, array $filters = [], array $relations = [])
+    {
+        $query = Message::where('session_id', $sessionId);
+
+        // Apply filters
+        if (!empty($filters['sender_type'])) {
+            $query->where('sender_type', $filters['sender_type']);
+        }
+
+        if (!empty($filters['message_type'])) {
+            $query->where('message_type', $filters['message_type']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->where('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->where('created_at', '<=', $filters['date_to']);
+        }
+
+        if (!empty($filters['search'])) {
+            $query->where('message_text', 'LIKE', "%{$filters['search']}%");
+        }
+
+        // Add relations
+        if (!empty($relations)) {
+            $query->with($relations);
+        }
+
+        $perPage = $request->get('per_page', 20);
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortDirection = $request->get('sort_direction', 'asc');
+
+        return $query
+            ->orderBy($sortBy, $sortDirection)
+            ->paginate($perPage);
     }
 }

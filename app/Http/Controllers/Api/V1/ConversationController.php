@@ -369,4 +369,153 @@ class ConversationController extends BaseApiController
         }
     }
 
+    /**
+     * Get conversation summary
+     */
+    public function getConversationSummary(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            $session = $this->conversationService->getItemById($sessionId, ['customer', 'agent', 'messages']);
+
+            if (!$session) {
+                return $this->notFoundResponse('Session');
+            }
+
+            $summary = $this->conversationService->getConversationSummary($sessionId);
+
+            return $this->successResponse(
+                'Conversation summary retrieved successfully',
+                $summary
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'get_conversation_summary',
+                'Failed to get conversation summary',
+                $e->getMessage(),
+                500,
+                'CONVERSATION_SUMMARY_ERROR',
+                ['session_id' => $sessionId]
+            );
+        }
+    }
+
+    /**
+     * Search messages in conversation
+     */
+    public function searchMessages(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            $query = $request->get('q', '');
+            $senderType = $request->get('sender_type');
+            $messageType = $request->get('message_type');
+            $dateFrom = $request->get('date_from');
+            $dateTo = $request->get('date_to');
+            $perPage = $request->get('per_page', 20);
+
+            if (empty($query)) {
+                return $this->errorResponse('Search query is required', [], 400);
+            }
+
+            $messages = $this->messageService->searchMessages(
+                $sessionId,
+                $query,
+                [
+                    'sender_type' => $senderType,
+                    'message_type' => $messageType,
+                    'date_from' => $dateFrom,
+                    'date_to' => $dateTo,
+                ],
+                $perPage
+            );
+
+            return $this->successResponse(
+                'Messages found successfully',
+                [
+                    'messages' => MessageResource::collection($messages),
+                    'search_query' => $query,
+                    'total_found' => $messages->total(),
+                    'session_id' => $sessionId
+                ]
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'search_messages',
+                'Failed to search messages',
+                $e->getMessage(),
+                500,
+                'MESSAGE_SEARCH_ERROR',
+                ['session_id' => $sessionId, 'query' => $request->get('q')]
+            );
+        }
+    }
+
+    /**
+     * Get unread message count for session
+     */
+    public function getUnreadCount(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            $unreadCount = $this->messageService->getUnreadCount($sessionId);
+
+            return $this->successResponse(
+                'Unread count retrieved successfully',
+                [
+                    'session_id' => $sessionId,
+                    'unread_count' => $unreadCount,
+                    'has_unread' => $unreadCount > 0
+                ]
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'get_unread_count',
+                'Failed to get unread count',
+                $e->getMessage(),
+                500,
+                'UNREAD_COUNT_ERROR',
+                ['session_id' => $sessionId]
+            );
+        }
+    }
+
+    /**
+     * Get conversation with recent messages
+     */
+    public function getConversationWithRecent(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            $limit = $request->get('limit', 10);
+            $includeRelations = ['customer', 'agent', 'messages' => function($query) use ($limit) {
+                $query->latest()->limit($limit);
+            }];
+
+            $session = $this->conversationService->getItemById($sessionId, $includeRelations);
+
+            if (!$session) {
+                return $this->notFoundResponse('Session');
+            }
+
+            return $this->successResponse(
+                'Conversation with recent messages retrieved successfully',
+                [
+                    'conversation' => new ConversationResource($session),
+                    'recent_messages_limit' => $limit,
+                    'total_messages' => $session->messages()->count()
+                ]
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'get_conversation_with_recent',
+                'Failed to get conversation with recent messages',
+                $e->getMessage(),
+                500,
+                'CONVERSATION_RECENT_ERROR',
+                ['session_id' => $sessionId]
+            );
+        }
+    }
+
 }

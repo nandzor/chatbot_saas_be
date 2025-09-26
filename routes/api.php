@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\EmailVerificationController;
 // Include additional route files
 require_once __DIR__ . '/n8n.php';
 require_once __DIR__ . '/waha.php';
+require_once __DIR__ . '/api/conversation.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -203,6 +204,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/analytics', [InboxController::class, 'sessionAnalytics']);
                 Route::post('/messages', [InboxController::class, 'sendMessage']);
                 Route::post('/transfer', [InboxController::class, 'transferSession']);
+                Route::post('/assign', [InboxController::class, 'assignSession']);
                 Route::post('/end', [InboxController::class, 'endSession']);
             });
 

@@ -891,4 +891,97 @@ class InboxController extends BaseApiController
             );
         }
     }
+
+    /**
+     * Assign session to agent
+     */
+    public function assignSession(Request $request, string $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'agent_id' => 'required|string'
+            ]);
+
+            $agentId = $request->input('agent_id');
+            $currentUser = Auth::user();
+
+            // Handle special case where we want to assign to current user
+            if ($agentId === 'current_agent' || $agentId === 'current_user') {
+                // Check if current user has an agent profile
+                if (!$currentUser->agent) {
+                    return $this->errorResponseWithLog(
+                        'user_not_agent',
+                        'Current user is not an agent',
+                        'User does not have an agent profile',
+                        400,
+                        'USER_NOT_AGENT'
+                    );
+                }
+                $agentId = $currentUser->agent->id;
+            } else {
+                // Validate that the provided agent_id is a valid UUID and exists
+                if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $agentId)) {
+                    return $this->errorResponseWithLog(
+                        'invalid_agent_id_format',
+                        'Invalid agent ID format',
+                        'Agent ID must be a valid UUID',
+                        422,
+                        'INVALID_AGENT_ID_FORMAT'
+                    );
+                }
+
+                // Check if agent exists
+                $agent = \App\Models\Agent::find($agentId);
+                if (!$agent) {
+                    return $this->errorResponseWithLog(
+                        'agent_not_found',
+                        'Agent not found',
+                        "Agent with ID {$agentId} not found",
+                        404,
+                        'AGENT_NOT_FOUND'
+                    );
+                }
+            }
+
+            $session = $this->inboxService->assignSession($id, $agentId);
+
+            if (!$session) {
+                return $this->errorResponseWithLog(
+                    'session_not_found',
+                    'Session not found',
+                    "Session {$id} not found",
+                    404,
+                    'SESSION_NOT_FOUND'
+                );
+            }
+
+            $this->logApiAction('session_assigned', [
+                'session_id' => $id,
+                'agent_id' => $agentId,
+                'organization_id' => $currentUser->organization_id
+            ]);
+
+            return $this->successResponseWithLog(
+                'session_assigned',
+                'Session assigned successfully',
+                new ChatSessionResource($session)
+            );
+        } catch (ValidationException $e) {
+            return $this->errorResponseWithLog(
+                'session_assignment_validation_error',
+                'Assignment validation failed',
+                $e->getMessage(),
+                422,
+                'SESSION_ASSIGNMENT_VALIDATION_ERROR'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'session_assignment_error',
+                'Failed to assign session',
+                $e->getMessage(),
+                500,
+                'SESSION_ASSIGNMENT_ERROR'
+            );
+        }
+    }
 }

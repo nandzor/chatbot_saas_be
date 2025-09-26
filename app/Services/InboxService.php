@@ -268,6 +268,27 @@ class InboxService
     }
 
     /**
+     * Assign session to agent
+     */
+    public function assignSession(string $sessionId, string $agentId): ?ChatSession
+    {
+        $session = $this->getSessionById($sessionId);
+
+        if (!$session) {
+            return null;
+        }
+
+        // Update the session with the assigned agent
+        $session->update([
+            'agent_id' => $agentId,
+            'assigned_at' => now(),
+            'status' => 'assigned'
+        ]);
+
+        return $session->fresh();
+    }
+
+    /**
      * End a chat session
      */
     public function endSession(string $id, array $data = []): ?ChatSession
@@ -343,12 +364,13 @@ class InboxService
         }
 
         // Set session ID
-        $data['chat_session_id'] = $sessionId;
+        $data['session_id'] = $sessionId;
 
         // Set sender information
         if (Auth::check()) {
             $data['sender_id'] = Auth::id();
             $data['sender_name'] = Auth::user()->name;
+            $data['sender_type'] = 'agent';
         }
 
         // Set message type if not provided
@@ -356,9 +378,20 @@ class InboxService
             $data['message_type'] = 'text';
         }
 
+        // Map content to message_text for database
+        if (isset($data['content'])) {
+            $data['message_text'] = $data['content'];
+        }
+
         // Set content from message_text if provided
         if (isset($data['message_text'])) {
             $data['content'] = $data['message_text'];
+        }
+
+        // Ensure content is set
+        if (!isset($data['content']) && isset($data['message'])) {
+            $data['content'] = $data['message'];
+            $data['message_text'] = $data['message'];
         }
 
         // Create message

@@ -345,8 +345,8 @@ class InboxService {
   async sendMessage(sessionId, message, type = 'text') {
     try {
       const response = await this._makeApiCall('POST', `/inbox/sessions/${sessionId}/messages`, {
-        message: message,
-        type: type
+        content: message,
+        message_type: type
       });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {

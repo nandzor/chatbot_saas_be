@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import apiClient from '../utils/apiClient';
 
 class ConversationService {
   /**
@@ -151,6 +151,70 @@ class ConversationService {
       return response.data;
     } catch (error) {
       console.error('Error sending typing indicator:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get conversation summary
+   */
+  async getConversationSummary(sessionId) {
+    try {
+      const response = await apiClient.get(`/conversations/${sessionId}/summary`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching conversation summary:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search messages in conversation
+   */
+  async searchMessages(sessionId, query, filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      params.append('q', query);
+
+      if (filters.sender_type) params.append('sender_type', filters.sender_type);
+      if (filters.message_type) params.append('message_type', filters.message_type);
+      if (filters.date_from) params.append('date_from', filters.date_from);
+      if (filters.date_to) params.append('date_to', filters.date_to);
+      if (filters.per_page) params.append('per_page', filters.per_page);
+
+      const response = await apiClient.get(`/conversations/${sessionId}/search?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error searching messages:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get unread message count
+   */
+  async getUnreadCount(sessionId) {
+    try {
+      const response = await apiClient.get(`/conversations/${sessionId}/unread-count`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get conversation with recent messages
+   */
+  async getConversationWithRecent(sessionId, limit = 10) {
+    try {
+      const params = new URLSearchParams();
+      if (limit) params.append('limit', limit);
+
+      const response = await apiClient.get(`/conversations/${sessionId}/recent?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching conversation with recent messages:', error);
       throw error;
     }
   }

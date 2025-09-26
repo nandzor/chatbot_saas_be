@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Send,
   Paperclip,
@@ -25,26 +25,33 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useConversation } from '@/hooks/useConversation';
+import ConversationSummary from '../conversation/ConversationSummary';
+import ConversationSearch from '../conversation/ConversationSearch';
 import { cn } from '@/lib/utils';
 
-const ProfessionalChatWindow = ({ sessionId, onClose }) => {
+const ProfessionalChatWindow = ({ sessionId, onClose: _onClose }) => {
   const [messageText, setMessageText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeTab, setActiveTab] = useState('chat'); // chat, summary, search
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
   const {
     conversation,
     messages,
+    summary,
+    unreadCount,
     loading,
     error,
-    typingUsers,
-    isConnected,
     sendMessage,
-    markMessagesAsRead,
+    markAsRead,
+    loadSummary,
+    searchMessages,
     sendTypingIndicator,
-    clearError
+    clearError,
+    isConnected,
+    typingUsers
   } = useConversation(sessionId);
 
   // Auto scroll to bottom
@@ -59,9 +66,15 @@ const ProfessionalChatWindow = ({ sessionId, onClose }) => {
   // Mark messages as read when component mounts
   useEffect(() => {
     if (messages.length > 0) {
-      markMessagesAsRead();
+      const unreadMessageIds = messages
+        .filter(msg => !msg.status?.is_read && msg.sender?.type !== 'agent')
+        .map(msg => msg.id);
+
+      if (unreadMessageIds.length > 0) {
+        markAsRead(unreadMessageIds);
+      }
     }
-  }, [messages, markMessagesAsRead]);
+  }, [messages, markAsRead]);
 
   // Handle typing indicator
   const handleTyping = (text) => {
@@ -94,9 +107,14 @@ const ProfessionalChatWindow = ({ sessionId, onClose }) => {
     sendTypingIndicator(false);
 
     try {
-      await sendMessage(text);
+      const messageData = {
+        message_text: text,
+        message_type: 'text',
+        sender_type: 'agent'
+      };
+      await sendMessage(messageData);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      // console.error('Failed to send message:', error);
     }
   };
 
@@ -235,13 +253,61 @@ const ProfessionalChatWindow = ({ sessionId, onClose }) => {
         </div>
       </div>
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4">
+      {/* Tab Navigation */}
+      <div className="border-b bg-white">
+        <div className="flex space-x-8 px-4">
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'chat'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Chat
+            {unreadCount > 0 && (
+              <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('summary');
+              if (!summary) {
+                loadSummary();
+              }
+            }}
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'summary'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Ringkasan
+          </button>
+          <button
+            onClick={() => setActiveTab('search')}
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'search'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Cari Pesan
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'chat' && (
+        <>
+          {/* Messages Area */}
+          <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {messages.map((message, index) => {
+          {messages.map((message, _index) => {
             const isCustomer = message.sender?.type === 'customer';
             const isAgent = message.sender?.type === 'agent';
-            const isBot = message.sender?.type === 'bot';
 
             return (
               <div
@@ -315,8 +381,31 @@ const ProfessionalChatWindow = ({ sessionId, onClose }) => {
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
+        </>
+      )}
 
-      {/* Message Input */}
+      {/* Tab Content */}
+      {activeTab === 'summary' && (
+        <div className="flex-1 p-4">
+          <ConversationSummary
+            summary={summary}
+            loading={loading}
+            onRefresh={loadSummary}
+          />
+        </div>
+      )}
+
+      {activeTab === 'search' && (
+        <div className="flex-1 p-4">
+          <ConversationSearch
+            onSearch={searchMessages}
+            loading={loading}
+          />
+        </div>
+      )}
+
+      {/* Message Input - Only show for chat tab */}
+      {activeTab === 'chat' && (
       <div className="p-4 border-t bg-gray-50">
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="sm">
@@ -350,6 +439,7 @@ const ProfessionalChatWindow = ({ sessionId, onClose }) => {
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 };

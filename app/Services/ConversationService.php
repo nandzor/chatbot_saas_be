@@ -878,4 +878,75 @@ class ConversationService extends BaseService
             ];
         }
     }
+
+    /**
+     * Get conversation summary
+     */
+    public function getConversationSummary(string $sessionId): array
+    {
+        $session = $this->getItemById($sessionId, ['customer', 'agent', 'messages']);
+
+        if (!$session) {
+            throw new \Exception('Session not found');
+        }
+
+        $messages = $session->messages;
+        $customerMessages = $messages->where('sender_type', 'customer');
+        $agentMessages = $messages->where('sender_type', 'agent');
+        $botMessages = $messages->where('sender_type', 'bot');
+
+        // Calculate response times
+        $responseTimes = [];
+        $lastCustomerMessageTime = null;
+
+        foreach ($messages->sortBy('created_at') as $message) {
+            if ($message->sender_type === 'customer') {
+                $lastCustomerMessageTime = $message->created_at;
+            } elseif (in_array($message->sender_type, ['agent', 'bot']) && $lastCustomerMessageTime) {
+                $responseTime = $message->created_at->diffInSeconds($lastCustomerMessageTime);
+                $responseTimes[] = $responseTime;
+                $lastCustomerMessageTime = null;
+            }
+        }
+
+        $avgResponseTime = !empty($responseTimes) ? array_sum($responseTimes) / count($responseTimes) : 0;
+
+        return [
+            'session_id' => $sessionId,
+            'customer' => [
+                'name' => $session->customer->name ?? 'Unknown',
+                'phone' => $session->customer->phone ?? null,
+                'total_messages' => $customerMessages->count(),
+            ],
+            'agent' => $session->agent ? [
+                'name' => $session->agent->display_name ?? $session->agent->name,
+                'total_messages' => $agentMessages->count(),
+            ] : null,
+            'statistics' => [
+                'total_messages' => $messages->count(),
+                'customer_messages' => $customerMessages->count(),
+                'agent_messages' => $agentMessages->count(),
+                'bot_messages' => $botMessages->count(),
+                'avg_response_time_seconds' => round($avgResponseTime, 2),
+                'session_duration_minutes' => $session->started_at ?
+                    round($session->last_activity_at->diffInMinutes($session->started_at), 2) : 0,
+            ],
+            'classification' => [
+                'intent' => $session->intent,
+                'category' => $session->category,
+                'priority' => $session->priority,
+                'status' => $session->status,
+            ],
+            'ai_analysis' => [
+                'sentiment_analysis' => $session->sentiment_analysis,
+                'ai_summary' => $session->ai_summary,
+                'topics_discussed' => $session->topics_discussed ?? [],
+            ],
+            'timeline' => [
+                'started_at' => $session->started_at?->toISOString(),
+                'last_activity_at' => $session->last_activity_at?->toISOString(),
+                'ended_at' => $session->ended_at?->toISOString(),
+            ]
+        ];
+    }
 }

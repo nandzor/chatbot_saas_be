@@ -1,24 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import conversationService from '../services/conversationService';
-import { useWebSocket } from './useWebSocket';
+import { handleError } from '../utils/errorHandler';
 
+/**
+ * Custom hook for conversation management
+ * Provides easy access to conversation API endpoints with loading states and error handling
+ */
 export const useConversation = (sessionId) => {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState(null);
-  const [typingUsers, setTypingUsers] = useState([]);
 
-  const {
-    isConnected,
-    registerMessageHandler,
-    registerTypingHandler,
-    sendTyping,
-    markAsRead
-  } = useWebSocket();
-
-  // Load conversation details
+  /**
+   * Load conversation details with messages
+   */
   const loadConversation = useCallback(async () => {
     if (!sessionId) return;
 
@@ -28,236 +27,293 @@ export const useConversation = (sessionId) => {
     try {
       const response = await conversationService.getConversation(sessionId);
       setConversation(response.data);
+      setMessages(response.data.messages || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load conversation');
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal memuat percakapan: ${errorResult.message}`);
     } finally {
       setLoading(false);
     }
   }, [sessionId]);
 
-  // Load messages with pagination
-  const loadMessages = useCallback(async (options = {}) => {
+  /**
+   * Load conversation summary
+   */
+  const loadSummary = useCallback(async () => {
+    if (!sessionId) return;
+
+    try {
+      const response = await conversationService.getConversationSummary(sessionId);
+      setSummary(response.data);
+    } catch (err) {
+      const errorResult = handleError(err);
+      console.error('Error loading conversation summary:', errorResult.message);
+    }
+  }, [sessionId]);
+
+  /**
+   * Load unread message count
+   */
+  const loadUnreadCount = useCallback(async () => {
+    if (!sessionId) return;
+
+    try {
+      const response = await conversationService.getUnreadCount(sessionId);
+      setUnreadCount(response.data.unread_count || 0);
+    } catch (err) {
+      const errorResult = handleError(err);
+      console.error('Error loading unread count:', errorResult.message);
+    }
+  }, [sessionId]);
+
+  /**
+   * Search messages in conversation
+   */
+  const searchMessages = useCallback(async (query, filters = {}) => {
+    if (!sessionId || !query) return [];
+
+    try {
+      const response = await conversationService.searchMessages(sessionId, query, filters);
+      return response.data.messages || [];
+    } catch (err) {
+      const errorResult = handleError(err);
+      toast.error(`Gagal mencari pesan: ${errorResult.message}`);
+      return [];
+    }
+  }, [sessionId]);
+
+  /**
+   * Load conversation with recent messages
+   */
+  const loadRecentMessages = useCallback(async (limit = 10) => {
     if (!sessionId) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await conversationService.getMessages(sessionId, options);
-      setMessages(response.data.messages);
-      setPagination(response.data.pagination);
+      const response = await conversationService.getConversationWithRecent(sessionId, limit);
+      setConversation(response.data.conversation);
+      setMessages(response.data.conversation.messages || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load messages');
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal memuat pesan terbaru: ${errorResult.message}`);
     } finally {
       setLoading(false);
     }
   }, [sessionId]);
 
-  // Send message
-  const sendMessage = useCallback(async (messageText, options = {}) => {
-    if (!sessionId || !messageText.trim()) return;
+  /**
+   * Send a message
+   */
+  const sendMessage = useCallback(async (messageData) => {
+    if (!sessionId) return null;
 
     try {
-      const messageData = conversationService.formatMessageData(messageText, options);
       const response = await conversationService.sendMessage(sessionId, messageData);
 
-      // Add new message to local state
-      setMessages(prev => [...prev, response.data]);
+      // Refresh messages after sending
+      await loadConversation();
 
       return response.data;
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send message');
+      const errorResult = handleError(err);
+      toast.error(`Gagal mengirim pesan: ${errorResult.message}`);
       throw err;
     }
-  }, [sessionId]);
+  }, [sessionId, loadConversation]);
 
-  // Update session
-  const updateSession = useCallback(async (updateData) => {
-    if (!sessionId) return;
-
-    try {
-      const response = await conversationService.updateSession(sessionId, updateData);
-      setConversation(response.data);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update session');
-      throw err;
-    }
-  }, [sessionId]);
-
-  // Assign session to current user
-  const assignToMe = useCallback(async () => {
-    if (!sessionId) return;
-
-    try {
-      const response = await conversationService.assignToMe(sessionId);
-      setConversation(response.data);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to assign session');
-      throw err;
-    }
-  }, [sessionId]);
-
-  // Transfer session
-  const transferSession = useCallback(async (agentId, options = {}) => {
-    if (!sessionId || !agentId) return;
-
-    try {
-      const transferData = conversationService.formatTransferData(agentId, options);
-      const response = await conversationService.transferSession(sessionId, transferData);
-      setConversation(response.data);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to transfer session');
-      throw err;
-    }
-  }, [sessionId]);
-
-  // Resolve session
-  const resolveSession = useCallback(async (resolutionType, options = {}) => {
-    if (!sessionId || !resolutionType) return;
-
-    try {
-      const resolutionData = conversationService.formatResolutionData(resolutionType, options);
-      const response = await conversationService.resolveSession(sessionId, resolutionData);
-      setConversation(response.data);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resolve session');
-      throw err;
-    }
-  }, [sessionId]);
-
-  // Mark messages as read
-  const markMessagesAsRead = useCallback(async (messageIds = []) => {
+  /**
+   * Mark messages as read
+   */
+  const markAsRead = useCallback(async (messageIds = []) => {
     if (!sessionId) return;
 
     try {
       await conversationService.markAsRead(sessionId, messageIds);
 
-      // Update local state
-      setMessages(prev => prev.map(msg =>
-        messageIds.length === 0 || messageIds.includes(msg.id)
-          ? { ...msg, status: { ...msg.status, is_read: true, read_at: new Date().toISOString() } }
-          : msg
-      ));
-    } catch (err) {
-      console.error('Failed to mark messages as read:', err);
-    }
-  }, [sessionId]);
+      // Refresh unread count
+      await loadUnreadCount();
 
-  // Send typing indicator
-  const sendTypingIndicator = useCallback(async (isTyping = true) => {
-    if (!sessionId) return;
-
-    try {
-      await conversationService.sendTypingIndicator(sessionId, isTyping);
-    } catch (err) {
-      console.error('Failed to send typing indicator:', err);
-    }
-  }, [sessionId]);
-
-  // Get typing status
-  const getTypingStatus = useCallback(async () => {
-    if (!sessionId) return;
-
-    try {
-      const response = await conversationService.getTypingStatus(sessionId);
-      setTypingUsers(response.data.typing_users || []);
-    } catch (err) {
-      console.error('Failed to get typing status:', err);
-    }
-  }, [sessionId]);
-
-  // WebSocket message handler
-  useEffect(() => {
-    if (!isConnected || !sessionId) return;
-
-    const handleNewMessage = (message) => {
-      if (message.session_id === sessionId) {
-        setMessages(prev => {
-          // Check if message already exists
-          const exists = prev.some(msg => msg.id === message.id);
-          if (exists) return prev;
-
-          return [...prev, message];
-        });
-      }
-    };
-
-    const handleMessageRead = (data) => {
-      if (data.session_id === sessionId) {
-        setMessages(prev => prev.map(msg =>
-          msg.id === data.message_id
-            ? { ...msg, status: { ...msg.status, is_read: true, read_at: data.read_at } }
+      // Update messages in state
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          messageIds.includes(msg.id)
+            ? { ...msg, status: { ...msg.status, is_read: true, read_at: new Date().toISOString() } }
             : msg
-        ));
-      }
-    };
+        )
+      );
+    } catch (err) {
+      const errorResult = handleError(err);
+      console.error('Error marking messages as read:', errorResult.message);
+    }
+  }, [sessionId, loadUnreadCount]);
 
-    const handleTypingIndicator = (data) => {
-      if (data.session_id === sessionId) {
-        setTypingUsers(prev => {
-          if (data.is_typing) {
-            return [...prev.filter(user => user.user_id !== data.user_id), {
-              user_id: data.user_id,
-              user_name: data.user_name,
-              started_at: data.started_at
-            }];
-          } else {
-            return prev.filter(user => user.user_id !== data.user_id);
-          }
-        });
-      }
-    };
+  /**
+   * Assign session to current user
+   */
+  const assignToMe = useCallback(async () => {
+    if (!sessionId) return;
 
-    // Register handlers
-    registerMessageHandler(handleNewMessage);
-    registerTypingHandler(handleTypingIndicator);
+    try {
+      const response = await conversationService.assignToMe(sessionId);
+      toast.success('Sesi berhasil ditugaskan kepada Anda');
+      return response.data;
+    } catch (err) {
+      const errorResult = handleError(err);
+      toast.error(`Gagal menugaskan sesi: ${errorResult.message}`);
+      throw err;
+    }
+  }, [sessionId]);
 
-    // Cleanup
-    return () => {
-      // Unregister handlers if needed
-    };
-  }, [isConnected, sessionId, registerMessageHandler, registerTypingHandler]);
+  /**
+   * Transfer session to another agent
+   */
+  const transferSession = useCallback(async (transferData) => {
+    if (!sessionId) return;
 
-  // Load initial data
+    try {
+      const response = await conversationService.transferSession(sessionId, transferData);
+      toast.success('Sesi berhasil ditransfer');
+      return response.data;
+    } catch (err) {
+      const errorResult = handleError(err);
+      toast.error(`Gagal mentransfer sesi: ${errorResult.message}`);
+      throw err;
+    }
+  }, [sessionId]);
+
+  /**
+   * Resolve/End session
+   */
+  const resolveSession = useCallback(async (resolutionData) => {
+    if (!sessionId) return;
+
+    try {
+      const response = await conversationService.resolveSession(sessionId, resolutionData);
+      toast.success('Sesi berhasil diselesaikan');
+      return response.data;
+    } catch (err) {
+      const errorResult = handleError(err);
+      toast.error(`Gagal menyelesaikan sesi: ${errorResult.message}`);
+      throw err;
+    }
+  }, [sessionId]);
+
+  /**
+   * Load initial data when sessionId changes
+   */
   useEffect(() => {
     if (sessionId) {
       loadConversation();
-      loadMessages();
-      getTypingStatus();
+      loadSummary();
+      loadUnreadCount();
     }
-  }, [sessionId, loadConversation, loadMessages, getTypingStatus]);
+  }, [sessionId, loadConversation, loadSummary, loadUnreadCount]);
 
   return {
-    // State
+    // Data
     conversation,
     messages,
+    summary,
+    unreadCount,
+
+    // Loading states
     loading,
     error,
-    pagination,
-    typingUsers,
-    isConnected,
 
     // Actions
     loadConversation,
-    loadMessages,
+    loadSummary,
+    loadUnreadCount,
+    loadRecentMessages,
+    searchMessages,
     sendMessage,
-    updateSession,
+    markAsRead,
     assignToMe,
     transferSession,
     resolveSession,
-    markMessagesAsRead,
-    sendTypingIndicator,
-    getTypingStatus,
 
-    // Utilities
-    clearError: () => setError(null),
+    // Helper functions
     refresh: () => {
       loadConversation();
-      loadMessages();
+      loadSummary();
+      loadUnreadCount();
     }
   };
 };
+
+/**
+ * Hook for conversation list management
+ * Useful for displaying multiple conversations
+ */
+export const useConversationList = () => {
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  /**
+   * Load conversation summaries for multiple sessions
+   */
+  const loadConversationSummaries = useCallback(async (sessionIds) => {
+    if (!sessionIds || sessionIds.length === 0) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const promises = sessionIds.map(sessionId =>
+        conversationService.getConversationSummary(sessionId)
+      );
+
+      const responses = await Promise.all(promises);
+      const summaries = responses.map(response => response.data);
+
+      setConversations(summaries);
+    } catch (err) {
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal memuat daftar percakapan: ${errorResult.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Load unread counts for multiple sessions
+   */
+  const loadUnreadCounts = useCallback(async (sessionIds) => {
+    if (!sessionIds || sessionIds.length === 0) return {};
+
+    try {
+      const promises = sessionIds.map(sessionId =>
+        conversationService.getUnreadCount(sessionId)
+      );
+
+      const responses = await Promise.all(promises);
+      const unreadCounts = {};
+
+      responses.forEach((response, index) => {
+        unreadCounts[sessionIds[index]] = response.data.unread_count || 0;
+      });
+
+      return unreadCounts;
+    } catch (err) {
+      const errorResult = handleError(err);
+      console.error('Error loading unread counts:', errorResult.message);
+      return {};
+    }
+  }, []);
+
+  return {
+    conversations,
+    loading,
+    error,
+    loadConversationSummaries,
+    loadUnreadCounts
+  };
+};
+
+export default useConversation;

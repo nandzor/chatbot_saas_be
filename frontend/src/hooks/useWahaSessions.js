@@ -249,9 +249,9 @@ export const useWahaSessions = () => {
         throw new Error(response.error || 'Gagal mencari sesi');
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage);
-      toast.error(`Gagal mencari sesi: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal mencari sesi: ${errorResult.message}`);
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.error('Error searching sessions:', err);
@@ -426,9 +426,9 @@ export const useWahaSessions = () => {
         throw new Error(result.error || 'Gagal memulai sesi');
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage);
-      toast.error(`${ERROR_MESSAGES.START_SESSION}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`${ERROR_MESSAGES.START_SESSION}: ${errorResult.message}`);
       throw err;
     } finally {
       setLoading(false);
@@ -474,9 +474,9 @@ export const useWahaSessions = () => {
         throw new Error(result.error || 'Gagal menghentikan sesi');
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage);
-      toast.error(`${ERROR_MESSAGES.STOP_SESSION}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`${ERROR_MESSAGES.STOP_SESSION}: ${errorResult.message}`);
       throw err;
     } finally {
       setLoading(false);
@@ -504,9 +504,9 @@ export const useWahaSessions = () => {
         throw new Error(result.error || 'Gagal menghapus sesi');
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage);
-      toast.error(`${ERROR_MESSAGES.DELETE_SESSION}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`${ERROR_MESSAGES.DELETE_SESSION}: ${errorResult.message}`);
       throw err;
     } finally {
       setLoading(false);
@@ -519,8 +519,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.getSessionStatus(sessionId);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.GET_STATUS}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.GET_STATUS}: ${errorResult.message}`);
       throw err;
     }
   }, []);
@@ -531,8 +531,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.isSessionConnected(sessionId);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.GET_STATUS}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.GET_STATUS}: ${errorResult.message}`);
       throw err;
     }
   }, []);
@@ -543,8 +543,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.getQrCode(sessionId);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.GET_QR}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.GET_QR}: ${errorResult.message}`);
       throw err;
     }
   }, []);
@@ -555,8 +555,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.sendTextMessage(sessionId, to, text);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.SEND_MESSAGE}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.SEND_MESSAGE}: ${errorResult.message}`);
       throw err;
     }
   }, []);
@@ -567,8 +567,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.sendMediaMessage(sessionId, to, mediaUrl, caption);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.SEND_MESSAGE}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.SEND_MESSAGE}: ${errorResult.message}`);
       throw err;
     }
   }, []);
@@ -579,8 +579,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.getMessages(sessionId, params);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.GET_MESSAGES}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.GET_MESSAGES}: ${errorResult.message}`);
       throw err;
     }
   }, []);
@@ -591,8 +591,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.getContacts(sessionId);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.GET_CONTACTS}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.GET_CONTACTS}: ${errorResult.message}`);
       throw err;
     }
   }, []);
@@ -603,8 +603,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.getGroups(sessionId);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.GET_GROUPS}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.GET_GROUPS}: ${errorResult.message}`);
       throw err;
     }
   }, []);
@@ -615,8 +615,8 @@ export const useWahaSessions = () => {
       const result = await wahaApi.getSessionStats(sessionId);
       return result;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`${ERROR_MESSAGES.GET_STATS}: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      toast.error(`${ERROR_MESSAGES.GET_STATS}: ${errorResult.message}`);
       throw err;
     }
   }, []);
