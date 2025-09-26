@@ -37,8 +37,8 @@ export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './Tool
 
 // Advanced UI Components
 export * from './Charts';
-export * from './LoadingStates';
-export * from './ErrorStates';
+export { default as LoadingStates } from './LoadingStates';
+export { default as ErrorStates } from './ErrorStates';
 export * from './AdvancedPagination';
 export { default as DataTable } from './DataTable';
 export * from './DataTables';

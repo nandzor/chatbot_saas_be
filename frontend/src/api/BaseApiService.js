@@ -656,6 +656,32 @@ export class AnalyticsApiService extends BaseApiService {
 }
 
 /**
+ * Organization Dashboard API Service
+ */
+export class OrganizationDashboardApiService extends BaseApiService {
+  constructor() {
+    super(API_ENDPOINTS.ORGANIZATION_DASHBOARD.BASE);
+  }
+
+  // Organization dashboard-specific methods
+  async getOverview(params = {}) {
+    return this.get('/overview', params);
+  }
+
+  async getRealtime(params = {}) {
+    return this.get('/realtime', params);
+  }
+
+  async getSessionDistribution(params = {}) {
+    return this.get('/session-distribution', params);
+  }
+
+  async export(data) {
+    return this.post('/export', data);
+  }
+}
+
+/**
  * Chatbot API Service
  */
 export class ChatbotApiService extends BaseApiService {
@@ -716,6 +742,7 @@ export const userApi = new UserApiService();
 export const organizationApi = new OrganizationApiService();
 export const subscriptionApi = new SubscriptionApiService();
 export const analyticsApi = new AnalyticsApiService();
+export const organizationDashboardApi = new OrganizationDashboardApiService();
 export const chatbotApi = new ChatbotApiService();
 export const conversationApi = new ConversationApiService();
 
@@ -725,12 +752,14 @@ export default {
   OrganizationApiService,
   SubscriptionApiService,
   AnalyticsApiService,
+  OrganizationDashboardApiService,
   ChatbotApiService,
   ConversationApiService,
   userApi,
   organizationApi,
   subscriptionApi,
   analyticsApi,
+  organizationDashboardApi,
   chatbotApi,
   conversationApi
 };

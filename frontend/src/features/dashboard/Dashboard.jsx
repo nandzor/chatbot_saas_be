@@ -1,20 +1,20 @@
-import { 
-  Calendar, 
-  Download, 
-  TrendingUp, 
-  Star, 
-  AlertCircle, 
-  UserCheck, 
+import {
+  Calendar,
+  Download,
+  TrendingUp,
+  Star,
+  AlertCircle,
+  UserCheck,
   Headphones,
   MessageSquare,
   Smile,
   Users
 } from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Button,
   Table,
@@ -26,19 +26,19 @@ import {
   ChartContainer,
   ChartTooltipContent
 } from '@/components/ui';
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
+import {
+  LineChart,
+  Line,
+  BarChart,
   Bar,
   AreaChart,
   Area,
   PieChart,
   Pie,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
+  XAxis,
+  YAxis,
+  CartesianGrid,
   ResponsiveContainer,
   Legend,
   Tooltip,
@@ -55,7 +55,7 @@ const Dashboard = () => {
     { name: 'Bot Handled', value: 68, fill: 'hsl(var(--chart-1))' },
     { name: 'Agent Handled', value: 32, fill: 'hsl(var(--chart-4))' }
   ];
-  
+
   const sessionsData = [
     { hour: '00:00', bot: 45, agent: 12 },
     { hour: '04:00', bot: 32, agent: 8 },
@@ -69,7 +69,7 @@ const Dashboard = () => {
     { name: "Customer Support", count: 289, percentage: 24, trending: "stable" },
     { name: "Technical Support", count: 198, percentage: 16, trending: "down" },
   ];
-  
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -105,7 +105,7 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -124,7 +124,7 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -140,7 +140,7 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -245,7 +245,7 @@ const Dashboard = () => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-muted rounded-full h-2">
-                        <div 
+                        <div
                           className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
                           style={{ width: `${intent.percentage}%` }}
                         />
