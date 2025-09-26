@@ -44,6 +44,23 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
                 'received_at' => $event->receivedAt,
             ]);
 
+            // Create a unique key for this event to prevent duplicate processing
+            $eventKey = "whatsapp_event_processed:{$event->organizationId}:{$event->messageData['message_id']}";
+
+            // Check if this exact event has already been processed
+            if (Redis::exists($eventKey)) {
+                Log::warning('WhatsApp message event already processed, skipping duplicate event', [
+                    'organization_id' => $event->organizationId,
+                    'message_id' => $event->messageData['message_id'] ?? 'unknown',
+                    'from' => $event->messageData['from'] ?? 'unknown',
+                    'event_key' => $eventKey,
+                ]);
+                return;
+            }
+
+            // Mark this event as being processed (expire in 5 minutes)
+            Redis::setex($eventKey, 300, 'processing');
+
             // Check if this message has already been processed to prevent duplicates
             if ($this->isMessageAlreadyProcessed($event->messageData, $event->organizationId)) {
                 Log::warning('WhatsApp message already processed, skipping duplicate', [
@@ -58,6 +75,9 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
             ProcessWhatsAppMessageJob::dispatch($event->messageData, $event->organizationId)
                 ->onQueue('whatsapp-messages')
                 ->delay(now()->addSeconds(1)); // Small delay to prevent overwhelming the system
+
+            // Mark event as successfully dispatched (expire in 1 hour)
+            Redis::setex($eventKey, 3600, 'dispatched');
 
             Log::info('WhatsApp message processing job dispatched', [
                 'organization_id' => $event->organizationId,

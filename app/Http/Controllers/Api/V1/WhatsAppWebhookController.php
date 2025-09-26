@@ -9,6 +9,7 @@ use App\Events\WhatsAppMessageReceived;
 use App\Models\ChatSession;
 use App\Models\Customer;
 use App\Models\Organization;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -57,6 +58,27 @@ class WhatsAppWebhookController extends Controller
                 ]);
                 return response()->json(['error' => 'Organization ID not found'], 400);
             }
+
+            // Check if this webhook has already been processed to prevent duplicate events
+            $webhookKey = "whatsapp_webhook_processed:{$organizationId}:{$messageData['message_id']}";
+
+            if (Redis::exists($webhookKey)) {
+                Log::warning('WhatsApp webhook already processed, skipping duplicate', [
+                    'organization_id' => $organizationId,
+                    'message_id' => $messageData['message_id'] ?? 'unknown',
+                    'from' => $messageData['from'] ?? 'unknown',
+                    'webhook_key' => $webhookKey,
+                ]);
+
+                return response()->json([
+                    'status' => 'duplicate',
+                    'message' => 'Webhook already processed',
+                    'message_id' => $messageData['message_id'] ?? null,
+                ]);
+            }
+
+            // Mark webhook as processed (expire in 1 hour)
+            Redis::setex($webhookKey, 3600, 'processed');
 
             // Fire event for asynchronous processing
             event(new WhatsAppMessageReceived($messageData, $organizationId));

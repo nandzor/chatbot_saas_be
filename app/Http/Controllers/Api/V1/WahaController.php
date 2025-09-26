@@ -1941,6 +1941,31 @@ class WahaController extends BaseApiController
                 'organization_id' => $organizationId
             ]);
 
+            // Check if this webhook has already been processed to prevent duplicate events
+            $webhookKey = "whatsapp_waha_processed:{$organizationId}:{$messageData['message_id']}";
+
+            if (\Illuminate\Support\Facades\Redis::exists($webhookKey)) {
+                Log::warning('WhatsApp WAHA webhook already processed, skipping duplicate', [
+                    'organization_id' => $organizationId,
+                    'message_id' => $messageData['message_id'] ?? 'unknown',
+                    'from' => $messageData['from'] ?? 'unknown',
+                    'webhook_key' => $webhookKey,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Webhook already processed',
+                    'data' => [
+                        'message_id' => $messageData['message_id'] ?? null,
+                        'from' => $messageData['from'] ?? null,
+                        'status' => 'duplicate'
+                    ]
+                ];
+            }
+
+            // Mark webhook as processed (expire in 1 hour)
+            \Illuminate\Support\Facades\Redis::setex($webhookKey, 3600, 'processed');
+
             // Fire event for asynchronous processing
             event(new \App\Events\WhatsAppMessageReceived($messageData, $organizationId));
 
