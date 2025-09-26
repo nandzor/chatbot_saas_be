@@ -19,7 +19,7 @@ export default defineConfig(({ command, mode }) => {
       fastRefresh: !isProduction,
       babel: {
         plugins: isProduction ? [
-          ['transform-remove-console', { exclude: ['error', 'warn'] }]
+          ['babel-plugin-transform-remove-console', { exclude: ['error', 'warn'] }]
         ] : []
       }
     })],
