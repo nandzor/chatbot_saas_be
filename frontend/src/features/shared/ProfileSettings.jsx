@@ -91,17 +91,17 @@ const ProfileSettings = () => {
       confirm_password: ''
     },
     preferences: {
-    language: 'id',
-    theme: 'auto',
-    notifications: {
-      email: {
-        weeklyReport: true,
-        billing: true,
-        securityAlerts: true
-      },
-      inApp: {
-        newTeamMember: true,
-        integrationStatus: true
+      language: 'id',
+      theme: 'auto',
+      notifications: {
+        email: {
+          weeklyReport: true,
+          billing: true,
+          securityAlerts: true
+        },
+        inApp: {
+          newTeamMember: true,
+          integrationStatus: true
         }
       }
     }

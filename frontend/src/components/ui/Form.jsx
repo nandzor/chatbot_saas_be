@@ -104,11 +104,11 @@ const Form = ({
   // Helper function to set nested value
   const setNestedValue = useCallback((obj, path, value) => {
     const keys = path.split('.');
-    const result = { ...obj };
+    const result = JSON.parse(JSON.stringify(obj)); // Deep clone to avoid mutation
     let current = result;
 
     for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) {
+      if (!current[keys[i]] || typeof current[keys[i]] !== 'object' || current[keys[i]] === null) {
         current[keys[i]] = {};
       }
       current = current[keys[i]];
