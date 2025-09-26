@@ -665,15 +665,15 @@ export class OrganizationDashboardApiService extends BaseApiService {
 
   // Organization dashboard-specific methods
   async getOverview(params = {}) {
-    return this.get('/overview', { params });
+    return this.get('/overview', params);
   }
 
   async getRealtime(params = {}) {
-    return this.get('/realtime', { params });
+    return this.get('/realtime', params);
   }
 
   async getSessionDistribution(params = {}) {
-    return this.get('/session-distribution', { params });
+    return this.get('/session-distribution', params);
   }
 
   async export(data) {

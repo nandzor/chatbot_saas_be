@@ -3,7 +3,7 @@
  * Dashboard untuk Organization Administrator sesuai spesifikasi
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Button } from '@/components/ui';
 import {
@@ -16,27 +16,18 @@ import {
   Activity,
   CheckCircle
 } from 'lucide-react';
-import { useApi } from '@/hooks';
+import { useApi, useAuth } from '@/hooks';
 import { organizationDashboardApi } from '@/api/BaseApiService';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { formatNumber } from '@/utils/helpers';
-import { LoadingStates, ErrorStates } from '@/components/ui';
 import toast from 'react-hot-toast';
 
 
 const OrganizationDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Set test token for development
-  if (!localStorage.getItem('jwt_token') && !localStorage.getItem('chatbot_auth_token')) {
-    localStorage.setItem('jwt_token', '19|vRvOeXOCLnLDOF3wjYcOsS9FaWB8aq9VBtlWZMAHab41ee67');
-    localStorage.setItem('chatbot_user', JSON.stringify({
-      id: '5b968a06-08b3-4d45-8f3a-8096fa1c8b9d',
-      name: 'Test User',
-      organization_id: '845e49a7-87db-4eb8-a5b6-6c077d0be712'
-    }));
-  }
-
-  // API Hooks
+  // API Hooks - only fetch data if user is authenticated
   const {
     data: dashboardData,
     loading: dashboardLoading,
@@ -44,7 +35,7 @@ const OrganizationDashboard = () => {
     refresh: refreshDashboard
   } = useApi(
     () => organizationDashboardApi.getOverview({ date_from: getDateFrom(), date_to: getDateTo() }),
-    { immediate: true }
+    { immediate: isAuthenticated }
   );
 
   const {
@@ -52,7 +43,7 @@ const OrganizationDashboard = () => {
     refresh: refreshRealtime
   } = useApi(
     () => organizationDashboardApi.getRealtime(),
-    { immediate: true, interval: 30000 } // Refresh every 30 seconds
+    { immediate: isAuthenticated, interval: 30000 } // Refresh every 30 seconds
   );
 
 
@@ -108,21 +99,69 @@ const OrganizationDashboard = () => {
   };
 
 
-  // Loading state
-  if (dashboardLoading) {
-    return <LoadingStates.DashboardLoadingSkeleton />;
-  }
-
-  // Error state
-  if (dashboardError) {
+  // Show loading state while checking authentication
+  if (authLoading) {
     return (
-      <ErrorStates.GenericErrorState
-        title="Failed to load dashboard"
-        message="An error occurred while loading the dashboard data"
-        onRetry={handleRefresh}
-      />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
     );
   }
+
+  // Show authentication required if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-red-500 mb-4">
+            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <p className="text-muted-foreground mb-4">Please log in to access the dashboard</p>
+          <Button onClick={() => window.location.href = '/auth/login'}>
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while fetching dashboard data
+  if (dashboardLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if dashboard data failed to load
+  if (dashboardError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-red-500 mb-4">
+            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Failed to load dashboard</h3>
+          <p className="text-muted-foreground mb-4">An error occurred while loading the dashboard data</p>
+          <Button onClick={handleRefresh}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
+
+
 
   const overview = dashboardData?.overview || {};
   const sessionDistributionOverTime = dashboardData?.session_distribution_over_time || [];
@@ -138,7 +177,7 @@ const OrganizationDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Dashboard Overview</h1>
           <p className="text-muted-foreground">
-            Welcome back, Organization Administrator!
+            Welcome back, {user?.full_name || user?.name || 'Organization Administrator'}!
           </p>
           {/* Real-time status */}
           {realtimeData?.data && (
@@ -302,135 +341,56 @@ const OrganizationDashboard = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bot vs Agent Sessions */}
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Bot vs Agent Sessions</CardTitle>
             <CardDescription>Session distribution over time</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {/* Line/Area Chart */}
-              <div className="h-80 bg-white rounded-lg p-6 border border-slate-200">
-                {sessionDistributionOverTime.length > 0 ? (
-                  <div className="h-full flex flex-col">
-                    {/* Chart Area */}
-                    <div className="flex-1 relative">
-                      {/* Y-axis labels */}
-                      <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-slate-500 pr-2">
-                        <span>180</span>
-                        <span>135</span>
-                        <span>90</span>
-                        <span>45</span>
-                        <span>0</span>
-                      </div>
-
-                      {/* Chart SVG */}
-                      <div className="ml-8 h-full">
-                        <svg className="w-full h-full" viewBox="0 0 400 200">
-                          {/* Grid lines */}
-                          <defs>
-                            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f1f5f9" strokeWidth="1"/>
-                            </pattern>
-                          </defs>
-                          <rect width="100%" height="100%" fill="url(#grid)" />
-
-                          {/* Bot line and area */}
-                          <path
-                            d={(() => {
-                              const points = sessionDistributionOverTime.slice(0, 12).map((item, index) => {
-                                const x = (index / 11) * 360 + 20;
-                                const y = 180 - ((item.bot || 0) / 180) * 160;
-                                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-                              }).join(' ');
-                              return points;
-                            })()}
-                            fill="none"
-                            stroke="#3b82f6"
-                            strokeWidth="2"
-                          />
-
-                          {/* Bot area fill */}
-                          <path
-                            d={(() => {
-                              const points = sessionDistributionOverTime.slice(0, 12).map((item, index) => {
-                                const x = (index / 11) * 360 + 20;
-                                const y = 180 - ((item.bot || 0) / 180) * 160;
-                                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-                              }).join(' ');
-                              const firstX = 20;
-                              const lastX = 380;
-                              return `${points} L ${lastX} 180 L ${firstX} 180 Z`;
-                            })()}
-                            fill="rgba(59, 130, 246, 0.1)"
-                          />
-
-                          {/* Agent line and area */}
-                          <path
-                            d={(() => {
-                              const points = sessionDistributionOverTime.slice(0, 12).map((item, index) => {
-                                const x = (index / 11) * 360 + 20;
-                                const total = (item.bot || 0) + (item.agent || 0);
-                                const y = 180 - (total / 180) * 160;
-                                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-                              }).join(' ');
-                              return points;
-                            })()}
-                            fill="none"
-                            stroke="#eab308"
-                            strokeWidth="2"
-                          />
-
-                          {/* Agent area fill */}
-                          <path
-                            d={(() => {
-                              const points = sessionDistributionOverTime.slice(0, 12).map((item, index) => {
-                                const x = (index / 11) * 360 + 20;
-                                const total = (item.bot || 0) + (item.agent || 0);
-                                const y = 180 - (total / 180) * 160;
-                                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-                              }).join(' ');
-                              const firstX = 20;
-                              const lastX = 380;
-                              return `${points} L ${lastX} 180 L ${firstX} 180 Z`;
-                            })()}
-                            fill="rgba(234, 179, 8, 0.1)"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* X-axis labels */}
-                    <div className="ml-8 flex justify-between text-xs text-slate-500 mt-2">
-                      <span>00:00</span>
-                      <span>04:00</span>
-                      <span>08:00</span>
-                      <span>12:00</span>
-                      <span>16:00</span>
-                      <span>20:00</span>
-                    </div>
+            <div className="h-[300px] border rounded-lg p-4">
+              {sessionDistributionOverTime.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={sessionDistributionOverTime.slice(0, 12)}>
+                    <defs>
+                      <linearGradient id="colorBot" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorAgent" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#eab308" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="time" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-white p-3 border rounded-lg shadow-lg">
+                              <p className="text-sm font-medium">{label}</p>
+                              <p className="text-sm text-blue-600">bot: {payload[0]?.value || 0}</p>
+                              <p className="text-sm text-yellow-600">agent: {payload[1]?.value || 0}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area type="monotone" dataKey="bot" stackId="1" stroke="#3b82f6" fill="url(#colorBot)" />
+                    <Area type="monotone" dataKey="agent" stackId="1" stroke="#eab308" fill="url(#colorAgent)" />
+                    <Legend />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center text-slate-500">
+                    <div className="text-lg font-semibold mb-2">No data available</div>
+                    <div className="text-sm">Chart will appear when data is loaded</div>
                   </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center text-slate-500">
-                      <div className="text-lg font-semibold mb-2">No data available</div>
-                      <div className="text-sm">Chart will appear when data is loaded</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Legend */}
-              <div className="flex justify-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-slate-700">bot</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm text-slate-700">agent</span>
-                </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -442,62 +402,64 @@ const OrganizationDashboard = () => {
             <CardDescription>Bot vs Agent handling</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center">
-              <div className="relative w-64 h-64">
-                {(() => {
-                  const totalBot = sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0);
-                  const totalAgent = sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0);
-                  const total = totalBot + totalAgent;
-                  const botPercentage = total > 0 ? (totalBot / total) * 100 : 0;
-                  const agentPercentage = total > 0 ? (totalAgent / total) * 100 : 0;
+            <div className="h-[250px] border rounded-lg p-4">
+              {(() => {
+                const totalBot = sessionDistributionOverTime.reduce((sum, item) => sum + (item.bot || 0), 0);
+                const totalAgent = sessionDistributionOverTime.reduce((sum, item) => sum + (item.agent || 0), 0);
+                const total = totalBot + totalAgent;
 
-                  if (total === 0) {
-                    return (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="text-center text-slate-500">
-                          <div className="text-lg font-semibold mb-2">No data available</div>
-                          <div className="text-sm">Chart will appear when data is loaded</div>
-                        </div>
-                      </div>
-                    );
-                  }
-
+                if (total === 0) {
                   return (
-                    <svg className="w-full h-full" viewBox="0 0 200 200">
-                      {/* Bot segment */}
-                      <path
-                        d={`M 100 100 L 100 20 A 80 80 0 ${botPercentage > 50 ? 1 : 0} 1 ${100 + 80 * Math.cos((botPercentage / 100) * 2 * Math.PI - Math.PI / 2)} ${100 + 80 * Math.sin((botPercentage / 100) * 2 * Math.PI - Math.PI / 2)} Z`}
-                        fill="#3b82f6"
-                      />
-                      {/* Agent segment */}
-                      <path
-                        d={`M 100 100 L ${100 + 80 * Math.cos((botPercentage / 100) * 2 * Math.PI - Math.PI / 2)} ${100 + 80 * Math.sin((botPercentage / 100) * 2 * Math.PI - Math.PI / 2)} A 80 80 0 ${agentPercentage > 50 ? 1 : 0} 1 100 20 Z`}
-                        fill="#eab308"
-                      />
-                      {/* Bot label */}
-                      <text
-                        x={100 + 40 * Math.cos((botPercentage / 200) * 2 * Math.PI - Math.PI / 2)}
-                        y={100 + 40 * Math.sin((botPercentage / 200) * 2 * Math.PI - Math.PI / 2)}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="text-xs font-medium fill-white"
-                      >
-                        Handled {Math.round(botPercentage)}%
-                      </text>
-                      {/* Agent label */}
-                      <text
-                        x={100 + 60 * Math.cos(((botPercentage + agentPercentage / 2) / 100) * 2 * Math.PI - Math.PI / 2)}
-                        y={100 + 60 * Math.sin(((botPercentage + agentPercentage / 2) / 100) * 2 * Math.PI - Math.PI / 2)}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="text-xs font-medium fill-slate-700"
-                      >
-                        Agent Handled
-                      </text>
-                    </svg>
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center text-slate-500">
+                        <div className="text-lg font-semibold mb-2">No data available</div>
+                        <div className="text-sm">Chart will appear when data is loaded</div>
+                      </div>
+                    </div>
                   );
-                })()}
-              </div>
+                }
+
+                const pieData = [
+                  { name: 'Bot', value: totalBot, fill: '#3b82f6' },
+                  { name: 'Agent', value: totalAgent, fill: '#eab308' }
+                ];
+
+                return (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0];
+                            return (
+                              <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                <p className="text-sm font-medium">{data.name}</p>
+                                <p className="text-sm text-slate-600">{data.value} sessions</p>
+                                <p className="text-sm text-slate-500">{((data.value / total) * 100).toFixed(1)}%</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>
