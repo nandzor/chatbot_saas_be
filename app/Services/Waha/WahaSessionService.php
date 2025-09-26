@@ -165,9 +165,9 @@ class WahaSessionService
             // Get workflow payload
             $workflowPayload = $this->getWahaWorkflowPayload($organizationId);
 
-            // Update webhook ID in the first node to include session name for uniqueness
+            // Update webhook ID in the first node to use session name for uniqueness
             if (isset($workflowPayload['nodes'][0]['webhookId'])) {
-                $workflowPayload['nodes'][0]['webhookId'] = $organizationId . '_' . $sessionName;
+                $workflowPayload['nodes'][0]['webhookId'] = $sessionName;
             }
 
             // Create workflow using N8N service

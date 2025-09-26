@@ -74,6 +74,7 @@ return new class extends Migration
 
             // Add unique constraint on id for foreign key references
             $table->unique('id', 'messages_id_unique');
+            $table->string('waha_session_id')->nullable()->after('session_id');
         });
     }
 

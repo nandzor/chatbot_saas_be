@@ -102,8 +102,8 @@ return [
 
     // Security Configuration
     'security' => [
-        'allowed_phone_numbers' => explode(',', env('WAHA_ALLOWED_PHONE_NUMBERS', '')),
-        'blocked_phone_numbers' => explode(',', env('WAHA_BLOCKED_PHONE_NUMBERS', '')),
+        'allowed_phone_numbers' => array_filter(explode(',', env('WAHA_ALLOWED_PHONE_NUMBERS', ''))),
+        'blocked_phone_numbers' => array_filter(explode(',', env('WAHA_BLOCKED_PHONE_NUMBERS', ''))),
         'require_authentication' => env('WAHA_REQUIRE_AUTH', true),
     ],
 

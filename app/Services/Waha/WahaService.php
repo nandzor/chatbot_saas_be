@@ -849,7 +849,12 @@ class WahaService extends BaseHttpClient
         // Remove all non-digit characters except +
         $cleaned = preg_replace('/[^\d+]/', '', $phoneNumber);
 
-        // Check if it starts with + and has at least 10 digits
+        // If it doesn't start with +, add it
+        if (!str_starts_with($cleaned, '+')) {
+            $cleaned = '+' . $cleaned;
+        }
+
+        // Check if it has at least 10 digits after +
         if (!preg_match('/^\+[1-9]\d{9,14}$/', $cleaned)) {
             throw WahaException::invalidPhoneNumber($phoneNumber);
         }
@@ -877,7 +882,12 @@ class WahaService extends BaseHttpClient
 
         // Check if phone number is in allowed list (if configured)
         $allowedNumbers = $securityConfig['allowed_phone_numbers'] ?? [];
-        if (!empty($allowedNumbers) && !in_array($phoneNumber, $allowedNumbers)) {
+        // Filter out empty strings and check if we have valid allowed numbers
+        $validAllowedNumbers = array_filter($allowedNumbers, function($number) {
+            return !empty(trim($number));
+        });
+
+        if (!empty($validAllowedNumbers) && !in_array($phoneNumber, $validAllowedNumbers)) {
             throw WahaException::unauthorizedPhoneNumber($phoneNumber);
         }
     }

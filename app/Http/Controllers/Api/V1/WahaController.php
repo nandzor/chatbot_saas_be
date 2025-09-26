@@ -2029,19 +2029,20 @@ class WahaController extends BaseApiController
             $message = \App\Models\Message::create([
                 'organization_id' => $organizationId,
                 'session_id' => $session->id,
+                'waha_session_id' => $messageData['waha_session'] ?? null,
                 'sender_type' => $senderType,
                 'sender_id' => $senderId,
                 'sender_name' => $senderName,
                 'message_type' => $messageData['message_type'] ?? 'text',
                 'message_text' => $messageData['text'] ?? '',
-                'waha_session_id' => $messageData['waha_session'] ?? null,
                 'metadata' => [
                     'whatsapp_message_id' => $messageData['message_id'] ?? null,
                     'phone_number' => $messageData['to'] ?? null,
                     'timestamp' => $messageData['timestamp'] ?? now()->timestamp,
                     'raw_data' => $messageData['raw_data'] ?? null,
                     'direction' => 'outgoing',
-                    'from_me' => true
+                    'from_me' => true,
+                    'waha_message_id' => $messageData['waha_message_id'] ?? null
                 ],
                 'is_read' => true, // Outgoing messages are considered read
                 'read_at' => now(),

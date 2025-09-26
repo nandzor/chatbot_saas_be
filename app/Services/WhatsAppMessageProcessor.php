@@ -53,34 +53,32 @@ class WhatsAppMessageProcessor
             // 2. Get or create chat session
             $session = $this->getOrCreateSession($messageData, $customer);
 
-            // 3. Customer message is now handled by webhook, skip creation here
+            // 3. Save customer message to database
+            $customerMessage = $this->saveCustomerMessage($messageData, $session);
 
-            // 4. Process with bot personality
-            Log::info('About to process with bot', [
-                'session_id' => $session->id,
-                'organization_id' => $session->organization_id
-            ]);
+            // // 4. Process with bot personality
+            // Log::info('About to process with bot', [
+            //     'session_id' => $session->id,
+            //     'organization_id' => $session->organization_id
+            // ]);
 
-            $botResponse = $this->processWithBot($session, $messageData);
+            // $botResponse = $this->processWithBot($session, $messageData);
 
-            Log::info('Bot processing completed', [
-                'session_id' => $session->id,
-                'bot_response' => $botResponse
-            ]);
+            // Log::info('Bot processing completed', [
+            //     'session_id' => $session->id,
+            //     'bot_response' => $botResponse
+            // ]);
 
             // 5. Check for escalation triggers
-            $escalationResult = $this->checkAndHandleEscalation($session, $messageData, $botResponse);
-
-            // 6. Update session metrics
-            $this->updateSessionMetrics($session);
+            // $escalationResult = $this->checkAndHandleEscalation($session, $messageData, $botResponse);
 
             return [
                 'session_id' => $session->id,
-                'message_id' => null, // Customer message now handled by webhook
+                'message_id' => $customerMessage->id ?? null,
                 'response_sent' => $botResponse['sent'] ?? false,
                 'bot_response' => $botResponse['content'] ?? null,
                 'escalated' => $escalationResult['escalated'] ?? false,
-                'escalation_result' => $escalationResult
+                // 'escalation_result' => $escalationResult
             ];
 
         } catch (\Exception $e) {
@@ -89,7 +87,43 @@ class WhatsAppMessageProcessor
                 'message_data' => $messageData
             ]);
             throw $e;
+        } finally {
+            // Update session metrics after transaction completes
+            if (isset($session)) {
+                try {
+                    $this->updateSessionMetrics($session);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to update session metrics', [
+                        'session_id' => $session->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
         }
+    }
+
+    /**
+     * Ensure data is an array, handling JSON strings
+     */
+    private function ensureArray($data): array
+    {
+        if (is_array($data)) {
+            return $data;
+        }
+
+        if (is_string($data)) {
+            // Try to decode as JSON first
+            $decoded = json_decode($data, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+
+            // If it's not valid JSON, return empty array
+            return [];
+        }
+
+        // For any other type (null, object, etc.), return empty array
+        return [];
     }
 
     /**
@@ -161,6 +195,101 @@ class WhatsAppMessageProcessor
         ]);
 
         return $customer;
+    }
+     /**
+     * Save customer message to database
+     */
+    private function saveCustomerMessage(array $messageData, ChatSession $session): Message
+    {
+        Log::info('Saving customer message', [
+            'session_id' => $session->id,
+            'from' => $messageData['from'] ?? 'unknown',
+            'text' => $messageData['text'] ?? 'no text'
+        ]);
+
+        // Debug media_metadata
+        $mediaData = $messageData['media'] ?? null;
+        Log::info('Media data debug', [
+            'media_type' => gettype($mediaData),
+            'media_is_array' => is_array($mediaData),
+            'media_is_string' => is_string($mediaData),
+            'media_length' => is_string($mediaData) ? strlen($mediaData) : 'N/A',
+            'media_preview' => is_string($mediaData) ? substr($mediaData, 0, 100) . '...' : $mediaData
+        ]);
+
+        $message = Message::create([
+            'session_id' => $session->id,
+            'organization_id' => $session->organization_id,
+            'waha_session_id' => $messageData['waha_session'] ?? null,
+            'sender_type' => 'customer',
+            'sender_id' => $session->customer_id,
+            'sender_name' => $messageData['customer_name'] ?? 'Customer',
+            'message_text' => $messageData['text'] ?? '',
+            'message_type' => $messageData['message_type'] ?? 'text',
+            'media_url' => is_string($messageData['media'] ?? null) ? $messageData['media'] : null,
+            'media_type' => $messageData['has_media'] ? 'image' : null,
+            'media_size' => null,
+            'media_metadata' => $this->ensureArray($messageData['media'] ?? null),
+            'thumbnail_url' => null,
+            'quick_replies' => null,
+            'buttons' => null,
+            'template_data' => null,
+            'intent' => null,
+            'entities' => [],
+            'confidence_score' => null,
+            'ai_generated' => false,
+            'ai_model_used' => null,
+            'sentiment_score' => null,
+            'sentiment_label' => null,
+            'emotion_scores' => [],
+            'is_read' => false,
+            'read_at' => null,
+            'delivered_at' => now(),
+            'failed_at' => null,
+            'failed_reason' => null,
+            'reply_to_message_id' => $messageData['reply_to'] ?? null,
+            'thread_id' => null,
+            'context' => [
+                'waha_message_id' => $messageData['message_id'] ?? null,
+                'waha_session' => $messageData['session_name'] ?? null,
+                'waha_event_id' => $messageData['waha_event_id'] ?? null,
+                'from_me' => $messageData['from_me'] ?? false,
+                'source' => $messageData['source'] ?? 'webhook',
+                'participant' => $messageData['participant'] ?? null,
+                'ack' => $messageData['ack'] ?? -1,
+                'ack_name' => $messageData['ack_name'] ?? null,
+                'author' => $messageData['author'] ?? null,
+                'location' => $messageData['location'] ?? null,
+                'v_cards' => $messageData['v_cards'] ?? [],
+                'me' => $messageData['me'] ?? null,
+                'environment' => $messageData['environment'] ?? null,
+            ],
+            'processing_time_ms' => null,
+            'metadata' => [
+                'waha_message_id' => $messageData['message_id'] ?? null,
+                'waha_session' => $messageData['session_name'] ?? null,
+                'raw_data' => $messageData,
+                'processed_at' => now()->toISOString()
+            ]
+        ]);
+
+        Log::info('Customer message saved', [
+            'message_id' => $message->id,
+            'session_id' => $session->id,
+            'text' => $message->message_text
+        ]);
+
+        // Verify message was actually saved
+        $savedMessage = Message::find($message->id);
+        if (!$savedMessage) {
+            Log::error('Message was not actually saved to database', [
+                'message_id' => $message->id,
+                'session_id' => $session->id
+            ]);
+            throw new \Exception('Message was not saved to database');
+        }
+
+        return $message;
     }
 
     /**
@@ -324,7 +453,7 @@ class WhatsAppMessageProcessor
                     'is_read' => false,
                     'read_at' => null,
                     'delivered_at' => now(),
-                    'created_at' => now()->addSeconds(rand(1, 3))
+                    'created_at' => now()->addSeconds(2)
                 ]);
 
                 Log::info('Bot message created successfully', [
@@ -363,7 +492,7 @@ class WhatsAppMessageProcessor
             'last_activity_at' => now(),
             'total_messages' => $session->messages()->count(),
             'customer_messages' => $session->messages()->where('sender_type', 'customer')->count(),
-            'bot_messages' => $session->messages()->where('sender_type', 'bot')->count(),
+            'bot_messages' => $session->messages()->where('sender_type', 'outgoing')->count(),
             'agent_messages' => $session->messages()->where('sender_type', 'agent')->count()
         ]);
     }
@@ -551,6 +680,13 @@ class WhatsAppMessageProcessor
                 'session_id' => $session->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
+            ]);
+
+            // Don't re-throw the exception to prevent transaction rollback
+            // The bot message is already saved, we just couldn't send it via WAHA
+            Log::warning('WhatsApp response could not be sent via WAHA, but bot message was saved', [
+                'session_id' => $session->id,
+                'bot_message_id' => $botMessage->id ?? null
             ]);
         }
     }

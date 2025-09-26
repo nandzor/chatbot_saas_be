@@ -77,9 +77,13 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
                 return;
             }
 
+            // Add organization_id to messageData before processing
+            $messageDataWithOrg = $this->messageData;
+            $messageDataWithOrg['organization_id'] = $this->organizationId;
+
             // Process the message
-            $result = DB::transaction(function () use ($messageProcessor) {
-                return $messageProcessor->processIncomingMessage($this->messageData);
+            $result = DB::transaction(function () use ($messageProcessor, $messageDataWithOrg) {
+                return $messageProcessor->processIncomingMessage($messageDataWithOrg);
             });
 
             // Calculate processing time
