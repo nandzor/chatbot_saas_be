@@ -89,7 +89,7 @@ class SendWelcomeNotification implements ShouldQueue
      */
     public function shouldQueue(UserRegistered $event): bool
     {
-        return $event->user->is_active;
+        return $event->user->isActive();
     }
 
     /**

@@ -357,9 +357,9 @@ class WahaSessionService
                     $webhook['hmac'] = $webhook['hmac'] ?? null;
                     $webhook['retries'] = $webhook['retries'] ?? null;
                     $webhook['customHeaders'] = array_merge($webhook['customHeaders'] ?? [], [
-                        'X-Webhook-Source' => 'WAHA-Session',
-                        'X-Organization-ID' => $organizationId,
-                        'X-N8N-Webhook-ID' => $webhookId
+                        ['name' => 'X-Webhook-Source', 'value' => 'WAHA-Session'],
+                        ['name' => 'X-Organization-ID', 'value' => $organizationId],
+                        ['name' => 'X-N8N-Webhook-ID', 'value' => $webhookId]
                     ]);
                 }
             }
@@ -372,10 +372,10 @@ class WahaSessionService
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => [
-                        'X-Webhook-Source' => 'WAHA-Session-Test',
-                        'X-Organization-ID' => $organizationId,
-                        'X-N8N-Webhook-ID' => $webhookId,
-                        'X-Environment' => 'test'
+                        ['name' => 'X-Webhook-Source', 'value' => 'WAHA-Session-Test'],
+                        ['name' => 'X-Organization-ID', 'value' => $organizationId],
+                        ['name' => 'X-N8N-Webhook-ID', 'value' => $webhookId],
+                        ['name' => 'X-Environment', 'value' => 'test']
                     ]
                 ],
                 [
@@ -384,10 +384,10 @@ class WahaSessionService
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => [
-                        'X-Webhook-Source' => 'WAHA-Session-Production',
-                        'X-Organization-ID' => $organizationId,
-                        'X-N8N-Webhook-ID' => $webhookId,
-                        'X-Environment' => 'production'
+                        ['name' => 'X-Webhook-Source', 'value' => 'WAHA-Session-Production'],
+                        ['name' => 'X-Organization-ID', 'value' => $organizationId],
+                        ['name' => 'X-N8N-Webhook-ID', 'value' => $webhookId],
+                        ['name' => 'X-Environment', 'value' => 'production']
                     ]
                 ],
                 [
@@ -396,11 +396,11 @@ class WahaSessionService
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => [
-                        'X-Webhook-Source' => 'WAHA-Message-Handler',
-                        'X-Organization-ID' => $organizationId,
-                        'X-N8N-Webhook-ID' => $webhookId,
-                        'X-Webhook-Type' => 'message-handler',
-                        'X-Environment' => 'production'
+                        ['name' => 'X-Webhook-Source', 'value' => 'WAHA-Message-Handler'],
+                        ['name' => 'X-Organization-ID', 'value' => $organizationId],
+                        ['name' => 'X-N8N-Webhook-ID', 'value' => $webhookId],
+                        ['name' => 'X-Webhook-Type', 'value' => 'message-handler'],
+                        ['name' => 'X-Environment', 'value' => 'production']
                     ]
                 ]
             ];
@@ -528,8 +528,8 @@ class WahaSessionService
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => [
-                        'X-Webhook-Type' => 'message-handler',
-                        'X-Organization-ID' => $organization->id
+                        ['name' => 'X-Webhook-Type', 'value' => 'message-handler'],
+                        ['name' => 'X-Organization-ID', 'value' => $organization->id]
                     ]
                 ]
             ];
@@ -555,8 +555,8 @@ class WahaSessionService
                         'hmac' => null,
                         'retries' => null,
                         'customHeaders' => [
-                            'X-Webhook-Type' => 'message-handler',
-                            'X-Organization-ID' => $organization->id
+                            ['name' => 'X-Webhook-Type', 'value' => 'message-handler'],
+                            ['name' => 'X-Organization-ID', 'value' => $organization->id]
                         ]
                     ]
                 ];

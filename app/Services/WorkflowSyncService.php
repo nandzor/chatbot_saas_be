@@ -6,6 +6,7 @@ use App\Models\BotPersonality;
 use App\Models\WahaSession;
 use App\Models\KnowledgeBaseItem;
 use App\Models\N8nWorkflow;
+use App\Services\AiInstructionService;
 use App\Traits\HasWorkflowIntegration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +25,12 @@ class WorkflowSyncService
     use HasWorkflowIntegration;
 
     protected ?\App\Services\Waha\WahaService $wahaService = null;
+    protected AiInstructionService $aiInstructionService;
+
+    public function __construct(AiInstructionService $aiInstructionService)
+    {
+        $this->aiInstructionService = $aiInstructionService;
+    }
 
     /**
      * Initialize WahaService instance
@@ -134,6 +141,21 @@ class WorkflowSyncService
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Get system message from knowledge base using AiInstructionService
+     */
+    protected function getSystemMessageFromKnowledgeBase(KnowledgeBaseItem $knowledgeBaseItem): string
+    {
+        // Create a temporary bot personality to generate system message
+        $tempBotPersonality = new BotPersonality([
+            'knowledge_base_item_id' => $knowledgeBaseItem->id,
+            'language' => 'indonesia', // Default language
+            'formality_level' => 'friendly' // Default formality level
+        ]);
+
+        return $this->aiInstructionService->generateForBotPersonality($tempBotPersonality);
     }
 
     /**

@@ -7,6 +7,8 @@ use App\Models\ChatSession;
 use App\Models\Message;
 use App\Models\Customer;
 use App\Models\AiModel;
+use App\Services\AiInstructionService;
+use App\Services\N8n\N8nService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -17,6 +19,15 @@ use Carbon\Carbon;
 
 class BotPersonalityService
 {
+    protected AiInstructionService $aiInstructionService;
+    protected N8nService $n8nService;
+
+    public function __construct(AiInstructionService $aiInstructionService, N8nService $n8nService)
+    {
+        $this->aiInstructionService = $aiInstructionService;
+        $this->n8nService = $n8nService;
+    }
+
     /**
      * Get all bot personalities for organization
      */
@@ -480,7 +491,56 @@ class BotPersonalityService
     public function createForOrganization(array $data, string $organizationId): BotPersonality
     {
         $data['organization_id'] = $organizationId;
-        return BotPersonality::create($data);
+
+        // Get n8n_workflow_id from waha_session if not provided
+        if (!isset($data['n8n_workflow_id']) && isset($data['waha_session_id'])) {
+            $wahaSession = \App\Models\WahaSession::find($data['waha_session_id']);
+            if ($wahaSession && $wahaSession->n8n_workflow_id) {
+                $data['n8n_workflow_id'] = $wahaSession->n8n_workflow_id;
+            }
+        }
+
+        // Create the bot personality first
+        $botPersonality = BotPersonality::create($data);
+
+        // Generate system message using AiInstructionService
+        if ($botPersonality->knowledge_base_item_id) {
+            try {
+                $systemMessage = $this->aiInstructionService->generateForBotPersonality($botPersonality);
+                $botPersonality->update(['system_message' => $systemMessage]);
+
+                // Update N8N workflow if it exists
+                if ($botPersonality->n8n_workflow_id) {
+                    $this->updateN8nWorkflowSystemMessage($botPersonality->n8n_workflow_id, $systemMessage);
+                } else {
+                    // Check if N8N workflows exist (no update, just check and report)
+                    $n8nCheckResult = $this->checkN8nWorkflowsExist();
+
+                    // Log the result
+                    if ($n8nCheckResult['success']) {
+                        Log::info('N8N workflows found', $n8nCheckResult);
+                    } else {
+                        Log::warning('N8N workflows not found or not accessible', $n8nCheckResult);
+                    }
+                }
+
+                Log::info('System message generated for new bot personality', [
+                    'bot_personality_id' => $botPersonality->id,
+                    'knowledge_base_item_id' => $botPersonality->knowledge_base_item_id,
+                    'language' => $botPersonality->language,
+                    'formality_level' => $botPersonality->formality_level,
+                    'system_message_length' => strlen($systemMessage),
+                    'n8n_workflow_id' => $botPersonality->n8n_workflow_id
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to generate system message for new bot personality', [
+                    'bot_personality_id' => $botPersonality->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return $botPersonality->fresh();
     }
 
     /**
@@ -506,8 +566,243 @@ class BotPersonalityService
             return null;
         }
 
+        // Get n8n_workflow_id from waha_session if not provided and not already set
+        if (!isset($data['n8n_workflow_id']) && !$personality->n8n_workflow_id && isset($data['waha_session_id'])) {
+            $wahaSession = \App\Models\WahaSession::find($data['waha_session_id']);
+            if ($wahaSession && $wahaSession->n8n_workflow_id) {
+                $data['n8n_workflow_id'] = $wahaSession->n8n_workflow_id;
+            }
+        }
+
+        // Check if knowledge base, language, or formality level changed
+        $shouldRegenerateSystemMessage = $this->shouldRegenerateSystemMessage($personality, $data);
+
+        // Update the bot personality
         $personality->update($data);
+
+        // Regenerate system message if needed
+        if ($shouldRegenerateSystemMessage && $personality->knowledge_base_item_id) {
+            try {
+                $systemMessage = $this->aiInstructionService->generateForBotPersonality($personality);
+                $personality->update(['system_message' => $systemMessage]);
+
+                // Update N8N workflow if it exists
+                if ($personality->n8n_workflow_id) {
+                    $this->updateN8nWorkflowSystemMessage($personality->n8n_workflow_id, $systemMessage);
+                } else {
+                    // Check if N8N workflows exist (no update, just check and report)
+                    $n8nCheckResult = $this->checkN8nWorkflowsExist();
+
+                    // Log the result
+                    if ($n8nCheckResult['success']) {
+                        Log::info('N8N workflows found', $n8nCheckResult);
+                    } else {
+                        Log::warning('N8N workflows not found or not accessible', $n8nCheckResult);
+                    }
+                }
+
+                Log::info('System message regenerated for updated bot personality', [
+                    'bot_personality_id' => $personality->id,
+                    'knowledge_base_item_id' => $personality->knowledge_base_item_id,
+                    'language' => $personality->language,
+                    'formality_level' => $personality->formality_level,
+                    'system_message_length' => strlen($systemMessage),
+                    'n8n_workflow_id' => $personality->n8n_workflow_id
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to regenerate system message for updated bot personality', [
+                    'bot_personality_id' => $personality->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
         return $personality->fresh(); // Return fresh instance with updated data
+    }
+
+    /**
+     * Check if system message should be regenerated
+     */
+    private function shouldRegenerateSystemMessage(BotPersonality $personality, array $data): bool
+    {
+        // Check if knowledge base item changed
+        if (isset($data['knowledge_base_item_id']) && $data['knowledge_base_item_id'] !== $personality->knowledge_base_item_id) {
+            return true;
+        }
+
+        // Check if language changed
+        if (isset($data['language']) && $data['language'] !== $personality->language) {
+            return true;
+        }
+
+        // Check if formality level changed
+        if (isset($data['formality_level']) && $data['formality_level'] !== $personality->formality_level) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Update N8N workflow system message
+     */
+    private function updateN8nWorkflowSystemMessage(string $n8nWorkflowId, string $systemMessage): void
+    {
+        try {
+            // First, find the N8N workflow in database to get the actual workflow_id
+            $n8nWorkflow = \App\Models\N8nWorkflow::find($n8nWorkflowId);
+            if (!$n8nWorkflow) {
+                Log::error('N8N workflow not found in database', [
+                    'n8n_workflow_id' => $n8nWorkflowId
+                ]);
+                return;
+            }
+
+            $actualWorkflowId = $n8nWorkflow->workflow_id;
+
+            // Try to update using the actual workflow ID
+            $this->n8nService->updateSystemMessage($actualWorkflowId, $systemMessage);
+
+            Log::info('N8N workflow system message updated', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'actual_workflow_id' => $actualWorkflowId,
+                'system_message_length' => strlen($systemMessage)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update N8N workflow system message', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage()
+            ]);
+
+            // Try alternative approach - update database directly
+            try {
+                $this->updateN8nWorkflowSystemMessageInDatabase($n8nWorkflowId, $systemMessage);
+            } catch (\Exception $dbException) {
+                Log::error('Failed to update N8N workflow system message in database', [
+                    'n8n_workflow_id' => $n8nWorkflowId,
+                    'error' => $dbException->getMessage()
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Update N8N workflow system message in database as fallback
+     */
+    private function updateN8nWorkflowSystemMessageInDatabase(string $n8nWorkflowId, string $systemMessage): void
+    {
+        $n8nWorkflow = \App\Models\N8nWorkflow::find($n8nWorkflowId);
+        if (!$n8nWorkflow) {
+            return;
+        }
+
+        $currentNodes = $n8nWorkflow->nodes ?? [];
+        $updated = false;
+
+        // Find and update any node that has systemMessage parameter
+        foreach ($currentNodes as &$node) {
+            if (isset($node['parameters']['options']['systemMessage'])) {
+                $node['parameters']['options']['systemMessage'] = $systemMessage;
+                $updated = true;
+            }
+        }
+
+        if ($updated) {
+            $n8nWorkflow->update(['nodes' => $currentNodes]);
+
+            Log::info('N8N workflow system message updated in database', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'system_message_length' => strlen($systemMessage)
+            ]);
+        }
+    }
+
+    /**
+     * Check if N8N workflows exist and return status message
+     * Does NOT update any workflows - only checks and reports
+     */
+    private function checkN8nWorkflowsExist(): array
+    {
+        try {
+            $workflows = $this->n8nService->getWorkflows();
+
+            if (!isset($workflows['data']) || !is_array($workflows['data']) || empty($workflows['data'])) {
+                Log::warning('No workflows found in N8N 3rd party');
+                return [
+                    'success' => false,
+                    'message' => 'No workflows found in N8N 3rd party. Please create workflows in N8N first.',
+                    'workflows_count' => 0
+                ];
+            }
+
+            $activeWorkflows = 0;
+            $workflowsWithSystemMessage = 0;
+
+            foreach ($workflows['data'] as $workflow) {
+                // Count active workflows
+                if (isset($workflow['active']) &&
+                    ($workflow['active'] === true || $workflow['active'] === 1 || $workflow['active'] === '1')) {
+                    $activeWorkflows++;
+                }
+
+                // Count workflows with systemMessage (check first few only for performance)
+                if ($workflowsWithSystemMessage < 5) { // Limit check to first 5 workflows
+                    try {
+                        $workflowDetail = $this->n8nService->getWorkflow($workflow['id']);
+                        foreach ($workflowDetail['nodes'] as $node) {
+                            if (isset($node['parameters']['options']['systemMessage'])) {
+                                $workflowsWithSystemMessage++;
+                                break;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        // Skip workflows that can't be accessed
+                        continue;
+                    }
+                }
+            }
+
+            if ($activeWorkflows === 0 && $workflowsWithSystemMessage === 0) {
+                Log::warning('No active workflows or workflows with systemMessage found in N8N 3rd party', [
+                    'total_workflows' => count($workflows['data']),
+                    'active_workflows' => $activeWorkflows,
+                    'workflows_with_system_message' => $workflowsWithSystemMessage
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'No active workflows or workflows with systemMessage found in N8N 3rd party. Please ensure workflows are active and have systemMessage nodes.',
+                    'workflows_count' => count($workflows['data']),
+                    'active_workflows' => $activeWorkflows,
+                    'workflows_with_system_message' => $workflowsWithSystemMessage
+                ];
+            }
+
+            Log::info('N8N workflows found', [
+                'total_workflows' => count($workflows['data']),
+                'active_workflows' => $activeWorkflows,
+                'workflows_with_system_message' => $workflowsWithSystemMessage
+            ]);
+
+            return [
+                'success' => true,
+                'message' => "Found {$activeWorkflows} active workflow(s) and {$workflowsWithSystemMessage} workflow(s) with systemMessage in N8N 3rd party",
+                'workflows_count' => count($workflows['data']),
+                'active_workflows' => $activeWorkflows,
+                'workflows_with_system_message' => $workflowsWithSystemMessage
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Failed to check N8N workflows', [
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to check N8N workflows: ' . $e->getMessage(),
+                'workflows_count' => 0
+            ];
+        }
     }
 
     /**
