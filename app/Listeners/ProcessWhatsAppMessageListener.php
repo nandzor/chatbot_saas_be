@@ -7,6 +7,7 @@ use App\Jobs\ProcessWhatsAppMessageJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 
 class ProcessWhatsAppMessageListener implements ShouldQueue
 {
@@ -43,6 +44,16 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
                 'received_at' => $event->receivedAt,
             ]);
 
+            // Check if this message has already been processed to prevent duplicates
+            if ($this->isMessageAlreadyProcessed($event->messageData, $event->organizationId)) {
+                Log::warning('WhatsApp message already processed, skipping duplicate', [
+                    'organization_id' => $event->organizationId,
+                    'message_id' => $event->messageData['message_id'] ?? 'unknown',
+                    'from' => $event->messageData['from'] ?? 'unknown',
+                ]);
+                return;
+            }
+
             // Dispatch job to process the message asynchronously
             ProcessWhatsAppMessageJob::dispatch($event->messageData, $event->organizationId)
                 ->onQueue('whatsapp-messages')
@@ -64,6 +75,39 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
             // Re-throw exception to trigger retry mechanism
             throw $e;
         }
+    }
+
+    /**
+     * Check if this message has already been processed
+     */
+    private function isMessageAlreadyProcessed(array $messageData, string $organizationId): bool
+    {
+        if (!isset($messageData['message_id'])) {
+            return false;
+        }
+
+        $messageId = $messageData['message_id'];
+        $redisKey = "whatsapp_message_processed:{$organizationId}:{$messageId}";
+
+        // Check Redis first for fast duplicate detection
+        if (Redis::exists($redisKey)) {
+            return true;
+        }
+
+        // Check database as fallback
+        $exists = \App\Models\Message::where('metadata->waha_message_id', $messageId)
+            ->where('organization_id', $organizationId)
+            ->exists();
+
+        if ($exists) {
+            // Mark in Redis for future fast lookups (expire in 1 hour)
+            Redis::setex($redisKey, 3600, '1');
+            return true;
+        }
+
+        // Mark as being processed in Redis to prevent race conditions
+        Redis::setex($redisKey, 300, 'processing'); // 5 minutes
+        return false;
     }
 
     /**

@@ -10,6 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 
 class ProcessWhatsAppMessageJob implements ShouldQueue
 {
@@ -103,6 +104,9 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
                 }
             }
 
+            // Mark message as processed in Redis
+            $this->markMessageAsProcessed();
+
             Log::info('WhatsApp message job completed successfully', [
                 'organization_id' => $this->organizationId,
                 'session_id' => $result['session_id'] ?? null,
@@ -112,6 +116,25 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
             ]);
 
         } catch (\Exception $e) {
+            // Check if this is a duplicate key constraint violation
+            if (str_contains($e->getMessage(), 'duplicate key value violates unique constraint')) {
+                Log::warning('Duplicate key constraint violation detected, message may have been processed already', [
+                    'organization_id' => $this->organizationId,
+                    'message_id' => $this->messageData['message_id'] ?? 'unknown',
+                    'error' => $e->getMessage(),
+                    'attempt' => $this->attempts(),
+                ]);
+
+                // Mark as processed since it was already processed by another job
+                $this->markMessageAsProcessed();
+
+                Log::info('WhatsApp message job completed (duplicate key handled gracefully)', [
+                    'organization_id' => $this->organizationId,
+                    'message_id' => $this->messageData['message_id'] ?? 'unknown',
+                ]);
+                return; // Exit gracefully without throwing exception
+            }
+
             Log::error('WhatsApp message job failed', [
                 'organization_id' => $this->organizationId,
                 'message_id' => $this->messageData['message_id'] ?? 'unknown',
@@ -137,6 +160,20 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
         return \App\Models\Message::where('metadata->whatsapp_message_id', $this->messageData['message_id'])
             ->where('organization_id', $this->organizationId)
             ->exists();
+    }
+
+    /**
+     * Mark message as processed in Redis
+     */
+    private function markMessageAsProcessed(): void
+    {
+        if (isset($this->messageData['message_id'])) {
+            $messageId = $this->messageData['message_id'];
+            $redisKey = "whatsapp_message_processed:{$this->organizationId}:{$messageId}";
+
+            // Mark as processed (expire in 1 hour)
+            Redis::setex($redisKey, 3600, '1');
+        }
     }
 
     /**

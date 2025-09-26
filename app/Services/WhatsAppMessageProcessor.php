@@ -217,61 +217,99 @@ class WhatsAppMessageProcessor
             'media_preview' => is_string($mediaData) ? substr($mediaData, 0, 100) . '...' : $mediaData
         ]);
 
-        $message = Message::create([
-            'session_id' => $session->id,
-            'organization_id' => $session->organization_id,
-            'waha_session_id' => $messageData['waha_session'] ?? null,
-            'sender_type' => 'customer',
-            'sender_id' => $session->customer_id,
-            'sender_name' => $messageData['customer_name'] ?? 'Customer',
-            'message_text' => $messageData['text'] ?? '',
-            'message_type' => $messageData['message_type'] ?? 'text',
-            'media_url' => is_string($messageData['media'] ?? null) ? $messageData['media'] : null,
-            'media_type' => $messageData['has_media'] ? 'image' : null,
-            'media_size' => null,
-            'media_metadata' => $this->ensureArray($messageData['media'] ?? null),
-            'thumbnail_url' => null,
-            'quick_replies' => null,
-            'buttons' => null,
-            'template_data' => null,
-            'intent' => null,
-            'entities' => [],
-            'confidence_score' => null,
-            'ai_generated' => false,
-            'ai_model_used' => null,
-            'sentiment_score' => null,
-            'sentiment_label' => null,
-            'emotion_scores' => [],
-            'is_read' => false,
-            'read_at' => null,
-            'delivered_at' => now(),
-            'failed_at' => null,
-            'failed_reason' => null,
-            'reply_to_message_id' => $messageData['reply_to'] ?? null,
-            'thread_id' => null,
-            'context' => [
+        // Check if message already exists to prevent duplicates
+        $existingMessage = Message::where('organization_id', $session->organization_id)
+            ->where('metadata->waha_message_id', $messageData['message_id'] ?? null)
+            ->first();
+
+        if ($existingMessage) {
+            Log::info('Message already exists, skipping duplicate', [
+                'existing_message_id' => $existingMessage->id,
                 'waha_message_id' => $messageData['message_id'] ?? null,
-                'waha_session' => $messageData['session_name'] ?? null,
-                'waha_event_id' => $messageData['waha_event_id'] ?? null,
-                'from_me' => $messageData['from_me'] ?? false,
-                'source' => $messageData['source'] ?? 'webhook',
-                'participant' => $messageData['participant'] ?? null,
-                'ack' => $messageData['ack'] ?? -1,
-                'ack_name' => $messageData['ack_name'] ?? null,
-                'author' => $messageData['author'] ?? null,
-                'location' => $messageData['location'] ?? null,
-                'v_cards' => $messageData['v_cards'] ?? [],
-                'me' => $messageData['me'] ?? null,
-                'environment' => $messageData['environment'] ?? null,
-            ],
-            'processing_time_ms' => null,
-            'metadata' => [
-                'waha_message_id' => $messageData['message_id'] ?? null,
-                'waha_session' => $messageData['session_name'] ?? null,
-                'raw_data' => $messageData,
-                'processed_at' => now()->toISOString()
-            ]
-        ]);
+                'organization_id' => $session->organization_id,
+            ]);
+            $message = $existingMessage;
+        } else {
+            try {
+                // Create new message
+                $message = Message::create([
+                    'session_id' => $session->id,
+                    'organization_id' => $session->organization_id,
+                    'waha_session_id' => $messageData['waha_session'] ?? null,
+                    'sender_type' => 'customer',
+                    'sender_id' => $session->customer_id,
+                    'sender_name' => $messageData['customer_name'] ?? 'Customer',
+                    'message_text' => $messageData['text'] ?? '',
+                    'message_type' => $messageData['message_type'] ?? 'text',
+                    'media_url' => is_string($messageData['media'] ?? null) ? $messageData['media'] : null,
+                    'media_type' => $messageData['has_media'] ? 'image' : null,
+                    'media_size' => null,
+                    'media_metadata' => $this->ensureArray($messageData['media'] ?? null),
+                    'thumbnail_url' => null,
+                    'quick_replies' => null,
+                    'buttons' => null,
+                    'template_data' => null,
+                    'intent' => null,
+                    'entities' => [],
+                    'confidence_score' => null,
+                    'ai_generated' => false,
+                    'ai_model_used' => null,
+                    'sentiment_score' => null,
+                    'sentiment_label' => null,
+                    'emotion_scores' => [],
+                    'is_read' => false,
+                    'read_at' => null,
+                    'delivered_at' => now(),
+                    'failed_at' => null,
+                    'failed_reason' => null,
+                    'reply_to_message_id' => $messageData['reply_to'] ?? null,
+                    'thread_id' => null,
+                    'context' => [
+                        'waha_message_id' => $messageData['message_id'] ?? null,
+                        'waha_session' => $messageData['session_name'] ?? null,
+                        'waha_event_id' => $messageData['waha_event_id'] ?? null,
+                        'from_me' => $messageData['from_me'] ?? false,
+                        'source' => $messageData['source'] ?? 'webhook',
+                        'participant' => $messageData['participant'] ?? null,
+                        'ack' => $messageData['ack'] ?? -1,
+                        'ack_name' => $messageData['ack_name'] ?? null,
+                        'author' => $messageData['author'] ?? null,
+                        'location' => $messageData['location'] ?? null,
+                        'v_cards' => $messageData['v_cards'] ?? [],
+                        'me' => $messageData['me'] ?? null,
+                        'environment' => $messageData['environment'] ?? null,
+                    ],
+                    'processing_time_ms' => null,
+                    'metadata' => [
+                        'waha_message_id' => $messageData['message_id'] ?? null,
+                        'waha_session' => $messageData['session_name'] ?? null,
+                        'raw_data' => $messageData,
+                        'processed_at' => now()->toISOString()
+                    ]
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Handle unique constraint violation - message was created by another process
+                if (str_contains($e->getMessage(), 'duplicate key value violates unique constraint')) {
+                    Log::warning('Message was created by another process, fetching existing message', [
+                        'waha_message_id' => $messageData['message_id'] ?? null,
+                        'organization_id' => $session->organization_id,
+                        'error' => $e->getMessage()
+                    ]);
+
+                    // Fetch the existing message
+                    $message = Message::where('organization_id', $session->organization_id)
+                        ->where('metadata->waha_message_id', $messageData['message_id'] ?? null)
+                        ->first();
+
+                    if (!$message) {
+                        throw new \Exception('Message should exist but could not be found after unique constraint violation');
+                    }
+                } else {
+                    // Re-throw if it's not a unique constraint violation
+                    throw $e;
+                }
+            }
+        }
 
         Log::info('Customer message saved', [
             'message_id' => $message->id,
