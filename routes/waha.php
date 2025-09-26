@@ -56,6 +56,6 @@ Route::prefix('waha')->middleware(['unified.auth', 'waha.organization'])->group(
     Route::put('/sessions/{sessionId}/webhook', [WahaController::class, 'updateWebhookConfig']);
 
     // Webhook routes (no authentication required for WAHA server callbacks)
-    Route::post('/webhook', [WahaController::class, 'handleWebhook'])->withoutMiddleware(['unified.auth', 'waha.organization']);
-    Route::post('/webhook/message', [WahaController::class, 'handleMessageWebhook'])->withoutMiddleware(['unified.auth', 'waha.organization']);
+    Route::post('/webhook/{sessionName}', [WahaController::class, 'handleWebhook'])->withoutMiddleware(['unified.auth', 'waha.organization']);
+    Route::post('/webhook/{sessionName}/message', [WahaController::class, 'handleMessageWebhook'])->withoutMiddleware(['unified.auth', 'waha.organization']);
 });

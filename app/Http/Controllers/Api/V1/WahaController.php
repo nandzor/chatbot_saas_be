@@ -914,22 +914,22 @@ class WahaController extends BaseApiController
     /**
      * Handle WAHA webhook for session status updates
      */
-    public function handleWebhook(Request $request): JsonResponse
+    public function handleWebhook(Request $request, string $sessionName): JsonResponse
     {
         try {
             $payload = $request->all();
 
             Log::info('WAHA webhook received', [
+                'session_name' => $sessionName,
                 'payload' => $payload
             ]);
 
-            // Extract session information from webhook payload
-            $sessionName = $payload['session'] ?? $payload['name'] ?? null;
+            // Use sessionName from route parameter
             $status = $payload['status'] ?? $payload['state'] ?? null;
             $organizationId = $payload['organization_id'] ?? null;
 
-            if (!$sessionName || !$status) {
-                return $this->errorResponse('Invalid webhook payload: missing session name or status', 400);
+            if (!$status) {
+                return $this->errorResponse('Invalid webhook payload: missing status', 400);
             }
 
             // If organization_id is not in payload, try to find it by session name
@@ -972,14 +972,14 @@ class WahaController extends BaseApiController
     /**
      * Handle incoming WhatsApp webhooks from WAHA (all event types)
      */
-    public function handleMessageWebhook(Request $request): JsonResponse
+    public function handleMessageWebhook(Request $request, string $sessionName): JsonResponse
     {
         try {
             $payload = $request->all();
 
             Log::info('WAHA webhook received', [
                 'event' => $payload['event'] ?? 'unknown',
-                'session' => $payload['session'] ?? 'unknown',
+                'session_name' => $sessionName,
                 'timestamp' => now()
             ]);
 
@@ -992,11 +992,11 @@ class WahaController extends BaseApiController
             }
 
             // Extract organization ID from session name
-            $organizationId = $this->extractOrganizationFromSession($payload['session'] ?? null);
+            $organizationId = $this->extractOrganizationFromSession($sessionName);
 
             if (!$organizationId) {
                 Log::error('Organization ID not found for WAHA webhook', [
-                    'session' => $payload['session'] ?? null,
+                    'session' => $sessionName,
                     'event' => $payload['event'] ?? 'unknown'
                 ]);
                 return $this->errorResponse('Organization not found', 400);
