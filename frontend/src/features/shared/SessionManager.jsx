@@ -52,6 +52,8 @@ import {
   X,
   Tag
 } from 'lucide-react';
+import ConversationDialog from '@/components/inbox/ConversationDialog';
+import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
 
 const SessionManagerComponent = () => {
   const { announce } = useAnnouncement();
@@ -60,6 +62,7 @@ const SessionManagerComponent = () => {
 
   // State management
   const [selectedSession, setSelectedSession] = useState(null);
+  const [showConversationDialog, setShowConversationDialog] = useState(false);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [showPersonalityDialog, setShowPersonalityDialog] = useState(false);
   const [showAiResponseDialog, setShowAiResponseDialog] = useState(false);
@@ -256,6 +259,7 @@ const SessionManagerComponent = () => {
   // Handle session selection
   const handleSessionSelect = useCallback((session) => {
     setSelectedSession(session);
+    setShowConversationDialog(true);
     announce(`Selected session ${session.session_token}`);
   }, [announce]);
 
@@ -335,7 +339,7 @@ const SessionManagerComponent = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle transfer session
-  const handleTransferSession = useCallback(async () => {
+  const handleTransferSessionAction = useCallback(async () => {
     if (!selectedSession || !transferData.agent_id) return;
 
     try {
@@ -408,9 +412,49 @@ const SessionManagerComponent = () => {
     }
   }, [selectedSession, aiResponseData, setLoading, announce, refresh]);
 
+  // Handle conversation dialog actions
+  const handleConversationClose = useCallback(() => {
+    setShowConversationDialog(false);
+    setSelectedSession(null);
+  }, []);
+
+  const handleSendMessage = useCallback((message) => {
+    announce('Message sent successfully');
+    refresh();
+  }, [announce, refresh]);
+
+  const handleAssignConversation = useCallback(async (session) => {
+    try {
+      setLoading('assign', true);
+      const result = await inboxService.assignSession(session.id, 'current_agent');
+
+      if (result.success) {
+        announce('Session assigned successfully');
+        refresh();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      handleError(err, { context: 'Assign Session' });
+    } finally {
+      setLoading('assign', false);
+    }
+  }, [setLoading, announce, refresh]);
+
+  const handleResolveConversation = useCallback((session, resolveData) => {
+    announce('Session resolved successfully');
+    refresh();
+  }, [announce, refresh]);
+
+  const handleTransferSession = useCallback((session, transferData) => {
+    announce('Session transferred successfully');
+    refresh();
+  }, [announce, refresh]);
+
 
     return (
-    <div className="space-y-6" ref={focusRef}>
+    <RealtimeMessageProvider>
+      <div className="space-y-6" ref={focusRef}>
       {/* Header and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
@@ -533,7 +577,7 @@ const SessionManagerComponent = () => {
               Cancel
             </Button>
             <Button
-              onClick={handleTransferSession}
+              onClick={handleTransferSessionAction}
               disabled={!transferData.agent_id || getLoadingState('transfer')}
             >
               {getLoadingState('transfer') ? 'Transferring...' : 'Transfer'}
@@ -658,7 +702,19 @@ const SessionManagerComponent = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* Conversation Dialog */}
+      <ConversationDialog
+        session={selectedSession}
+        isOpen={showConversationDialog}
+        onClose={handleConversationClose}
+        onSendMessage={handleSendMessage}
+        onAssignConversation={handleAssignConversation}
+        onResolveConversation={handleResolveConversation}
+        onTransferSession={handleTransferSession}
+      />
+      </div>
+    </RealtimeMessageProvider>
   );
 };
 

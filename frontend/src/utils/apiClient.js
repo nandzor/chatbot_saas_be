@@ -7,7 +7,7 @@ import axios from 'axios';
 
 // Create axios instance with default configuration
 const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || '/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -18,7 +18,7 @@ const apiClient = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY || 'auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
   (error) => {
     // Handle 401 errors (unauthorized)
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem(import.meta.env.VITE_AUTH_TOKEN_KEY || 'auth_token');
       window.location.href = '/login';
     }
 
