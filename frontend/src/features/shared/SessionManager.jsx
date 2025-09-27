@@ -15,7 +15,9 @@ import {
   useAnnouncement,
   useFocusManagement
 } from '@/utils/accessibilityUtils';
+import { useAuth } from '@/contexts/AuthContext';
 import { inboxService } from '@/services/InboxService';
+import conversationService from '@/services/conversationService';
 import { usePaginatedApi } from '@/hooks/useApi';
 import {
   Button,
@@ -50,19 +52,30 @@ import {
   MessageCircle,
   ArrowRightLeft,
   X,
-  Tag
+  Tag,
+  History,
+  Search
 } from 'lucide-react';
+import ConversationDialog from '@/components/inbox/ConversationDialog';
+import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
 
 const SessionManagerComponent = () => {
   const { announce } = useAnnouncement();
   const { focusRef } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
+  const { user } = useAuth();
 
   // State management
   const [selectedSession, setSelectedSession] = useState(null);
+  const [showConversationDialog, setShowConversationDialog] = useState(false);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [showPersonalityDialog, setShowPersonalityDialog] = useState(false);
   const [showAiResponseDialog, setShowAiResponseDialog] = useState(false);
+  const [showRecentMessagesDialog, setShowRecentMessagesDialog] = useState(false);
+  const [showSearchMessagesDialog, setShowSearchMessagesDialog] = useState(false);
+  const [recentMessages, setRecentMessages] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [transferData, setTransferData] = useState({
     agent_id: '',
     reason: '',
@@ -250,12 +263,33 @@ const SessionManagerComponent = () => {
           </Badge>
         ) : null
       )
+    },
+    {
+      key: 'recent_message',
+      header: 'Recent Message',
+      sortable: false,
+      render: (value, row) => (
+        <div className="max-w-xs">
+          {row.recent_message ? (
+            <div className="text-sm text-muted-foreground truncate">
+              <span className="font-medium">
+                {row.recent_message.sender?.type === 'customer' ? 'Customer' :
+                 row.recent_message.sender?.type === 'agent' ? 'Agent' : 'Bot'}:
+              </span>
+              <span className="ml-1">{row.recent_message.content?.text || 'No text'}</span>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">No messages</span>
+          )}
+        </div>
+      )
     }
   ], [getSessionTypeIcon, getStatusBadgeVariant, getPriorityBadgeVariant, formatTimeAgo]);
 
   // Handle session selection
   const handleSessionSelect = useCallback((session) => {
     setSelectedSession(session);
+    setShowConversationDialog(true);
     announce(`Selected session ${session.session_token}`);
   }, [announce]);
 
@@ -278,12 +312,73 @@ const SessionManagerComponent = () => {
     }
   }, [setLoading, announce, refresh]);
 
+  // Handle recent messages
+  const handleViewRecentMessages = useCallback(async (session) => {
+    try {
+      setLoading('recent', true);
+      setSelectedSession(session);
+
+      const result = await conversationService.getConversationWithRecent(session.id, 10);
+
+      if (result.success) {
+        setRecentMessages(result.data.conversation.messages || []);
+        setShowRecentMessagesDialog(true);
+        announce(`Loaded ${result.data.conversation.messages?.length || 0} recent messages`);
+      } else {
+        throw new Error(result.error || 'Failed to load recent messages');
+      }
+    } catch (err) {
+      handleError(err, { context: 'Load Recent Messages' });
+    } finally {
+      setLoading('recent', false);
+    }
+  }, [setLoading, announce]);
+
+  // Handle search messages
+  const handleSearchMessages = useCallback(async (session) => {
+    setSelectedSession(session);
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchMessagesDialog(true);
+  }, []);
+
+  const handlePerformSearch = useCallback(async () => {
+    if (!selectedSession || !searchQuery.trim()) return;
+
+    try {
+      setLoading('search', true);
+
+      const result = await conversationService.searchMessages(selectedSession.id, searchQuery.trim());
+
+      if (result.success) {
+        setSearchResults(result.data.messages || []);
+        announce(`Found ${result.data.total_found || 0} messages`);
+      } else {
+        throw new Error(result.error || 'Failed to search messages');
+      }
+    } catch (err) {
+      handleError(err, { context: 'Search Messages' });
+    } finally {
+      setLoading('search', false);
+    }
+  }, [selectedSession, searchQuery, setLoading, announce]);
+
   // Define actions for DataTable
   const actions = useMemo(() => [
     {
       label: 'View Details',
       icon: Eye,
       onClick: (row) => handleSessionSelect(row)
+    },
+    {
+      label: 'Recent Messages',
+      icon: History,
+      onClick: (row) => handleViewRecentMessages(row)
+    },
+    {
+      label: 'Search Messages',
+      icon: Search,
+      onClick: (row) => handleSearchMessages(row)
     },
     {
       label: 'Transfer',
@@ -315,7 +410,7 @@ const SessionManagerComponent = () => {
       onClick: (row) => handleEndSession(row.id),
       disabled: (row) => !row.is_active
     }
-  ], [handleSessionSelect, handleEndSession]);
+  ], [handleSessionSelect, handleViewRecentMessages, handleSearchMessages, handleEndSession]);
 
   // Load available personalities
   const loadAvailablePersonalities = useCallback(async () => {
@@ -335,7 +430,7 @@ const SessionManagerComponent = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle transfer session
-  const handleTransferSession = useCallback(async () => {
+  const handleTransferSessionAction = useCallback(async () => {
     if (!selectedSession || !transferData.agent_id) return;
 
     try {
@@ -408,9 +503,51 @@ const SessionManagerComponent = () => {
     }
   }, [selectedSession, aiResponseData, setLoading, announce, refresh]);
 
+  // Handle conversation dialog actions
+  const handleConversationClose = useCallback(() => {
+    setShowConversationDialog(false);
+    setSelectedSession(null);
+  }, []);
+
+  const handleSendMessage = useCallback((message) => {
+    announce('Message sent successfully');
+    refresh();
+  }, [announce, refresh]);
+
+  const handleAssignConversation = useCallback(async (session) => {
+    try {
+      setLoading('assign', true);
+
+      // Use current_agent to let backend handle the logic
+      const result = await inboxService.assignSession(session.id, 'current_agent');
+
+      if (result.success) {
+        announce('Session assigned successfully');
+        refresh();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      handleError(err, { context: 'Assign Session' });
+    } finally {
+      setLoading('assign', false);
+    }
+  }, [setLoading, announce, refresh]);
+
+  const handleResolveConversation = useCallback((session, resolveData) => {
+    announce('Session resolved successfully');
+    refresh();
+  }, [announce, refresh]);
+
+  const handleTransferSession = useCallback((session, transferData) => {
+    announce('Session transferred successfully');
+    refresh();
+  }, [announce, refresh]);
+
 
     return (
-    <div className="space-y-6" ref={focusRef}>
+    <RealtimeMessageProvider>
+      <div className="space-y-6" ref={focusRef}>
       {/* Header and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
@@ -533,7 +670,7 @@ const SessionManagerComponent = () => {
               Cancel
             </Button>
             <Button
-              onClick={handleTransferSession}
+              onClick={handleTransferSessionAction}
               disabled={!transferData.agent_id || getLoadingState('transfer')}
             >
               {getLoadingState('transfer') ? 'Transferring...' : 'Transfer'}
@@ -658,7 +795,229 @@ const SessionManagerComponent = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* Search Messages Dialog */}
+      <Dialog open={showSearchMessagesDialog} onOpenChange={setShowSearchMessagesDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Search Messages</DialogTitle>
+            <DialogDescription>
+              Search messages in session: {selectedSession?.session_token}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex space-x-2">
+              <Input
+                placeholder="Enter search query..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handlePerformSearch()}
+                className="flex-1"
+              />
+              <Button
+                onClick={handlePerformSearch}
+                disabled={!searchQuery.trim() || getLoadingState('search')}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                {getLoadingState('search') ? 'Searching...' : 'Search'}
+              </Button>
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto">
+              {getLoadingState('search') ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                  <span>Searching messages...</span>
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="text-sm text-muted-foreground mb-4">
+                    Found {searchResults.length} messages
+                  </div>
+                  {searchResults.map((message, index) => (
+                    <div
+                      key={message.id || index}
+                      className={`p-3 rounded-lg border ${
+                        message.sender?.type === 'customer'
+                          ? 'bg-blue-50 border-blue-200'
+                          : message.sender?.type === 'agent'
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Badge
+                              variant={
+                                message.sender?.type === 'customer' ? 'default' :
+                                message.sender?.type === 'agent' ? 'secondary' : 'outline'
+                              }
+                            >
+                              {message.sender?.type === 'customer' ? 'Customer' :
+                               message.sender?.type === 'agent' ? 'Agent' : 'Bot'}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {message.sender?.name || 'Unknown'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {message.created_at ? new Date(message.created_at).toLocaleString() : 'Unknown time'}
+                            </span>
+                          </div>
+                          <div className="text-sm">
+                            {message.content?.text || 'No text content'}
+                          </div>
+                          {message.status && (
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Badge
+                                variant={message.status.is_read ? 'secondary' : 'default'}
+                                className="text-xs"
+                              >
+                                {message.status.is_read ? 'Read' : 'Unread'}
+                              </Badge>
+                              {message.status.delivered_at && (
+                                <span className="text-xs text-muted-foreground">
+                                  Delivered: {new Date(message.status.delivered_at).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : searchQuery ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No messages found for "{searchQuery}"</p>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Enter a search query to find messages</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSearchMessagesDialog(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recent Messages Dialog */}
+      <Dialog open={showRecentMessagesDialog} onOpenChange={setShowRecentMessagesDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Recent Messages</DialogTitle>
+            <DialogDescription>
+              Recent messages for session: {selectedSession?.session_token}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {getLoadingState('recent') ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                <span>Loading recent messages...</span>
+              </div>
+            ) : recentMessages.length > 0 ? (
+              <div className="space-y-3">
+                {recentMessages.map((message, index) => (
+                  <div
+                    key={message.id || index}
+                    className={`p-3 rounded-lg border ${
+                      message.sender?.type === 'customer'
+                        ? 'bg-blue-50 border-blue-200'
+                        : message.sender?.type === 'agent'
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Badge
+                            variant={
+                              message.sender?.type === 'customer' ? 'default' :
+                              message.sender?.type === 'agent' ? 'secondary' : 'outline'
+                            }
+                          >
+                            {message.sender?.type === 'customer' ? 'Customer' :
+                             message.sender?.type === 'agent' ? 'Agent' : 'Bot'}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {message.sender?.name || 'Unknown'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {message.created_at ? new Date(message.created_at).toLocaleString() : 'Unknown time'}
+                          </span>
+                        </div>
+                        <div className="text-sm">
+                          {message.content?.text || 'No text content'}
+                        </div>
+                        {message.status && (
+                          <div className="flex items-center space-x-2 mt-2">
+                            <Badge
+                              variant={message.status.is_read ? 'secondary' : 'default'}
+                              className="text-xs"
+                            >
+                              {message.status.is_read ? 'Read' : 'Unread'}
+                            </Badge>
+                            {message.status.delivered_at && (
+                              <span className="text-xs text-muted-foreground">
+                                Delivered: {new Date(message.status.delivered_at).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No recent messages found for this session.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRecentMessagesDialog(false)}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => selectedSession && handleViewRecentMessages(selectedSession)}
+              disabled={getLoadingState('recent')}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${getLoadingState('recent') ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conversation Dialog */}
+      <ConversationDialog
+        session={selectedSession}
+        isOpen={showConversationDialog}
+        onClose={handleConversationClose}
+        onSendMessage={handleSendMessage}
+        onAssignConversation={handleAssignConversation}
+        onResolveConversation={handleResolveConversation}
+        onTransferSession={handleTransferSession}
+      />
+      </div>
+    </RealtimeMessageProvider>
   );
 };
 

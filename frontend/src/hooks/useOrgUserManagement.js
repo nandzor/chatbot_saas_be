@@ -78,9 +78,9 @@ export const useOrgUserManagement = () => {
         throw new Error(response.message || 'Failed to load users');
       }
         } catch (err) {
-          const errorMessage = handleError(err);
-          setError(errorMessage.message);
-          toast.error(`Gagal memuat daftar pengguna: ${errorMessage.message}`);
+          const errorResult = handleError(err);
+          setError(errorResult.message);
+          toast.error(`Gagal memuat daftar pengguna: ${errorResult.message}`);
         } finally {
       setLoading(false);
     }
@@ -102,9 +102,9 @@ export const useOrgUserManagement = () => {
         throw new Error(response.message || 'Failed to create user');
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage.message);
-      toast.error(`Gagal membuat pengguna: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal membuat pengguna: ${errorResult.message}`);
       if (import.meta.env.DEV) {
         console.error('Error creating user:', err);
       }
@@ -130,9 +130,9 @@ export const useOrgUserManagement = () => {
         throw new Error(response.message || 'Failed to update user');
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage.message);
-      toast.error(`Gagal memperbarui pengguna: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal memperbarui pengguna: ${errorResult.message}`);
       if (import.meta.env.DEV) {
         console.error('Error updating user:', err);
       }
@@ -158,9 +158,9 @@ export const useOrgUserManagement = () => {
         throw new Error(response.message || 'Failed to delete user');
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage.message);
-      toast.error(`Gagal menghapus pengguna: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal menghapus pengguna: ${errorResult.message}`);
       if (import.meta.env.DEV) {
         console.error('Error deleting user:', err);
       }
@@ -186,9 +186,9 @@ export const useOrgUserManagement = () => {
         throw new Error(response.message || 'Failed to toggle user status');
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage.message);
-      toast.error(`Gagal mengubah status pengguna: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal mengubah status pengguna: ${errorResult.message}`);
       if (import.meta.env.DEV) {
         console.error('Error toggling user status:', err);
       }
@@ -205,9 +205,9 @@ export const useOrgUserManagement = () => {
       const response = await userManagementService.getUserById(userId);
       return response;
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage.message);
-      toast.error(`Gagal memuat detail pengguna: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal memuat detail pengguna: ${errorResult.message}`);
       if (import.meta.env.DEV) {
         console.error('Error getting user by ID:', err);
       }

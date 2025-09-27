@@ -7,7 +7,7 @@ import axios from 'axios';
 
 // Create axios instance with default configuration
 const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || '/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -18,10 +18,19 @@ const apiClient = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const jwtToken = localStorage.getItem('jwt_token');
+    const sanctumToken = localStorage.getItem('sanctum_token');
+
+    // Add JWT token to Authorization header
+    if (jwtToken) {
+      config.headers.Authorization = `Bearer ${jwtToken}`;
     }
+
+    // Add Sanctum token as fallback
+    if (sanctumToken) {
+      config.headers['X-Sanctum-Token'] = sanctumToken;
+    }
+
     return config;
   },
   (error) => {
@@ -37,8 +46,15 @@ apiClient.interceptors.response.use(
   (error) => {
     // Handle 401 errors (unauthorized)
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
-      window.location.href = '/login';
+      console.warn('🔐 Unauthorized access - token may be invalid or expired');
+      // Only redirect to login if we're not already on a login page
+      if (!window.location.pathname.includes('/login')) {
+        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('sanctum_token');
+        localStorage.removeItem('chatbot_user');
+        localStorage.removeItem('chatbot_session');
+        window.location.href = '/login';
+      }
     }
 
     // Handle 403 errors (forbidden)

@@ -169,11 +169,21 @@ class ConversationService extends BaseService
             // Create the message
             $message = Message::create([
                 'organization_id' => $this->getCurrentOrganizationId(),
-                'chat_session_id' => $conversation->id,
+                'session_id' => $conversation->id,
                 'sender_type' => $data['sender_type'],
                 'sender_id' => $data['sender_id'] ?? null,
+                'sender_name' => $data['sender_name'] ?? null,
+                'message_text' => $data['message_text'],
                 'message_type' => $data['message_type'] ?? 'text',
-                'content' => $data['content'],
+                'media_url' => $data['media_url'] ?? null,
+                'media_type' => $data['media_type'] ?? null,
+                'media_size' => $data['media_size'] ?? null,
+                'media_metadata' => $data['media_metadata'] ?? [],
+                'thumbnail_url' => $data['thumbnail_url'] ?? null,
+                'quick_replies' => $data['quick_replies'] ?? null,
+                'buttons' => $data['buttons'] ?? null,
+                'template_data' => $data['template_data'] ?? null,
+                'reply_to_message_id' => $data['reply_to_message_id'] ?? null,
                 'metadata' => $data['metadata'] ?? []
             ]);
 
@@ -213,7 +223,7 @@ class ConversationService extends BaseService
             ]);
         }
 
-        $query = Message::where('chat_session_id', $conversationId)
+        $query = Message::where('session_id', $conversationId)
             ->where('organization_id', $this->getCurrentOrganizationId())
             ->orderBy('created_at', 'asc');
 
@@ -266,6 +276,50 @@ class ConversationService extends BaseService
                 'conversation_id' => $conversation->id,
                 'resolution_time' => $resolutionTime,
                 'ended_by' => $this->getCurrentUserId()
+            ]);
+
+            return $conversation->fresh();
+        });
+    }
+
+    /**
+     * Assign a conversation to the current user.
+     */
+    public function assignToMe(string $conversationId): ?ChatSession
+    {
+        return DB::transaction(function () use ($conversationId) {
+            $conversation = $this->getItemById($conversationId);
+
+            if (!$conversation) {
+                throw ValidationException::withMessages([
+                    'conversation_id' => ['Conversation not found.']
+                ]);
+            }
+
+            $user = $this->getCurrentUser();
+
+            // Get agent for current user
+            $agent = \App\Models\Agent::where('user_id', $user->id)->first();
+
+            if (!$agent) {
+                throw ValidationException::withMessages([
+                    'agent' => ['Agent not found for current user.']
+                ]);
+            }
+
+            // Update conversation with current user as agent
+            $conversation->update([
+                'agent_id' => $agent->id,
+                'assigned_at' => now(),
+                'assigned_by' => $user->id
+            ]);
+
+            // Clear cache
+            $this->clearConversationCache();
+
+            Log::info('Conversation assigned', [
+                'conversation_id' => $conversation->id,
+                'agent_id' => $user->id
             ]);
 
             return $conversation->fresh();
@@ -466,7 +520,7 @@ class ConversationService extends BaseService
             $firstResponseTime = $conversation->started_at->diffInSeconds(now());
             $conversation->update([
                 'first_response_at' => now(),
-                'response_time_avg' => $firstResponseTime
+                'response_time_avg' => (int) $firstResponseTime
             ]);
         }
     }
@@ -823,5 +877,76 @@ class ConversationService extends BaseService
                 'organization_id' => $data['organization_id'] ?? null
             ];
         }
+    }
+
+    /**
+     * Get conversation summary
+     */
+    public function getConversationSummary(string $sessionId): array
+    {
+        $session = $this->getItemById($sessionId, ['customer', 'agent', 'messages']);
+
+        if (!$session) {
+            throw new \Exception('Session not found');
+        }
+
+        $messages = $session->messages;
+        $customerMessages = $messages->where('sender_type', 'customer');
+        $agentMessages = $messages->where('sender_type', 'agent');
+        $botMessages = $messages->where('sender_type', 'bot');
+
+        // Calculate response times
+        $responseTimes = [];
+        $lastCustomerMessageTime = null;
+
+        foreach ($messages->sortBy('created_at') as $message) {
+            if ($message->sender_type === 'customer') {
+                $lastCustomerMessageTime = $message->created_at;
+            } elseif (in_array($message->sender_type, ['agent', 'bot']) && $lastCustomerMessageTime) {
+                $responseTime = $message->created_at->diffInSeconds($lastCustomerMessageTime);
+                $responseTimes[] = $responseTime;
+                $lastCustomerMessageTime = null;
+            }
+        }
+
+        $avgResponseTime = !empty($responseTimes) ? array_sum($responseTimes) / count($responseTimes) : 0;
+
+        return [
+            'session_id' => $sessionId,
+            'customer' => [
+                'name' => $session->customer->name ?? 'Unknown',
+                'phone' => $session->customer->phone ?? null,
+                'total_messages' => $customerMessages->count(),
+            ],
+            'agent' => $session->agent ? [
+                'name' => $session->agent->display_name ?? $session->agent->name,
+                'total_messages' => $agentMessages->count(),
+            ] : null,
+            'statistics' => [
+                'total_messages' => $messages->count(),
+                'customer_messages' => $customerMessages->count(),
+                'agent_messages' => $agentMessages->count(),
+                'bot_messages' => $botMessages->count(),
+                'avg_response_time_seconds' => round($avgResponseTime, 2),
+                'session_duration_minutes' => $session->started_at ?
+                    round($session->last_activity_at->diffInMinutes($session->started_at), 2) : 0,
+            ],
+            'classification' => [
+                'intent' => $session->intent,
+                'category' => $session->category,
+                'priority' => $session->priority,
+                'status' => $session->status,
+            ],
+            'ai_analysis' => [
+                'sentiment_analysis' => $session->sentiment_analysis,
+                'ai_summary' => $session->ai_summary,
+                'topics_discussed' => $session->topics_discussed ?? [],
+            ],
+            'timeline' => [
+                'started_at' => $session->started_at?->toISOString(),
+                'last_activity_at' => $session->last_activity_at?->toISOString(),
+                'ended_at' => $session->ended_at?->toISOString(),
+            ]
+        ];
     }
 }

@@ -108,9 +108,9 @@ export const useKnowledgeManagement = () => {
         }));
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      setError(errorMessage);
-      toast.error(`Gagal memuat knowledge base: ${errorMessage.message}`);
+      const errorResult = handleError(err);
+      setError(errorResult.message);
+      toast.error(`Gagal memuat knowledge base: ${errorResult.message}`);
 
       if (import.meta.env.DEV) {
         // console.error('Error loading knowledge items:', err);
@@ -157,9 +157,9 @@ export const useKnowledgeManagement = () => {
         throw new Error(response.message);
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Gagal membuat knowledge item: ${errorMessage.message}`);
-      return { success: false, error: errorMessage };
+      const errorResult = handleError(err);
+      toast.error(`Gagal membuat knowledge item: ${errorResult.message}`);
+      return { success: false, error: errorResult.message };
     } finally {
       setLoading(false);
     }
@@ -180,9 +180,9 @@ export const useKnowledgeManagement = () => {
         throw new Error(response.message);
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Gagal memperbarui knowledge item: ${errorMessage.message}`);
-      return { success: false, error: errorMessage };
+      const errorResult = handleError(err);
+      toast.error(`Gagal memperbarui knowledge item: ${errorResult.message}`);
+      return { success: false, error: errorResult.message };
     } finally {
       setLoading(false);
     }
@@ -203,9 +203,9 @@ export const useKnowledgeManagement = () => {
         throw new Error(response.message);
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Gagal menghapus knowledge item: ${errorMessage.message}`);
-      return { success: false, error: errorMessage };
+      const errorResult = handleError(err);
+      toast.error(`Gagal menghapus knowledge item: ${errorResult.message}`);
+      return { success: false, error: errorResult.message };
     } finally {
       setLoading(false);
     }
@@ -224,9 +224,9 @@ export const useKnowledgeManagement = () => {
       }
       return response;
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Gagal mengubah status: ${errorMessage.message}`);
-      return { success: false, error: errorMessage };
+      const errorResult = handleError(err);
+      toast.error(`Gagal mengubah status: ${errorResult.message}`);
+      return { success: false, error: errorResult.message };
     }
   }, [updateKnowledgeItem]);
 
@@ -244,9 +244,9 @@ export const useKnowledgeManagement = () => {
         throw new Error(response.message);
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Gagal mempublikasikan knowledge item: ${errorMessage.message}`);
-      return { success: false, error: errorMessage };
+      const errorResult = handleError(err);
+      toast.error(`Gagal mempublikasikan knowledge item: ${errorResult.message}`);
+      return { success: false, error: errorResult.message };
     } finally {
       setLoading(false);
     }
@@ -269,9 +269,9 @@ export const useKnowledgeManagement = () => {
         throw new Error(response.message);
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Gagal mencari knowledge items: ${errorMessage.message}`);
-      return { success: false, error: errorMessage };
+      const errorResult = handleError(err);
+      toast.error(`Gagal mencari knowledge items: ${errorResult.message}`);
+      return { success: false, error: errorResult.message };
     } finally {
       setLoading(false);
     }
@@ -313,9 +313,9 @@ export const useKnowledgeManagement = () => {
         throw new Error(response.message);
       }
     } catch (err) {
-      const errorMessage = handleError(err);
-      toast.error(`Failed to update knowledge item status: ${errorMessage.message}`);
-      return { success: false, error: errorMessage };
+      const errorResult = handleError(err);
+      toast.error(`Failed to update knowledge item status: ${errorResult.message}`);
+      return { success: false, error: errorResult.message };
     } finally {
       setLoading(false);
     }

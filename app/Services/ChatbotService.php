@@ -337,7 +337,32 @@ class ChatbotService extends BaseService
                 'metadata' => $data['metadata'] ?? []
             ]);
 
-            // Process the message with AI
+            // Check if session is assigned to an agent - if so, don't auto-reply
+            if ($session->agent_id) {
+                Log::info('Session assigned to agent, skipping bot auto-reply', [
+                    'session_id' => $session->id,
+                    'agent_id' => $session->agent_id,
+                    'customer_message_id' => $customerMessage->id
+                ]);
+
+                // Update session statistics (only customer message)
+                $session->increment('total_messages');
+                $session->update(['last_activity_at' => now()]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Message received, waiting for agent response',
+                    'data' => [
+                        'customer_message' => $customerMessage,
+                        'bot_response' => null,
+                        'session' => $session,
+                        'auto_reply_skipped' => true,
+                        'reason' => 'Session assigned to agent'
+                    ]
+                ];
+            }
+
+            // Process the message with AI (only if no agent assigned)
             $aiResponse = $this->generateAIResponse($chatbot, $data['message'], $session);
 
             // Create bot response message
@@ -367,12 +392,19 @@ class ChatbotService extends BaseService
             ]);
 
             return [
-                'session_id' => $session->id,
-                'bot_response' => $aiResponse['content'],
-                'response_time' => round($responseTime, 2),
-                'confidence_score' => $aiResponse['confidence'] ?? 0.8,
-                'suggested_actions' => $aiResponse['suggested_actions'] ?? [],
-                'metadata' => $aiResponse['metadata'] ?? []
+                'success' => true,
+                'message' => 'Message processed successfully',
+                'data' => [
+                    'session_id' => $session->id,
+                    'customer_message' => $customerMessage,
+                    'bot_response' => $botMessage,
+                    'ai_response' => $aiResponse,
+                    'response_time' => round($responseTime, 2),
+                    'confidence_score' => $aiResponse['confidence'] ?? 0.8,
+                    'suggested_actions' => $aiResponse['suggested_actions'] ?? [],
+                    'metadata' => $aiResponse['metadata'] ?? [],
+                    'auto_reply_skipped' => false
+                ]
             ];
         });
     }

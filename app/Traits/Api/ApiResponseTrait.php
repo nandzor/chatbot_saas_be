@@ -91,9 +91,10 @@ trait ApiResponseTrait
 
         // Add debugging info in non-production
         if (!app()->environment('production')) {
+            $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
             $response['debug'] = [
-                'file' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['file'] ?? null,
-                'line' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['line'] ?? null,
+                'file' => $backtrace[1]['file'] ?? null,
+                'line' => $backtrace[1]['line'] ?? null,
                 'trace_id' => uniqid('trace_'),
             ];
         }

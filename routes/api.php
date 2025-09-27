@@ -35,6 +35,12 @@ use App\Http\Controllers\Api\EmailVerificationController;
 // Include additional route files
 require_once __DIR__ . '/n8n.php';
 require_once __DIR__ . '/waha.php';
+require_once __DIR__ . '/api/conversation.php';
+
+// WAHA Status routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/waha/status', [App\Http\Controllers\Api\V1\WahaStatusController::class, 'getStatus']);
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -55,10 +61,10 @@ require_once __DIR__ . '/waha.php';
 Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handleMessage'])
     ->name('webhook.whatsapp.message');
 
-// WAHA Webhook Routes (for direct webhook URL from WAHA)
-Route::post('/webhook/message', [\App\Http\Controllers\Api\V1\WahaController::class, 'handleMessageWebhook'])
-    ->name('webhook.waha.message')
-    ->withoutMiddleware(['unified.auth', 'waha.organization']);
+// WAHA Webhook Routes (for direct webhook URL from WAHA) - REMOVED DUPLICATE
+// Route::post('/webhook/message', [\App\Http\Controllers\Api\V1\WahaController::class, 'handleMessageWebhook'])
+//     ->name('webhook.waha.message')
+//     ->withoutMiddleware(['unified.auth', 'waha.organization']);
 
 /**
  * Health Check Endpoint
@@ -203,6 +209,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/analytics', [InboxController::class, 'sessionAnalytics']);
                 Route::post('/messages', [InboxController::class, 'sendMessage']);
                 Route::post('/transfer', [InboxController::class, 'transferSession']);
+                Route::post('/assign', [InboxController::class, 'assignSession']);
                 Route::post('/end', [InboxController::class, 'endSession']);
             });
 

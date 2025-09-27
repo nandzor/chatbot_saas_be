@@ -57,6 +57,7 @@ class MessageProcessed implements ShouldBroadcast
         return [
             new PrivateChannel('organization.' . $this->organizationId),
             new PrivateChannel('inbox.' . $this->organizationId),
+            new PrivateChannel('conversation.' . $this->session->id),
         ];
     }
 
@@ -68,11 +69,19 @@ class MessageProcessed implements ShouldBroadcast
         return [
             'session_id' => $this->session->id,
             'message_id' => $this->message->id,
-            'customer_name' => $this->session->customer->name,
-            'message_content' => $this->message->content,
+            'customer_name' => $this->session->customer->name ?? 'Unknown Customer',
+            'message_content' => $this->message->message_text ?? $this->message->content,
             'message_type' => $this->message->message_type,
-            'sent_at' => $this->message->sent_at,
+            'sender_type' => $this->message->sender_type,
+            'sender_name' => $this->message->sender_name,
+            'sent_at' => $this->message->created_at ?? $this->message->sent_at,
+            'is_read' => $this->message->is_read,
+            'delivered_at' => $this->message->delivered_at,
+            'media_url' => $this->message->media_url,
+            'media_type' => $this->message->media_type,
             'result' => $this->result,
+            'organization_id' => $this->organizationId,
+            'timestamp' => now()->toISOString(),
         ];
     }
 
