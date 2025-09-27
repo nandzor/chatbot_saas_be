@@ -5,12 +5,23 @@ class KnowledgeBaseService {
     try {
       const response = await api.get('/v1/knowledge-base', { params });
       const resp = response.data;
+      
+      // Handle direct array response (Laravel collection)
       if (Array.isArray(resp)) {
         return { success: true, data: { data: resp, pagination: { total: resp.length, last_page: 1, current_page: 1 } }, message: 'OK' };
       }
-      if (resp && resp.data && resp.pagination) {
-        return { success: true, data: { data: resp.data, pagination: resp.pagination }, message: resp.message || 'OK' };
+      
+      // Handle Laravel paginated response with data array
+      if (resp && resp.data && Array.isArray(resp.data)) {
+        return { success: true, data: { data: resp.data, pagination: resp.pagination || {} }, message: resp.message || 'OK' };
       }
+      
+      // Handle Laravel paginated response with nested data
+      if (resp && resp.data && resp.data.data && Array.isArray(resp.data.data)) {
+        return { success: true, data: { data: resp.data.data, pagination: resp.data.pagination || {} }, message: resp.message || 'OK' };
+      }
+      
+      // Handle response with total count
       if (resp && resp.data && typeof resp.total !== 'undefined') {
         const pagination = {
           total: resp.total,
@@ -22,6 +33,8 @@ class KnowledgeBaseService {
         };
         return { success: true, data: { data: resp.data, pagination }, message: resp.message || 'OK' };
       }
+      
+      // Fallback for other response structures
       return { success: true, data: { data: resp?.items || [], pagination: resp?.pagination || {} }, message: resp?.message || 'OK' };
     } catch (error) {
       return this.handleError(error, 'Failed to load knowledge items');

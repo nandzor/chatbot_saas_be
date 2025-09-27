@@ -51,6 +51,14 @@ import TestChatbotResponse from '@/components/knowledge/TestChatbotResponse';
 const EditKnowledgeDialog = ({ open, onOpenChange, knowledgeItem, onKnowledgeUpdated, categories = [] }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Debug logging
+  useEffect(() => {
+    console.log('EditKnowledgeDialog props changed:', { open, knowledgeItem: knowledgeItem?.title, categories: categories.length });
+    if (open && knowledgeItem) {
+      console.log('EditKnowledgeDialog opened with item:', knowledgeItem);
+    }
+  }, [open, knowledgeItem, categories]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',

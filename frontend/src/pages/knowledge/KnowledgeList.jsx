@@ -342,10 +342,15 @@ const KnowledgeList = React.memo(() => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => {
+            <DropdownMenuItem onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               if (item) {
+                console.log('Opening edit dialog for item:', item);
+                console.log('Current editDialogOpen state:', editDialogOpen);
                 setSelectedItem(item);
                 setEditDialogOpen(true);
+                console.log('Edit dialog should be open now');
               }
             }}>
               <Edit className="mr-2 h-4 w-4" />
@@ -556,6 +561,15 @@ const KnowledgeList = React.memo(() => {
         onKnowledgeUpdated={handleEdit}
         categories={categories}
       />
+
+      {/* Debug info */}
+      {import.meta.env.DEV && (
+        <div className="fixed bottom-4 right-4 bg-black text-white p-2 text-xs rounded">
+          Edit Dialog Open: {editDialogOpen ? 'YES' : 'NO'}<br/>
+          Selected Item: {selectedItem ? selectedItem.title : 'NONE'}<br/>
+          Categories: {categories.length}
+        </div>
+      )}
 
     </div>
   );
