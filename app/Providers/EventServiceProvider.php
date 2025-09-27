@@ -8,10 +8,12 @@ use App\Events\OrganizationDeleted;
 use App\Events\NotificationSent;
 use App\Events\WhatsAppMessageReceived;
 use App\Events\MessageProcessed;
+use App\Events\MessageSent;
 use App\Listeners\LogOrganizationActivity;
 use App\Listeners\SendOrganizationNotification;
 use App\Listeners\ProcessNotification;
 use App\Listeners\ProcessWhatsAppMessageListener;
+use App\Listeners\SendMessageToWahaListener;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -53,6 +55,11 @@ class EventServiceProvider extends ServiceProvider
         // WhatsApp Message Events
         WhatsAppMessageReceived::class => [
             ProcessWhatsAppMessageListener::class,
+        ],
+
+        // Message Sent Events
+        MessageSent::class => [
+            SendMessageToWahaListener::class,
         ],
     ];
 

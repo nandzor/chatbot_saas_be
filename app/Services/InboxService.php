@@ -8,6 +8,7 @@ use App\Models\Agent;
 use App\Models\Customer;
 use App\Models\BotPersonality;
 use App\Models\ChannelConfig;
+use App\Events\MessageSent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -19,6 +20,7 @@ use Carbon\Carbon;
 
 class InboxService
 {
+
     /**
      * Get inbox statistics
      */
@@ -395,7 +397,28 @@ class InboxService
         }
 
         // Create message
-        $message = Message::create($data);
+        try {
+            $message = Message::create($data);
+        } catch (\Exception $e) {
+            Log::error('Failed to create message', [
+                'session_id' => $session->id,
+                'data' => $data,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+
+        // Log before triggering event
+        Log::info('Triggering MessageSent event', [
+            'session_id' => $session->id,
+            'message_id' => $message->id,
+            'content' => $message->content ?? $message->message_text,
+            'sender_type' => $message->sender_type
+        ]);
+
+        // Trigger MessageSent event for WAHA integration
+        event(new MessageSent($message, $session, $data));
 
         // Update session activity
         $session->updateActivity();

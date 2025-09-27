@@ -1983,103 +1983,46 @@ class WahaController extends BaseApiController
 
     /**
      * Save outgoing message to database
+     *
+     * This method handles saving outgoing messages from WAHA webhooks.
+     * It includes duplicate detection and proper sender identification.
      */
     private function saveOutgoingMessage(array $messageData, string $organizationId): void
     {
         try {
-            // Find the session based on customer phone number
-            $customerPhone = $messageData['to'] ?? null;
-            if (!$customerPhone) {
-                Log::warning('Cannot save outgoing message: no customer phone found', [
-                    'message_data' => $messageData
-                ]);
+            // Extract and validate message data
+            $messageInfo = $this->extractMessageInfo($messageData);
+            if (!$messageInfo) {
                 return;
             }
 
-            // Find customer (try both formats: with and without @c.us)
-            $customer = \App\Models\Customer::where('organization_id', $organizationId)
-                ->where(function($query) use ($customerPhone) {
-                    $query->where('phone', $customerPhone)
-                          ->orWhere('phone', str_replace('@c.us', '', $customerPhone))
-                          ->orWhere('phone', $customerPhone . '@c.us');
-                })
-                ->first();
+            // Check for duplicates using database lock
+            if ($this->isDuplicateMessage($messageInfo, $organizationId)) {
+                return;
+            }
 
+            // Find customer and session
+            $customer = $this->findCustomerByPhone($messageInfo['phone'], $organizationId);
             if (!$customer) {
-                Log::warning('Cannot save outgoing message: customer not found', [
-                    'phone' => $customerPhone,
-                    'organization_id' => $organizationId
-                ]);
                 return;
             }
 
-            // Find active session
-            $session = \App\Models\ChatSession::where('organization_id', $organizationId)
-                ->where('customer_id', $customer->id)
-                ->where('is_active', true)
-                ->first();
-
+            $session = $this->findActiveSession($customer->id, $organizationId);
             if (!$session) {
-                Log::warning('Cannot save outgoing message: no active session found', [
-                    'customer_id' => $customer->id,
-                    'organization_id' => $organizationId
-                ]);
                 return;
             }
 
-            // Determine sender type and ID
-            $senderType = 'bot'; // Default to bot
-            $senderId = null;
-            $senderName = 'System Bot';
+            // Determine sender information
+            $senderInfo = $this->determineSenderInfo($session, $organizationId);
 
-            // Check if session has an assigned agent
-            if ($session->agent_id) {
-                $senderType = 'agent';
-                $senderId = $session->agent_id;
-                $senderName = $session->agent->display_name ?? 'Agent';
-            } else {
-                // Check if there's a bot personality for this organization
-                $botPersonality = \App\Models\BotPersonality::where('organization_id', $organizationId)
-                    ->where('status', 'active')
-                    ->where('is_default', true)
-                    ->first();
-
-                if ($botPersonality) {
-                    $senderId = $botPersonality->id;
-                    $senderName = $botPersonality->name;
-                }
-            }
-
-            // Create outgoing message
-            $message = \App\Models\Message::create([
-                'organization_id' => $organizationId,
-                'session_id' => $session->id,
-                'waha_session_id' => $messageData['waha_session'] ?? null,
-                'sender_type' => $senderType,
-                'sender_id' => $senderId,
-                'sender_name' => $senderName,
-                'message_type' => $messageData['message_type'] ?? 'text',
-                'message_text' => $messageData['text'] ?? '',
-                'metadata' => [
-                    'whatsapp_message_id' => $messageData['message_id'] ?? null,
-                    'phone_number' => $messageData['to'] ?? null,
-                    'timestamp' => $messageData['timestamp'] ?? now()->timestamp,
-                    'raw_data' => $messageData['raw_data'] ?? null,
-                    'direction' => 'outgoing',
-                    'from_me' => true,
-                    'waha_message_id' => $messageData['waha_message_id'] ?? null
-                ],
-                'is_read' => true, // Outgoing messages are considered read
-                'read_at' => now(),
-                'delivered_at' => now(),
-                'created_at' => now()->addMilliseconds(rand(100, 500))
-            ]);
+            // Create the message
+            $message = $this->createOutgoingMessage($messageData, $messageInfo, $session, $senderInfo, $organizationId);
 
             Log::info('Outgoing message saved successfully', [
                 'message_id' => $message->id,
                 'session_id' => $session->id,
-                'sender_type' => $senderType,
-                'sender_name' => $senderName,
+                'sender_type' => $senderInfo['type'],
+                'sender_name' => $senderInfo['name'],
                 'content' => $message->message_text
             ]);
 
@@ -2090,6 +2033,190 @@ class WahaController extends BaseApiController
                 'message_data' => $messageData
             ]);
         }
+    }
+
+    /**
+     * Extract and validate message information from WAHA data
+     */
+    private function extractMessageInfo(array $messageData): ?array
+    {
+        $messageText = $messageData['text'] ?? '';
+        $customerPhone = $messageData['to'] ?? '';
+        $timestamp = $messageData['timestamp'] ?? null;
+
+        if (empty($messageText) || empty($customerPhone)) {
+            Log::warning('Cannot save outgoing message: missing required data', [
+                'has_text' => !empty($messageText),
+                'has_phone' => !empty($customerPhone),
+                'message_data' => $messageData
+            ]);
+            return null;
+        }
+
+        return [
+            'text' => $messageText,
+            'phone' => $customerPhone,
+            'timestamp' => $timestamp,
+            'waha_message_id' => $messageData['message_id'] ?? null,
+            'message_type' => $messageData['message_type'] ?? 'text'
+        ];
+    }
+
+    /**
+     * Check if message is duplicate using database lock
+     */
+    private function isDuplicateMessage(array $messageInfo, string $organizationId): bool
+    {
+        return \DB::transaction(function() use ($messageInfo, $organizationId) {
+            // Check by WAHA message ID first (most reliable)
+            if ($messageInfo['waha_message_id']) {
+                $existingByWahaId = \App\Models\Message::where('metadata->waha_message_id', $messageInfo['waha_message_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existingByWahaId) {
+                    Log::info('Outgoing message already exists (duplicate WAHA ID)', [
+                        'waha_message_id' => $messageInfo['waha_message_id'],
+                        'existing_message_id' => $existingByWahaId->id
+                    ]);
+                    return true;
+                }
+            }
+
+            // Check by content and phone within last 30 seconds
+            $existingByContent = \App\Models\Message::where('message_text', $messageInfo['text'])
+                ->where('metadata->whatsapp->to', $messageInfo['phone'])
+                ->where('created_at', '>=', now()->subSeconds(30))
+                ->where('sender_type', 'bot')
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingByContent) {
+                Log::info('Outgoing message already exists (duplicate content)', [
+                    'message_text' => $messageInfo['text'],
+                    'customer_phone' => $messageInfo['phone'],
+                    'existing_message_id' => $existingByContent->id,
+                    'existing_created_at' => $existingByContent->created_at
+                ]);
+                return true;
+            }
+
+            return false; // No duplicate found
+        });
+    }
+
+    /**
+     * Find customer by phone number
+     */
+    private function findCustomerByPhone(string $phone, string $organizationId): ?\App\Models\Customer
+    {
+        $customer = \App\Models\Customer::where('organization_id', $organizationId)
+            ->where(function($query) use ($phone) {
+                $query->where('phone', $phone)
+                      ->orWhere('phone', str_replace('@c.us', '', $phone))
+                      ->orWhere('phone', $phone . '@c.us');
+            })
+            ->first();
+
+        if (!$customer) {
+            Log::warning('Cannot save outgoing message: customer not found', [
+                'phone' => $phone,
+                'organization_id' => $organizationId
+            ]);
+        }
+
+        return $customer;
+    }
+
+    /**
+     * Find active session for customer
+     */
+    private function findActiveSession(string $customerId, string $organizationId): ?\App\Models\ChatSession
+    {
+        $session = \App\Models\ChatSession::where('organization_id', $organizationId)
+            ->where('customer_id', $customerId)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$session) {
+            Log::warning('Cannot save outgoing message: no active session found', [
+                'customer_id' => $customerId,
+                'organization_id' => $organizationId
+            ]);
+        }
+
+        return $session;
+    }
+
+    /**
+     * Determine sender information based on session and organization
+     */
+    private function determineSenderInfo(\App\Models\ChatSession $session, string $organizationId): array
+    {
+        // If session has assigned agent, use agent as sender
+        if ($session->agent_id) {
+            return [
+                'type' => 'agent',
+                'id' => $session->agent_id,
+                'name' => $session->agent->display_name ?? 'Agent'
+            ];
+        }
+
+        // Otherwise, use bot personality
+        $botPersonality = \App\Models\BotPersonality::where('organization_id', $organizationId)
+            ->where('status', 'active')
+            ->where('is_default', true)
+            ->first();
+
+        if ($botPersonality) {
+            return [
+                'type' => 'bot',
+                'id' => $botPersonality->id,
+                'name' => $botPersonality->name
+            ];
+        }
+
+        // Fallback to system bot
+        return [
+            'type' => 'bot',
+            'id' => null,
+            'name' => 'System Bot'
+        ];
+    }
+
+    /**
+     * Create outgoing message record
+     */
+    private function createOutgoingMessage(
+        array $messageData,
+        array $messageInfo,
+        \App\Models\ChatSession $session,
+        array $senderInfo,
+        string $organizationId
+    ): \App\Models\Message {
+        return \App\Models\Message::create([
+            'organization_id' => $organizationId,
+            'session_id' => $session->id,
+            'waha_session_id' => $messageData['waha_session'] ?? null,
+            'sender_type' => $senderInfo['type'],
+            'sender_id' => $senderInfo['id'],
+            'sender_name' => $senderInfo['name'],
+            'message_type' => $messageInfo['message_type'],
+            'message_text' => $messageInfo['text'],
+            'metadata' => [
+                'whatsapp_message_id' => $messageInfo['waha_message_id'],
+                'phone_number' => $messageInfo['phone'],
+                'timestamp' => $messageInfo['timestamp'] ?? now()->timestamp,
+                'raw_data' => $messageData['raw_data'] ?? null,
+                'direction' => 'outgoing',
+                'from_me' => true,
+                'waha_message_id' => $messageInfo['waha_message_id']
+            ],
+            'is_read' => true, // Outgoing messages are considered read
+            'read_at' => now(),
+            'delivered_at' => now(),
+            'created_at' => now()->addMilliseconds(rand(100, 500))
+        ]);
     }
 
     /**
