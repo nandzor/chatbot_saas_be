@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import permissionService from '@/services/PermissionService';
+import { useState, useCallback } from 'react';
+import permissionService from '@/services/PermissionManagementService';
 
 /**
  * Custom hook for managing permissions

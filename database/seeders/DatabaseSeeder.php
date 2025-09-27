@@ -56,6 +56,9 @@ class DatabaseSeeder extends Seeder
 
             // Notification Template Seeder
             // NotificationTemplateSeeder::class,
+
+            // Organization Dashboard Seeder (for dashboard data)
+            OrganizationDashboardSeeder::class,
         ]);
     }
 }

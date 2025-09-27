@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import authService from '@/api/authService';
+import { authService } from '@/services/AuthService';
 import { ROLES, ROUTES } from '@/config/constants';
 
 export const useAuth = () => {
@@ -14,14 +14,14 @@ export const useAuth = () => {
     const initializeAuth = async () => {
       try {
         if (authService.isAuthenticated()) {
-          const storedUser = authService.getStoredUser();
+          const storedUser = authService.getCurrentUserSync();
           if (storedUser) {
             setUser(storedUser);
             setIsAuthenticated(true);
           } else {
             // Try to get fresh user data from API
             const result = await authService.getCurrentUser();
-            if (result.success) {
+            if (result && result.user) {
               setUser(result.user);
               setIsAuthenticated(true);
             } else {
@@ -45,15 +45,15 @@ export const useAuth = () => {
     setIsLoading(true);
     try {
       const result = await authService.login(credentials);
-      
+
       if (result.success) {
         setUser(result.user);
         setIsAuthenticated(true);
-        
+
         // Redirect based on role
         const redirectPath = getRedirectPath(result.user.role);
         navigate(redirectPath);
-        
+
         return { success: true };
       } else {
         return { success: false, error: result.error };

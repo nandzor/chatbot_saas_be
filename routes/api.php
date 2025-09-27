@@ -270,6 +270,23 @@ Route::prefix('v1')->group(function () {
         });
 
         // ====================================================================
+        // ORGANIZATION DASHBOARD (With Permission Middleware)
+        // ====================================================================
+
+        Route::prefix('organization-dashboard')
+            ->middleware(['permission:analytics.view', 'organization'])
+            ->group(function () {
+
+            // Dashboard overview
+            Route::get('/overview', [\App\Http\Controllers\Api\V1\OrganizationDashboardController::class, 'overview']);
+            Route::get('/realtime', [\App\Http\Controllers\Api\V1\OrganizationDashboardController::class, 'realtime']);
+            Route::get('/session-distribution', [\App\Http\Controllers\Api\V1\OrganizationDashboardController::class, 'sessionDistribution']);
+
+            // Export functionality
+            Route::middleware(['permission:analytics.export'])->post('/export', [\App\Http\Controllers\Api\V1\OrganizationDashboardController::class, 'export']);
+        });
+
+        // ====================================================================
         // USER MANAGEMENT (With Permission Middleware)
         // ====================================================================
 

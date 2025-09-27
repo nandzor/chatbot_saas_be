@@ -10,6 +10,43 @@ export const generateAvatarUrl = (name, email, size = 40) => {
 };
 
 /**
+ * Generate local placeholder avatar as data URL (fallback for network issues)
+ */
+export const generateLocalAvatarUrl = (text = 'U', bgColor = '#2563EB', textColor = '#FFFFFF', size = 200) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  
+  // Draw background
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, size, size);
+  
+  // Draw text
+  ctx.fillStyle = textColor;
+  ctx.font = `bold ${size * 0.4}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text.toUpperCase(), size / 2, size / 2);
+  
+  return canvas.toDataURL();
+};
+
+/**
+ * Generate placeholder URL with fallback to local generation
+ */
+export const generatePlaceholderUrl = (text = 'U', bgColor = '2563EB', textColor = 'FFFFFF', size = 200) => {
+  // Try to use a more reliable placeholder service first
+  try {
+    // Use ui-avatars.com as primary (more reliable than via.placeholder.com)
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(text)}&background=${bgColor}&color=${textColor}&size=${size}&bold=true`;
+  } catch (error) {
+    // Fallback to local generation
+    return generateLocalAvatarUrl(text, `#${bgColor}`, `#${textColor}`, size);
+  }
+};
+
+/**
  * Generate initials from name
  */
 export const getInitials = (name) => {

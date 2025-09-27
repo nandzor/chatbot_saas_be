@@ -56,7 +56,8 @@ const Form = ({
   autoSave = false,
   autoSaveDelay = 2000,
   maxAttempts = 5,
-  className = ''
+  className = '',
+  externalErrors = {} // Add external errors prop
 }) => {
   const [values, setValues] = useState(initialValues);
 
@@ -65,6 +66,12 @@ const Form = ({
     setValues(initialValues);
   }, [initialValues]);
   const [errors, setErrors] = useState({});
+
+  // Merge external errors with internal errors
+  const allErrors = useMemo(() => ({
+    ...errors,
+    ...externalErrors
+  }), [errors, externalErrors]);
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setSubmitAttempts] = useState(0);
@@ -104,11 +111,11 @@ const Form = ({
   // Helper function to set nested value
   const setNestedValue = useCallback((obj, path, value) => {
     const keys = path.split('.');
-    const result = { ...obj };
+    const result = JSON.parse(JSON.stringify(obj)); // Deep clone to avoid mutation
     let current = result;
 
     for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) {
+      if (!current[keys[i]] || typeof current[keys[i]] !== 'object' || current[keys[i]] === null) {
         current[keys[i]] = {};
       }
       current = current[keys[i]];
@@ -357,7 +364,7 @@ const Form = ({
 
   // Render field
   const renderField = useCallback((field) => {
-    const fieldError = errors[field.name];
+    const fieldError = allErrors[field.name];
     const fieldValue = getNestedValue(values, field.name);
 
     const commonProps = {

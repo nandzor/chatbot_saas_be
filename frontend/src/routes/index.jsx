@@ -18,6 +18,7 @@ import SuperAdminLogin from '@/pages/auth/SuperAdminLogin';
 
 // Dashboard Pages
 import Dashboard from '@/pages/dashboard/Dashboard';
+import OrganizationDashboard from '@/features/dashboard/organization/OrganizationDashboard';
 import Inbox from '@/pages/inbox/Inbox';
 import Analytics from '@/pages/analytics/Analytics';
 import Knowledge from '@/pages/knowledge/Knowledge';
@@ -122,7 +123,7 @@ export const router = createBrowserRouter([
           </RoleBasedRoute>
         ),
         children: [
-          { index: true, element: <Dashboard /> },
+          { index: true, element: <OrganizationDashboard /> },
           {
             path: 'inbox',
             element: (

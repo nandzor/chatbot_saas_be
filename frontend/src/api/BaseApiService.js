@@ -6,6 +6,7 @@
 import apiClient from './axios';
 import { HTTP_STATUS, API_ENDPOINTS } from '@/utils/constants';
 import { getErrorMessage, retry } from '@/utils/helpers';
+import { fixApiResponse } from '@/utils/urlFixer';
 
 /**
  * Base API Service Class
@@ -29,16 +30,17 @@ export class BaseApiService {
 
       // Check if response has success field (our API format)
       if (response.data && typeof response.data.success !== 'undefined') {
-        return response.data; // Return the API response as-is
+        return fixApiResponse(response.data); // Fix URLs in API response
       }
 
       // Fallback for non-standard responses
-      return {
+      const fallbackResponse = {
         success: true,
         data: response.data,
         status: response.status,
         headers: response.headers
       };
+      return fixApiResponse(fallbackResponse);
     } catch (error) {
       return {
         success: false,
@@ -656,6 +658,32 @@ export class AnalyticsApiService extends BaseApiService {
 }
 
 /**
+ * Organization Dashboard API Service
+ */
+export class OrganizationDashboardApiService extends BaseApiService {
+  constructor() {
+    super(API_ENDPOINTS.ORGANIZATION_DASHBOARD.BASE);
+  }
+
+  // Organization dashboard-specific methods
+  async getOverview(params = {}) {
+    return this.get('/overview', params);
+  }
+
+  async getRealtime(params = {}) {
+    return this.get('/realtime', params);
+  }
+
+  async getSessionDistribution(params = {}) {
+    return this.get('/session-distribution', params);
+  }
+
+  async export(data) {
+    return this.post('/export', data);
+  }
+}
+
+/**
  * Chatbot API Service
  */
 export class ChatbotApiService extends BaseApiService {
@@ -716,6 +744,7 @@ export const userApi = new UserApiService();
 export const organizationApi = new OrganizationApiService();
 export const subscriptionApi = new SubscriptionApiService();
 export const analyticsApi = new AnalyticsApiService();
+export const organizationDashboardApi = new OrganizationDashboardApiService();
 export const chatbotApi = new ChatbotApiService();
 export const conversationApi = new ConversationApiService();
 
@@ -725,12 +754,14 @@ export default {
   OrganizationApiService,
   SubscriptionApiService,
   AnalyticsApiService,
+  OrganizationDashboardApiService,
   ChatbotApiService,
   ConversationApiService,
   userApi,
   organizationApi,
   subscriptionApi,
   analyticsApi,
+  organizationDashboardApi,
   chatbotApi,
   conversationApi
 };

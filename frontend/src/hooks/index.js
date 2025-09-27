@@ -29,9 +29,9 @@ export * from './useSessionManager';
 export * from './useTransactionHistory';
 
 // Re-export default hooks
-export { default as useApi } from './useApi';
-export { default as useAuth } from './useAuth';
-export { default as useClientManagement } from './useClientManagement';
-export { default as useOrganizationManagement } from './useOrganizationManagement';
-export { default as useUserManagement } from './useUserManagement';
-export { default as usePermissionManagement } from './usePermissionManagement';
+export { useApi } from './useApi';
+export { useAuth } from './useAuth';
+export { useClientManagement } from './useClientManagement';
+export { useOrganizationManagement } from './useOrganizationManagement';
+export { useUserManagement } from './useUserManagement';
+export { usePermissionManagement } from './usePermissionManagement';
