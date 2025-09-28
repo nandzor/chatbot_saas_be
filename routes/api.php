@@ -99,6 +99,10 @@ Route::post('/resend-verification', [EmailVerificationController::class, 'resend
     ->name('api.resend-verification')
     ->middleware(['throttle:auth', 'security.headers', 'input.sanitization']);
 
+Route::post('/get-email-from-token', [EmailVerificationController::class, 'getEmailFromToken'])
+    ->name('api.get-email-from-token')
+    ->middleware(['throttle:auth', 'security.headers', 'input.sanitization']);
+
 // ============================================================================
 // API V1 ROUTES (Protected Routes)
 // ============================================================================

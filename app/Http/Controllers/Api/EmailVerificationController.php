@@ -80,10 +80,10 @@ class EmailVerificationController extends BaseApiController
             ]);
 
             $type = $request->input('type', 'organization_verification');
-            
+
             // Log resend attempt
             $this->logger->logResendVerificationAttempt($request->email, $type, $request->ip());
-            
+
             $result = $this->emailVerificationService->resendEmailVerification($request->email, $type);
 
             if ($result['success']) {
@@ -109,6 +109,53 @@ class EmailVerificationController extends BaseApiController
 
             return $this->errorResponseWithDebug(
                 'Failed to resend verification email',
+                500,
+                ['error' => 'An unexpected error occurred'],
+                $e
+            );
+        }
+    }
+
+    /**
+     * Get email from verification token.
+     */
+    public function getEmailFromToken(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'token' => 'required|string',
+            ]);
+
+            $verificationToken = \App\Models\EmailVerificationToken::findValidToken($request->token, 'organization_verification');
+
+            if (!$verificationToken) {
+                return $this->errorResponse(
+                    'Invalid or expired verification token.',
+                    [],
+                    400
+                );
+            }
+
+            return $this->successResponse(
+                'Token information retrieved successfully',
+                [
+                    'email' => $verificationToken->email,
+                    'organization_id' => $verificationToken->organization_id,
+                    'user_id' => $verificationToken->user_id,
+                    'expires_at' => $verificationToken->expires_at,
+                ],
+                200
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Get email from token error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponseWithDebug(
+                'Failed to get email from token',
                 500,
                 ['error' => 'An unexpected error occurred'],
                 $e

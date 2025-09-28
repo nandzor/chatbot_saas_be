@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         DB::statement('
-            CREATE TABLE messages (
+            CREATE TABLE IF NOT EXISTS messages (
                 id UUID NOT NULL,
                 session_id UUID NOT NULL,
                 organization_id UUID NOT NULL,
@@ -58,7 +58,7 @@ return new class extends Migration
         ');
 
         // Add unique constraint for WAHA message ID
-        DB::statement("CREATE UNIQUE INDEX messages_org_waha_message_id_unique ON messages (organization_id, (metadata ->> 'waha_message_id')) WHERE (metadata ->> 'waha_message_id') IS NOT NULL");
+        DB::statement("CREATE UNIQUE INDEX IF NOT EXISTS messages_org_waha_message_id_unique ON messages (organization_id, (metadata ->> 'waha_message_id')) WHERE (metadata ->> 'waha_message_id') IS NOT NULL");
     }
 
     /**

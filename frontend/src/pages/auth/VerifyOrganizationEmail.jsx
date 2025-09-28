@@ -3,11 +3,10 @@
  * Handles organization email verification after registration
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
-  useLoadingStates,
-  LoadingButton
+  useLoadingStates
 } from '@/utils/loadingStates';
 import {
   handleError,
@@ -20,9 +19,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Button,
   Alert,
   AlertDescription
@@ -35,37 +31,53 @@ import {
   RefreshCw,
   Building
 } from 'lucide-react';
+import { APP_CONFIG } from '@/config/app';
 
 const VerifyOrganizationEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { announce } = useAnnouncement();
-  const { focusRef, setFocus } = useFocusManagement();
+  const { } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
 
-  const [verificationStatus, setVerificationStatus] = useState('verifying'); // verifying, success, error
+  const [verificationStatus, setVerificationStatus] = useState('pending'); // pending, verifying, success, error
   const [error, setError] = useState(null);
   const [verificationData, setVerificationData] = useState(null);
+  const [tokenEmail, setTokenEmail] = useState('');
 
   const token = searchParams.get('token');
 
-  // Verify email on component mount
-  useEffect(() => {
-    if (token) {
-      verifyEmail();
-    } else {
-      setError('No verification token provided');
-      setVerificationStatus('error');
+  const getEmailFromToken = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${APP_CONFIG.api.baseUrl}/get-email-from-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setTokenEmail(result.data.email);
+      }
+    } catch (err) {
+      // Failed to get email from token - will use fallback
     }
   }, [token]);
 
-  const verifyEmail = async () => {
+  const verifyEmail = useCallback(async () => {
     try {
       setLoading('verify', true);
       setError(null);
       setVerificationStatus('verifying');
 
-      const response = await fetch('/api/verify-organization-email', {
+      const response = await fetch(`${APP_CONFIG.api.baseUrl}/verify-organization-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,14 +113,24 @@ const VerifyOrganizationEmail = () => {
     } finally {
       setLoading('verify', false);
     }
-  };
+  }, [token, setLoading, announce, navigate]);
+
+  // Get email from token on component mount (without auto-verification)
+  useEffect(() => {
+    if (token) {
+      getEmailFromToken();
+    } else {
+      setError('No verification token provided');
+      setVerificationStatus('error');
+    }
+  }, [token, getEmailFromToken]);
 
   const resendVerification = async () => {
     try {
       setLoading('resend', true);
       setError(null);
 
-      const response = await fetch('/api/resend-verification', {
+      const response = await fetch(`${APP_CONFIG.api.baseUrl}/resend-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +138,7 @@ const VerifyOrganizationEmail = () => {
           'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify({
-          email: verificationData?.user?.email,
+          email: tokenEmail,
           type: 'organization_verification'
         }),
       });
@@ -145,6 +167,79 @@ const VerifyOrganizationEmail = () => {
     navigate('/auth/login');
     announce('Navigating to login page');
   };
+
+  if (verificationStatus === 'pending') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Mail className="mx-auto h-12 w-12 text-indigo-500 mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Verify Your Organization Email
+              </h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Click the button below to verify your organization email address.
+              </p>
+
+              {tokenEmail && (
+                <div className="bg-gray-50 p-3 rounded-md mb-4">
+                  <p className="text-sm text-gray-700">
+                    <strong>Email:</strong> {tokenEmail}
+                  </p>
+                </div>
+              )}
+
+              <Button
+                onClick={verifyEmail}
+                disabled={getLoadingState('verify') || !tokenEmail}
+                className="w-full"
+              >
+                {getLoadingState('verify') ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Verify Email Address
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={resendVerification}
+                disabled={getLoadingState('resend') || !tokenEmail}
+                className="w-full mt-3"
+              >
+                {getLoadingState('resend') ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 mr-2"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Resend Verification Email
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="ghost"
+                onClick={handleLogin}
+                className="w-full mt-3"
+              >
+                Back to Login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (verificationStatus === 'verifying') {
     return (
@@ -251,7 +346,7 @@ const VerifyOrganizationEmail = () => {
               <Button
                 variant="outline"
                 onClick={resendVerification}
-                disabled={getLoadingState('resend')}
+                disabled={getLoadingState('resend') || !tokenEmail}
                 className="w-full"
               >
                 {getLoadingState('resend') ? (
