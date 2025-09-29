@@ -8,7 +8,8 @@ const config = {
   websocket: {
     host: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
     port: import.meta.env.VITE_REVERB_PORT || '8081',
-    appKey: import.meta.env.VITE_REVERB_APP_KEY || '14823957',
+    appId: import.meta.env.VITE_REVERB_APP_ID || '14823957',
+    appKey: import.meta.env.VITE_REVERB_APP_KEY || 'p8z4t7y2m9x6c1v5',
     appSecret: import.meta.env.VITE_REVERB_APP_SECRET || 'aK9sL3jH7gP5fD2rB8nV1cM0xZ4qW6eT',
     protocol: window.location.protocol === 'https:' ? 'wss:' : 'ws:',
 

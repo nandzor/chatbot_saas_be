@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationAuditController;
 use App\Http\Controllers\Api\V1\OrganizationNotificationController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Controllers\BroadcastingController;
 use App\Http\Controllers\Api\V1\BotPersonalityController;
 use App\Http\Controllers\Api\V1\BotPersonalityWorkflowController;
 use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
@@ -78,6 +79,17 @@ Route::get('/health', function () {
         'environment' => config('app.env'),
     ]);
 });
+
+
+
+
+
+/**
+ * Broadcasting Authentication Endpoint (API Route)
+ * Custom endpoint that uses unified auth middleware for WebSocket authentication
+ */
+Route::post('/broadcasting/auth', [\App\Http\Controllers\BroadcastingController::class, 'authenticate'])
+    ->middleware(['unified.auth']);
 
 /**
  * Organization Self-Registration Endpoint

@@ -34,8 +34,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withProviders([
         \App\Providers\EventServiceProvider::class,
+        \App\Providers\BroadcastServiceProvider::class,
         \App\Providers\NotificationServiceProvider::class,
         \App\Providers\N8nServiceProvider::class,
+        \Laravel\Horizon\HorizonServiceProvider::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         // Register middleware aliases
@@ -43,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth' => \App\Http\Middleware\JwtAuthMiddleware::class,
             'unified.auth' => \App\Http\Middleware\UnifiedAuthMiddleware::class,
             'api.response' => \App\Http\Middleware\ApiResponseMiddleware::class,
+            'cors' => \App\Http\Middleware\CorsMiddleware::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
             'organization' => \App\Http\Middleware\OrganizationAccessMiddleware::class,
             'organization.management' => \App\Http\Middleware\OrganizationManagementMiddleware::class,
@@ -59,6 +62,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'input.sanitization' => \App\Http\Middleware\InputSanitization::class,
             'webhook.signature' => \App\Http\Middleware\WebhookSignatureMiddleware::class,
         ]);
+
+        // Add CORS middleware globally
+        $middleware->append(\App\Http\Middleware\CorsMiddleware::class);
 
         // Register custom middleware for API guard
         $middleware->appendToGroup('api', [

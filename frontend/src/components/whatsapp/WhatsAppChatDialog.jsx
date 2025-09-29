@@ -98,7 +98,7 @@ const WhatsAppChatDialog = ({
       </DialogTrigger>
 
       <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col">
-        <DialogHeader className="p-4 border-b border-gray-200">
+        <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-gray-50/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Avatar className="w-10 h-10">

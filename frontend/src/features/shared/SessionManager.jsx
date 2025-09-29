@@ -626,43 +626,47 @@ const SessionManagerComponent = () => {
 
       {/* Transfer Dialog */}
       <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Transfer Session</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="px-6 py-5 border-b bg-gray-50/50">
+            <DialogTitle className="text-xl">Transfer Session</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Transfer this session to another agent.
             </DialogDescription>
           </DialogHeader>
-              <div className="space-y-4">
+          <div className="px-6 py-5 space-y-6">
             <div>
-              <Label htmlFor="agent_id">Agent</Label>
+              <Label htmlFor="agent_id" className="text-sm font-medium text-gray-700">Agent</Label>
               <Input
                 id="agent_id"
                 value={transferData.agent_id}
                 onChange={(e) => setTransferData(prev => ({ ...prev, agent_id: e.target.value }))}
                 placeholder="Enter agent ID"
+                className="mt-2"
               />
-              </div>
+            </div>
             <div>
-              <Label htmlFor="reason">Reason (Optional)</Label>
+              <Label htmlFor="reason" className="text-sm font-medium text-gray-700">Reason (Optional)</Label>
               <Input
                 id="reason"
                 value={transferData.reason}
                 onChange={(e) => setTransferData(prev => ({ ...prev, reason: e.target.value }))}
                 placeholder="Reason for transfer"
+                className="mt-2"
               />
             </div>
             <div>
-              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Label htmlFor="notes" className="text-sm font-medium text-gray-700">Notes (Optional)</Label>
               <Textarea
                 id="notes"
                 value={transferData.notes}
                 onChange={(e) => setTransferData(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Additional notes"
+                className="mt-2"
+                rows={3}
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t bg-gray-50/50">
             <Button
               variant="outline"
               onClick={() => setShowTransferDialog(false)}
@@ -913,25 +917,25 @@ const SessionManagerComponent = () => {
 
       {/* Recent Messages Dialog */}
       <Dialog open={showRecentMessagesDialog} onOpenChange={setShowRecentMessagesDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Recent Messages</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-4xl max-h-[80vh] p-0">
+          <DialogHeader className="px-6 py-5 border-b bg-gray-50/50">
+            <DialogTitle className="text-xl">Recent Messages</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Recent messages for session: {selectedSession?.session_token}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
             {getLoadingState('recent') ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                <span>Loading recent messages...</span>
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="h-6 w-6 animate-spin mr-3" />
+                <span className="text-gray-600">Loading recent messages...</span>
               </div>
             ) : recentMessages.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {recentMessages.map((message, index) => (
                   <div
                     key={message.id || index}
-                    className={`p-3 rounded-lg border ${
+                    className={`p-4 rounded-lg border shadow-sm ${
                       message.sender?.type === 'customer'
                         ? 'bg-blue-50 border-blue-200'
                         : message.sender?.type === 'agent'
@@ -941,28 +945,29 @@ const SessionManagerComponent = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
+                        <div className="flex items-center space-x-3 mb-3">
                           <Badge
                             variant={
                               message.sender?.type === 'customer' ? 'default' :
                               message.sender?.type === 'agent' ? 'secondary' : 'outline'
                             }
+                            className="text-xs"
                           >
                             {message.sender?.type === 'customer' ? 'Customer' :
                              message.sender?.type === 'agent' ? 'Agent' : 'Bot'}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm font-medium text-gray-700">
                             {message.sender?.name || 'Unknown'}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {message.created_at ? new Date(message.created_at).toLocaleString() : 'Unknown time'}
                           </span>
                         </div>
-                        <div className="text-sm">
+                        <div className="text-sm text-gray-800 leading-relaxed">
                           {message.content?.text || 'No text content'}
                         </div>
                         {message.status && (
-                          <div className="flex items-center space-x-2 mt-2">
+                          <div className="flex items-center space-x-3 mt-3 pt-2 border-t border-gray-200/50">
                             <Badge
                               variant={message.status.is_read ? 'secondary' : 'default'}
                               className="text-xs"
@@ -982,13 +987,14 @@ const SessionManagerComponent = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No recent messages found for this session.</p>
+              <div className="text-center py-12 text-muted-foreground">
+                <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium mb-2">No recent messages found</p>
+                <p className="text-sm">No recent messages found for this session.</p>
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t bg-gray-50/50">
             <Button
               variant="outline"
               onClick={() => setShowRecentMessagesDialog(false)}

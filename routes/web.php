@@ -7,6 +7,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+
+
 /*
 |--------------------------------------------------------------------------
 | Log Viewer Web Routes
@@ -35,3 +37,4 @@ Route::prefix('logs')->group(function () {
     Route::get('/public', [LogViewerController::class, 'index'])->name('logs.public.index');
 
 });
+

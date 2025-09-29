@@ -83,7 +83,7 @@ const WhatsAppChatUI = ({
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 px-6 py-5">
         <div className="space-y-4">
           {messages.length === 0 && !loading ? (
             <div className="flex items-center justify-center h-full">
@@ -157,7 +157,7 @@ const WhatsAppChatUI = ({
       </ScrollArea>
 
       {/* Message Input */}
-      <div className="border-t border-gray-200 bg-white p-4">
+      <div className="border-t border-gray-200 bg-white px-6 py-5">
         <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
           <Button
             type="button"

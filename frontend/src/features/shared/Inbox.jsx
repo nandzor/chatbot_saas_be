@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  Search, 
-  Send, 
-  MessageCircle, 
-  Globe, 
-  Users, 
+import {
+  Search,
+  Send,
+  MessageCircle,
+  Globe,
+  Users,
   Send as SendIcon,
   Smile,
   AlertCircle
@@ -18,62 +18,62 @@ const Inbox = () => {
 
   // Sample data - seharusnya dipindah ke file data terpisah
   const conversationsData = [
-    { 
-      id: 1, 
-      customer: "John Doe", 
-      status: "active", 
-      channel: "webchat", 
-      lastMessage: "I need help with my order #12345", 
-      time: "2 min ago", 
-      agent: "Sarah Wilson", 
+    {
+      id: 1,
+      customer: "John Doe",
+      status: "active",
+      channel: "webchat",
+      lastMessage: "I need help with my order #12345",
+      time: "2 min ago",
+      agent: "Sarah Wilson",
       sentiment: "neutral",
       unread: 2,
       priority: "high"
     },
-    { 
-      id: 2, 
-      customer: "Emma Smith", 
-      status: "bot_handled", 
-      channel: "whatsapp", 
-      lastMessage: "What are your business hours?", 
-      time: "5 min ago", 
-      agent: "Bot", 
+    {
+      id: 2,
+      customer: "Emma Smith",
+      status: "bot_handled",
+      channel: "whatsapp",
+      lastMessage: "What are your business hours?",
+      time: "5 min ago",
+      agent: "Bot",
       sentiment: "positive",
       unread: 0,
       priority: "low"
     },
-    { 
-      id: 3, 
-      customer: "Michael Brown", 
-      status: "agent_handled", 
-      channel: "facebook", 
-      lastMessage: "Thank you for your help!", 
-      time: "10 min ago", 
-      agent: "John Davis", 
+    {
+      id: 3,
+      customer: "Michael Brown",
+      status: "agent_handled",
+      channel: "facebook",
+      lastMessage: "Thank you for your help!",
+      time: "10 min ago",
+      agent: "John Davis",
       sentiment: "positive",
       unread: 0,
       priority: "medium"
     },
-    { 
-      id: 4, 
-      customer: "Lisa Johnson", 
-      status: "completed", 
-      channel: "webchat", 
-      lastMessage: "Issue resolved", 
-      time: "1 hour ago", 
-      agent: "Sarah Wilson", 
+    {
+      id: 4,
+      customer: "Lisa Johnson",
+      status: "completed",
+      channel: "webchat",
+      lastMessage: "Issue resolved",
+      time: "1 hour ago",
+      agent: "Sarah Wilson",
       sentiment: "positive",
       unread: 0,
       priority: "low"
     },
-    { 
-      id: 5, 
-      customer: "Robert Taylor", 
-      status: "active", 
-      channel: "telegram", 
-      lastMessage: "Can you check my refund status?", 
-      time: "15 min ago", 
-      agent: "Mike Chen", 
+    {
+      id: 5,
+      customer: "Robert Taylor",
+      status: "active",
+      channel: "telegram",
+      lastMessage: "Can you check my refund status?",
+      time: "15 min ago",
+      agent: "Mike Chen",
       sentiment: "negative",
       unread: 3,
       priority: "high"
@@ -161,8 +161,8 @@ const Inbox = () => {
                 key={conversation.id}
                 onClick={() => setSelectedConversation(conversation)}
                 className={`p-3 rounded-lg cursor-pointer transition-all ${
-                  selectedConversation?.id === conversation.id 
-                    ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-primary/20' 
+                  selectedConversation?.id === conversation.id
+                    ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-primary/20'
                     : 'hover:bg-accent'
                 }`}
               >
@@ -186,11 +186,11 @@ const Inbox = () => {
                     <span className="text-xs text-muted-foreground">{conversation.time}</span>
                   </div>
                 </div>
-                
+
                 <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                   {conversation.lastMessage}
                 </p>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {getSentimentIcon(conversation.sentiment)}
@@ -237,8 +237,8 @@ const Inbox = () => {
                 </div>
               </div>
             </CardHeader>
-            
-            <CardContent className="flex-1 overflow-y-auto p-4">
+
+            <CardContent className="flex-1 overflow-y-auto px-6 py-5">
               <div className="space-y-4">
                 {chatMessages.map(message => (
                   <div
@@ -247,8 +247,8 @@ const Inbox = () => {
                   >
                     <div className={`max-w-[70%] ${message.sender === 'customer' ? 'order-2' : 'order-1'}`}>
                       <div className={`rounded-lg px-4 py-2 ${
-                        message.sender === 'customer' 
-                          ? 'bg-primary text-primary-foreground' 
+                        message.sender === 'customer'
+                          ? 'bg-primary text-primary-foreground'
                           : message.sender === 'agent'
                           ? 'bg-secondary text-secondary-foreground'
                           : 'bg-muted text-muted-foreground'
@@ -266,8 +266,8 @@ const Inbox = () => {
                 ))}
               </div>
             </CardContent>
-            
-            <div className="p-4 border-t">
+
+            <div className="px-6 py-5 border-t">
               <div className="flex gap-2">
                 <Input
                   value={messageInput}

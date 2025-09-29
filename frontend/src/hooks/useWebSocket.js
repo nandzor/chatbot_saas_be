@@ -27,16 +27,79 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
     return getWebSocketUrl();
   }, []);
 
-  // Get authentication token
+  // Get authentication token (optimized)
   const getAuthToken = useCallback(async () => {
     try {
+      // Priority order: JWT -> Sanctum -> User service
+      const jwtToken = localStorage.getItem('jwt_token');
+      if (jwtToken) return jwtToken;
+
+      const sanctumToken = localStorage.getItem('sanctum_token');
+      if (sanctumToken) return sanctumToken;
+
+      // Fallback to user service
       const user = await authService.getCurrentUser();
-      return user?.access_token || user?.token;
+      return user?.access_token || user?.token || null;
     } catch (error) {
-      console.error('Failed to get auth token:', error);
       return null;
     }
   }, []);
+
+  // Authenticate channel subscription (optimized)
+  const authenticateChannel = useCallback(async (channelName, token) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000';
+    const socketId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+    const makeAuthRequest = async (authToken) => {
+      const response = await fetch(`${baseUrl}/broadcasting/auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Bearer ${authToken}`,
+          'Accept': 'application/json',
+        },
+        body: new URLSearchParams({
+          channel_name: channelName,
+          socket_id: socketId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const authData = await response.json();
+
+      // Handle both direct auth response and ApiResponse format
+      if (authData.auth) {
+        return authData; // Direct auth response
+      } else if (authData.success && authData.data) {
+        return authData.data; // ApiResponse format
+      }
+
+      throw new Error('Invalid auth response format');
+    };
+
+    try {
+      // Try with current token
+      return await makeAuthRequest(token);
+    } catch (error) {
+      // If 401, try token refresh
+      if (error.message.includes('401')) {
+        try {
+          await authService.refreshTokens();
+          const newToken = await getAuthToken();
+
+          if (newToken && newToken !== token) {
+            return await makeAuthRequest(newToken);
+          }
+        } catch (refreshError) {
+          // Token refresh failed
+        }
+      }
+      return null;
+    }
+  }, [getAuthToken]);
 
   // Send message through WebSocket
   const sendMessage = useCallback((channel, event, data) => {
@@ -54,23 +117,11 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
 
   // Subscribe to a channel
   const subscribe = useCallback((channel) => {
-    const message = {
-      event: 'pusher:subscribe',
-      data: {
-        channel: channel
-      }
-    };
     return sendMessage(null, 'pusher:subscribe', { channel });
   }, [sendMessage]);
 
   // Unsubscribe from a channel
   const unsubscribe = useCallback((channel) => {
-    const message = {
-      event: 'pusher:unsubscribe',
-      data: {
-        channel: channel
-      }
-    };
     return sendMessage(null, 'pusher:unsubscribe', { channel });
   }, [sendMessage]);
 
@@ -92,22 +143,20 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
     });
   }, [sendMessage]);
 
-  // Handle incoming messages
+  // Handle incoming messages (optimized)
   const handleMessage = useCallback((event) => {
     try {
       const data = JSON.parse(event.data);
+      const { event: eventType, data: eventData } = data;
 
-      switch (data.event) {
+      switch (eventType) {
         case 'pusher:connection_established':
-          if (isDebugMode()) {
-            console.log('WebSocket connection established');
-          }
           setIsConnected(true);
           setConnectionError(null);
           setReconnectAttempts(0);
           onConnectionChange?.(true);
 
-          // Subscribe to organization channel
+          // Auto-subscribe to organization channels
           if (organizationId) {
             subscribe(getOrganizationChannel(organizationId));
             subscribe(getInboxChannel(organizationId));
@@ -115,56 +164,44 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
           break;
 
         case 'pusher:connection_failed':
-          console.error('WebSocket connection failed:', data.data);
-          setConnectionError(data.data);
+          setConnectionError(eventData);
           setIsConnected(false);
           onConnectionChange?.(false);
           break;
 
         case 'pusher:error':
-          console.error('WebSocket error:', data.data);
-          setConnectionError(data.data);
+          setConnectionError(eventData);
           break;
 
         case 'MessageSent':
         case 'MessageProcessed':
-          // Handle new message
-          onMessage?.(data.data);
-          break;
-
         case 'MessageRead':
-          // Handle message read status
-          onMessage?.(data.data);
+          onMessage?.(eventData);
           break;
 
         case 'TypingIndicator':
-          // Handle typing indicator
-          onTyping?.(data.data);
+          onTyping?.(eventData);
           break;
 
         case 'pusher:subscription_succeeded':
-          console.log(`Subscribed to channel: ${data.channel}`);
-          break;
-
         case 'pusher:subscription_error':
-          console.error(`Subscription error for channel: ${data.channel}`, data.data);
+          // Handle silently
           break;
 
         default:
-          // Handle custom events
-          if (data.event && data.event.startsWith('App\\Events\\')) {
-            onMessage?.(data.data);
+          // Handle Laravel events
+          if (eventType?.startsWith('App\\Events\\')) {
+            onMessage?.(eventData);
           }
           break;
       }
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error);
+      // Silently handle JSON parse errors
     }
   }, [organizationId, subscribe, onMessage, onTyping, onConnectionChange]);
 
   // Handle connection close
   const handleClose = useCallback((event) => {
-    console.log('WebSocket connection closed:', event.code, event.reason);
     setIsConnected(false);
     onConnectionChange?.(false);
 
@@ -187,7 +224,6 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
 
   // Handle connection error
   const handleError = useCallback((error) => {
-    console.error('WebSocket error:', error);
     setConnectionError('Connection error occurred');
     setIsConnected(false);
     onConnectionChange?.(false);
@@ -202,11 +238,11 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
     }, 30000); // Send ping every 30 seconds
   }, []);
 
-  // Connect to WebSocket
+  // Connect to WebSocket (optimized)
   const connect = useCallback(async () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      return; // Already connected
-    }
+    // Prevent duplicate connections
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (!organizationId) return;
 
     try {
       const token = await getAuthToken();
@@ -216,24 +252,36 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
       }
 
       const wsUrl = getWebSocketUrlFromConfig();
-      if (isDebugMode()) {
-        console.log('Connecting to WebSocket:', wsUrl);
-      }
-
       wsRef.current = new WebSocket(wsUrl);
 
-      wsRef.current.onopen = () => {
-        if (isDebugMode()) {
-          console.log('WebSocket connection opened');
-        }
-        // Send authentication
-        wsRef.current.send(JSON.stringify({
-          event: 'pusher:subscribe',
-          data: {
-            channel: getOrganizationChannel(organizationId),
-            auth: token
+      wsRef.current.onopen = async () => {
+        setIsConnected(true);
+        setConnectionError(null);
+        onConnectionChange?.(true);
+
+        // Authenticate and subscribe to organization channel
+        const channelName = getOrganizationChannel(organizationId);
+
+        try {
+          const authData = await authenticateChannel(channelName, token);
+
+          if (authData?.auth) {
+            const subscribeMessage = {
+              event: 'pusher:subscribe',
+              data: {
+                channel: channelName,
+                auth: authData.auth,
+                channel_data: authData.channel_data || null
+              }
+            };
+
+            wsRef.current?.send(JSON.stringify(subscribeMessage));
+          } else {
+            setConnectionError('Failed to authenticate WebSocket channel');
           }
-        }));
+        } catch (error) {
+          setConnectionError('Channel authentication failed');
+        }
       };
 
       wsRef.current.onmessage = handleMessage;
@@ -242,10 +290,9 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
 
       startHeartbeat();
     } catch (error) {
-      console.error('Failed to connect to WebSocket:', error);
       setConnectionError('Failed to connect to WebSocket');
     }
-  }, [organizationId, getAuthToken, getWebSocketUrl, handleMessage, handleClose, handleError, startHeartbeat]);
+  }, [organizationId, getAuthToken, getWebSocketUrlFromConfig, handleMessage, handleClose, handleError, startHeartbeat, authenticateChannel, onConnectionChange]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -303,3 +350,4 @@ export const useWebSocket = (organizationId, onMessage, onTyping, onConnectionCh
 };
 
 export default useWebSocket;
+

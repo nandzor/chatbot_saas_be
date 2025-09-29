@@ -50,7 +50,7 @@ import {
 } from '@/components/ui';
 import { inboxService } from '@/services/InboxService';
 import { useApi } from '@/hooks/useApi';
-import { useRealtimeMessages } from './RealtimeMessageProvider';
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 
 const ConversationDialog = ({
   session,
@@ -65,7 +65,6 @@ const ConversationDialog = ({
   const [newMessage, setNewMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
   const [sending, setSending] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [activeTab, setActiveTab] = useState('messages');
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [showResolveDialog, setShowResolveDialog] = useState(false);
@@ -181,9 +180,6 @@ const ConversationDialog = ({
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set typing indicator
-    setIsTyping(true);
-
     // Send typing indicator to other users
     if (session?.id) {
       sendTyping(session.id, true);
@@ -191,7 +187,6 @@ const ConversationDialog = ({
 
     // Clear typing indicator after 3 seconds of no typing
     typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
       if (session?.id) {
         sendTyping(session.id, false);
       }
@@ -287,7 +282,7 @@ const ConversationDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 border-b">
+        <DialogHeader className="px-6 py-5 border-b bg-gray-50/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {/* Connection Status Indicator */}
@@ -379,7 +374,7 @@ const ConversationDialog = ({
               </TabsList>
 
               {/* Messages Tab */}
-              <TabsContent value="messages" className="flex-1 flex flex-col p-6 pt-4">
+              <TabsContent value="messages" className="flex-1 flex flex-col px-6 py-5">
                 <ScrollArea className="flex-1 pr-4">
                   {messagesLoading ? (
                     <div className="flex items-center justify-center h-32">
@@ -392,9 +387,9 @@ const ConversationDialog = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {messages.map((message) => (
+                      {messages.map((message, index) => (
                         <div
-                          key={message.id}
+                          key={message.id || `message-${index}`}
                           className={`flex ${message.sender_type === 'agent' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${message.sender_type === 'agent' ? 'flex-row-reverse space-x-reverse' : ''}`}>
@@ -436,9 +431,9 @@ const ConversationDialog = ({
                           <div className="bg-gray-200 rounded-lg px-3 py-2">
                             <div className="flex items-center space-x-1">
                               <div className="flex space-x-1">
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                <div key="typing-dot-1" className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                <div key="typing-dot-2" className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                <div key="typing-dot-3" className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                               </div>
                               <span className="text-xs text-gray-500 ml-2">
                                 {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
@@ -454,7 +449,7 @@ const ConversationDialog = ({
                 </ScrollArea>
 
                 {/* Message Input */}
-                <div className="border-t pt-4 mt-4">
+                <div className="border-t pt-5 mt-5">
                   <div className="flex items-end space-x-2">
                     <div className="flex-1">
                       <Textarea
@@ -490,14 +485,14 @@ const ConversationDialog = ({
               </TabsContent>
 
               {/* Details Tab */}
-              <TabsContent value="details" className="flex-1 p-6 pt-4">
+              <TabsContent value="details" className="flex-1 px-6 py-5">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Customer Information */}
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="px-6 py-4">
                       <CardTitle className="text-lg">Customer Information</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="px-6 py-4 space-y-4">
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={session.customer?.avatar_url} />
@@ -530,10 +525,10 @@ const ConversationDialog = ({
 
                   {/* Session Information */}
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="px-6 py-4">
                       <CardTitle className="text-lg">Session Information</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="px-6 py-4 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium text-gray-500">Session ID</label>
@@ -558,7 +553,7 @@ const ConversationDialog = ({
                           <label className="text-sm font-medium text-gray-500">Tags</label>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {session.tags.map((tag, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
+                              <Badge key={`tag-${index}-${tag}`} variant="outline" className="text-xs">
                                 <Tag className="h-3 w-3 mr-1" />
                                 {tag}
                               </Badge>
