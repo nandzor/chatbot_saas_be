@@ -188,7 +188,7 @@ class ConversationController extends BaseApiController
         } catch (\Exception $e) {
             return $this->errorResponseWithLog(
                 'assign_session',
-                'Failed to assign session',
+                'Unable to assign session to you: Please ensure you have the necessary permissions or contact support.',
                 $e->getMessage(),
                 500,
                 'SESSION_ASSIGN_ERROR',

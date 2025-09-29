@@ -117,49 +117,47 @@ class SendMessageToWahaListener implements ShouldQueue
                 $messageContent
             );
 
-            if ($result['success'] ?? false) {
+            // Check if result contains message data (successful response)
+            if (isset($result['id']) || isset($result['_data']['id'])) {
+                // Extract message ID from WAHA response
+                $wahaMessageId = $result['id']['_serialized'] ??
+                               $result['_data']['id']['_serialized'] ??
+                               $result['id'] ??
+                               null;
+
                 Log::info('Message sent to WAHA successfully via event listener', [
                     'session_id' => $session->id,
                     'waha_session' => $wahaSessionName,
                     'message_id' => $message->id,
-                    'waha_message_id' => $result['messageId'] ?? null
+                    'waha_message_id' => $wahaMessageId
                 ]);
 
                 // Update message with WAHA response
                 $message->update([
                     'metadata' => array_merge($message->metadata ?? [], [
-                        'waha_message_id' => $result['messageId'] ?? null,
+                        'waha_message_id' => $wahaMessageId,
                         'waha_timestamp' => $result['timestamp'] ?? null,
                         'waha_sent_at' => now()->toISOString(),
-                        'waha_sent_via' => 'event_listener'
+                        'waha_sent_via' => 'event_listener',
+                        'waha_response' => $result
                     ])
                 ]);
             } else {
-                Log::warning('Failed to send message to WAHA via event listener - WAHA server may have issues', [
+                Log::warning('Failed to send message to WAHA via event listener', [
                     'session_id' => $session->id,
                     'waha_session' => $wahaSessionName,
                     'message_id' => $message->id,
-                    'error' => $result['error'] ?? 'Unknown error',
-                    'note' => 'Message saved to database but not sent to WhatsApp due to WAHA server error'
+                    'result' => $result
                 ]);
 
                 // Update message with error status
                 $message->update([
                     'metadata' => array_merge($message->metadata ?? [], [
-                        'waha_error' => $result['error'] ?? 'Unknown error',
+                        'waha_error' => 'Invalid response format',
                         'waha_failed_at' => now()->toISOString(),
                         'waha_sent_via' => 'event_listener_failed',
-                        'waha_status' => 'failed_due_to_server_bug',
-                        'waha_note' => 'WAHA server has a bug in ensureSuffix function - message saved to database but not sent to WhatsApp'
+                        'waha_response' => $result
                     ])
-                ]);
-
-                // Send notification to admin about WAHA server issue
-                Log::critical('WAHA server bug detected - messages cannot be sent to WhatsApp', [
-                    'session_id' => $session->id,
-                    'message_id' => $message->id,
-                    'error' => $result['error'] ?? 'Unknown error',
-                    'action_required' => 'Update WAHA server or use alternative WhatsApp API'
                 ]);
             }
 

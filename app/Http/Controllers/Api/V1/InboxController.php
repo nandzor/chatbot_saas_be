@@ -911,7 +911,7 @@ class InboxController extends BaseApiController
                 if (!$currentUser->agent) {
                     return $this->errorResponseWithLog(
                         'user_not_agent',
-                        'Current user is not an agent',
+                        'Cannot assign session: You are not registered as an agent. Please contact your administrator to set up your agent profile.',
                         'User does not have an agent profile',
                         400,
                         'USER_NOT_AGENT'
@@ -923,7 +923,7 @@ class InboxController extends BaseApiController
                 if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $agentId)) {
                     return $this->errorResponseWithLog(
                         'invalid_agent_id_format',
-                        'Invalid agent ID format',
+                        'Invalid agent ID: Please provide a valid agent identifier.',
                         'Agent ID must be a valid UUID',
                         422,
                         'INVALID_AGENT_ID_FORMAT'
@@ -935,7 +935,7 @@ class InboxController extends BaseApiController
                 if (!$agent) {
                     return $this->errorResponseWithLog(
                         'agent_not_found',
-                        'Agent not found',
+                        'Agent not found: The selected agent does not exist or is not available.',
                         "Agent with ID {$agentId} not found",
                         404,
                         'AGENT_NOT_FOUND'
@@ -948,7 +948,7 @@ class InboxController extends BaseApiController
             if (!$session) {
                 return $this->errorResponseWithLog(
                     'session_not_found',
-                    'Session not found',
+                    'Session not found: The requested conversation session does not exist or is not accessible.',
                     "Session {$id} not found",
                     404,
                     'SESSION_NOT_FOUND'
@@ -969,7 +969,7 @@ class InboxController extends BaseApiController
         } catch (ValidationException $e) {
             return $this->errorResponseWithLog(
                 'session_assignment_validation_error',
-                'Assignment validation failed',
+                'Invalid request: Please check your input and try again.',
                 $e->getMessage(),
                 422,
                 'SESSION_ASSIGNMENT_VALIDATION_ERROR'
@@ -977,7 +977,7 @@ class InboxController extends BaseApiController
         } catch (\Exception $e) {
             return $this->errorResponseWithLog(
                 'session_assignment_error',
-                'Failed to assign session',
+                'Unable to assign session: An unexpected error occurred. Please try again or contact support.',
                 $e->getMessage(),
                 500,
                 'SESSION_ASSIGNMENT_ERROR'
