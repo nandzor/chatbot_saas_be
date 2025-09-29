@@ -88,7 +88,7 @@ Route::get('/health', function () {
  * Broadcasting Authentication Endpoint (API Route)
  * Custom endpoint that uses unified auth middleware for WebSocket authentication
  */
-Route::post('/broadcasting/auth', [\App\Http\Controllers\BroadcastingController::class, 'authenticate'])
+Route::post('/broadcasting/auth', [BroadcastingController::class, 'authenticate'])
     ->middleware(['unified.auth']);
 
 /**

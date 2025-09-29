@@ -10,6 +10,7 @@ use App\Http\Requests\Conversation\ResolveSessionRequest;
 use App\Http\Resources\Conversation\ConversationResource;
 use App\Http\Resources\Conversation\MessageResource;
 use App\Services\ConversationService;
+use App\Services\InboxService;
 use App\Services\MessageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class ConversationController extends BaseApiController
 {
     public function __construct(
         private ConversationService $conversationService,
+        private InboxService $inboxService,
         private MessageService $messageService
     ) {}
 
@@ -149,9 +151,8 @@ class ConversationController extends BaseApiController
     public function updateSession(UpdateSessionRequest $request, string $sessionId): JsonResponse
     {
         try {
-            $session = $this->conversationService->updateSession(
+            $session = $this->inboxService->updateSession(
                 $sessionId,
-                Auth::user()->organization_id,
                 $request->validated()
             );
 
@@ -203,9 +204,8 @@ class ConversationController extends BaseApiController
     public function transferSession(TransferSessionRequest $request, string $sessionId): JsonResponse
     {
         try {
-            $session = $this->conversationService->transferSession(
+            $session = $this->inboxService->transferSession(
                 $sessionId,
-                Auth::user()->organization_id,
                 $request->validated()
             );
 
@@ -232,9 +232,8 @@ class ConversationController extends BaseApiController
     public function resolveSession(ResolveSessionRequest $request, string $sessionId): JsonResponse
     {
         try {
-            $session = $this->conversationService->resolveSession(
+            $session = $this->inboxService->endSession(
                 $sessionId,
-                Auth::user()->organization_id,
                 $request->validated()
             );
 
@@ -261,10 +260,7 @@ class ConversationController extends BaseApiController
     public function getAnalytics(Request $request, string $sessionId): JsonResponse
     {
         try {
-            $analytics = $this->conversationService->getSessionAnalytics(
-                $sessionId,
-                Auth::user()->organization_id
-            );
+            $analytics = $this->inboxService->getSessionAnalytics($sessionId);
 
             return $this->successResponse(
                 'Analytics retrieved successfully',
@@ -291,11 +287,7 @@ class ConversationController extends BaseApiController
         try {
             $messageIds = $request->get('message_ids', []);
 
-            $this->conversationService->markMessagesAsRead(
-                $sessionId,
-                Auth::user()->organization_id,
-                $messageIds
-            );
+            $this->messageService->markAsRead($sessionId, $messageIds);
 
             return $this->successResponse('Messages marked as read');
 
@@ -317,10 +309,7 @@ class ConversationController extends BaseApiController
     public function getTypingStatus(Request $request, string $sessionId): JsonResponse
     {
         try {
-            $typingUsers = $this->conversationService->getTypingUsers(
-                $sessionId,
-                Auth::user()->organization_id
-            );
+            $typingUsers = $this->messageService->getTypingUsers($sessionId);
 
             return $this->successResponse(
                 'Typing status retrieved successfully',

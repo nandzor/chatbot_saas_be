@@ -6,6 +6,7 @@ use App\Events\MessageSent;
 use App\Services\Waha\WahaService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class SendMessageToWahaListener implements ShouldQueue
@@ -35,7 +36,7 @@ class SendMessageToWahaListener implements ShouldQueue
             $processingKey = 'waha_processing_' . $message->id;
 
             // Check if this message is already being processed (using cache lock)
-            if (\Cache::has($processingKey)) {
+            if (Cache::has($processingKey)) {
                 Log::info('Message already being processed by WAHA listener, skipping duplicate', [
                     'session_id' => $session->id,
                     'message_id' => $message->id,
@@ -46,7 +47,7 @@ class SendMessageToWahaListener implements ShouldQueue
             }
 
             // Set processing lock for 60 seconds
-            \Cache::put($processingKey, true, 60);
+            Cache::put($processingKey, true, 60);
 
             Log::info('WAHA listener processing lock set', [
                 'session_id' => $session->id,
@@ -62,7 +63,7 @@ class SendMessageToWahaListener implements ShouldQueue
                     'message_id' => $message->id,
                     'waha_sent_via' => $message->metadata['waha_sent_via']
                 ]);
-                \Cache::forget($processingKey);
+                Cache::forget($processingKey);
                 return;
             }
 
@@ -162,12 +163,12 @@ class SendMessageToWahaListener implements ShouldQueue
             }
 
             // Clear processing lock
-            \Cache::forget($processingKey);
+            Cache::forget($processingKey);
 
         } catch (\Exception $e) {
             // Clear processing lock on exception
             $processingKey = 'waha_processing_' . $event->message->id;
-            \Cache::forget($processingKey);
+            Cache::forget($processingKey);
 
             Log::error('Exception while sending message to WAHA via event listener', [
                 'session_id' => $event->session->id,
