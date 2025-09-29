@@ -15,7 +15,6 @@ import {
   useAnnouncement,
   useFocusManagement
 } from '@/utils/accessibilityUtils';
-import { useAuth } from '@/contexts/AuthContext';
 import { inboxService } from '@/services/InboxService';
 import conversationService from '@/services/conversationService';
 import { usePaginatedApi } from '@/hooks/useApi';
@@ -63,7 +62,6 @@ const SessionManagerComponent = () => {
   const { announce } = useAnnouncement();
   const { focusRef } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
-  const { user } = useAuth();
 
   // State management
   const [selectedSession, setSelectedSession] = useState(null);
@@ -509,7 +507,7 @@ const SessionManagerComponent = () => {
     setSelectedSession(null);
   }, []);
 
-  const handleSendMessage = useCallback((message) => {
+  const handleSendMessage = useCallback((_message) => {
     announce('Message sent successfully');
     refresh();
   }, [announce, refresh]);
@@ -534,12 +532,12 @@ const SessionManagerComponent = () => {
     }
   }, [setLoading, announce, refresh]);
 
-  const handleResolveConversation = useCallback((session, resolveData) => {
+  const handleResolveConversation = useCallback((_session, _resolveData) => {
     announce('Session resolved successfully');
     refresh();
   }, [announce, refresh]);
 
-  const handleTransferSession = useCallback((session, transferData) => {
+  const handleTransferSession = useCallback((_session, _transferData) => {
     announce('Session transferred successfully');
     refresh();
   }, [announce, refresh]);
@@ -894,7 +892,7 @@ const SessionManagerComponent = () => {
               ) : searchQuery ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No messages found for "{searchQuery}"</p>
+                  <p>No messages found for &quot;{searchQuery}&quot;</p>
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
