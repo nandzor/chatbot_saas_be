@@ -272,10 +272,61 @@ class MessageService
                 $isTyping
             ));
 
+            // Send typing indicator to WAHA if session is WhatsApp
+            $this->sendTypingIndicatorToWaha($sessionId, $isTyping);
+
         } catch (\Exception $e) {
             Log::error('Failed to send typing indicator', [
                 'session_id' => $sessionId,
                 'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Send typing indicator to WAHA
+     */
+    private function sendTypingIndicatorToWaha(string $sessionId, bool $isTyping): void
+    {
+        try {
+            // Get session information
+            $session = \App\Models\ChatSession::with(['customer', 'channelConfig'])->find($sessionId);
+            if (!$session) {
+                Log::warning('Session not found for typing indicator', ['session_id' => $sessionId]);
+                return;
+            }
+
+            // Check if session is WhatsApp
+            if ($session->channelConfig && $session->channelConfig->channel === 'whatsapp') {
+                $wahaSessionId = $session->channelConfig->settings['waha_session_id'] ?? null;
+                $customerPhone = $session->customer->phone ?? null;
+
+                if ($wahaSessionId && $customerPhone) {
+                    // Initialize WAHA service
+                    $wahaService = new \App\Services\Waha\WahaService();
+                    
+                    // Send typing indicator to WAHA
+                    $wahaService->sendTypingIndicator($wahaSessionId, $customerPhone, $isTyping);
+                    
+                    Log::info('Typing indicator sent to WAHA', [
+                        'session_id' => $sessionId,
+                        'waha_session_id' => $wahaSessionId,
+                        'customer_phone' => $customerPhone,
+                        'is_typing' => $isTyping
+                    ]);
+                } else {
+                    Log::warning('Missing WAHA session ID or customer phone for typing indicator', [
+                        'session_id' => $sessionId,
+                        'waha_session_id' => $wahaSessionId,
+                        'customer_phone' => $customerPhone
+                    ]);
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send typing indicator to WAHA', [
+                'session_id' => $sessionId,
                 'error' => $e->getMessage()
             ]);
         }

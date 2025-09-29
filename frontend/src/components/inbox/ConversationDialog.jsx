@@ -106,14 +106,57 @@ const ConversationDialog = ({
     if (!session?.id) return;
 
     const unregisterMessage = registerMessageHandler(session.id, (data) => {
-      if (data.type === 'message') {
-        setMessages(prev => {
-          // Check if message already exists to avoid duplicates
-          const exists = prev.some(msg => msg.id === data.id);
-          if (exists) return prev;
+      // console.log('🔔 ConversationDialog received data:', data);
+      // Handle different message types
+      if (data.type === 'message' || data.event === 'message.processed' || data.message_id) {
+        // For message.processed event, we need to fetch the full message data
+        if (data.event === 'message.processed' || data.message_id) {
+          // Add the new message from WAHA to the messages list
+          const newMessage = {
+            id: data.message_id,
+            sender_type: data.sender_type,
+            sender_name: data.sender_name,
+            message_text: data.message_content,
+            text: data.message_content, // For compatibility
+            content: { text: data.message_content },
+            message_type: data.message_type,
+            media_url: data.media_url,
+            media_type: data.media_type,
+            is_read: data.is_read,
+            delivered_at: data.delivered_at,
+            created_at: data.sent_at || data.timestamp,
+            sent_at: data.sent_at || data.timestamp
+          };
 
-          return [...prev, data];
-        });
+          setMessages(prev => {
+            // Check if message already exists to avoid duplicates
+            const exists = prev.some(msg => msg.id === newMessage.id);
+            if (exists) return prev;
+
+            // Add new message and sort by created_at
+            const updatedMessages = [...prev, newMessage];
+            const sortedMessages = updatedMessages.sort((a, b) =>
+              new Date(a.created_at || a.sent_at) - new Date(b.created_at || b.sent_at)
+            );
+
+            // Show notification for new message from customer
+            if (newMessage.sender_type === 'customer') {
+              // You can add a toast notification here if needed
+              // console.log('New message from customer:', newMessage.message_text);
+            }
+
+            return sortedMessages;
+          });
+        } else {
+          // Handle regular message type
+          setMessages(prev => {
+            // Check if message already exists to avoid duplicates
+            const exists = prev.some(msg => msg.id === data.id);
+            if (exists) return prev;
+
+            return [...prev, data];
+          });
+        }
       } else if (data.type === 'message_read') {
         setMessages(prev => prev.map(msg =>
           msg.id === data.message_id
@@ -386,36 +429,55 @@ const ConversationDialog = ({
                       <p>No messages yet. Start the conversation!</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {messages.map((message, index) => (
                         <div
                           key={message.id || `message-${index}`}
                           className={`flex ${message.sender_type === 'agent' ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${message.sender_type === 'agent' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                          <div className={`flex items-start space-x-3 max-w-[70%] ${message.sender_type === 'agent' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                            {/* Avatar - only for incoming messages */}
                             {message.sender_type !== 'agent' && (
-                              <Avatar className="h-6 w-6">
+                              <Avatar className="h-8 w-8 flex-shrink-0">
                                 <AvatarFallback className={`text-xs ${getSenderColor(message.sender_type)}`}>
                                   {getSenderIcon(message.sender_type)}
                                 </AvatarFallback>
                               </Avatar>
                             )}
 
-                            <div className={`rounded-lg px-3 py-2 ${
-                              message.sender_type === 'agent'
-                                ? 'bg-blue-500 text-white'
-                                : message.sender_type === 'bot'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-gray-200 text-gray-800'
-                            }`}>
-                              <p className="text-sm">{message.text}</p>
+                            {/* Message Content */}
+                            <div className={`flex flex-col space-y-1 ${message.sender_type === 'agent' ? 'items-end' : 'items-start'}`}>
+                              {/* Sender Info */}
+                              <div className={`flex items-center space-x-2 ${message.sender_type === 'agent' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                                <span className="text-xs font-medium text-gray-600">
+                                  {message.sender_type === 'agent'
+                                    ? 'You'
+                                    : message.sender_type === 'bot'
+                                    ? 'Bot'
+                                    : message.sender_name || 'Customer'
+                                  }
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {formatMessageTime(message.created_at)}
+                                </span>
+                              </div>
 
-                              <div className={`flex items-center justify-between mt-1 text-xs ${
-                                message.sender_type === 'agent' ? 'text-blue-100' : 'text-gray-500'
+                              {/* Message Bubble */}
+                              <div className={`relative rounded-2xl px-4 py-3 shadow-sm ${
+                                message.sender_type === 'agent'
+                                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md'
+                                  : message.sender_type === 'bot'
+                                  ? 'bg-gradient-to-r from-purple-100 to-purple-50 text-purple-800 border border-purple-200 rounded-bl-md'
+                                  : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'
                               }`}>
-                                <span>{formatMessageTime(message.created_at)}</span>
+                                {/* Message Text */}
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                  {message.text || message.message_text || message.content?.text}
+                                </p>
+
+                                {/* Message Status for Agent Messages */}
                                 {message.sender_type === 'agent' && (
-                                  <div className="ml-2">
+                                  <div className="flex items-center justify-end mt-2">
                                     {getMessageStatus(message)}
                                   </div>
                                 )}
@@ -428,16 +490,30 @@ const ConversationDialog = ({
                       {/* Typing Indicator */}
                       {typingUsers.length > 0 && (
                         <div className="flex justify-start">
-                          <div className="bg-gray-200 rounded-lg px-3 py-2">
-                            <div className="flex items-center space-x-1">
-                              <div className="flex space-x-1">
-                                <div key="typing-dot-1" className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                <div key="typing-dot-2" className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                <div key="typing-dot-3" className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="flex items-start space-x-3">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
+                                <User className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs font-medium text-gray-600">
+                                  {typingUsers.join(', ')}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                                </span>
                               </div>
-                              <span className="text-xs text-gray-500 ml-2">
-                                {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
-                              </span>
+                              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                                <div className="flex items-center space-x-1">
+                                  <div className="flex space-x-1">
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -449,120 +525,167 @@ const ConversationDialog = ({
                 </ScrollArea>
 
                 {/* Message Input */}
-                <div className="border-t pt-5 mt-5">
-                  <div className="flex items-end space-x-2">
+                <div className="border-t bg-gray-50/50 pt-4 mt-5">
+                  <div className="flex items-end space-x-3">
                     <div className="flex-1">
-                      <Textarea
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={handleTyping}
-                        onKeyPress={handleKeyPress}
-                        className="min-h-[40px] max-h-32 resize-none"
-                        disabled={sending}
-                      />
+                      <div className="relative">
+                        <Textarea
+                          placeholder="Type a message..."
+                          value={newMessage}
+                          onChange={handleTyping}
+                          onKeyPress={handleKeyPress}
+                          className="min-h-[44px] max-h-32 resize-none rounded-2xl border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                          disabled={sending}
+                        />
+                        <div className="absolute right-3 bottom-3 flex items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-gray-100"
+                          >
+                            <Paperclip className="h-4 w-4 text-gray-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-gray-100"
+                          >
+                            <Smile className="h-4 w-4 text-gray-500" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Button variant="ghost" size="sm">
-                        <Paperclip className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Smile className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        onClick={handleSendMessage}
-                        disabled={!newMessage.trim() || sending}
-                        size="sm"
-                      >
-                        {sending ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim() || sending}
+                      size="sm"
+                      className="h-11 w-11 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {sending ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               </TabsContent>
 
               {/* Details Tab */}
               <TabsContent value="details" className="flex-1 px-6 py-5">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Customer Information */}
-                  <Card>
-                    <CardHeader className="px-6 py-4">
-                      <CardTitle className="text-lg">Customer Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-6 py-4 space-y-4">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={session.customer?.avatar_url} />
-                          <AvatarFallback>
-                            {session.customer?.name?.charAt(0) || 'C'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-semibold">{session.customer?.name || 'Unknown Customer'}</h3>
-                          <p className="text-sm text-gray-500">{session.customer?.email || 'No email'}</p>
+                <div className="space-y-6">
+                  {/* Header Section */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-16 w-16 border-4 border-white shadow-lg">
+                        <AvatarImage src={session.customer?.avatar_url} />
+                        <AvatarFallback className="text-lg font-semibold bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+                          {session.customer?.name?.charAt(0) || 'C'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          {session.customer?.name || 'Unknown Customer'}
+                        </h2>
+                        <p className="text-gray-600 mt-1">{session.customer?.email || 'No email provided'}</p>
+                        <div className="flex items-center space-x-3 mt-3">
+                          <Badge variant="outline" className="bg-white">
+                            {session.customer?.channel || 'Unknown Channel'}
+                          </Badge>
+                          <Badge variant={session.is_active ? 'default' : 'secondary'}>
+                            {session.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                          {session.priority && (
+                            <Badge variant="outline" className="bg-white">
+                              {session.priority}
+                            </Badge>
+                          )}
                         </div>
                       </div>
+                    </div>
+                  </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Building className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">{session.customer?.company || 'No company'}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">{session.customer?.phone || 'No phone'}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">Joined {formatTimeAgo(session.customer?.created_at)}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Session Information */}
-                  <Card>
-                    <CardHeader className="px-6 py-4">
-                      <CardTitle className="text-lg">Session Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-6 py-4 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Session ID</label>
-                          <p className="text-sm font-mono">{session.id}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Session Type</label>
-                          <p className="text-sm capitalize">{session.session_type}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Started</label>
-                          <p className="text-sm">{formatTimeAgo(session.started_at)}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Last Activity</label>
-                          <p className="text-sm">{formatTimeAgo(session.last_activity_at)}</p>
-                        </div>
-                      </div>
-
-                      {session.tags && session.tags.length > 0 && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Tags</label>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {session.tags.map((tag, index) => (
-                              <Badge key={`tag-${index}-${tag}`} variant="outline" className="text-xs">
-                                <Tag className="h-3 w-3 mr-1" />
-                                {tag}
-                              </Badge>
-                            ))}
+                  {/* Information Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Customer Information */}
+                    <Card className="border-0 shadow-lg">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-lg">
+                        <CardTitle className="text-lg flex items-center space-x-2">
+                          <User className="h-5 w-5 text-blue-600" />
+                          <span>Customer Information</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <Building className="h-5 w-5 text-gray-500" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-500">Company</p>
+                              <p className="text-sm text-gray-900">{session.customer?.company || 'Not specified'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <Phone className="h-5 w-5 text-gray-500" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-500">Phone</p>
+                              <p className="text-sm text-gray-900">{session.customer?.phone || 'Not provided'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <Calendar className="h-5 w-5 text-gray-500" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-500">Customer Since</p>
+                              <p className="text-sm text-gray-900">{formatTimeAgo(session.customer?.created_at)}</p>
+                            </div>
                           </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+
+                    {/* Session Information */}
+                    <Card className="border-0 shadow-lg">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-lg">
+                        <CardTitle className="text-lg flex items-center space-x-2">
+                          <MessageSquare className="h-5 w-5 text-green-600" />
+                          <span>Session Information</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-4">
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm font-medium text-gray-500">Session ID</p>
+                            <p className="text-sm font-mono text-gray-900 break-all">{session.id}</p>
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm font-medium text-gray-500">Session Type</p>
+                            <p className="text-sm capitalize text-gray-900">{session.session_type}</p>
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm font-medium text-gray-500">Started</p>
+                            <p className="text-sm text-gray-900">{formatTimeAgo(session.started_at)}</p>
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm font-medium text-gray-500">Last Activity</p>
+                            <p className="text-sm text-gray-900">{formatTimeAgo(session.last_activity_at)}</p>
+                          </div>
+                        </div>
+
+                        {session.tags && session.tags.length > 0 && (
+                          <div className="pt-4 border-t">
+                            <p className="text-sm font-medium text-gray-500 mb-3">Tags</p>
+                            <div className="flex flex-wrap gap-2">
+                              {session.tags.map((tag, index) => (
+                                <Badge key={`tag-${index}-${tag}`} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  <Tag className="h-3 w-3 mr-1" />
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </TabsContent>
 

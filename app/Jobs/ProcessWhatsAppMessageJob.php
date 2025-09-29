@@ -101,7 +101,20 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
                         'response_sent' => $result['response_sent'] ?? false,
                         'bot_response' => $result['bot_response'] ?? null,
                     ]));
+                } else {
+                    Log::warning('Session or message not found for MessageProcessed event', [
+                        'session_id' => $result['session_id'] ?? null,
+                        'message_id' => $result['message_id'] ?? null,
+                        'session_found' => $session ? 'yes' : 'no',
+                        'message_found' => $message ? 'yes' : 'no'
+                    ]);
                 }
+            } else {
+                Log::warning('Missing session_id or message_id in result', [
+                    'result_keys' => array_keys($result),
+                    'session_id' => $result['session_id'] ?? null,
+                    'message_id' => $result['message_id'] ?? null
+                ]);
             }
 
             // Mark message as processed in Redis

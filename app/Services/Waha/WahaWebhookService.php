@@ -184,7 +184,7 @@ class WahaWebhookService
                 $message = $payload['payload'];
 
                 return [
-                    'message_id' => $message['id'] ?? \Illuminate\Support\Str::uuid(),
+                    'message_id' => is_array($message['id']) ? ($message['id']['_serialized'] ?? \Illuminate\Support\Str::uuid()) : ($message['id'] ?? \Illuminate\Support\Str::uuid()),
                     'from' => $message['from'] ?? null,
                     'to' => $message['to'] ?? null,
                     'text' => $message['body'] ?? null,

@@ -57,6 +57,7 @@ import {
 } from 'lucide-react';
 import ConversationDialog from '@/components/inbox/ConversationDialog';
 import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 
 const SessionManagerComponent = () => {
   const { announce } = useAnnouncement();
@@ -427,6 +428,7 @@ const SessionManagerComponent = () => {
     loadAvailablePersonalities();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+
   // Handle transfer session
   const handleTransferSessionAction = useCallback(async () => {
     if (!selectedSession || !transferData.agent_id) return;
@@ -545,7 +547,134 @@ const SessionManagerComponent = () => {
 
     return (
     <RealtimeMessageProvider>
-      <div className="space-y-6" ref={focusRef}>
+      <SessionManagerWithRealtime
+        sessions={sessions}
+        pagination={pagination}
+        sessionsLoading={sessionsLoading}
+        sessionsError={sessionsError}
+        handlePageChange={handlePageChange}
+        handleSearch={handleSearch}
+        refresh={refresh}
+        columns={columns}
+        actions={actions}
+        selectedSession={selectedSession}
+        showConversationDialog={showConversationDialog}
+        showTransferDialog={showTransferDialog}
+        showPersonalityDialog={showPersonalityDialog}
+        showAiResponseDialog={showAiResponseDialog}
+        showRecentMessagesDialog={showRecentMessagesDialog}
+        showSearchMessagesDialog={showSearchMessagesDialog}
+        recentMessages={recentMessages}
+        searchResults={searchResults}
+        searchQuery={searchQuery}
+        transferData={transferData}
+        aiResponseData={aiResponseData}
+        availablePersonalities={availablePersonalities}
+        getLoadingState={getLoadingState}
+        handleSessionSelect={handleSessionSelect}
+        handleViewRecentMessages={handleViewRecentMessages}
+        handlePerformSearch={handlePerformSearch}
+        handleTransferSessionAction={handleTransferSessionAction}
+        handleAssignPersonality={handleAssignPersonality}
+        handleGenerateAiResponse={handleGenerateAiResponse}
+        handleConversationClose={handleConversationClose}
+        handleSendMessage={handleSendMessage}
+        handleAssignConversation={handleAssignConversation}
+        handleResolveConversation={handleResolveConversation}
+        handleTransferSession={handleTransferSession}
+        setShowTransferDialog={setShowTransferDialog}
+        setShowPersonalityDialog={setShowPersonalityDialog}
+        setShowAiResponseDialog={setShowAiResponseDialog}
+        setShowRecentMessagesDialog={setShowRecentMessagesDialog}
+        setShowSearchMessagesDialog={setShowSearchMessagesDialog}
+        setTransferData={setTransferData}
+        setAiResponseData={setAiResponseData}
+        setSearchQuery={setSearchQuery}
+        focusRef={focusRef}
+        announce={announce}
+      />
+    </RealtimeMessageProvider>
+  );
+};
+
+// Component that uses realtime messages hook inside the provider
+const SessionManagerWithRealtime = (props) => {
+  const { registerMessageHandler } = useRealtimeMessages();
+  const {
+    sessions,
+    pagination,
+    sessionsLoading,
+    sessionsError,
+    handlePageChange,
+    handleSearch,
+    refresh,
+    columns,
+    actions,
+    selectedSession,
+    showConversationDialog,
+    showTransferDialog,
+    showPersonalityDialog,
+    showAiResponseDialog,
+    showRecentMessagesDialog,
+    showSearchMessagesDialog,
+    recentMessages,
+    searchResults,
+    searchQuery,
+    transferData,
+    aiResponseData,
+    availablePersonalities,
+    getLoadingState,
+    handleSessionSelect,
+    handleViewRecentMessages,
+    handlePerformSearch,
+    handleTransferSessionAction,
+    handleAssignPersonality,
+    handleGenerateAiResponse,
+    handleConversationClose,
+    handleSendMessage,
+    handleAssignConversation,
+    handleResolveConversation,
+    handleTransferSession,
+    setShowTransferDialog,
+    setShowPersonalityDialog,
+    setShowAiResponseDialog,
+    setShowRecentMessagesDialog,
+    setShowSearchMessagesDialog,
+    setTransferData,
+    setAiResponseData,
+    setSearchQuery,
+    focusRef: _focusRef,
+    announce
+  } = props;
+
+  // Register real-time message handler for session updates
+  useEffect(() => {
+    if (!registerMessageHandler) return;
+
+    const unregisterMessage = registerMessageHandler(null, (data) => {
+      // console.log('🔔 SessionManager received data:', data);
+      // Handle message.processed event to update session list
+      if (data.event === 'message.processed' || data.message_id) {
+        // console.log('📨 SessionManager processing message.processed event');
+        // Refresh session list to show updated last message and activity
+        refresh();
+
+        // Show notification for new messages
+        if (data.sender_type === 'customer') {
+          announce(`New message from ${data.customer_name || 'customer'}`);
+        }
+      }
+    });
+
+    return () => {
+      if (unregisterMessage) {
+        unregisterMessage();
+      }
+    };
+  }, [registerMessageHandler, refresh, announce]);
+
+  return (
+      <div className="space-y-6" ref={_focusRef}>
       {/* Header and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
@@ -1021,7 +1150,6 @@ const SessionManagerComponent = () => {
         onTransferSession={handleTransferSession}
       />
       </div>
-    </RealtimeMessageProvider>
   );
 };
 

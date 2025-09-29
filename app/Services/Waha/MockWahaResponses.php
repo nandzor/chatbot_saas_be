@@ -107,6 +107,20 @@ class MockWahaResponses
     }
 
     /**
+     * Get mock typing indicator response
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function sendTypingIndicator(): array
+    {
+        return [
+            'success' => true,
+            'message' => 'Typing indicator sent successfully',
+            'timestamp' => now()->timestamp,
+        ];
+    }
+
+    /**
      * Get mock messages response
      *
      * @return array{messages: array, pagination: array}

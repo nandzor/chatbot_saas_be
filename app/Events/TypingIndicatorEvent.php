@@ -63,6 +63,6 @@ class TypingIndicatorEvent implements ShouldBroadcast
      */
     public function broadcastAs(): string
     {
-        return 'typing.indicator';
+        return 'typing';
     }
 }
