@@ -15,13 +15,33 @@ return new class extends Migration
         // Add foreign key constraints only if the referenced tables exist
         if (Schema::hasTable('chat_sessions') && Schema::hasTable('messages')) {
             Schema::table('ai_conversations_log', function (Blueprint $table) {
-                // Add foreign key constraint for session_id
-                $table->foreign('session_id')->references('id')->on('chat_sessions')->onDelete('set null');
+                // Check if foreign key constraints don't already exist before adding them
+                if (!$this->foreignKeyExists('ai_conversations_log', 'session_id')) {
+                    $table->foreign('session_id')->references('id')->on('chat_sessions')->onDelete('set null');
+                }
 
-                // Add foreign key constraint for message_id
-                $table->foreign('message_id')->references('id')->on('messages')->onDelete('set null');
+                if (!$this->foreignKeyExists('ai_conversations_log', 'message_id')) {
+                    $table->foreign('message_id')->references('id')->on('messages')->onDelete('set null');
+                }
             });
         }
+    }
+
+    /**
+     * Check if a foreign key constraint exists
+     */
+    private function foreignKeyExists($table, $column)
+    {
+        $constraints = DB::select("
+            SELECT constraint_name
+            FROM information_schema.table_constraints
+            WHERE table_name = ?
+            AND constraint_type = 'FOREIGN KEY'
+            AND constraint_name LIKE ?",
+            [$table, "%{$column}_foreign"]
+        );
+
+        return count($constraints) > 0;
     }
 
     /**
