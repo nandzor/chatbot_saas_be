@@ -13,7 +13,18 @@ class SendMessageToWahaListener implements ShouldQueue
 {
     use InteractsWithQueue;
 
+    /**
+     * The number of times the job may be attempted.
+     */
+    public $tries = 3;
+
+    /**
+     * The maximum number of seconds the job can run.
+     */
+    public $timeout = 30;
+
     protected WahaService $wahaService;
+    protected $messageId;
 
     /**
      * Create the event listener.
@@ -31,29 +42,47 @@ class SendMessageToWahaListener implements ShouldQueue
         try {
             $message = $event->message;
             $session = $event->session;
+            $this->messageId = $message->id;
 
             // Generate unique processing key to prevent duplicate processing
             $processingKey = 'waha_processing_' . $message->id;
 
-            // Check if this message is already being processed (using cache lock)
-            if (Cache::has($processingKey)) {
-                Log::info('Message already being processed by WAHA listener, skipping duplicate', [
+            // Use atomic cache operation to prevent race conditions
+            $lockAcquired = Cache::lock($processingKey, 60)->get(function () use ($message, $session, $processingKey) {
+                return $this->processMessage($message, $session, $processingKey);
+            });
+
+            if (!$lockAcquired) {
+                Log::info('Message processing lock could not be acquired, skipping duplicate', [
                     'session_id' => $session->id,
                     'message_id' => $message->id,
-                    'processing_key' => $processingKey,
-                    'cache_driver' => config('cache.default')
+                    'processing_key' => $processingKey
                 ]);
                 return;
             }
 
-            // Set processing lock for 60 seconds
-            Cache::put($processingKey, true, 60);
+        } catch (\Exception $e) {
+            Log::error('WAHA listener failed to process message', [
+                'session_id' => $event->session->id,
+                'message_id' => $event->message->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
 
-            Log::info('WAHA listener processing lock set', [
+    /**
+     * Process the message with WAHA service
+     */
+    private function processMessage($message, $session, $processingKey): bool
+    {
+        try {
+            Log::info('WAHA listener processing message', [
                 'session_id' => $session->id,
                 'message_id' => $message->id,
                 'processing_key' => $processingKey,
-                'lock_set_at' => now()->toISOString()
+                'lock_acquired_at' => now()->toISOString()
             ]);
 
             // Prevent duplicate processing by checking if message already has WAHA metadata
@@ -63,8 +92,7 @@ class SendMessageToWahaListener implements ShouldQueue
                     'message_id' => $message->id,
                     'waha_sent_via' => $message->metadata['waha_sent_via']
                 ]);
-                Cache::forget($processingKey);
-                return;
+                return true;
             }
 
             // Check if session has WAHA integration
@@ -76,7 +104,7 @@ class SendMessageToWahaListener implements ShouldQueue
                     'session_id' => $session->id,
                     'session_data' => $sessionData
                 ]);
-                return;
+                return true;
             }
 
             // Get customer phone number
@@ -86,7 +114,7 @@ class SendMessageToWahaListener implements ShouldQueue
                     'session_id' => $session->id,
                     'session_data' => $sessionData
                 ]);
-                return;
+                return true;
             }
 
             // Only send if message is from agent (not from customer or bot)
@@ -95,7 +123,7 @@ class SendMessageToWahaListener implements ShouldQueue
                     'session_id' => $session->id,
                     'sender_type' => $message->sender_type
                 ]);
-                return;
+                return true;
             }
 
             // Get message content
@@ -108,7 +136,7 @@ class SendMessageToWahaListener implements ShouldQueue
                     'content' => $message->content,
                     'message_text' => $message->message_text
                 ]);
-                return;
+                return true;
             }
 
             // Send message to WAHA
@@ -162,20 +190,16 @@ class SendMessageToWahaListener implements ShouldQueue
                 ]);
             }
 
-            // Clear processing lock
-            Cache::forget($processingKey);
+            return true;
 
         } catch (\Exception $e) {
-            // Clear processing lock on exception
-            $processingKey = 'waha_processing_' . $event->message->id;
-            Cache::forget($processingKey);
-
-            Log::error('Exception while sending message to WAHA via event listener', [
-                'session_id' => $event->session->id,
-                'message_id' => $event->message->id,
+            Log::error('Exception while processing message in WAHA listener', [
+                'session_id' => $session->id,
+                'message_id' => $message->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            throw $e;
         }
     }
 }
