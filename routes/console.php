@@ -53,6 +53,44 @@ Schedule::call(function () {
     Artisan::call('view:clear');
 })->dailyAt('05:00')->name('cleanup-system');
 
+// Clean up old log files every day at 5:30 AM
+Schedule::call(function () {
+    $logPath = storage_path('logs');
+    $files = \Illuminate\Support\Facades\File::glob($logPath . '/*.log');
+    $deleted = 0;
+    $freed = 0;
+
+    foreach ($files as $file) {
+        $fileDate = \Illuminate\Support\Facades\File::lastModified($file);
+        $cutoff = now()->subDays(14)->timestamp; // Keep logs for 14 days
+
+        if ($fileDate < $cutoff) {
+            $size = \Illuminate\Support\Facades\File::size($file);
+            if (\Illuminate\Support\Facades\File::delete($file)) {
+                $deleted++;
+                $freed += $size;
+            }
+        }
+    }
+
+    if ($deleted > 0) {
+        Log::info("Log cleanup completed: deleted {$deleted} files, freed " . round($freed/1024/1024, 2) . " MB");
+    }
+})->dailyAt('05:30')->name('cleanup-logs');
+
+// Clean up old webhook logs from database every day at 5:45 AM
+Schedule::call(function () {
+    try {
+        $deletedCount = \App\Models\WebhookLog::cleanupOldLogs(7); // Keep for 7 days
+
+        if ($deletedCount > 0) {
+            Log::info("Webhook logs cleanup completed: deleted {$deletedCount} old webhook log records");
+        }
+    } catch (\Exception $e) {
+        Log::error("Webhook logs cleanup failed: " . $e->getMessage());
+    }
+})->dailyAt('05:45')->name('cleanup-webhook-logs');
+
 // Backup database every day at 6:00 AM (if backup command exists)
 Schedule::call(function () {
     try {

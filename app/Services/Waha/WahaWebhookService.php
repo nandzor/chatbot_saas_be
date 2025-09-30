@@ -133,15 +133,12 @@ class WahaWebhookService
                 'organization_id' => $organizationId
             ]);
 
-            // Check if this webhook has already been processed to prevent duplicate events
-            $webhookKey = "whatsapp_waha_processed:{$organizationId}:{$messageData['message_id']}";
-
-            if (Redis::exists($webhookKey)) {
+            // Check for duplicate using database instead of Redis
+            if ($this->isMessageAlreadyProcessed($messageData['message_id'], $organizationId)) {
                 Log::warning('WhatsApp WAHA webhook already processed, skipping duplicate', [
                     'organization_id' => $organizationId,
                     'message_id' => $messageData['message_id'] ?? 'unknown',
                     'from' => $messageData['from'] ?? 'unknown',
-                    'webhook_key' => $webhookKey,
                 ]);
 
                 return [
@@ -155,8 +152,8 @@ class WahaWebhookService
                 ];
             }
 
-            // Mark webhook as processed (expire in 1 hour)
-            Redis::setex($webhookKey, 3600, 'processed');
+            // Log webhook processing for deduplication
+            $this->logWebhookProcessing($messageData['message_id'], $organizationId, $messageData);
 
             // Fire event for asynchronous processing
             event(new \App\Events\WhatsAppMessageReceived($messageData, $organizationId));
@@ -719,6 +716,112 @@ class WahaWebhookService
 
         $expectedSignature = hash_hmac('sha256', $payload, $secret);
         return hash_equals($expectedSignature, $signature);
+    }
+
+    /**
+     * Check if message is already processed using database
+     * More memory efficient than Redis keys
+     */
+    private function isMessageAlreadyProcessed(string $messageId, string $organizationId): bool
+    {
+        try {
+            // Check if message exists in database
+            $existingMessage = \App\Models\Message::where('metadata->waha_message_id', $messageId)
+                ->where('organization_id', $organizationId)
+                ->first();
+
+            if ($existingMessage) {
+                Log::info('Message already exists in database', [
+                    'message_id' => $messageId,
+                    'organization_id' => $organizationId,
+                    'existing_message_id' => $existingMessage->id
+                ]);
+                return true;
+            }
+
+            // Check if webhook was processed recently (last 5 minutes)
+            $recentWebhook = \App\Models\WebhookLog::where('message_id', $messageId)
+                ->where('organization_id', $organizationId)
+                ->where('created_at', '>=', now()->subMinutes(5))
+                ->where('status', 'processed')
+                ->first();
+
+            if ($recentWebhook) {
+                Log::info('Webhook already processed recently', [
+                    'message_id' => $messageId,
+                    'organization_id' => $organizationId,
+                    'webhook_log_id' => $recentWebhook->id
+                ]);
+                return true;
+            }
+
+            return false;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to check message processing status', [
+                'message_id' => $messageId,
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+            return false; // Allow processing if check fails
+        }
+    }
+
+    /**
+     * Log webhook processing for deduplication
+     */
+    private function logWebhookProcessing(string $messageId, string $organizationId, array $messageData): void
+    {
+        try {
+            \App\Models\WebhookLog::create([
+                'message_id' => $messageId,
+                'organization_id' => $organizationId,
+                'webhook_type' => 'whatsapp_waha',
+                'status' => 'processed',
+                'payload' => $messageData,
+                'processed_at' => now()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to log webhook processing', [
+                'message_id' => $messageId,
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Clear expired webhook deduplication keys
+     */
+    public function clearExpiredWebhookKeys(): int
+    {
+        try {
+            $pattern = 'whatsapp_waha_processed:*';
+            $keys = Redis::keys($pattern);
+            $clearedCount = 0;
+
+            foreach ($keys as $key) {
+                $ttl = Redis::ttl($key);
+                // If TTL is -1 (no expiration) or -2 (expired), delete the key
+                if ($ttl === -1 || $ttl === -2) {
+                    Redis::del($key);
+                    $clearedCount++;
+                }
+            }
+
+            Log::info('Cleared expired webhook deduplication keys', [
+                'cleared_count' => $clearedCount,
+                'total_keys_checked' => count($keys)
+            ]);
+
+            return $clearedCount;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to clear expired webhook keys', [
+                'error' => $e->getMessage()
+            ]);
+            return 0;
+        }
     }
 
     /**

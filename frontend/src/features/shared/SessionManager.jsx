@@ -107,6 +107,8 @@ const SessionManagerComponent = () => {
     error: sessionsError,
     handlePageChange,
     handleSearch,
+    handleSort: handleApiSort,
+    handlePerPageChange,
     refresh
   } = usePaginatedApi(getSessions, {
     initialPage: 1,
@@ -291,6 +293,22 @@ const SessionManagerComponent = () => {
     setShowConversationDialog(true);
     announce(`Selected session ${session.session_token}`);
   }, [announce]);
+
+  // Handle table sorting
+  const handleTableSort = useCallback((sortConfig) => {
+    if (handleApiSort) {
+      handleApiSort(sortConfig.key, sortConfig.direction);
+      announce(`Table sorted by ${sortConfig.key} in ${sortConfig.direction}ending order`);
+    }
+  }, [handleApiSort, announce]);
+
+  // Handle per page change
+  const handleTablePerPageChange = useCallback((newPerPage) => {
+    if (handlePerPageChange) {
+      handlePerPageChange(newPerPage);
+      announce(`Changed page size to ${newPerPage} items`);
+    }
+  }, [handlePerPageChange, announce]);
 
   // Handle end session
   const handleEndSession = useCallback(async (sessionId, resolutionType = 'resolved') => {
@@ -554,6 +572,8 @@ const SessionManagerComponent = () => {
         sessionsError={sessionsError}
         handlePageChange={handlePageChange}
         handleSearch={handleSearch}
+        handleTableSort={handleTableSort}
+        handleTablePerPageChange={handleTablePerPageChange}
         refresh={refresh}
         columns={columns}
         actions={actions}
@@ -607,6 +627,8 @@ const SessionManagerWithRealtime = (props) => {
     sessionsError,
     handlePageChange,
     handleSearch,
+    handleTableSort,
+    handleTablePerPageChange,
     refresh,
     columns,
     actions,
@@ -713,10 +735,7 @@ const SessionManagerWithRealtime = (props) => {
         actions={actions}
         loading={sessionsLoading}
         error={sessionsError}
-        onSort={(_sortConfig) => {
-          // Handle sorting if needed
-          // TODO: Implement sorting logic
-        }}
+        onSort={handleTableSort}
         onFilter={(searchQuery) => {
           handleSearch(searchQuery);
         }}
@@ -727,10 +746,7 @@ const SessionManagerWithRealtime = (props) => {
           totalItems: pagination.totalItems,
           perPage: pagination.itemsPerPage,
           onPageChange: handlePageChange,
-          onPerPageChange: (_newPerPage) => {
-            // Handle per page change if needed
-            // TODO: Implement per page change logic
-          }
+          onPerPageChange: handleTablePerPageChange
         } : null}
         searchable={true}
         className="w-full"
@@ -812,50 +828,71 @@ const SessionManagerWithRealtime = (props) => {
 
       {/* Bot Personality Assignment Dialog */}
       <Dialog open={showPersonalityDialog} onOpenChange={setShowPersonalityDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Bot Personality</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-lg font-semibold">Assign Bot Personality</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Assign a bot personality to handle this session automatically.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-                  <div>
-              <Label htmlFor="personality_id">Bot Personality ID</Label>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="personality_id" className="text-sm font-medium">
+                Bot Personality ID
+              </Label>
               <Input
                 id="personality_id"
                 value={aiResponseData.personality_id}
                 onChange={(e) => setAiResponseData(prev => ({ ...prev, personality_id: e.target.value }))}
                 placeholder="Enter bot personality ID"
+                className="w-full"
               />
-                      </div>
+            </div>
+
             {aiResponseData.personality_id && (
-              <div className="p-3 bg-muted rounded-lg">
-                <h4 className="font-medium text-sm mb-2">Personality Details</h4>
+              <div className="p-4 bg-muted/50 rounded-lg border">
+                <h4 className="font-medium text-sm mb-3 text-foreground">Personality Details</h4>
                 {(() => {
                   const personality = availablePersonalities.find(p => p.id === aiResponseData.personality_id);
                   return personality ? (
-                    <div className="text-sm space-y-1">
-                      <p><strong>Language:</strong> {personality.language}</p>
-                      <p><strong>Tone:</strong> {personality.tone}</p>
-                      <p><strong>Style:</strong> {personality.communication_style}</p>
-                      <p><strong>Description:</strong> {personality.description}</p>
+                    <div className="text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Language:</span>
+                        <span className="font-medium">{personality.language}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tone:</span>
+                        <span className="font-medium">{personality.tone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Style:</span>
+                        <span className="font-medium">{personality.communication_style}</span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <span className="text-muted-foreground">Description:</span>
+                        <p className="mt-1 text-foreground">{personality.description}</p>
+                      </div>
                     </div>
-                  ) : null;
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Personality not found</p>
+                  );
                 })()}
-                        </div>
-                      )}
-                    </div>
-          <DialogFooter>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
             <Button
               variant="outline"
               onClick={() => setShowPersonalityDialog(false)}
+              className="mt-2 sm:mt-0"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAssignPersonality}
               disabled={!aiResponseData.personality_id || getLoadingState('assign')}
+              className="w-full sm:w-auto"
             >
               {getLoadingState('assign') ? 'Assigning...' : 'Assign Bot'}
             </Button>
