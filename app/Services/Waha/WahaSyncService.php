@@ -209,10 +209,21 @@ class WahaSyncService
             'mapped_health' => $this->mapHealthStatus($wahaData)
         ]);
 
+        // Get valid channel config for this organization
+        $channelConfig = \App\Models\ChannelConfig::where('organization_id', $organizationId)->first();
+        if (!$channelConfig) {
+            // If no specific channel config found, get the first available one
+            $channelConfig = \App\Models\ChannelConfig::first();
+        }
+
+        if (!$channelConfig) {
+            throw new Exception('No channel config found for organization: ' . $organizationId);
+        }
+
         $sessionData = [
             'organization_id' => $organizationId,
             'n8n_workflow_id' => $n8nWorkflowId,
-            'channel_config_id' => '00000000-0000-0000-0000-000000000000', // Default channel config
+            'channel_config_id' => $channelConfig->id,
             'session_name' => $sessionName,
             'phone_number' => $this->extractPhoneNumber($wahaData),
             'instance_id' => $sessionName, // Use session name as instance ID
