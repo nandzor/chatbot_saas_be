@@ -47,6 +47,7 @@ class WahaService extends BaseHttpClient
     private const ENDPOINT_SEND_TEXT = '/api/sendText';
     private const ENDPOINT_SEND_TEXT_ALT = '/api/sessions/%s/sendText'; // Alternative endpoint
     private const ENDPOINT_SEND_MEDIA = '/api/sendImage';
+    private const ENDPOINT_SEND_TYPING = '/api/sendTyping';
     private const ENDPOINT_MESSAGES = '/api/messages';
     private const ENDPOINT_CONTACTS = '/api/contacts';
     private const ENDPOINT_GROUPS = '/api/%s/groups';
@@ -755,6 +756,56 @@ class WahaService extends BaseHttpClient
             'media' => $mediaUrl,
             'caption' => $caption,
         ];
+    }
+
+    /**
+     * Send typing indicator
+     */
+    public function sendTypingIndicator(string $sessionId, string $to, bool $isTyping = true): array
+    {
+        if ($this->mockResponses) {
+            return $this->mockResponsesHandler->sendTypingIndicator();
+        }
+
+        try {
+            $payload = [
+                'session' => $sessionId,
+                'to' => $to,
+                'typing' => $isTyping
+            ];
+
+            Log::info('Sending typing indicator to WAHA', [
+                'session_id' => $sessionId,
+                'to' => $to,
+                'is_typing' => $isTyping
+            ]);
+
+            $response = $this->makeRequest('POST', self::ENDPOINT_SEND_TYPING, $payload);
+
+            if ($response->successful()) {
+                $result = $response->json();
+                Log::info('Typing indicator sent successfully', [
+                    'session_id' => $sessionId,
+                    'to' => $to,
+                    'response' => $result
+                ]);
+                return $result;
+            } else {
+                throw new WahaException(
+                    'Failed to send typing indicator',
+                    $response->status(),
+                    $response->json()
+                );
+            }
+
+        } catch (Exception $e) {
+            Log::error('Error sending typing indicator', [
+                'session_id' => $sessionId,
+                'to' => $to,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
 
     /**

@@ -7,6 +7,10 @@ use App\Models\WahaSession;
 use App\Services\Waha\WahaService;
 use App\Services\Waha\WahaSyncService;
 use App\Services\Waha\WahaSessionService;
+use App\Services\Waha\WahaWebhookService;
+use App\Services\Waha\WahaSessionManagementService;
+use App\Services\Waha\WahaMessageService;
+use App\Services\Waha\WahaWebhookConfigService;
 use App\Services\N8n\N8nService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,17 +23,29 @@ class WahaController extends BaseApiController
     protected WahaService $wahaService;
     protected WahaSyncService $wahaSyncService;
     protected WahaSessionService $wahaSessionService;
+    protected WahaWebhookService $wahaWebhookService;
+    protected WahaSessionManagementService $wahaSessionManagementService;
+    protected WahaMessageService $wahaMessageService;
+    protected WahaWebhookConfigService $wahaWebhookConfigService;
     protected N8nService $n8nService;
 
     public function __construct(
         WahaService $wahaService,
         WahaSyncService $wahaSyncService,
         WahaSessionService $wahaSessionService,
+        WahaWebhookService $wahaWebhookService,
+        WahaSessionManagementService $wahaSessionManagementService,
+        WahaMessageService $wahaMessageService,
+        WahaWebhookConfigService $wahaWebhookConfigService,
         N8nService $n8nService
     ) {
         $this->wahaService = $wahaService;
         $this->wahaSyncService = $wahaSyncService;
         $this->wahaSessionService = $wahaSessionService;
+        $this->wahaWebhookService = $wahaWebhookService;
+        $this->wahaSessionManagementService = $wahaSessionManagementService;
+        $this->wahaMessageService = $wahaMessageService;
+        $this->wahaWebhookConfigService = $wahaWebhookConfigService;
         $this->n8nService = $n8nService;
     }
 
@@ -149,7 +165,24 @@ class WahaController extends BaseApiController
             if ($shouldUseDefaults) {
                 // Create session with automatic defaults - no frontend payload needed
                 Log::info('Using createSessionWithDefaults due to no custom name or config');
-                return $this->createSessionWithDefaults($organization);
+                $result = $this->wahaSessionManagementService->createSessionWithDefaults($organization);
+
+                if ($result['success']) {
+                    $this->logApiAction('create_waha_session_auto', [
+                        'session_name' => $result['data']['session_name'],
+                        'organization_id' => $organization->id,
+                        'local_session_id' => $result['data']['local_session_id'],
+                        'auto_created' => true,
+                        'n8n_workflow_created' => $result['data']['n8n_workflow']['success'] ?? false,
+                        'n8n_workflow_id' => $result['data']['n8n_workflow']['data']['id'] ?? null,
+                        'webhook_id' => $result['data']['webhook_id'],
+                        'webhook_url' => $result['data']['webhook_url'],
+                    ]);
+                }
+
+                return $result['success']
+                    ? $this->successResponse($result['message'], $result['data'])
+                    : $this->errorResponse($result['message'], 500);
             }
 
             // Validate the request payload if provided
@@ -174,48 +207,24 @@ class WahaController extends BaseApiController
                 'config.webhooks.*.customHeaders' => 'nullable|array',
             ]);
 
-            // Add organization metadata to the config
-            $this->addOrganizationMetadata($validatedData, $organization);
+            $result = $this->wahaSessionManagementService->createSessionWithConfig($validatedData, $organization->id);
 
-            // Use service to create session with N8N integration
-            $result = $this->wahaSessionService->createSessionWithN8nIntegration($validatedData, $organization->id);
-
-            // Check if result is successful
-            $isSuccess = ($result['waha_session']['success'] ?? false) ||
-                isset($result['waha_session']['name']) ||
-                isset($result['waha_session']['session']);
-
-            if ($isSuccess) {
-                // Create or update local session record
-                $localSession = $this->wahaSyncService->createOrUpdateLocalSession(
-                    $organization->id,
-                    $result['session_name'],
-                    $result['waha_session']
-                );
-
+            if ($result['success']) {
                 $this->logApiAction('create_waha_session', [
-                    'session_name' => $result['session_name'],
+                    'session_name' => $result['data']['session_name'],
                     'organization_id' => $organization->id,
-                    'local_session_id' => $localSession->id,
-                    'n8n_workflow_created' => $result['n8n_workflow']['success'] ?? false,
-                    'n8n_workflow_id' => $result['n8n_workflow']['data']['id'] ?? null,
-                    'webhook_id' => $result['webhook_id'],
-                    'webhook_url' => $result['webhook_url'],
-                ]);
-
-                return $this->successResponse('Session created successfully with N8N workflow', [
-                    'local_session_id' => $localSession->id,
-                    'organization_id' => $organization->id,
-                    'session_name' => $result['session_name'],
-                    'n8n_workflow' => $result['n8n_workflow'],
-                    'webhook_id' => $result['webhook_id'],
-                    'webhook_url' => $result['webhook_url'],
-                    'third_party_response' => $result['waha_session'],
-                    'status' => $localSession->status,
+                    'local_session_id' => $result['data']['local_session_id'],
+                    'n8n_workflow_created' => $result['data']['n8n_workflow']['success'] ?? false,
+                    'n8n_workflow_id' => $result['data']['n8n_workflow']['data']['id'] ?? null,
+                    'webhook_id' => $result['data']['webhook_id'],
+                    'webhook_url' => $result['data']['webhook_url'],
                 ]);
             }
 
-            return $this->errorResponse('Failed to create session in 3rd party WAHA', 500);
+            return $result['success']
+                ? $this->successResponse($result['message'], $result['data'])
+                : $this->errorResponse($result['message'], 500);
+
         } catch (Exception $e) {
             Log::error('Failed to create WAHA session', [
                 'organization_id' => $this->getCurrentOrganization()?->id,
@@ -238,9 +247,6 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('start WAHA session');
             }
 
-            // Check if session already exists by ID
-            $existingSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
-
             $config = $request->validate([
                 'webhook' => 'nullable|string|url',
                 'webhook_by_events' => 'boolean',
@@ -256,79 +262,20 @@ class WahaController extends BaseApiController
                 'business_email' => 'nullable|email|max:255',
             ]);
 
-            $localSession = null;
+            $result = $this->wahaSessionManagementService->startSession($sessionId, $config, $organization->id);
 
-            if ($existingSession) {
-                // Session exists locally, check if already running
-                if ($existingSession->is_connected && $existingSession->is_authenticated) {
-                    return $this->errorResponse('Session is already running and connected', 409);
-                }
-
-                // Check if session exists on WAHA server
-                try {
-                    $sessionInfo = $this->wahaService->getSessionInfo($existingSession->session_name);
-
-                    // Update database first with connecting status
-                    $this->wahaSyncService->updateSessionStatus($organization->id, $existingSession->session_name, 'STARTING');
-
-                    // Then try to start session on WAHA server
-                    $result = $this->wahaService->startSession($existingSession->session_name, $config);
-
-                    // If no exception thrown, start session was successful
-                    // Now check actual status from WAHA server and update database accordingly
-                    try {
-                        $updatedSessionInfo = $this->wahaService->getSessionInfo($existingSession->session_name);
-                        $actualStatus = $updatedSessionInfo['status'] ?? 'connecting';
-
-                        // Update database with actual status from WAHA server
-                        $this->wahaSyncService->updateSessionStatus($organization->id, $existingSession->session_name, $actualStatus);
-                    } catch (\Exception $e) {
-                        // If we can't get updated status, keep as connecting
-                        $this->wahaSyncService->updateSessionStatus($organization->id, $existingSession->session_name, 'STARTING');
-                    }
-
-                    $localSession = $existingSession;
-                } catch (\App\Services\Waha\Exceptions\WahaException $e) {
-                    // Session doesn't exist on WAHA server, return error
-                    Log::warning('Session not found on WAHA server, cannot start', [
-                        'session_id' => $sessionId,
-                        'session_name' => $existingSession->session_name,
-                        'organization_id' => $organization->id,
-                        'error' => $e->getMessage()
-                    ]);
-
-                    return $this->errorResponse('Session not found on WAHA server. Please create the session first.', 404);
-                } catch (Exception $e) {
-                    // Other error
-                    Log::error('Unexpected error checking WAHA session', [
-                        'session_id' => $sessionId,
-                        'session_name' => $existingSession->session_name,
-                        'organization_id' => $organization->id,
-                        'error' => $e->getMessage()
-                    ]);
-
-                    return $this->errorResponse('Failed to check session status on WAHA server', 500);
-                }
-            } else {
-                // Session doesn't exist locally, return error
-                return $this->errorResponse('Session not found. Please create the session first.', 404);
+            if ($result['success']) {
+                $this->logApiAction('start_waha_session', [
+                    'session_id' => $sessionId,
+                    'organization_id' => $organization->id,
+                    'local_session_id' => $result['data']['local_session_id'],
+                ]);
             }
 
-            $this->logApiAction('start_waha_session', [
-                'session_id' => $sessionId,
-                'organization_id' => $organization->id,
-                'local_session_id' => $localSession->id,
-            ]);
+            return $result['success']
+                ? $this->successResponse($result['message'], $result['data'])
+                : $this->errorResponse($result['message'], $result['code'] ?? 500);
 
-            // Get the updated session status from database
-            $updatedLocalSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
-
-            return $this->successResponse('Session started successfully', [
-                'local_session_id' => $localSession->id,
-                'organization_id' => $organization->id,
-                'session_name' => $localSession->session_name,
-                'status' => $updatedLocalSession->status ?? 'connecting',
-            ]);
         } catch (Exception $e) {
             Log::error('Failed to start WAHA session', [
                 'session_id' => $sessionId,
@@ -351,33 +298,20 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('stop WAHA session');
             }
 
-            // Verify session belongs to current organization
-            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
-            if (!$localSession) {
-                return $this->handleResourceNotFound('WAHA session', $sessionId);
-            }
+            $result = $this->wahaSessionManagementService->stopSession($sessionId, $organization->id);
 
-            // Stop session in WAHA server
-            $result = $this->wahaService->stopSession($localSession->session_name);
-
-            // Check if the result contains session data (WAHA API returns session info on success)
-            if (isset($result['name']) && isset($result['status'])) {
-                // Update session status using sync service
-                $this->wahaSyncService->updateSessionStatus($organization->id, $localSession->session_name, 'STOPPED');
-
+            if ($result['success']) {
                 $this->logApiAction('stop_waha_session', [
                     'session_id' => $sessionId,
                     'organization_id' => $organization->id,
-                    'local_session_id' => $localSession->id,
+                    'local_session_id' => $result['data']['local_session_id'],
                 ]);
-
-                return $this->successResponse('Session stopped successfully', array_merge($result, [
-                    'local_session_id' => $localSession->id,
-                    'organization_id' => $organization->id,
-                ]));
             }
 
-            return $this->errorResponse('Failed to stop session', 500);
+            return $result['success']
+                ? $this->successResponse($result['message'], $result['data'])
+                : $this->errorResponse($result['message'], $result['code'] ?? 500);
+
         } catch (Exception $e) {
             Log::error('Failed to stop WAHA session', [
                 'session_id' => $sessionId,
@@ -436,35 +370,30 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('send WAHA message');
             }
 
-            // Verify session belongs to current organization
-            $localSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
-            if (!$localSession) {
-                return $this->handleResourceNotFound('WAHA session', $sessionId);
-            }
-
             $data = $request->validate([
                 'to' => 'required|string',
                 'text' => 'required|string|max:4096',
             ]);
 
-            $result = $this->wahaService->sendTextMessage(
+            $result = $this->wahaMessageService->sendTextMessage(
                 $sessionId,
                 $data['to'],
-                $data['text']
+                $data['text'],
+                $organization->id
             );
 
-            // Update message count in local session
-            if ($result['success'] ?? false) {
-                $localSession->increment('total_messages_sent');
+            if ($result['success']) {
+                $this->logApiAction('send_waha_text_message', [
+                    'session_id' => $sessionId,
+                    'organization_id' => $organization->id,
+                    'recipient' => $data['to'],
+                ]);
             }
 
-            $this->logApiAction('send_waha_text_message', [
-                'session_id' => $sessionId,
-                'organization_id' => $organization->id,
-                'recipient' => $data['to'],
-            ]);
+            return $result['success']
+                ? $this->successResponse($result['message'], $result['data'])
+                : $this->errorResponse($result['message'], $result['code'] ?? 500);
 
-            return $this->successResponse('Message sent successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to send WAHA text message', [
                 'session_id' => $sessionId,
@@ -711,126 +640,38 @@ class WahaController extends BaseApiController
     /**
      * Regenerate QR code for session
      */
-    // ...
-
     public function regenerateQrCode(string $sessionId): JsonResponse
     {
         try {
-            // 1. Validasi awal (Guard Clauses)
+            // Get current organization
             $organization = $this->getCurrentOrganization();
             if (!$organization) {
                 return $this->handleUnauthorizedAccess('regenerate WAHA QR code');
             }
 
-            $localSession = $this->wahaSyncService->verifySessionAccess($organization->id, $sessionId);
-            if (!$localSession) {
-                return $this->handleResourceNotFound('WAHA session', $sessionId);
-            }
+            $result = $this->wahaSessionManagementService->regenerateQrCode($sessionId, $organization->id);
 
-            // 2. Jika sudah terhubung, tidak perlu generate QR baru
-            if ($localSession->is_connected && $localSession->is_authenticated) {
-                return $this->successResponse('Session is already connected', [
-                    'connected' => true,
-                    'status' => $localSession->status,
-                    'message' => 'QR code regeneration is not needed.'
+            if ($result['success']) {
+                $this->logApiAction('regenerate_waha_qr_code', [
+                    'session_id' => $sessionId,
+                    'organization_id' => $organization->id
                 ]);
             }
 
-            // 3. Pastikan sesi berjalan sebelum meminta QR
-            $this->ensureSessionIsRunning($localSession);
+            return $result['success']
+                ? $this->successResponse($result['message'], $result['data'])
+                : $this->errorResponse($result['message'], $result['code'] ?? 500);
 
-            // 4. Ambil QR code, dengan logika retry (restart) jika gagal
-            $qrCode = $this->fetchQrCodeWithRestart($localSession);
-
-            $this->logApiAction('regenerate_waha_qr_code', [
-                'session_id' => $sessionId,
-                'organization_id' => $organization->id
-            ]);
-
-            return $this->successResponse('QR code retrieved successfully', $qrCode);
         } catch (Exception $e) {
             Log::error('Failed to regenerate WAHA QR code', [
                 'session_id' => $sessionId,
                 'organization_id' => $this->getCurrentOrganization()?->id,
                 'error' => $e->getMessage()
             ]);
-
-            // Memberikan pesan error yang lebih spesifik kepada client jika memungkinkan
             return $this->errorResponse($e->getMessage(), 500);
         }
     }
 
-    /**
-     * Memastikan sesi WAHA dalam keadaan berjalan, jika 'STOPPED' maka akan dijalankan.
-     *
-     * @param mixed $localSession
-     * @throws Exception
-     */
-    private function ensureSessionIsRunning(mixed $localSession): void
-    {
-        $sessionInfo = $this->wahaService->getSessionInfo($localSession->session_name);
-
-        if (!$sessionInfo || !isset($sessionInfo['status'])) {
-            throw new Exception('Failed to get session info: ' . ($sessionInfo['error'] ?? 'Unknown error'));
-        }
-
-        $status = $sessionInfo['status'] ?? 'UNKNOWN';
-
-        if ($status === 'STOPPED') {
-            Log::info('Session is stopped, attempting to start it.', ['session_name' => $localSession->session_name]);
-            try {
-                $startResult = $this->wahaService->startSession($localSession->session_name);
-                // If no exception thrown, start was successful
-                Log::info('Session started successfully', ['session_name' => $localSession->session_name]);
-
-                // Beri jeda agar sesi sempat terinisialisasi
-                sleep(2);
-            } catch (Exception $e) {
-                throw new Exception('Failed to start a stopped session: ' . $e->getMessage());
-            }
-        }
-    }
-
-    /**
-     * Mencoba mengambil QR code. Jika gagal, coba restart sesi dan ambil lagi.
-     *
-     * @param mixed $localSession
-     * @return array
-     * @throws Exception
-     */
-    private function fetchQrCodeWithRestart(mixed $localSession): array
-    {
-        try {
-            // Coba ambil QR code pertama kali
-            return $this->wahaService->getQrCode($localSession->session_name);
-        } catch (Exception $initialException) {
-            Log::warning('Initial QR code fetch failed, attempting session restart.', [
-                'session_name' => $localSession->session_name,
-                'error' => $initialException->getMessage()
-            ]);
-
-            // Jika gagal, coba restart sesi
-            try {
-                $restartResult = $this->wahaService->restartSession($localSession->session_name);
-                Log::info('Session restarted successfully after QR fetch failure', [
-                    'session_name' => $localSession->session_name
-                ]);
-            } catch (Exception $restartException) {
-                throw new Exception('Failed to restart session after QR fetch failure: ' . $restartException->getMessage());
-            }
-
-            // Beri jeda agar sesi sempat restart
-            sleep(3);
-
-            // Coba lagi mengambil QR code setelah restart
-            try {
-                return $this->wahaService->getQrCode($localSession->session_name);
-            } catch (Exception $retryException) {
-                // Jika percobaan kedua tetap gagal, menyerah.
-                throw new Exception('Failed to get QR code even after restarting session.');
-            }
-        }
-    }
 
     /**
      * Delete session
@@ -887,8 +728,8 @@ class WahaController extends BaseApiController
                 return $this->handleResourceNotFound('WAHA session', $sessionId);
             }
 
-            // Use sync service to get session with automatic sync using session name
-            $sessionData = $this->wahaSyncService->getSessionForOrganization($organization->id, $localSession->session_name);
+            // Use database-only method to get session data
+            $sessionData = $this->wahaSyncService->getSessionForOrganizationFromDatabase($organization->id, $localSession->session_name);
 
             if (!$sessionData) {
                 return $this->handleResourceNotFound('WAHA session', $sessionId);
@@ -984,7 +825,7 @@ class WahaController extends BaseApiController
             ]);
 
             // Validate webhook signature if configured
-            if (!$this->validateWahaWebhookSignature($request)) {
+            if (!$this->wahaWebhookService->validateWahaWebhookSignature($request)) {
                 Log::warning('Invalid WAHA webhook signature', [
                     'payload' => $payload
                 ]);
@@ -992,7 +833,7 @@ class WahaController extends BaseApiController
             }
 
             // Extract organization ID from session name
-            $organizationId = $this->extractOrganizationFromSession($sessionName);
+            $organizationId = $this->wahaWebhookService->extractOrganizationFromSession($sessionName);
 
             if (!$organizationId) {
                 Log::error('Organization ID not found for WAHA webhook', [
@@ -1003,7 +844,7 @@ class WahaController extends BaseApiController
             }
 
             // Handle different webhook event types
-            $result = $this->handleWahaWebhookEvent($payload, $organizationId);
+            $result = $this->wahaWebhookService->handleWahaWebhookEvent($payload, $organizationId);
 
             if (!$result['success']) {
                 return $this->errorResponse($result['message'], $result['code'] ?? 400);
@@ -1168,175 +1009,6 @@ class WahaController extends BaseApiController
         }
     }
 
-    /**
-     * Flatten nested metadata objects to string key-value pairs for WAHA API compatibility
-     *
-     * @param array $metadata The metadata array to flatten
-     * @return array Flattened metadata with string values only
-     */
-    private function flattenMetadata(array $metadata): array
-    {
-        $flattened = [];
-
-        foreach ($metadata as $key => $value) {
-            if (is_array($value)) {
-                // Recursively flatten nested arrays
-                $nested = $this->flattenMetadata($value);
-                foreach ($nested as $nestedKey => $nestedValue) {
-                    $flattened["{$key}.{$nestedKey}"] = (string) $nestedValue;
-                }
-            } else {
-                // Convert all values to strings
-                $flattened[$key] = (string) $value;
-            }
-        }
-
-        return $flattened;
-    }
-
-    /**
-     * Convert WAHA workflow JSON payload to PHP array
-     *
-     * @param string $organizationId The organization ID
-     * @return array
-     */
-    private function getWahaWorkflowPayload(string $organizationId): array
-    {
-        // Load the JSON payload from file
-        $jsonPath = base_path('waha_workflow_payload.json');
-
-        if (!file_exists($jsonPath)) {
-            throw new Exception('WAHA workflow payload file not found');
-        }
-
-        $jsonContent = file_get_contents($jsonPath);
-        $payload = json_decode($jsonContent, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid JSON in WAHA workflow payload: ' . json_last_error_msg());
-        }
-
-        // Replace organization_id placeholder with actual organization ID
-        $payload['name'] = str_replace('organization_id_(count001)', $organizationId, $payload['name']);
-
-        // Update webhookId in the first node (WAHA Trigger)
-        if (isset($payload['nodes'][0]['webhookId'])) {
-            $payload['nodes'][0]['webhookId'] = str_replace('organization_id_(count001)', $organizationId, $payload['nodes'][0]['webhookId']);
-        }
-
-        return $payload;
-    }
-
-
-    /**
-     * Create session with automatic defaults - no frontend payload required
-     *
-     * @param object $organization The organization object
-     * @return JsonResponse
-     */
-    private function createSessionWithDefaults($organization): JsonResponse
-    {
-        try {
-            // Use service to create default session with N8N integration
-            $result = $this->wahaSessionService->createDefaultSessionWithN8nIntegration($organization);
-
-            // Check if result is successful
-            $isSuccess = ($result['waha_session']['success'] ?? false) ||
-                isset($result['waha_session']['name']) ||
-                isset($result['waha_session']['session']);
-
-            if ($isSuccess) {
-                // Session already saved to database by createDefaultSessionWithN8nIntegration
-                // Just get the local session for response
-                $localSession = WahaSession::where('organization_id', $organization->id)
-                    ->where('session_name', $result['session_name'])
-                    ->first();
-
-                $this->logApiAction('create_waha_session_auto', [
-                    'session_name' => $result['session_name'],
-                    'organization_id' => $organization->id,
-                    'local_session_id' => $localSession->id ?? 'N/A',
-                    'auto_created' => true,
-                    'n8n_workflow_created' => $result['n8n_workflow']['success'] ?? false,
-                    'n8n_workflow_id' => $result['n8n_workflow']['data']['id'] ?? null,
-                    'webhook_id' => $result['webhook_id'],
-                    'webhook_url' => $result['webhook_url'],
-                ]);
-
-                return $this->successResponse('Session created successfully with automatic defaults and N8N workflow', [
-                    'local_session_id' => $localSession->id ?? 'N/A',
-                    'organization_id' => $organization->id,
-                    'session_name' => $result['session_name'],
-                    'auto_created' => true,
-                    'n8n_workflow' => $result['n8n_workflow'],
-                    'webhook_id' => $result['webhook_id'],
-                    'webhook_url' => $result['webhook_url'],
-                    'status' => $localSession->status ?? 'unknown',
-                    'third_party_response' => $result['waha_session'],
-                ]);
-            }
-
-            return $this->errorResponse('Failed to create session in 3rd party WAHA', 500);
-        } catch (Exception $e) {
-            Log::error('Failed to create WAHA session with defaults', [
-                'organization_id' => $organization->id,
-                'error' => $e->getMessage()
-            ]);
-            return $this->errorResponse('Failed to create session with defaults', 500);
-        }
-    }
-
-    /**
-     * Add organization metadata to session configuration
-     *
-     * @param array $validatedData Session data
-     * @param object $organization Organization object
-     * @return void
-     */
-    private function addOrganizationMetadata(array &$validatedData, $organization): void
-    {
-        // Ensure config structure exists
-        if (!isset($validatedData['config'])) {
-            $validatedData['config'] = [];
-        }
-        if (!isset($validatedData['config']['metadata'])) {
-            $validatedData['config']['metadata'] = [];
-        }
-
-        // Get user name instead of ID
-        $user = Auth::user();
-        $createdByName = $user ? ($user->first_name . ' ' . $user->last_name) : 'System';
-
-        // Add organization information to metadata (avoid duplication)
-        $validatedData['config']['metadata']['organization.id'] = $organization->id;
-        $validatedData['config']['metadata']['organization.name'] = $organization->name;
-        $validatedData['config']['metadata']['organization.code'] = $organization->org_code;
-        $validatedData['config']['metadata']['created_by'] = $createdByName;
-        $validatedData['config']['metadata']['created_at'] = now()->toISOString();
-
-        // Flatten nested metadata objects to string key-value pairs for WAHA API compatibility
-        $validatedData['config']['metadata'] = $this->flattenMetadata($validatedData['config']['metadata']);
-    }
-
-
-    /**
-     * Generate a unique session name using UUID
-     *
-     * @param string $organizationId The organization ID
-     * @param string|null $customName Optional custom name prefix
-     * @return string Generated session name with UUID
-     */
-    private function generateUuidSessionName(string $organizationId, ?string $customName = null): string
-    {
-        $sessionUuid = \Illuminate\Support\Str::uuid()->toString();
-        $orgIdPrefix = substr($organizationId, 0, 7); // Get first 7 characters of organization ID
-
-        if ($customName) {
-            return "{$customName}-{$orgIdPrefix}-{$sessionUuid}";
-        }
-
-        return "session-{$orgIdPrefix}-{$sessionUuid}";
-    }
 
     /**
      * Get chat list for a session
@@ -1512,184 +1184,6 @@ class WahaController extends BaseApiController
         }
     }
 
-    /**
-     * Extract message data from WAHA webhook payload
-     */
-    private function extractWahaMessageData(array $payload): ?array
-    {
-        try {
-
-            // Standard WAHA webhook format (from documentation)
-            if (isset($payload['event']) && in_array($payload['event'], ['message', 'message.any']) && isset($payload['payload'])) {
-                $message = $payload['payload'];
-
-                return [
-                    'message_id' => $message['id'] ?? \Illuminate\Support\Str::uuid(),
-                    'from' => $message['from'] ?? null,
-                    'to' => $message['to'] ?? null,
-                    'text' => $message['body'] ?? null,
-                    'message_type' => $this->determineMessageType($message),
-                    'timestamp' => $message['timestamp'] ?? now()->timestamp,
-                    'session_name' => $payload['session'] ?? null,
-                    'customer_phone' => $this->extractPhoneNumber($message['from'] ?? null),
-                    'customer_name' => $this->extractCustomerName($message),
-                    'raw_data' => $payload,
-                    'waha_message_id' => $message['id'] ?? null,
-                    'waha_session' => $payload['session'] ?? null,
-                    'waha_event_id' => $payload['id'] ?? null,
-                    'from_me' => $message['fromMe'] ?? false,
-                    'source' => $message['source'] ?? 'unknown',
-                    'participant' => $message['participant'] ?? null,
-                    'has_media' => $message['hasMedia'] ?? false,
-                    'media' => $message['media'] ?? null,
-                    'ack' => $message['ack'] ?? -1,
-                    'ack_name' => $message['ackName'] ?? null,
-                    'author' => $message['author'] ?? null,
-                    'location' => $message['location'] ?? null,
-                    'v_cards' => $message['vCards'] ?? [],
-                    'reply_to' => $message['replyTo'] ?? null,
-                    'me' => $payload['me'] ?? null,
-                    'environment' => $payload['environment'] ?? null,
-                ];
-            }
-
-            // Legacy WAHA format (backward compatibility)
-            if (isset($payload['message']) && isset($payload['session'])) {
-                $message = $payload['message'];
-
-                return [
-                    'message_id' => $message['id'] ?? \Illuminate\Support\Str::uuid(),
-                    'from' => $message['from'] ?? null,
-                    'to' => $message['to'] ?? null,
-                    'text' => $message['text']['body'] ?? $message['body'] ?? null,
-                    'message_type' => $message['type'] ?? 'text',
-                    'timestamp' => $message['timestamp'] ?? now()->timestamp,
-                    'session_name' => $payload['session'] ?? null,
-                    'customer_phone' => $this->extractPhoneNumber($message['from'] ?? null),
-                    'customer_name' => $message['contact']['name'] ?? null,
-                    'raw_data' => $payload,
-                    'waha_message_id' => $message['id'] ?? null,
-                    'waha_session' => $payload['session'] ?? null,
-                ];
-            }
-
-            return null;
-
-        } catch (Exception $e) {
-            Log::error('Failed to extract WAHA message data', [
-                'error' => $e->getMessage(),
-                'payload' => $payload
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Determine message type from WAHA message data
-     */
-    private function determineMessageType(array $message): string
-    {
-        if (isset($message['hasMedia']) && $message['hasMedia']) {
-            if (isset($message['media']['mimetype'])) {
-                $mimetype = $message['media']['mimetype'];
-                if (str_starts_with($mimetype, 'image/')) return 'image';
-                if (str_starts_with($mimetype, 'video/')) return 'video';
-                if (str_starts_with($mimetype, 'audio/')) return 'audio';
-                if (str_starts_with($mimetype, 'application/')) return 'document';
-            }
-            return 'media';
-        }
-
-        if (isset($message['location'])) return 'location';
-        if (isset($message['vCards']) && !empty($message['vCards'])) return 'contact';
-        if (isset($message['body']) && empty($message['body'])) return 'system';
-
-        return 'text';
-    }
-
-    /**
-     * Extract phone number from WAHA format
-     */
-    private function extractPhoneNumber(?string $from): ?string
-    {
-        if (!$from) return null;
-
-        // Remove @c.us suffix if present
-        return str_replace('@c.us', '', $from);
-    }
-
-    /**
-     * Extract customer name from message data
-     */
-    private function extractCustomerName(array $message): ?string
-    {
-
-        // Try different possible locations for customer name
-        if (isset($message['contact']['name'])) {
-            return $message['contact']['name'];
-        }
-
-        if (isset($message['author'])) {
-            return $message['author'];
-        }
-
-        if (isset($message['pushName'])) {
-            return $message['pushName'];
-        }
-
-        // Check in _data.notifyName (real WAHA data)
-        if (isset($message['_data']['notifyName'])) {
-            return $message['_data']['notifyName'];
-        }
-
-        // Check in media._data.notifyName (real WAHA data structure)
-        if (isset($message['media']['_data']['notifyName'])) {
-            return $message['media']['_data']['notifyName'];
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract organization ID from session name
-     */
-    private function extractOrganizationFromSession(?string $sessionName): ?string
-    {
-        if (!$sessionName) {
-            return null;
-        }
-
-        try {
-            // Find organization by session name
-            $wahaSession = \App\Models\WahaSession::where('session_name', $sessionName)->first();
-
-            if ($wahaSession) {
-                return $wahaSession->organization_id;
-            }
-
-            // Try to extract from session name pattern (e.g., "session_orgId_kbId")
-            if (str_starts_with($sessionName, 'session_')) {
-                $parts = explode('_', $sessionName);
-                if (count($parts) >= 2) {
-                    $potentialOrgId = $parts[1];
-                    // Verify if this is a valid organization ID
-                    $organization = \App\Models\Organization::find($potentialOrgId);
-                    if ($organization) {
-                        return $organization->id;
-                    }
-                }
-            }
-
-            return null;
-
-        } catch (Exception $e) {
-            Log::error('Failed to extract organization from session', [
-                'session_name' => $sessionName,
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
-    }
 
     /**
      * Get webhook configuration for a session
@@ -1703,19 +1197,11 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('get webhook config');
             }
 
-            // Verify session belongs to current organization
-            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
-            if (!$localSession) {
-                return $this->handleResourceNotFound('WAHA session', $sessionId);
-            }
+            $result = $this->wahaWebhookConfigService->getWebhookConfig($sessionId, $organization->id);
 
-            $sessionName = $localSession->session_name;
-            $result = $this->wahaService->getWebhookConfig($sessionName);
-
-            return $this->successResponse(
-                $result['message'] ?? 'Webhook configuration retrieved successfully',
-                $result['data'] ?? []
-            );
+            return $result['success']
+                ? $this->successResponse($result['message'], $result['data'])
+                : $this->errorResponse($result['message'], $result['code'] ?? 500);
 
         } catch (Exception $e) {
             Log::error('Failed to get webhook config', [
@@ -1738,31 +1224,19 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('configure webhook');
             }
 
-            // Verify session belongs to current organization
-            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
-            if (!$localSession) {
-                return $this->handleResourceNotFound('WAHA session', $sessionId);
-            }
-
             // Validate request
-            $request->validate([
+            $webhookData = $request->validate([
                 'webhook_url' => 'required|url',
                 'events' => 'array',
                 'events.*' => 'string|in:message,session.status,message.status',
                 'webhook_by_events' => 'boolean',
             ]);
 
-            $sessionName = $localSession->session_name;
-            $webhookUrl = $request->input('webhook_url');
-            $events = $request->input('events', ['message', 'session.status']);
-            $options = $request->only(['webhook_by_events']);
+            $result = $this->wahaWebhookConfigService->configureWebhook($sessionId, $webhookData, $organization->id);
 
-            $result = $this->wahaService->configureWebhook($sessionName, $webhookUrl, $events, $options);
-
-            return $this->successResponse(
-                $result['message'] ?? 'Webhook configured successfully',
-                $result['data'] ?? []
-            );
+            return $result['success']
+                ? $this->successResponse($result['message'], $result['data'])
+                : $this->errorResponse($result['message'], $result['code'] ?? 500);
 
         } catch (Exception $e) {
             Log::error('Failed to configure webhook', [
@@ -1785,31 +1259,19 @@ class WahaController extends BaseApiController
                 return $this->handleUnauthorizedAccess('update webhook config');
             }
 
-            // Verify session belongs to current organization
-            $localSession = $this->wahaSyncService->verifySessionAccessById($organization->id, $sessionId);
-            if (!$localSession) {
-                return $this->handleResourceNotFound('WAHA session', $sessionId);
-            }
-
             // Validate request
-            $request->validate([
+            $webhookData = $request->validate([
                 'webhook_url' => 'sometimes|url',
                 'events' => 'sometimes|array',
                 'events.*' => 'string|in:message,session.status,message.status',
                 'webhook_by_events' => 'sometimes|boolean',
             ]);
 
-            $sessionName = $localSession->session_name;
-            $webhookUrl = $request->input('webhook_url');
-            $events = $request->input('events', ['message', 'session.status']);
-            $options = $request->only(['webhook_by_events']);
+            $result = $this->wahaWebhookConfigService->updateWebhookConfig($sessionId, $webhookData, $organization->id);
 
-            $result = $this->wahaService->configureWebhook($sessionName, $webhookUrl, $events, $options);
-
-            return $this->successResponse(
-                $result['message'] ?? 'Webhook configuration updated successfully',
-                $result['data'] ?? []
-            );
+            return $result['success']
+                ? $this->successResponse($result['message'], $result['data'])
+                : $this->errorResponse($result['message'], $result['code'] ?? 500);
 
         } catch (Exception $e) {
             Log::error('Failed to update webhook config', [
@@ -1820,579 +1282,4 @@ class WahaController extends BaseApiController
         }
     }
 
-    /**
-     * Handle different types of WAHA webhook events
-     */
-    private function handleWahaWebhookEvent(array $payload, string $organizationId): array
-    {
-        $eventType = $payload['event'] ?? 'unknown';
-
-        try {
-            switch ($eventType) {
-                case 'message':
-                case 'message.any':
-                    return $this->handleMessageEvent($payload, $organizationId);
-
-                case 'message.reaction':
-                    return $this->handleMessageReactionEvent($payload, $organizationId);
-
-                case 'message.ack':
-                    return $this->handleMessageAckEvent($payload, $organizationId);
-
-                case 'message.revoked':
-                    return $this->handleMessageRevokedEvent($payload, $organizationId);
-
-                case 'message.edited':
-                    return $this->handleMessageEditedEvent($payload, $organizationId);
-
-                case 'group.v2.join':
-                case 'group.v2.leave':
-                case 'group.v2.update':
-                case 'group.v2.participants':
-                    return $this->handleGroupEvent($payload, $organizationId);
-
-                case 'chat.archive':
-                    return $this->handleChatArchiveEvent($payload, $organizationId);
-
-                case 'presence.update':
-                    return $this->handlePresenceUpdateEvent($payload, $organizationId);
-
-                case 'poll.vote':
-                    return $this->handlePollVoteEvent($payload, $organizationId);
-
-                case 'call.received':
-                case 'call.accepted':
-                case 'call.rejected':
-                    return $this->handleCallEvent($payload, $organizationId);
-
-                default:
-                    Log::info('Unhandled WAHA webhook event type', [
-                        'event' => $eventType,
-                        'organization_id' => $organizationId
-                    ]);
-                    return [
-                        'success' => true,
-                        'message' => 'Event type not handled but acknowledged'
-                    ];
-            }
-        } catch (Exception $e) {
-            Log::error('Failed to handle WAHA webhook event', [
-                'event' => $eventType,
-                'organization_id' => $organizationId,
-                'error' => $e->getMessage()
-            ]);
-            return [
-                'success' => false,
-                'message' => 'Failed to handle webhook event: ' . $e->getMessage(),
-                'code' => 500
-            ];
-        }
-    }
-
-    /**
-     * Handle message events
-     */
-    private function handleMessageEvent(array $payload, string $organizationId): array
-    {
-        // Extract message data from WAHA webhook format
-        $messageData = $this->extractWahaMessageData($payload);
-
-        if (!$messageData) {
-            return [
-                'success' => false,
-                'message' => 'Invalid message format',
-                'code' => 400
-            ];
-        }
-
-        // Add organization_id to message data
-        $messageData['organization_id'] = $organizationId;
-
-        // Check if this is an outgoing message (from our system)
-        $isOutgoing = $messageData['from_me'] ?? false;
-
-        if ($isOutgoing) {
-            // Handle outgoing message (from bot/agent)
-            Log::info('Outgoing message detected', [
-                'message_id' => $messageData['message_id'],
-                'to' => $messageData['to'],
-                'text' => $messageData['text'],
-                'organization_id' => $organizationId
-            ]);
-
-            // Save outgoing message to database
-            $this->saveOutgoingMessage($messageData, $organizationId);
-
-            return [
-                'success' => true,
-                'message' => 'Outgoing message processed',
-                'data' => [
-                    'message_id' => $messageData['message_id'] ?? null,
-                    'to' => $messageData['to'] ?? null,
-                    'direction' => 'outgoing'
-                ]
-            ];
-        } else {
-            // Handle incoming message (from customer)
-            Log::info('Incoming message detected', [
-                'message_id' => $messageData['message_id'],
-                'from' => $messageData['from'],
-                'text' => $messageData['text'],
-                'organization_id' => $organizationId
-            ]);
-
-            // Check if this webhook has already been processed to prevent duplicate events
-            $webhookKey = "whatsapp_waha_processed:{$organizationId}:{$messageData['message_id']}";
-
-            if (\Illuminate\Support\Facades\Redis::exists($webhookKey)) {
-                Log::warning('WhatsApp WAHA webhook already processed, skipping duplicate', [
-                    'organization_id' => $organizationId,
-                    'message_id' => $messageData['message_id'] ?? 'unknown',
-                    'from' => $messageData['from'] ?? 'unknown',
-                    'webhook_key' => $webhookKey,
-                ]);
-
-                return [
-                    'success' => false,
-                    'message' => 'Webhook already processed',
-                    'data' => [
-                        'message_id' => $messageData['message_id'] ?? null,
-                        'from' => $messageData['from'] ?? null,
-                        'status' => 'duplicate'
-                    ]
-                ];
-            }
-
-            // Mark webhook as processed (expire in 1 hour)
-            \Illuminate\Support\Facades\Redis::setex($webhookKey, 3600, 'processed');
-
-            // Fire event for asynchronous processing
-            event(new \App\Events\WhatsAppMessageReceived($messageData, $organizationId));
-
-            return [
-                'success' => true,
-                'message' => 'Incoming message event processed',
-                'data' => [
-                    'message_id' => $messageData['message_id'] ?? null,
-                    'from' => $messageData['from'] ?? null,
-                    'direction' => 'incoming'
-                ]
-            ];
-        }
-    }
-
-    /**
-     * Save outgoing message to database
-     *
-     * This method handles saving outgoing messages from WAHA webhooks.
-     * It includes duplicate detection and proper sender identification.
-     */
-    private function saveOutgoingMessage(array $messageData, string $organizationId): void
-    {
-        try {
-            // Extract and validate message data
-            $messageInfo = $this->extractMessageInfo($messageData);
-            if (!$messageInfo) {
-                return;
-            }
-
-            // Check for duplicates using database lock
-            if ($this->isDuplicateMessage($messageInfo, $organizationId)) {
-                return;
-            }
-
-            // Find customer and session
-            $customer = $this->findCustomerByPhone($messageInfo['phone'], $organizationId);
-            if (!$customer) {
-                return;
-            }
-
-            $session = $this->findActiveSession($customer->id, $organizationId);
-            if (!$session) {
-                return;
-            }
-
-            // Determine sender information
-            $senderInfo = $this->determineSenderInfo($session, $organizationId);
-
-            // Create the message
-            $message = $this->createOutgoingMessage($messageData, $messageInfo, $session, $senderInfo, $organizationId);
-
-            Log::info('Outgoing message saved successfully', [
-                'message_id' => $message->id,
-                'session_id' => $session->id,
-                'sender_type' => $senderInfo['type'],
-                'sender_name' => $senderInfo['name'],
-                'content' => $message->message_text
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to save outgoing message', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'message_data' => $messageData
-            ]);
-        }
-    }
-
-    /**
-     * Extract and validate message information from WAHA data
-     */
-    private function extractMessageInfo(array $messageData): ?array
-    {
-        $messageText = $messageData['text'] ?? '';
-        $customerPhone = $messageData['to'] ?? '';
-        $timestamp = $messageData['timestamp'] ?? null;
-
-        if (empty($messageText) || empty($customerPhone)) {
-            Log::warning('Cannot save outgoing message: missing required data', [
-                'has_text' => !empty($messageText),
-                'has_phone' => !empty($customerPhone),
-                'message_data' => $messageData
-            ]);
-            return null;
-        }
-
-        return [
-            'text' => $messageText,
-            'phone' => $customerPhone,
-            'timestamp' => $timestamp,
-            'waha_message_id' => $messageData['message_id'] ?? null,
-            'message_type' => $messageData['message_type'] ?? 'text'
-        ];
-    }
-
-    /**
-     * Check if message is duplicate using database lock
-     */
-    private function isDuplicateMessage(array $messageInfo, string $organizationId): bool
-    {
-        return \DB::transaction(function() use ($messageInfo, $organizationId) {
-            // Check by WAHA message ID first (most reliable)
-            if ($messageInfo['waha_message_id']) {
-                $existingByWahaId = \App\Models\Message::where('metadata->waha_message_id', $messageInfo['waha_message_id'])
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($existingByWahaId) {
-                    Log::info('Outgoing message already exists (duplicate WAHA ID)', [
-                        'waha_message_id' => $messageInfo['waha_message_id'],
-                        'existing_message_id' => $existingByWahaId->id
-                    ]);
-                    return true;
-                }
-            }
-
-            // Check by content and phone within last 30 seconds
-            $existingByContent = \App\Models\Message::where('message_text', $messageInfo['text'])
-                ->where('metadata->whatsapp->to', $messageInfo['phone'])
-                ->where('created_at', '>=', now()->subSeconds(30))
-                ->where('sender_type', 'bot')
-                ->lockForUpdate()
-                ->first();
-
-            if ($existingByContent) {
-                Log::info('Outgoing message already exists (duplicate content)', [
-                    'message_text' => $messageInfo['text'],
-                    'customer_phone' => $messageInfo['phone'],
-                    'existing_message_id' => $existingByContent->id,
-                    'existing_created_at' => $existingByContent->created_at
-                ]);
-                return true;
-            }
-
-            return false; // No duplicate found
-        });
-    }
-
-    /**
-     * Find customer by phone number
-     */
-    private function findCustomerByPhone(string $phone, string $organizationId): ?\App\Models\Customer
-    {
-        $customer = \App\Models\Customer::where('organization_id', $organizationId)
-            ->where(function($query) use ($phone) {
-                $query->where('phone', $phone)
-                      ->orWhere('phone', str_replace('@c.us', '', $phone))
-                      ->orWhere('phone', $phone . '@c.us');
-            })
-            ->first();
-
-        if (!$customer) {
-            Log::warning('Cannot save outgoing message: customer not found', [
-                'phone' => $phone,
-                'organization_id' => $organizationId
-            ]);
-        }
-
-        return $customer;
-    }
-
-    /**
-     * Find active session for customer
-     */
-    private function findActiveSession(string $customerId, string $organizationId): ?\App\Models\ChatSession
-    {
-        $session = \App\Models\ChatSession::where('organization_id', $organizationId)
-            ->where('customer_id', $customerId)
-            ->where('is_active', true)
-            ->first();
-
-        if (!$session) {
-            Log::warning('Cannot save outgoing message: no active session found', [
-                'customer_id' => $customerId,
-                'organization_id' => $organizationId
-            ]);
-        }
-
-        return $session;
-    }
-
-    /**
-     * Determine sender information based on session and organization
-     */
-    private function determineSenderInfo(\App\Models\ChatSession $session, string $organizationId): array
-    {
-        // If session has assigned agent, use agent as sender
-        if ($session->agent_id) {
-            return [
-                'type' => 'agent',
-                'id' => $session->agent_id,
-                'name' => $session->agent->display_name ?? 'Agent'
-            ];
-        }
-
-        // Otherwise, use bot personality
-        $botPersonality = \App\Models\BotPersonality::where('organization_id', $organizationId)
-            ->where('status', 'active')
-            ->where('is_default', true)
-            ->first();
-
-        if ($botPersonality) {
-            return [
-                'type' => 'bot',
-                'id' => $botPersonality->id,
-                'name' => $botPersonality->name
-            ];
-        }
-
-        // Fallback to system bot
-        return [
-            'type' => 'bot',
-            'id' => null,
-            'name' => 'System Bot'
-        ];
-    }
-
-    /**
-     * Create outgoing message record
-     */
-    private function createOutgoingMessage(
-        array $messageData,
-        array $messageInfo,
-        \App\Models\ChatSession $session,
-        array $senderInfo,
-        string $organizationId
-    ): \App\Models\Message {
-        return \App\Models\Message::create([
-            'organization_id' => $organizationId,
-            'session_id' => $session->id,
-            'waha_session_id' => $messageData['waha_session'] ?? null,
-            'sender_type' => $senderInfo['type'],
-            'sender_id' => $senderInfo['id'],
-            'sender_name' => $senderInfo['name'],
-            'message_type' => $messageInfo['message_type'],
-            'message_text' => $messageInfo['text'],
-            'metadata' => [
-                'whatsapp_message_id' => $messageInfo['waha_message_id'],
-                'phone_number' => $messageInfo['phone'],
-                'timestamp' => $messageInfo['timestamp'] ?? now()->timestamp,
-                'raw_data' => $messageData['raw_data'] ?? null,
-                'direction' => 'outgoing',
-                'from_me' => true,
-                'waha_message_id' => $messageInfo['waha_message_id']
-            ],
-            'is_read' => true, // Outgoing messages are considered read
-            'read_at' => now(),
-            'delivered_at' => now(),
-            'created_at' => now()->addMilliseconds(rand(100, 500))
-        ]);
-    }
-
-    /**
-     * Handle message reaction events
-     */
-    private function handleMessageReactionEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Message reaction event received', [
-            'organization_id' => $organizationId,
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement message reaction handling
-        return [
-            'success' => true,
-            'message' => 'Message reaction event processed'
-        ];
-    }
-
-    /**
-     * Handle message acknowledgment events
-     */
-    private function handleMessageAckEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Message ACK event received', [
-            'organization_id' => $organizationId,
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement message ACK handling
-        return [
-            'success' => true,
-            'message' => 'Message ACK event processed'
-        ];
-    }
-
-    /**
-     * Handle message revoked events
-     */
-    private function handleMessageRevokedEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Message revoked event received', [
-            'organization_id' => $organizationId,
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement message revocation handling
-        return [
-            'success' => true,
-            'message' => 'Message revoked event processed'
-        ];
-    }
-
-    /**
-     * Handle message edited events
-     */
-    private function handleMessageEditedEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Message edited event received', [
-            'organization_id' => $organizationId,
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement message edit handling
-        return [
-            'success' => true,
-            'message' => 'Message edited event processed'
-        ];
-    }
-
-    /**
-     * Handle group events
-     */
-    private function handleGroupEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Group event received', [
-            'organization_id' => $organizationId,
-            'event' => $payload['event'] ?? 'unknown',
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement group event handling
-        return [
-            'success' => true,
-            'message' => 'Group event processed'
-        ];
-    }
-
-    /**
-     * Handle chat archive events
-     */
-    private function handleChatArchiveEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Chat archive event received', [
-            'organization_id' => $organizationId,
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement chat archive handling
-        return [
-            'success' => true,
-            'message' => 'Chat archive event processed'
-        ];
-    }
-
-    /**
-     * Handle presence update events
-     */
-    private function handlePresenceUpdateEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Presence update event received', [
-            'organization_id' => $organizationId,
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement presence update handling
-        return [
-            'success' => true,
-            'message' => 'Presence update event processed'
-        ];
-    }
-
-    /**
-     * Handle poll vote events
-     */
-    private function handlePollVoteEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Poll vote event received', [
-            'organization_id' => $organizationId,
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement poll vote handling
-        return [
-            'success' => true,
-            'message' => 'Poll vote event processed'
-        ];
-    }
-
-    /**
-     * Handle call events
-     */
-    private function handleCallEvent(array $payload, string $organizationId): array
-    {
-        Log::info('Call event received', [
-            'organization_id' => $organizationId,
-            'event' => $payload['event'] ?? 'unknown',
-            'payload' => $payload
-        ]);
-
-        // TODO: Implement call event handling
-        return [
-            'success' => true,
-            'message' => 'Call event processed'
-        ];
-    }
-
-    /**
-     * Validate WAHA webhook signature
-     */
-    private function validateWahaWebhookSignature(Request $request): bool
-    {
-        // Check if webhook signature validation is enabled
-        if (!config('waha.webhook.validate_signature', false)) {
-            return true; // Skip validation if not configured
-        }
-
-        $signature = $request->header('X-WAHA-Signature');
-        $payload = $request->getContent();
-        $secret = config('waha.webhook.secret');
-
-        if (!$signature || !$secret) {
-            return false;
-        }
-
-        $expectedSignature = hash_hmac('sha256', $payload, $secret);
-        return hash_equals($expectedSignature, $signature);
-    }
 }

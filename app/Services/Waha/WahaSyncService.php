@@ -209,10 +209,21 @@ class WahaSyncService
             'mapped_health' => $this->mapHealthStatus($wahaData)
         ]);
 
+        // Get valid channel config for this organization
+        $channelConfig = \App\Models\ChannelConfig::where('organization_id', $organizationId)->first();
+        if (!$channelConfig) {
+            // If no specific channel config found, get the first available one
+            $channelConfig = \App\Models\ChannelConfig::first();
+        }
+
+        if (!$channelConfig) {
+            throw new Exception('No channel config found for organization: ' . $organizationId);
+        }
+
         $sessionData = [
             'organization_id' => $organizationId,
             'n8n_workflow_id' => $n8nWorkflowId,
-            'channel_config_id' => '00000000-0000-0000-0000-000000000000', // Default channel config
+            'channel_config_id' => $channelConfig->id,
             'session_name' => $sessionName,
             'phone_number' => $this->extractPhoneNumber($wahaData),
             'instance_id' => $sessionName, // Use session name as instance ID
@@ -438,8 +449,8 @@ class WahaSyncService
         string $sortOrder = 'desc'
     ): array {
         try {
-            // First sync sessions to ensure we have latest data
-            $this->syncSessionsForOrganization($organizationId);
+            // Only read from database - no server sync
+            // $this->syncSessionsForOrganization($organizationId); // REMOVED
 
             // Build query for local sessions
             $query = WahaSession::where('organization_id', $organizationId)
@@ -570,6 +581,32 @@ class WahaSyncService
         $wahaData = $this->wahaService->getSessionInfo($sessionName);
 
         return $this->mergeSessionData($localSession, $wahaData);
+    }
+
+    /**
+     * Get session for organization from database only (no server sync)
+     */
+    public function getSessionForOrganizationFromDatabase(string $organizationId, string $sessionName): ?array
+    {
+        try {
+            $localSession = WahaSession::where('session_name', $sessionName)
+                ->where('organization_id', $organizationId)
+                ->with(['organization', 'channelConfig'])
+                ->first();
+
+            if (!$localSession) {
+                return null;
+            }
+
+            return $this->formatSessionForDisplay($localSession);
+        } catch (\Exception $e) {
+            Log::error('Error getting session from database only', [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 
     /**

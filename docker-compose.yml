@@ -10,6 +10,7 @@ services:
     ports:
       - "9000:80"
       - "8443:443"
+      - "8081:8081"
     volumes:
       # Source code synchronization (development friendly)
       - .:/app
@@ -31,11 +32,11 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health", "||", "exit", "1"]
+      test: ["CMD", "sh", "-c", "curl -f http://localhost/health && netstat -tuln | grep :8081"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 90s
 
   # PostgreSQL Database
   postgres:

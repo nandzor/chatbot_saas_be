@@ -56,21 +56,22 @@ class WhatsAppMessageProcessor
             // 3. Save customer message to database
             $customerMessage = $this->saveCustomerMessage($messageData, $session);
 
-            // // 4. Process with bot personality
-            // Log::info('About to process with bot', [
-            //     'session_id' => $session->id,
-            //     'organization_id' => $session->organization_id
-            // ]);
+            // 4. Process with bot personality using conversation template
+            Log::info('About to process with bot using conversation template', [
+                'session_id' => $session->id,
+                'organization_id' => $session->organization_id,
+                'template_applied' => $session->metadata['template_applied'] ?? false
+            ]);
 
-            // $botResponse = $this->processWithBot($session, $messageData);
+            $botResponse = $this->processWithBot($session, $messageData);
 
-            // Log::info('Bot processing completed', [
-            //     'session_id' => $session->id,
-            //     'bot_response' => $botResponse
-            // ]);
+            Log::info('Bot processing completed', [
+                'session_id' => $session->id,
+                'bot_response' => $botResponse
+            ]);
 
             // 5. Check for escalation triggers
-            // $escalationResult = $this->checkAndHandleEscalation($session, $messageData, $botResponse);
+            $escalationResult = $this->checkAndHandleEscalation($session, $messageData, $botResponse);
 
             return [
                 'session_id' => $session->id,
@@ -78,7 +79,8 @@ class WhatsAppMessageProcessor
                 'response_sent' => $botResponse['sent'] ?? false,
                 'bot_response' => $botResponse['content'] ?? null,
                 'escalated' => $escalationResult['escalated'] ?? false,
-                // 'escalation_result' => $escalationResult
+                'escalation_result' => $escalationResult,
+                'conversation_template_applied' => $session->metadata['template_applied'] ?? false
             ];
 
         } catch (\Exception $e) {
@@ -242,7 +244,7 @@ class WhatsAppMessageProcessor
                     'message_text' => $messageData['text'] ?? '',
                     'message_type' => $messageData['message_type'] ?? 'text',
                     'media_url' => is_string($messageData['media'] ?? null) ? $messageData['media'] : null,
-                    'media_type' => $messageData['has_media'] ? 'image' : null,
+                    'media_type' => ($messageData['has_media'] ?? false) ? 'image' : null,
                     'media_size' => null,
                     'media_metadata' => $this->ensureArray($messageData['media'] ?? null),
                     'thumbnail_url' => null,
@@ -411,7 +413,9 @@ class WhatsAppMessageProcessor
                 'created_via' => 'automatic',
                 'bot_personality_id' => $botPersonality?->id,
                 'channel_type' => 'whatsapp',
-                'session_name' => $messageData['session_name'] ?? null
+                'session_name' => $messageData['session_name'] ?? null,
+                'conversation_template' => $this->getConversationTemplate($botPersonality),
+                'template_applied' => true
             ]
         ]);
 
@@ -453,12 +457,71 @@ class WhatsAppMessageProcessor
                 return ['sent' => false, 'content' => null];
             }
 
-            // Generate AI response
-            $response = $this->botPersonalityService->generateAiResponse(
-                $botPersonality->id,
-                $messageData['text'] ?? '',
-                ['session_id' => $session->id, 'customer_id' => $session->customer_id]
-            );
+            // Get conversation template from session metadata
+            $conversationTemplate = $session->metadata['conversation_template'] ?? [];
+            $isFirstMessage = $session->customer_messages <= 1;
+
+            Log::info('Processing bot response with conversation template', [
+                'session_id' => $session->id,
+                'bot_personality_id' => $botPersonality->id,
+                'is_first_message' => $isFirstMessage,
+                'template_available' => !empty($conversationTemplate),
+                'greeting_message' => $conversationTemplate['greeting_message'] ?? null
+            ]);
+
+            // Use greeting message for first customer message
+            if ($isFirstMessage && !empty($conversationTemplate['greeting_message'])) {
+                Log::info('Using greeting message from conversation template', [
+                    'session_id' => $session->id,
+                    'greeting_message' => $conversationTemplate['greeting_message']
+                ]);
+
+                $response = [
+                    'success' => true,
+                    'data' => [
+                        'content' => $conversationTemplate['greeting_message'],
+                        'ai_model_used' => 'conversation_template',
+                        'confidence' => 1.0,
+                        'processing_time_ms' => 0,
+                        'template_used' => 'greeting_message'
+                    ]
+                ];
+            } else {
+                // Check if we can use response template based on intent
+                $intent = $this->detectIntent($messageData['text'] ?? '');
+                $responseTemplate = $conversationTemplate['response_templates'][$intent] ?? null;
+
+                if ($responseTemplate) {
+                    Log::info('Using response template for intent', [
+                        'session_id' => $session->id,
+                        'intent' => $intent,
+                        'template' => $responseTemplate
+                    ]);
+
+                    $response = [
+                        'success' => true,
+                        'data' => [
+                            'content' => $responseTemplate,
+                            'ai_model_used' => 'conversation_template',
+                            'confidence' => 0.9,
+                            'processing_time_ms' => 0,
+                            'template_used' => 'response_template',
+                            'intent' => $intent
+                        ]
+                    ];
+                } else {
+                    // Generate AI response using bot personality
+                    $response = $this->botPersonalityService->generateAiResponse(
+                        $botPersonality->id,
+                        $messageData['text'] ?? '',
+                        [
+                            'session_id' => $session->id,
+                            'customer_id' => $session->customer_id,
+                            'conversation_template' => $conversationTemplate
+                        ]
+                    );
+                }
+            }
 
             Log::info('Bot response generated successfully', [
                 'response' => $response,
@@ -486,7 +549,10 @@ class WhatsAppMessageProcessor
                         'bot_personality_id' => $botPersonality->id,
                         'ai_model' => $response['data']['ai_model_used'] ?? null,
                         'confidence' => $response['data']['confidence'] ?? null,
-                        'processing_time' => $response['data']['processing_time_ms'] ?? null
+                        'processing_time' => $response['data']['processing_time_ms'] ?? null,
+                        'template_used' => $response['data']['template_used'] ?? null,
+                        'intent' => $response['data']['intent'] ?? null,
+                        'conversation_template_applied' => true
                     ],
                     'is_read' => false,
                     'read_at' => null,
@@ -599,6 +665,36 @@ class WhatsAppMessageProcessor
         ]);
 
         return $botPersonality;
+    }
+
+    /**
+     * Get conversation template from bot personality
+     */
+    private function getConversationTemplate(?BotPersonality $botPersonality): array
+    {
+        if (!$botPersonality) {
+            return [
+                'response_templates' => [],
+                'conversation_starters' => [],
+                'greeting_message' => null,
+                'fallback_message' => null,
+                'error_message' => null
+            ];
+        }
+
+        return [
+            'response_templates' => $botPersonality->response_templates ?? [],
+            'conversation_starters' => $botPersonality->conversation_starters ?? [],
+            'greeting_message' => $botPersonality->greeting_message,
+            'fallback_message' => $botPersonality->fallback_message,
+            'error_message' => $botPersonality->error_message,
+            'personality_traits' => $botPersonality->personality_traits ?? [],
+            'custom_vocabulary' => $botPersonality->custom_vocabulary ?? [],
+            'language' => $botPersonality->language ?? 'id',
+            'tone' => $botPersonality->tone ?? 'friendly',
+            'communication_style' => $botPersonality->communication_style ?? 'conversational',
+            'formality_level' => $botPersonality->formality_level ?? 'casual'
+        ];
     }
 
     /**

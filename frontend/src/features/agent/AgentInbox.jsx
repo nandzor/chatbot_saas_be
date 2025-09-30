@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Label, Select, SelectItem, Textarea, Switch, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui';
-import { 
+import {
   MessageSquare,
   Clock,
   User,
@@ -267,12 +267,12 @@ const AgentInbox = () => {
       warning: 'bg-yellow-500',
       danger: 'bg-red-500'
     };
-    
+
     return (
       <div className="flex items-center space-x-2">
         <div className={`w-3 h-3 rounded-full ${colors[slaStatus]} ${slaStatus === 'danger' ? 'animate-pulse' : ''}`}></div>
         <span className={`text-xs ${
-          slaStatus === 'danger' ? 'text-red-600' : 
+          slaStatus === 'danger' ? 'text-red-600' :
           slaStatus === 'warning' ? 'text-yellow-600' : 'text-green-600'
         }`}>
           {waitingTime}m
@@ -303,9 +303,9 @@ const AgentInbox = () => {
       read: false
     };
 
-    setChatSessions(sessions => 
-      sessions.map(session => 
-        session.id === selectedSession.id 
+    setChatSessions(sessions =>
+      sessions.map(session =>
+        session.id === selectedSession.id
           ? { ...session, messages: [...session.messages, newMessage] }
           : session
       )
@@ -324,9 +324,9 @@ const AgentInbox = () => {
   const handleSessionSelect = (session) => {
     setSelectedSession(session);
     // Mark messages as read
-    setChatSessions(sessions => 
-      sessions.map(s => 
-        s.id === session.id 
+    setChatSessions(sessions =>
+      sessions.map(s =>
+        s.id === session.id
           ? { ...s, unreadCount: 0, messages: s.messages.map(msg => ({ ...msg, read: true })) }
           : s
       )
@@ -371,7 +371,7 @@ const AgentInbox = () => {
               {filteredSessions.length}
             </Badge>
           </div>
-          
+
           {/* Search & Filter */}
           <div className="space-y-2">
             <div className="relative">
@@ -383,7 +383,7 @@ const AgentInbox = () => {
                 className="pl-7 h-7 text-xs bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
-            
+
             <Select value={filterStatus} onValueChange={setFilterStatus} className="h-7 text-xs bg-white border-gray-300" placeholder="Filter status">
               <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
@@ -400,8 +400,8 @@ const AgentInbox = () => {
               key={session.id}
               onClick={() => handleSessionSelect(session)}
               className={`p-2.5 border-b border-gray-100 cursor-pointer transition-all duration-200 ${
-                selectedSession?.id === session.id 
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500' 
+                selectedSession?.id === session.id
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500'
                   : 'hover:bg-gray-50 hover:border-l-4 hover:border-l-gray-300'
               }`}
             >
@@ -458,13 +458,13 @@ const AgentInbox = () => {
                   {session.messages[session.messages.length - 1]?.content}
                 </p>
               </div>
-              
+
               {/* Timestamp & Status */}
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">
-                  {new Date(session.lastMessage).toLocaleTimeString('id-ID', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
+                  {new Date(session.lastMessage).toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit'
                   })}
                 </p>
                 <div className="flex items-center space-x-1">
@@ -512,11 +512,11 @@ const AgentInbox = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-1 flex-shrink-0">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setShowInternalNotes(!showInternalNotes)}
                     className={`hover:bg-yellow-50 hover:text-yellow-700 p-2 ${
                       showInternalNotes ? 'bg-yellow-100 text-yellow-700' : ''
@@ -524,7 +524,7 @@ const AgentInbox = () => {
                   >
                     <FileText className="w-3 h-3" />
                   </Button>
-                  
+
                   <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="ghost" size="sm" className="hover:bg-orange-50 hover:text-orange-700">
@@ -532,7 +532,7 @@ const AgentInbox = () => {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-md">
-                      <DialogHeader>
+                      <DialogHeader className="px-6 py-5">
                         <DialogTitle className="flex items-center space-x-2">
                           <ArrowRightLeft className="w-5 h-5 text-orange-600" />
                           <span>Transfer Session</span>
@@ -541,7 +541,7 @@ const AgentInbox = () => {
                           Transfer chat ini ke agent atau departemen lain
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-4">
+                      <div className="px-6 py-4 space-y-4">
                         <div>
                           <Label htmlFor="transferTo" className="text-sm font-medium">Transfer ke</Label>
                           <Select className="mt-1" placeholder="Pilih agent atau departemen">
@@ -553,8 +553,8 @@ const AgentInbox = () => {
                         </div>
                         <div>
                           <Label htmlFor="transferReason" className="text-sm font-medium">Alasan Transfer</Label>
-                          <Textarea 
-                            placeholder="Jelaskan alasan transfer..." 
+                          <Textarea
+                            placeholder="Jelaskan alasan transfer..."
                             rows={3}
                             className="mt-1"
                           />
@@ -578,7 +578,7 @@ const AgentInbox = () => {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-md">
-                      <DialogHeader>
+                      <DialogHeader className="px-6 py-5">
                         <DialogTitle className="flex items-center space-x-2">
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           <span>Wrap-Up Session</span>
@@ -587,7 +587,7 @@ const AgentInbox = () => {
                           Selesaikan chat session ini
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-4">
+                      <div className="px-6 py-4 space-y-4">
                         <div>
                           <Label htmlFor="category" className="text-sm font-medium">Kategori Sesi</Label>
                           <Select className="mt-1" placeholder="Pilih kategori">
@@ -616,8 +616,8 @@ const AgentInbox = () => {
                         </div>
                         <div>
                           <Label htmlFor="summary" className="text-sm font-medium">Ringkasan Session</Label>
-                          <Textarea 
-                            placeholder="Ringkas masalah dan solusi yang diberikan..." 
+                          <Textarea
+                            placeholder="Ringkas masalah dan solusi yang diberikan..."
                             rows={3}
                             className="mt-1"
                           />
@@ -645,16 +645,16 @@ const AgentInbox = () => {
                     <FileText className="w-4 h-4 text-yellow-700" />
                     <Label className="text-sm font-semibold text-yellow-800">Internal Notes</Label>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setShowInternalNotes(false)}
                     className="hover:bg-yellow-100 hover:text-yellow-800"
                   >
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
-                <Textarea 
+                <Textarea
                   value={internalNotes || selectedSession.internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}
                   placeholder="Catatan internal untuk tim..."
@@ -681,8 +681,8 @@ const AgentInbox = () => {
                   className={`flex ${message.type === 'agent' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-xs lg:max-w-md px-3 py-2 rounded-xl shadow-sm ${
-                    message.type === 'agent' 
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white' 
+                    message.type === 'agent'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
                       : 'bg-white text-gray-900 border border-gray-200 shadow-md'
                   }`}>
                     <p className="text-sm leading-relaxed">{message.content}</p>
@@ -690,9 +690,9 @@ const AgentInbox = () => {
                       message.type === 'agent' ? 'text-blue-100' : 'text-gray-500'
                     }`}>
                       <span className="font-medium">
-                        {new Date(message.timestamp).toLocaleTimeString('id-ID', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
+                        {new Date(message.timestamp).toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                       </span>
                       {message.type === 'agent' && (
@@ -761,16 +761,16 @@ const AgentInbox = () => {
                   </div>
                 </div>
                 <div className="flex flex-col space-y-1">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="hover:bg-gray-100 hover:text-gray-700 p-2"
                     title="Attach file"
                   >
                     <Paperclip className="w-3 h-3" />
                   </Button>
-                  <Button 
-                    onClick={handleSendMessage} 
+                  <Button
+                    onClick={handleSendMessage}
                     disabled={!messageText.trim()}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed p-2"
                     title="Send message"
@@ -829,7 +829,7 @@ const AgentInbox = () => {
                         <p className="text-xs text-gray-600 truncate">{selectedSession.customer.email}</p>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-1.5 text-xs">
                       <div className="flex items-center space-x-2 p-1 bg-gray-50 rounded-lg">
                         <Building className="w-3 h-3 text-blue-600 flex-shrink-0" />
@@ -918,7 +918,7 @@ const AgentInbox = () => {
                   className="pl-7 h-7 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
-              
+
               <div className="space-y-1.5">
                 {knowledgeArticles.map((article) => (
                   <Card key={article.id} className="p-2.5 hover:shadow-md cursor-pointer transition-all duration-200 border-gray-200 hover:border-blue-300">

@@ -315,7 +315,7 @@ class InboxService
     public function getSessionMessages(string $sessionId, Request $request, array $filters = []): LengthAwarePaginator
     {
         $query = Message::query()
-            ->where('chat_session_id', $sessionId);
+            ->where('session_id', $sessionId);
 
         // Apply organization filter
         if (Auth::check() && Auth::user()->organization_id) {

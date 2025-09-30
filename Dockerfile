@@ -60,8 +60,8 @@ RUN chmod 0644 /etc/cron.d/laravel-cron \
 # Copy FrankenPHP configuration
 COPY docker/frankenphp/Caddyfile /etc/caddy/Caddyfile
 
-# Expose port
-EXPOSE 80 443
+# Expose ports
+EXPOSE 80 443 8081
 
 # Create entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh

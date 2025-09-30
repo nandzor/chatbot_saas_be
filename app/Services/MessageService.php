@@ -141,7 +141,7 @@ class MessageService
     /**
      * Mark message as failed
      */
-    public function markAsFailed(string $messageId, string $organizationId, string $reason = null): Message
+    public function markAsFailed(string $messageId, string $organizationId, ?string $reason = null): Message
     {
         $message = Message::where('id', $messageId)
             ->where('organization_id', $organizationId)
@@ -244,14 +244,92 @@ class MessageService
      */
     public function sendTypingIndicator(string $sessionId, string $organizationId, string $userId, string $userName, bool $isTyping = true): void
     {
-        // Broadcast typing indicator event
-        broadcast(new \App\Events\TypingIndicatorEvent(
-            $sessionId,
-            $organizationId,
-            $userId,
-            $userName,
-            $isTyping
-        ));
+        try {
+            $typingKey = "typing_users_session_{$sessionId}";
+            $typingUsers = cache()->get($typingKey, []);
+
+            if ($isTyping) {
+                // Add or update typing indicator
+                $typingUsers[$userId] = [
+                    'user_name' => $userName,
+                    'is_typing' => true,
+                    'timestamp' => now()->timestamp
+                ];
+            } else {
+                // Remove typing indicator
+                unset($typingUsers[$userId]);
+            }
+
+            // Store in cache for 1 minute
+            cache()->put($typingKey, $typingUsers, 60);
+
+            // Broadcast typing indicator event
+            broadcast(new \App\Events\TypingIndicatorEvent(
+                $sessionId,
+                $organizationId,
+                $userId,
+                $userName,
+                $isTyping
+            ));
+
+            // Send typing indicator to WAHA if session is WhatsApp
+            $this->sendTypingIndicatorToWaha($sessionId, $isTyping);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send typing indicator', [
+                'session_id' => $sessionId,
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Send typing indicator to WAHA
+     */
+    private function sendTypingIndicatorToWaha(string $sessionId, bool $isTyping): void
+    {
+        try {
+            // Get session information
+            $session = \App\Models\ChatSession::with(['customer', 'channelConfig'])->find($sessionId);
+            if (!$session) {
+                Log::warning('Session not found for typing indicator', ['session_id' => $sessionId]);
+                return;
+            }
+
+            // Check if session is WhatsApp
+            if ($session->channelConfig && $session->channelConfig->channel === 'whatsapp') {
+                $wahaSessionId = $session->channelConfig->settings['waha_session_id'] ?? null;
+                $customerPhone = $session->customer->phone ?? null;
+
+                if ($wahaSessionId && $customerPhone) {
+                    // Initialize WAHA service
+                    $wahaService = new \App\Services\Waha\WahaService();
+                    
+                    // Send typing indicator to WAHA
+                    $wahaService->sendTypingIndicator($wahaSessionId, $customerPhone, $isTyping);
+                    
+                    Log::info('Typing indicator sent to WAHA', [
+                        'session_id' => $sessionId,
+                        'waha_session_id' => $wahaSessionId,
+                        'customer_phone' => $customerPhone,
+                        'is_typing' => $isTyping
+                    ]);
+                } else {
+                    Log::warning('Missing WAHA session ID or customer phone for typing indicator', [
+                        'session_id' => $sessionId,
+                        'waha_session_id' => $wahaSessionId,
+                        'customer_phone' => $customerPhone
+                    ]);
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send typing indicator to WAHA', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -306,4 +384,54 @@ class MessageService
             ->orderBy($sortBy, $sortDirection)
             ->paginate($perPage);
     }
+
+    /**
+     * Get typing users for a session
+     */
+    public function getTypingUsers(string $sessionId): array
+    {
+        try {
+            // Get typing indicators from cache or database
+            $typingKey = "typing_users_session_{$sessionId}";
+            $typingUsers = cache()->get($typingKey, []);
+
+            // Filter out expired typing indicators (older than 5 seconds)
+            $currentTime = now()->timestamp;
+            $validTypingUsers = [];
+
+            foreach ($typingUsers as $userId => $typingData) {
+                if (isset($typingData['timestamp']) && ($currentTime - $typingData['timestamp']) < 5) {
+                    $validTypingUsers[] = [
+                        'user_id' => $userId,
+                        'user_name' => $typingData['user_name'] ?? 'Unknown User',
+                        'is_typing' => $typingData['is_typing'] ?? false,
+                        'timestamp' => $typingData['timestamp']
+                    ];
+                }
+            }
+
+            // Clean up expired entries
+            if (count($validTypingUsers) !== count($typingUsers)) {
+                $cleanedTypingUsers = [];
+                foreach ($validTypingUsers as $user) {
+                    $cleanedTypingUsers[$user['user_id']] = [
+                        'user_name' => $user['user_name'],
+                        'is_typing' => $user['is_typing'],
+                        'timestamp' => $user['timestamp']
+                    ];
+                }
+                cache()->put($typingKey, $cleanedTypingUsers, 60); // Cache for 1 minute
+            }
+
+            return $validTypingUsers;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get typing users', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
 }

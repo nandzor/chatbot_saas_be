@@ -70,9 +70,9 @@ return [
     */
 
     'auth' => [
-        'guard' => env('REVERB_AUTH_GUARD', 'web'),
+        'guard' => env('REVERB_AUTH_GUARD', 'sanctum'),
         'middleware' => [
-            'unified.auth',
+            'unified.auth', // Temporarily disabled to test basic connection
         ],
     ],
 

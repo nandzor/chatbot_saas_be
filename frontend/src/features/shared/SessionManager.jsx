@@ -15,7 +15,6 @@ import {
   useAnnouncement,
   useFocusManagement
 } from '@/utils/accessibilityUtils';
-import { useAuth } from '@/contexts/AuthContext';
 import { inboxService } from '@/services/InboxService';
 import conversationService from '@/services/conversationService';
 import { usePaginatedApi } from '@/hooks/useApi';
@@ -58,12 +57,12 @@ import {
 } from 'lucide-react';
 import ConversationDialog from '@/components/inbox/ConversationDialog';
 import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 
 const SessionManagerComponent = () => {
   const { announce } = useAnnouncement();
   const { focusRef } = useFocusManagement();
   const { setLoading, getLoadingState } = useLoadingStates();
-  const { user } = useAuth();
 
   // State management
   const [selectedSession, setSelectedSession] = useState(null);
@@ -108,6 +107,8 @@ const SessionManagerComponent = () => {
     error: sessionsError,
     handlePageChange,
     handleSearch,
+    handleSort: handleApiSort,
+    handlePerPageChange,
     refresh
   } = usePaginatedApi(getSessions, {
     initialPage: 1,
@@ -293,6 +294,22 @@ const SessionManagerComponent = () => {
     announce(`Selected session ${session.session_token}`);
   }, [announce]);
 
+  // Handle table sorting
+  const handleTableSort = useCallback((sortConfig) => {
+    if (handleApiSort) {
+      handleApiSort(sortConfig.key, sortConfig.direction);
+      announce(`Table sorted by ${sortConfig.key} in ${sortConfig.direction}ending order`);
+    }
+  }, [handleApiSort, announce]);
+
+  // Handle per page change
+  const handleTablePerPageChange = useCallback((newPerPage) => {
+    if (handlePerPageChange) {
+      handlePerPageChange(newPerPage);
+      announce(`Changed page size to ${newPerPage} items`);
+    }
+  }, [handlePerPageChange, announce]);
+
   // Handle end session
   const handleEndSession = useCallback(async (sessionId, resolutionType = 'resolved') => {
     try {
@@ -429,6 +446,7 @@ const SessionManagerComponent = () => {
     loadAvailablePersonalities();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+
   // Handle transfer session
   const handleTransferSessionAction = useCallback(async () => {
     if (!selectedSession || !transferData.agent_id) return;
@@ -509,7 +527,7 @@ const SessionManagerComponent = () => {
     setSelectedSession(null);
   }, []);
 
-  const handleSendMessage = useCallback((message) => {
+  const handleSendMessage = useCallback((_message) => {
     announce('Message sent successfully');
     refresh();
   }, [announce, refresh]);
@@ -534,12 +552,12 @@ const SessionManagerComponent = () => {
     }
   }, [setLoading, announce, refresh]);
 
-  const handleResolveConversation = useCallback((session, resolveData) => {
+  const handleResolveConversation = useCallback((_session, _resolveData) => {
     announce('Session resolved successfully');
     refresh();
   }, [announce, refresh]);
 
-  const handleTransferSession = useCallback((session, transferData) => {
+  const handleTransferSession = useCallback((_session, _transferData) => {
     announce('Session transferred successfully');
     refresh();
   }, [announce, refresh]);
@@ -547,7 +565,138 @@ const SessionManagerComponent = () => {
 
     return (
     <RealtimeMessageProvider>
-      <div className="space-y-6" ref={focusRef}>
+      <SessionManagerWithRealtime
+        sessions={sessions}
+        pagination={pagination}
+        sessionsLoading={sessionsLoading}
+        sessionsError={sessionsError}
+        handlePageChange={handlePageChange}
+        handleSearch={handleSearch}
+        handleTableSort={handleTableSort}
+        handleTablePerPageChange={handleTablePerPageChange}
+        refresh={refresh}
+        columns={columns}
+        actions={actions}
+        selectedSession={selectedSession}
+        showConversationDialog={showConversationDialog}
+        showTransferDialog={showTransferDialog}
+        showPersonalityDialog={showPersonalityDialog}
+        showAiResponseDialog={showAiResponseDialog}
+        showRecentMessagesDialog={showRecentMessagesDialog}
+        showSearchMessagesDialog={showSearchMessagesDialog}
+        recentMessages={recentMessages}
+        searchResults={searchResults}
+        searchQuery={searchQuery}
+        transferData={transferData}
+        aiResponseData={aiResponseData}
+        availablePersonalities={availablePersonalities}
+        getLoadingState={getLoadingState}
+        handleSessionSelect={handleSessionSelect}
+        handleViewRecentMessages={handleViewRecentMessages}
+        handlePerformSearch={handlePerformSearch}
+        handleTransferSessionAction={handleTransferSessionAction}
+        handleAssignPersonality={handleAssignPersonality}
+        handleGenerateAiResponse={handleGenerateAiResponse}
+        handleConversationClose={handleConversationClose}
+        handleSendMessage={handleSendMessage}
+        handleAssignConversation={handleAssignConversation}
+        handleResolveConversation={handleResolveConversation}
+        handleTransferSession={handleTransferSession}
+        setShowTransferDialog={setShowTransferDialog}
+        setShowPersonalityDialog={setShowPersonalityDialog}
+        setShowAiResponseDialog={setShowAiResponseDialog}
+        setShowRecentMessagesDialog={setShowRecentMessagesDialog}
+        setShowSearchMessagesDialog={setShowSearchMessagesDialog}
+        setTransferData={setTransferData}
+        setAiResponseData={setAiResponseData}
+        setSearchQuery={setSearchQuery}
+        focusRef={focusRef}
+        announce={announce}
+      />
+    </RealtimeMessageProvider>
+  );
+};
+
+// Component that uses realtime messages hook inside the provider
+const SessionManagerWithRealtime = (props) => {
+  const { registerMessageHandler } = useRealtimeMessages();
+  const {
+    sessions,
+    pagination,
+    sessionsLoading,
+    sessionsError,
+    handlePageChange,
+    handleSearch,
+    handleTableSort,
+    handleTablePerPageChange,
+    refresh,
+    columns,
+    actions,
+    selectedSession,
+    showConversationDialog,
+    showTransferDialog,
+    showPersonalityDialog,
+    showAiResponseDialog,
+    showRecentMessagesDialog,
+    showSearchMessagesDialog,
+    recentMessages,
+    searchResults,
+    searchQuery,
+    transferData,
+    aiResponseData,
+    availablePersonalities,
+    getLoadingState,
+    handleSessionSelect,
+    handleViewRecentMessages,
+    handlePerformSearch,
+    handleTransferSessionAction,
+    handleAssignPersonality,
+    handleGenerateAiResponse,
+    handleConversationClose,
+    handleSendMessage,
+    handleAssignConversation,
+    handleResolveConversation,
+    handleTransferSession,
+    setShowTransferDialog,
+    setShowPersonalityDialog,
+    setShowAiResponseDialog,
+    setShowRecentMessagesDialog,
+    setShowSearchMessagesDialog,
+    setTransferData,
+    setAiResponseData,
+    setSearchQuery,
+    focusRef: _focusRef,
+    announce
+  } = props;
+
+  // Register real-time message handler for session updates
+  useEffect(() => {
+    if (!registerMessageHandler) return;
+
+    const unregisterMessage = registerMessageHandler(null, (data) => {
+      // console.log('🔔 SessionManager received data:', data);
+      // Handle message.processed event to update session list
+      if (data.event === 'message.processed' || data.message_id) {
+        // console.log('📨 SessionManager processing message.processed event');
+        // Refresh session list to show updated last message and activity
+        refresh();
+
+        // Show notification for new messages
+        if (data.sender_type === 'customer') {
+          announce(`New message from ${data.customer_name || 'customer'}`);
+        }
+      }
+    });
+
+    return () => {
+      if (unregisterMessage) {
+        unregisterMessage();
+      }
+    };
+  }, [registerMessageHandler, refresh, announce]);
+
+  return (
+      <div className="space-y-6" ref={_focusRef}>
       {/* Header and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
@@ -586,10 +735,7 @@ const SessionManagerComponent = () => {
         actions={actions}
         loading={sessionsLoading}
         error={sessionsError}
-        onSort={(_sortConfig) => {
-          // Handle sorting if needed
-          // TODO: Implement sorting logic
-        }}
+        onSort={handleTableSort}
         onFilter={(searchQuery) => {
           handleSearch(searchQuery);
         }}
@@ -600,10 +746,7 @@ const SessionManagerComponent = () => {
           totalItems: pagination.totalItems,
           perPage: pagination.itemsPerPage,
           onPageChange: handlePageChange,
-          onPerPageChange: (_newPerPage) => {
-            // Handle per page change if needed
-            // TODO: Implement per page change logic
-          }
+          onPerPageChange: handleTablePerPageChange
         } : null}
         searchable={true}
         className="w-full"
@@ -626,43 +769,47 @@ const SessionManagerComponent = () => {
 
       {/* Transfer Dialog */}
       <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Transfer Session</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="px-6 py-5 border-b bg-gray-50/50">
+            <DialogTitle className="text-xl">Transfer Session</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Transfer this session to another agent.
             </DialogDescription>
           </DialogHeader>
-              <div className="space-y-4">
+          <div className="px-6 py-5 space-y-6">
             <div>
-              <Label htmlFor="agent_id">Agent</Label>
+              <Label htmlFor="agent_id" className="text-sm font-medium text-gray-700">Agent</Label>
               <Input
                 id="agent_id"
                 value={transferData.agent_id}
                 onChange={(e) => setTransferData(prev => ({ ...prev, agent_id: e.target.value }))}
                 placeholder="Enter agent ID"
+                className="mt-2"
               />
-              </div>
+            </div>
             <div>
-              <Label htmlFor="reason">Reason (Optional)</Label>
+              <Label htmlFor="reason" className="text-sm font-medium text-gray-700">Reason (Optional)</Label>
               <Input
                 id="reason"
                 value={transferData.reason}
                 onChange={(e) => setTransferData(prev => ({ ...prev, reason: e.target.value }))}
                 placeholder="Reason for transfer"
+                className="mt-2"
               />
             </div>
             <div>
-              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Label htmlFor="notes" className="text-sm font-medium text-gray-700">Notes (Optional)</Label>
               <Textarea
                 id="notes"
                 value={transferData.notes}
                 onChange={(e) => setTransferData(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Additional notes"
+                className="mt-2"
+                rows={3}
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t bg-gray-50/50">
             <Button
               variant="outline"
               onClick={() => setShowTransferDialog(false)}
@@ -681,50 +828,71 @@ const SessionManagerComponent = () => {
 
       {/* Bot Personality Assignment Dialog */}
       <Dialog open={showPersonalityDialog} onOpenChange={setShowPersonalityDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Bot Personality</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-lg font-semibold">Assign Bot Personality</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Assign a bot personality to handle this session automatically.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-                  <div>
-              <Label htmlFor="personality_id">Bot Personality ID</Label>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="personality_id" className="text-sm font-medium">
+                Bot Personality ID
+              </Label>
               <Input
                 id="personality_id"
                 value={aiResponseData.personality_id}
                 onChange={(e) => setAiResponseData(prev => ({ ...prev, personality_id: e.target.value }))}
                 placeholder="Enter bot personality ID"
+                className="w-full"
               />
-                      </div>
+            </div>
+
             {aiResponseData.personality_id && (
-              <div className="p-3 bg-muted rounded-lg">
-                <h4 className="font-medium text-sm mb-2">Personality Details</h4>
+              <div className="p-4 bg-muted/50 rounded-lg border">
+                <h4 className="font-medium text-sm mb-3 text-foreground">Personality Details</h4>
                 {(() => {
                   const personality = availablePersonalities.find(p => p.id === aiResponseData.personality_id);
                   return personality ? (
-                    <div className="text-sm space-y-1">
-                      <p><strong>Language:</strong> {personality.language}</p>
-                      <p><strong>Tone:</strong> {personality.tone}</p>
-                      <p><strong>Style:</strong> {personality.communication_style}</p>
-                      <p><strong>Description:</strong> {personality.description}</p>
+                    <div className="text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Language:</span>
+                        <span className="font-medium">{personality.language}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tone:</span>
+                        <span className="font-medium">{personality.tone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Style:</span>
+                        <span className="font-medium">{personality.communication_style}</span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <span className="text-muted-foreground">Description:</span>
+                        <p className="mt-1 text-foreground">{personality.description}</p>
+                      </div>
                     </div>
-                  ) : null;
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Personality not found</p>
+                  );
                 })()}
-                        </div>
-                      )}
-                    </div>
-          <DialogFooter>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
             <Button
               variant="outline"
               onClick={() => setShowPersonalityDialog(false)}
+              className="mt-2 sm:mt-0"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAssignPersonality}
               disabled={!aiResponseData.personality_id || getLoadingState('assign')}
+              className="w-full sm:w-auto"
             >
               {getLoadingState('assign') ? 'Assigning...' : 'Assign Bot'}
             </Button>
@@ -890,7 +1058,7 @@ const SessionManagerComponent = () => {
               ) : searchQuery ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No messages found for "{searchQuery}"</p>
+                  <p>No messages found for &quot;{searchQuery}&quot;</p>
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -913,25 +1081,25 @@ const SessionManagerComponent = () => {
 
       {/* Recent Messages Dialog */}
       <Dialog open={showRecentMessagesDialog} onOpenChange={setShowRecentMessagesDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Recent Messages</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-4xl max-h-[80vh] p-0">
+          <DialogHeader className="px-6 py-5 border-b bg-gray-50/50">
+            <DialogTitle className="text-xl">Recent Messages</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Recent messages for session: {selectedSession?.session_token}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
             {getLoadingState('recent') ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                <span>Loading recent messages...</span>
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="h-6 w-6 animate-spin mr-3" />
+                <span className="text-gray-600">Loading recent messages...</span>
               </div>
             ) : recentMessages.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {recentMessages.map((message, index) => (
                   <div
                     key={message.id || index}
-                    className={`p-3 rounded-lg border ${
+                    className={`p-4 rounded-lg border shadow-sm ${
                       message.sender?.type === 'customer'
                         ? 'bg-blue-50 border-blue-200'
                         : message.sender?.type === 'agent'
@@ -941,28 +1109,29 @@ const SessionManagerComponent = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
+                        <div className="flex items-center space-x-3 mb-3">
                           <Badge
                             variant={
                               message.sender?.type === 'customer' ? 'default' :
                               message.sender?.type === 'agent' ? 'secondary' : 'outline'
                             }
+                            className="text-xs"
                           >
                             {message.sender?.type === 'customer' ? 'Customer' :
                              message.sender?.type === 'agent' ? 'Agent' : 'Bot'}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm font-medium text-gray-700">
                             {message.sender?.name || 'Unknown'}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {message.created_at ? new Date(message.created_at).toLocaleString() : 'Unknown time'}
                           </span>
                         </div>
-                        <div className="text-sm">
+                        <div className="text-sm text-gray-800 leading-relaxed">
                           {message.content?.text || 'No text content'}
                         </div>
                         {message.status && (
-                          <div className="flex items-center space-x-2 mt-2">
+                          <div className="flex items-center space-x-3 mt-3 pt-2 border-t border-gray-200/50">
                             <Badge
                               variant={message.status.is_read ? 'secondary' : 'default'}
                               className="text-xs"
@@ -982,13 +1151,14 @@ const SessionManagerComponent = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No recent messages found for this session.</p>
+              <div className="text-center py-12 text-muted-foreground">
+                <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium mb-2">No recent messages found</p>
+                <p className="text-sm">No recent messages found for this session.</p>
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t bg-gray-50/50">
             <Button
               variant="outline"
               onClick={() => setShowRecentMessagesDialog(false)}
@@ -1017,7 +1187,6 @@ const SessionManagerComponent = () => {
         onTransferSession={handleTransferSession}
       />
       </div>
-    </RealtimeMessageProvider>
   );
 };
 
