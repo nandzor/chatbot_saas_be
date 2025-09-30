@@ -49,12 +49,22 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
 
             // Check if this exact event has already been processed
             if (Redis::exists($eventKey)) {
-                Log::warning('WhatsApp message event already processed, skipping duplicate event', [
-                    'organization_id' => $event->organizationId,
-                    'message_id' => $event->messageData['message_id'] ?? 'unknown',
-                    'from' => $event->messageData['from'] ?? 'unknown',
-                    'event_key' => $eventKey,
-                ]);
+                // Track duplicate rate for monitoring
+                $duplicateKey = "whatsapp_duplicate_count:{$event->organizationId}";
+                $duplicateCount = Redis::incr($duplicateKey);
+                Redis::expire($duplicateKey, 3600); // Reset every hour
+
+                // Only log duplicates if enabled in environment or every 10th duplicate
+                $logDuplicates = config('app.log_duplicate_events', false);
+                if ($logDuplicates || $duplicateCount % 10 === 0) {
+                    Log::info('WhatsApp message event already processed, skipping duplicate event', [
+                        'organization_id' => $event->organizationId,
+                        'message_id' => $event->messageData['message_id'] ?? 'unknown',
+                        'from' => $event->messageData['from'] ?? 'unknown',
+                        'event_key' => $eventKey,
+                        'duplicate_count' => $duplicateCount,
+                    ]);
+                }
                 return;
             }
 

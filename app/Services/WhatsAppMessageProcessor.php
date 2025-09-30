@@ -38,9 +38,10 @@ class WhatsAppMessageProcessor
     {
         try {
             Log::info('Processing WhatsApp message', [
-                'from' => $messageData['from'] ?? 'unknown',
+                'from' => $messageData['from'] ?? $messageData['customer_phone'] ?? 'unknown',
                 'text' => $messageData['text'] ?? 'no text',
-                'organization_id' => $messageData['organization_id'] ?? 'unknown'
+                'organization_id' => $messageData['organization_id'] ?? 'unknown',
+                'message_data_keys' => array_keys($messageData)
             ]);
 
             Log::info('Starting message processing flow', [
@@ -133,13 +134,15 @@ class WhatsAppMessageProcessor
      */
     private function getOrCreateCustomer(array $messageData): Customer
     {
-        Log::info('Getting or creating customer', [
-            'phone' => $messageData['customer_phone'] ?? $messageData['from'],
-            'organization_id' => $messageData['organization_id']
-        ]);
+        // Extract phone number with proper validation
+        $phone = $messageData['customer_phone'] ?? $messageData['from'] ?? null;
+        $organizationId = $messageData['organization_id'] ?? null;
 
-        $phone = $messageData['customer_phone'] ?? $messageData['from'];
-        $organizationId = $messageData['organization_id'];
+        Log::info('Getting or creating customer', [
+            'phone' => $phone,
+            'organization_id' => $organizationId,
+            'message_data_keys' => array_keys($messageData)
+        ]);
 
         if (!$phone || !$organizationId) {
             throw new \Exception('Missing phone number or organization ID');
@@ -205,7 +208,7 @@ class WhatsAppMessageProcessor
     {
         Log::info('Saving customer message', [
             'session_id' => $session->id,
-            'from' => $messageData['from'] ?? 'unknown',
+            'from' => $messageData['from'] ?? $messageData['customer_phone'] ?? 'unknown',
             'text' => $messageData['text'] ?? 'no text'
         ]);
 

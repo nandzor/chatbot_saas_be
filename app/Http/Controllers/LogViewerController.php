@@ -54,9 +54,8 @@ class LogViewerController extends Controller
                     $lines = $request->get('lines', 100);
                     $lines = min($lines, 1000);
 
-                    $content = file_get_contents($filePath);
-                    $linesArray = explode("\n", $content);
-                    $logContent = implode("\n", array_slice($linesArray, -$lines));
+                    // Use efficient method to read last N lines without loading entire file
+                    $logContent = $this->readLastLines($filePath, $lines);
                 }
             }
 
@@ -189,6 +188,58 @@ class LogViewerController extends Controller
         }
 
         return response()->download($filePath, $filename);
+    }
+
+    /**
+     * Efficiently read the last N lines of a file without loading entire file into memory
+     *
+     * @param string $filePath
+     * @param int $lines
+     * @return string
+     */
+    protected function readLastLines($filePath, $lines = 100)
+    {
+        $handle = fopen($filePath, 'r');
+        if (!$handle) {
+            return '';
+        }
+
+        // Get file size
+        fseek($handle, 0, SEEK_END);
+        $fileSize = ftell($handle);
+
+        // If file is small, read it normally
+        if ($fileSize < 1024 * 1024) { // Less than 1MB
+            rewind($handle);
+            $content = fread($handle, $fileSize);
+            fclose($handle);
+            $linesArray = explode("\n", $content);
+            return implode("\n", array_slice($linesArray, -$lines));
+        }
+
+        // For large files, read from the end
+        $buffer = '';
+        $lineCount = 0;
+        $chunkSize = 8192; // 8KB chunks
+        $position = $fileSize;
+
+        while ($position > 0 && $lineCount < $lines) {
+            $readSize = min($chunkSize, $position);
+            $position -= $readSize;
+
+            fseek($handle, $position);
+            $chunk = fread($handle, $readSize);
+            $buffer = $chunk . $buffer;
+
+            // Count newlines in the buffer
+            $lineCount = substr_count($buffer, "\n");
+        }
+
+        fclose($handle);
+
+        // Split by newlines and get the last N lines
+        $linesArray = explode("\n", $buffer);
+        return implode("\n", array_slice($linesArray, -$lines));
     }
 
     /**

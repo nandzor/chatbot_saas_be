@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Log Duplicate Events
+    |--------------------------------------------------------------------------
+    |
+    | When this option is enabled, all duplicate event warnings will be logged.
+    | When disabled, only every 10th duplicate will be logged for monitoring.
+    |
+    */
+
+    'log_duplicate_events' => (bool) env('LOG_DUPLICATE_EVENTS', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |
