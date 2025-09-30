@@ -42,11 +42,11 @@ COPY . .
 RUN composer install --optimize-autoloader --no-interaction
 
 # Remove dev dependencies after build to reduce image size
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Set proper permissions
 RUN chown -R www-data:www-data /app \
-    && chmod -R 755 /app/storage \
+    # && chmod -R 755 /app/storage \
     && chmod -R 755 /app/bootstrap/cache
 
 # Copy supervisor configuration

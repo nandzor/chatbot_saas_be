@@ -72,12 +72,12 @@ echo "Using database queue - no RabbitMQ dependency"
 echo "Setting proper permissions..."
 chown -R www-data:www-data /app/storage
 chown -R www-data:www-data /app/bootstrap/cache
-chmod -R 755 /app/storage
-chmod -R 755 /app/bootstrap/cache
+# chmod -R 755 /app/storage
+# chmod -R 755 /app/bootstrap/cache
 
 # Run database migrations
-echo "Running database migrations..."
-php artisan migrate --force
+# echo "Running database migrations..."
+# php artisan migrate --force
 
 # Clear and cache configurations
 echo "Optimizing application..."

@@ -22,8 +22,10 @@ class OrganizationDashboardSeeder extends Seeder
         if (!$organization) {
             $organization = Organization::create([
                 'id' => '845e49a7-87db-4eb8-a5b6-6c077d0be712',
+                'org_code' => 'ORG-TEST',
                 'name' => 'Test Organization',
-                'slug' => 'test-org',
+                'display_name' => 'Test Organization',
+                'email' => 'org@test.com',
                 'description' => 'Test organization for dashboard',
                 'settings' => json_encode(['timezone' => 'UTC']),
                 'status' => 'active',
@@ -37,11 +39,28 @@ class OrganizationDashboardSeeder extends Seeder
         if ($agents->isEmpty()) {
             // Create test agents if none exist
             for ($i = 1; $i <= 5; $i++) {
+                // Create corresponding user for agent (agents table has user_id foreign key)
+                $user = \App\Models\User::create([
+                    'id' => \Illuminate\Support\Str::uuid(),
+                    'username' => "agent{$i}",
+                    'full_name' => "Agent {$i}",
+                    'email' => "agent{$i}@test.com",
+                    'password_hash' => bcrypt('password'),
+                    'organization_id' => $organization->id,
+                    'role' => 'agent',
+                    'status' => 'active',
+                    'created_at' => now()->subDays(30),
+                    'updated_at' => now(),
+                ]);
+
                 $agent = \App\Models\Agent::create([
                     'id' => \Illuminate\Support\Str::uuid(),
                     'organization_id' => $organization->id,
-                    'name' => "Agent {$i}",
-                    'email' => "agent{$i}@test.com",
+                    'user_id' => $user->id,
+                    'agent_code' => sprintf('AGT-%04d', $i),
+                    'display_name' => "Agent {$i}",
+                    'department' => 'Support',
+                    'job_title' => 'Support Agent',
                     'status' => 'active',
                     'created_at' => now()->subDays(30),
                     'updated_at' => now(),
@@ -49,24 +68,6 @@ class OrganizationDashboardSeeder extends Seeder
                 $agents->push($agent);
             }
         }
-
-        // Create admin user
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@test.com'],
-            [
-                'id' => '5b968a06-08b3-4d45-8f3a-8096fa1c8b9d',
-                'username' => 'admin',
-                'full_name' => 'Test Admin',
-                'email' => 'admin@test.com',
-                'password_hash' => bcrypt('password'),
-                'organization_id' => $organization->id,
-                'role' => 'org_admin',
-                'status' => 'active',
-                'last_login_at' => now()->subMinutes(5),
-                'created_at' => now()->subDays(30),
-                'updated_at' => now(),
-            ]
-        );
 
         // Get existing customer for sessions
         $customer = \App\Models\Customer::where('organization_id', $organization->id)->first();
@@ -77,6 +78,9 @@ class OrganizationDashboardSeeder extends Seeder
                 'name' => 'Test Customer',
                 'email' => 'customer@test.com',
                 'phone' => '+1234567890',
+                // required by customers table
+                'channel' => 'webchat',
+                'channel_user_id' => 'test-web-user',
                 'status' => 'active',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -90,7 +94,8 @@ class OrganizationDashboardSeeder extends Seeder
                 'id' => \Illuminate\Support\Str::uuid(),
                 'organization_id' => $organization->id,
                 'name' => 'Test Channel',
-                'type' => 'web',
+                'channel' => 'webchat',
+                'channel_identifier' => 'web-default',
                 'status' => 'active',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -114,7 +119,9 @@ class OrganizationDashboardSeeder extends Seeder
             $sessionCount = rand(0, 25);
 
             for ($i = 0; $i < $sessionCount; $i++) {
-                $sessionStartTime = $sessionTime->copy()->addMinutes($i * 2 + rand(0, 1)); // Make each session unique
+                // Ensure unique started_at per (organization_id, customer_id)
+                $candidateStart = $sessionTime->copy()->addMinutes($i * 2 + rand(0, 1));
+                $sessionStartTime = $this->uniqueSessionStartTime($organization->id, $customer->id, $candidateStart);
                 $session = ChatSession::create([
                     'id' => \Illuminate\Support\Str::uuid(),
                     'organization_id' => $organization->id,
@@ -145,7 +152,8 @@ class OrganizationDashboardSeeder extends Seeder
         $agentSessions = [];
         foreach ($sessions as $session) {
             if ($session->handover_at) {
-                // Create agent session
+                // Create agent session with unique timestamp
+                $uniqueAgentStart = $this->uniqueSessionStartTime($organization->id, $customer->id, $session->handover_at);
                 $agentSession = ChatSession::create([
                     'id' => \Illuminate\Support\Str::uuid(),
                     'organization_id' => $organization->id,
@@ -154,9 +162,9 @@ class OrganizationDashboardSeeder extends Seeder
                     'agent_id' => $agents->random()->id,
                     'session_token' => \Illuminate\Support\Str::random(32),
                     'session_type' => 'agent',
-                    'started_at' => $session->handover_at,
-                    'ended_at' => $session->handover_at->copy()->addMinutes(rand(5, 20)),
-                    'last_activity_at' => $session->handover_at->copy()->addMinutes(rand(5, 20)),
+                    'started_at' => $uniqueAgentStart,
+                    'ended_at' => $uniqueAgentStart->copy()->addMinutes(rand(5, 20)),
+                    'last_activity_at' => $uniqueAgentStart->copy()->addMinutes(rand(5, 20)),
                     'is_active' => false,
                     'is_bot_session' => false,
                     'handover_at' => null,
@@ -200,25 +208,25 @@ class OrganizationDashboardSeeder extends Seeder
                     'id' => \Illuminate\Support\Str::uuid(),
                     'organization_id' => $organization->id,
                     'session_id' => $session->id,
-                    'user_id' => $isUserMessage ? null : $session->agent_id,
-                    'content' => $isUserMessage ?
+                    'sender_type' => $isUserMessage ? 'user' : ($isBotSession ? 'bot' : 'agent'),
+                    'sender_id' => $isUserMessage ? null : $session->agent_id,
+                    'message_text' => $isUserMessage ?
                         $this->getUserMessage() :
                         $this->getBotAgentMessage($isBotSession),
-                    'role' => $isUserMessage ? 'user' : ($isBotSession ? 'bot' : 'agent'),
                     'metadata' => json_encode([
                         'intent' => $intents[array_rand($intents)],
                         'confidence' => rand(70, 95) / 100,
                         'waha_message_id' => 'waha_' . \Illuminate\Support\Str::random(10),
                     ]),
                     'created_at' => $messageTime,
-                    'updated_at' => $messageTime,
                 ]);
             }
         }
 
         // Create some recent sessions for real-time data
         for ($i = 0; $i < 44; $i++) {
-            $recentTime = now()->subMinutes($i + rand(1, 2)); // Make each session unique
+            $baseRecent = now()->subMinutes($i + rand(1, 2));
+            $recentTime = $this->uniqueSessionStartTime($organization->id, $customer->id, $baseRecent);
             ChatSession::create([
                 'id' => \Illuminate\Support\Str::uuid(),
                 'organization_id' => $organization->id,
@@ -250,6 +258,23 @@ class OrganizationDashboardSeeder extends Seeder
         $this->command->info("- " . count($agentSessions) . " agent sessions");
         $this->command->info("- 44 active sessions for real-time data");
         $this->command->info("- Messages with various intents");
+    }
+
+    private function uniqueSessionStartTime(string $organizationId, string $customerId, \Carbon\Carbon $candidate): \Carbon\Carbon
+    {
+        $ts = $candidate->copy();
+        $attempts = 0;
+        while (\App\Models\ChatSession::where('organization_id', $organizationId)
+            ->where('customer_id', $customerId)
+            ->where('started_at', $ts)
+            ->exists()) {
+            $ts = $ts->copy()->addSeconds(1);
+            $attempts++;
+            if ($attempts > 10) {
+                break;
+            }
+        }
+        return $ts;
     }
 
     private function getUserMessage(): string
