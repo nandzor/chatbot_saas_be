@@ -503,6 +503,11 @@ class BotPersonalityService
         // Create the bot personality first
         $botPersonality = BotPersonality::create($data);
 
+        // Activate N8N workflow if it exists
+        if ($botPersonality->n8n_workflow_id) {
+            $this->activateN8nWorkflow($botPersonality->n8n_workflow_id);
+        }
+
         // Generate system message using AiInstructionService
         if ($botPersonality->knowledge_base_item_id) {
             try {
@@ -579,6 +584,11 @@ class BotPersonalityService
 
         // Update the bot personality
         $personality->update($data);
+
+        // Activate N8N workflow if it exists
+        if ($personality->n8n_workflow_id) {
+            $this->activateN8nWorkflow($personality->n8n_workflow_id);
+        }
 
         // Regenerate system message if needed
         if ($shouldRegenerateSystemMessage && $personality->knowledge_base_item_id) {
@@ -887,7 +897,91 @@ class BotPersonalityService
             return false;
         }
 
-        return $personality->delete();
+        // Store workflow ID before deletion for cleanup
+        $n8nWorkflowId = $personality->n8n_workflow_id;
+        $wahaSessionId = $personality->waha_session_id;
+
+        // Delete the personality
+        $deleted = $personality->delete();
+
+        if ($deleted) {
+            // Clean up related resources
+            $this->cleanupRelatedResources($n8nWorkflowId, $wahaSessionId, $organizationId);
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * Clean up related resources when bot personality is deleted
+     */
+    private function cleanupRelatedResources(?string $n8nWorkflowId, ?string $wahaSessionId, string $organizationId): void
+    {
+        try {
+            // Check if N8N workflow is still being used by other personalities
+            if ($n8nWorkflowId) {
+                $otherPersonalitiesUsingWorkflow = BotPersonality::where('n8n_workflow_id', $n8nWorkflowId)
+                    ->where('organization_id', $organizationId)
+                    ->exists();
+
+                if (!$otherPersonalitiesUsingWorkflow) {
+                    // No other personalities using this workflow, deactivate it
+                    $this->deactivateUnusedN8nWorkflow($n8nWorkflowId);
+                }
+            }
+
+            Log::info('Bot personality cleanup completed', [
+                'organization_id' => $organizationId,
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'waha_session_id' => $wahaSessionId,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error during bot personality cleanup', [
+                'organization_id' => $organizationId,
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'waha_session_id' => $wahaSessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Deactivate N8N workflow that's no longer used
+     */
+    private function deactivateUnusedN8nWorkflow(string $n8nWorkflowId): void
+    {
+        try {
+            $workflow = \App\Models\N8nWorkflow::find($n8nWorkflowId);
+            if ($workflow) {
+                // Update database status to inactive
+                $workflow->update([
+                    'status' => 'inactive',
+                    'is_enabled' => false,
+                    'updated_at' => now(),
+                ]);
+
+                // Try to deactivate in N8N server
+                try {
+                    $this->n8nService->deactivateWorkflow($workflow->workflow_id);
+                    Log::info('N8N workflow deactivated successfully', [
+                        'n8n_workflow_id' => $n8nWorkflowId,
+                        'workflow_id' => $workflow->workflow_id,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to deactivate N8N workflow in server, but database updated', [
+                        'n8n_workflow_id' => $n8nWorkflowId,
+                        'workflow_id' => $workflow->workflow_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error deactivating unused N8N workflow', [
+                'n8n_workflow_id' => $n8nWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
