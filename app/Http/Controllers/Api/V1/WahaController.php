@@ -728,8 +728,8 @@ class WahaController extends BaseApiController
                 return $this->handleResourceNotFound('WAHA session', $sessionId);
             }
 
-            // Use sync service to get session with automatic sync using session name
-            $sessionData = $this->wahaSyncService->getSessionForOrganization($organization->id, $localSession->session_name);
+            // Use database-only method to get session data
+            $sessionData = $this->wahaSyncService->getSessionForOrganizationFromDatabase($organization->id, $localSession->session_name);
 
             if (!$sessionData) {
                 return $this->handleResourceNotFound('WAHA session', $sessionId);

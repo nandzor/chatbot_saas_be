@@ -449,8 +449,8 @@ class WahaSyncService
         string $sortOrder = 'desc'
     ): array {
         try {
-            // First sync sessions to ensure we have latest data
-            $this->syncSessionsForOrganization($organizationId);
+            // Only read from database - no server sync
+            // $this->syncSessionsForOrganization($organizationId); // REMOVED
 
             // Build query for local sessions
             $query = WahaSession::where('organization_id', $organizationId)
@@ -581,6 +581,32 @@ class WahaSyncService
         $wahaData = $this->wahaService->getSessionInfo($sessionName);
 
         return $this->mergeSessionData($localSession, $wahaData);
+    }
+
+    /**
+     * Get session for organization from database only (no server sync)
+     */
+    public function getSessionForOrganizationFromDatabase(string $organizationId, string $sessionName): ?array
+    {
+        try {
+            $localSession = WahaSession::where('session_name', $sessionName)
+                ->where('organization_id', $organizationId)
+                ->with(['organization', 'channelConfig'])
+                ->first();
+
+            if (!$localSession) {
+                return null;
+            }
+
+            return $this->formatSessionForDisplay($localSession);
+        } catch (\Exception $e) {
+            Log::error('Error getting session from database only', [
+                'organization_id' => $organizationId,
+                'session_name' => $sessionName,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 
     /**
