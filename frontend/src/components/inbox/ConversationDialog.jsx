@@ -19,7 +19,8 @@ import {
   Building,
   Calendar,
   Tag,
-  BarChart3
+  BarChart3,
+  Sparkles
 } from 'lucide-react';
 import {
   Dialog,
@@ -93,7 +94,9 @@ const ConversationDialog = ({
 
   useEffect(() => {
     if (messagesData?.success) {
-      setMessages(messagesData.data?.messages?.data || []);
+      const loadedMessages = messagesData.data?.messages?.data || [];
+      console.log('📨 Loaded messages:', loadedMessages);
+      setMessages(loadedMessages);
     }
   }, [messagesData]);
 
@@ -132,6 +135,11 @@ const ConversationDialog = ({
             // Check if message already exists to avoid duplicates
             const exists = prev.some(msg => msg.id === newMessage.id);
             if (exists) return prev;
+
+            // Don't add agent messages from real-time handler to avoid duplicates
+            if (newMessage.sender_type === 'agent') {
+              return prev;
+            }
 
             // Add new message and sort by created_at
             const updatedMessages = [...prev, newMessage];
@@ -196,8 +204,25 @@ const ConversationDialog = ({
       if (response.success) {
         setNewMessage('');
         // Add message to local state immediately for better UX
-        setMessages(prev => [...prev, response.data]);
-        onSendMessage?.(response.data);
+        const agentMessage = {
+          id: response.data.id || `agent-${Date.now()}`,
+          sender_type: 'agent',
+          sender_name: 'You',
+          message_text: newMessage.trim(),
+          text: newMessage.trim(),
+          content: { text: newMessage.trim() },
+          message_type: 'text',
+          is_read: true,
+          created_at: new Date().toISOString(),
+          sent_at: new Date().toISOString()
+        };
+        console.log('📤 Sending agent message:', agentMessage);
+        setMessages(prev => {
+          const updated = [...prev, agentMessage];
+          console.log('📨 Updated messages after sending:', updated);
+          return updated;
+        });
+        onSendMessage?.(agentMessage);
       } else {
         throw new Error(response.error || 'Failed to send message');
       }
@@ -276,6 +301,34 @@ const ConversationDialog = ({
     }
   };
 
+  const getTemplateIndicator = (message) => {
+    if (message.sender_type !== 'bot' || !message.metadata) return null;
+
+    const { template_used, ai_model, conversation_template_applied } = message.metadata;
+
+    if (conversation_template_applied && template_used) {
+      return (
+        <div className="flex items-center text-xs text-purple-600 mt-1">
+          <Sparkles className="h-3 w-3 mr-1" />
+          {template_used === 'greeting_message' ? 'Template: Greeting' :
+           template_used === 'response_template' ? 'Template: Response' :
+           'Template Used'}
+        </div>
+      );
+    }
+
+    if (ai_model && ai_model !== 'conversation_template') {
+      return (
+        <div className="flex items-center text-xs text-purple-600 mt-1">
+          <Bot className="h-3 w-3 mr-1" />
+          AI Generated
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const formatMessageTime = (timestamp) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
@@ -324,8 +377,8 @@ const ConversationDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 py-5 border-b bg-gray-50/50">
+      <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 py-5 border-b bg-gray-50/50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {/* Connection Status Indicator */}
@@ -397,11 +450,11 @@ const ConversationDialog = ({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden min-h-0">
           {/* Main Content */}
-          <div className="flex-1 flex flex-col">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-              <TabsList className="mx-6 mt-4">
+          <div className="flex-1 flex flex-col min-h-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+              <TabsList className="mx-6 mt-4 flex-shrink-0">
                 <TabsTrigger value="messages" className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   Messages
@@ -417,8 +470,8 @@ const ConversationDialog = ({
               </TabsList>
 
               {/* Messages Tab */}
-              <TabsContent value="messages" className="flex-1 flex flex-col px-6 py-5">
-                <ScrollArea className="flex-1 pr-4">
+              <TabsContent value="messages" className="flex-1 flex flex-col px-6 py-5 min-h-0">
+                <ScrollArea className="flex-1 pr-4 min-h-0">
                   {messagesLoading ? (
                     <div className="flex items-center justify-center h-32">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -475,6 +528,9 @@ const ConversationDialog = ({
                                   {message.text || message.message_text || message.content?.text}
                                 </p>
 
+                                {/* Template Indicator for Bot Messages */}
+                                {message.sender_type === 'bot' && getTemplateIndicator(message)}
+
                                 {/* Message Status for Agent Messages */}
                                 {message.sender_type === 'agent' && (
                                   <div className="flex items-center justify-end mt-2">
@@ -525,7 +581,7 @@ const ConversationDialog = ({
                 </ScrollArea>
 
                 {/* Message Input */}
-                <div className="border-t bg-gray-50/50 pt-4 mt-5">
+                <div className="border-t bg-gray-50/50 pt-4 mt-5 flex-shrink-0">
                   <div className="flex items-end space-x-3">
                     <div className="flex-1">
                       <div className="relative">
@@ -572,7 +628,7 @@ const ConversationDialog = ({
               </TabsContent>
 
               {/* Details Tab */}
-              <TabsContent value="details" className="flex-1 px-6 py-5">
+              <TabsContent value="details" className="flex-1 px-6 py-5 min-h-0 overflow-y-auto">
                 <div className="space-y-6">
                   {/* Header Section */}
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
@@ -685,12 +741,80 @@ const ConversationDialog = ({
                         )}
                       </CardContent>
                     </Card>
+
+                    {/* Conversation Template Information */}
+                    {session.metadata?.conversation_template && (
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-t-lg">
+                          <CardTitle className="text-lg flex items-center space-x-2">
+                            <Sparkles className="h-5 w-5 text-purple-600" />
+                            <span>Conversation Template</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                          <div className="space-y-3">
+                            <div className="p-3 bg-purple-50 rounded-lg">
+                              <p className="text-sm font-medium text-purple-700">Template Applied</p>
+                              <p className="text-sm text-purple-900">
+                                {session.metadata.template_applied ? 'Yes' : 'No'}
+                              </p>
+                            </div>
+
+                            {session.metadata.conversation_template.language && (
+                              <div className="p-3 bg-purple-50 rounded-lg">
+                                <p className="text-sm font-medium text-purple-700">Language</p>
+                                <p className="text-sm text-purple-900 capitalize">
+                                  {session.metadata.conversation_template.language}
+                                </p>
+                              </div>
+                            )}
+
+                            {session.metadata.conversation_template.tone && (
+                              <div className="p-3 bg-purple-50 rounded-lg">
+                                <p className="text-sm font-medium text-purple-700">Tone</p>
+                                <p className="text-sm text-purple-900 capitalize">
+                                  {session.metadata.conversation_template.tone}
+                                </p>
+                              </div>
+                            )}
+
+                            {session.metadata.conversation_template.communication_style && (
+                              <div className="p-3 bg-purple-50 rounded-lg">
+                                <p className="text-sm font-medium text-purple-700">Communication Style</p>
+                                <p className="text-sm text-purple-900 capitalize">
+                                  {session.metadata.conversation_template.communication_style}
+                                </p>
+                              </div>
+                            )}
+
+                            {session.metadata.conversation_template.greeting_message && (
+                              <div className="p-3 bg-purple-50 rounded-lg">
+                                <p className="text-sm font-medium text-purple-700">Greeting Message</p>
+                                <p className="text-sm text-purple-900 italic">
+                                  &ldquo;{session.metadata.conversation_template.greeting_message}&rdquo;
+                                </p>
+                              </div>
+                            )}
+
+                            {session.metadata.conversation_template.response_templates &&
+                             Object.keys(session.metadata.conversation_template.response_templates).length > 0 && (
+                              <div className="p-3 bg-purple-50 rounded-lg">
+                                <p className="text-sm font-medium text-purple-700">Response Templates</p>
+                                <p className="text-sm text-purple-900">
+                                  {Object.keys(session.metadata.conversation_template.response_templates).length} templates available
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </div>
               </TabsContent>
 
               {/* Analytics Tab */}
-              <TabsContent value="analytics" className="flex-1 p-6 pt-4">
+              <TabsContent value="analytics" className="flex-1 p-6 pt-4 min-h-0 overflow-y-auto">
                 {sessionAnalytics?.success ? (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <Card>
@@ -766,6 +890,53 @@ const ConversationDialog = ({
                           <Badge variant={sessionAnalytics.data.is_resolved ? 'default' : 'secondary'}>
                             {sessionAnalytics.data.is_resolved ? 'Resolved' : 'Open'}
                           </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Template Usage Analytics */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center space-x-2">
+                          <Sparkles className="h-5 w-5 text-purple-600" />
+                          <span>Template Usage</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex justify-between">
+                          <span className="text-sm">Template Applied</span>
+                          <Badge variant={session.metadata?.template_applied ? 'default' : 'secondary'}>
+                            {session.metadata?.template_applied ? 'Yes' : 'No'}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm">Greeting Used</span>
+                          <span className="font-semibold">
+                            {messages.some(m => m.metadata?.template_used === 'greeting_message') ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm">Response Templates Used</span>
+                          <span className="font-semibold">
+                            {messages.filter(m => m.metadata?.template_used === 'response_template').length}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm">AI Generated</span>
+                          <span className="font-semibold">
+                            {messages.filter(m => m.metadata?.ai_model && m.metadata?.ai_model !== 'conversation_template').length}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm">Template Success Rate</span>
+                          <span className="font-semibold">
+                            {(() => {
+                              const templateMessages = messages.filter(m => m.sender_type === 'bot' && m.metadata?.conversation_template_applied);
+                              const totalBotMessages = messages.filter(m => m.sender_type === 'bot').length;
+                              if (totalBotMessages === 0) return 'N/A';
+                              return `${Math.round((templateMessages.length / totalBotMessages) * 100)}%`;
+                            })()}
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
