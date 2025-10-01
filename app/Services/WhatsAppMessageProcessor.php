@@ -798,17 +798,22 @@ class WhatsAppMessageProcessor
                 $content
             );
 
-            if ($result['success']) {
+            // Check if result has success key, otherwise assume success if no error
+            $isSuccess = isset($result['success']) ? $result['success'] : true;
+
+            if ($isSuccess) {
                 Log::info('WhatsApp response sent successfully', [
                     'session_id' => $session->id,
-                    'waha_message_id' => $result['data']['id'] ?? null,
-                    'to' => $session->customer->phone
+                    'waha_message_id' => $result['data']['id'] ?? $result['messageId'] ?? null,
+                    'to' => $session->customer->phone,
+                    'result' => $result
                 ]);
             } else {
                 Log::error('Failed to send WhatsApp response', [
                     'session_id' => $session->id,
-                    'error' => $result['error'] ?? 'Unknown error',
-                    'to' => $session->customer->phone
+                    'error' => $result['message'] ?? $result['error'] ?? 'Unknown error',
+                    'to' => $session->customer->phone,
+                    'result' => $result
                 ]);
             }
 

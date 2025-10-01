@@ -95,50 +95,79 @@ const ConversationDialog = ({
   useEffect(() => {
     if (messagesData?.success) {
       const loadedMessages = messagesData.data?.messages?.data || [];
-      console.log('📨 Loaded messages:', loadedMessages);
+      // console.log('📨 Loaded messages:', loadedMessages);
       setMessages(loadedMessages);
     }
   }, [messagesData]);
 
   useEffect(() => {
-    scrollToBottom();
+    // Auto-scroll to bottom when messages change
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
   }, [messages]);
 
   // Register real-time message handlers
   useEffect(() => {
     if (!session?.id) return;
 
+    // console.log('🔗 Registering message handler for session:', session.id);
+
     const unregisterMessage = registerMessageHandler(session.id, (data) => {
       // console.log('🔔 ConversationDialog received data:', data);
-      // Handle different message types
-      if (data.type === 'message' || data.event === 'message.processed' || data.message_id) {
+
+      // Handle different message types and events
+      if (data.type === 'message' ||
+          data.event === 'message.processed' ||
+          data.event === 'message.sent' ||
+          data.event === 'MessageSent' ||
+          data.event === 'MessageProcessed' ||
+          data.message_id) {
+
+        // console.log('📨 Processing message event:', data.event || data.type, data);
+
         // For message.processed event, we need to fetch the full message data
-        if (data.event === 'message.processed' || data.message_id) {
+        if (data.event === 'message.processed' ||
+            data.event === 'MessageProcessed' ||
+            data.message_id) {
+
           // Add the new message from WAHA to the messages list
           const newMessage = {
-            id: data.message_id,
-            sender_type: data.sender_type,
-            sender_name: data.sender_name,
-            message_text: data.message_content,
-            text: data.message_content, // For compatibility
-            content: { text: data.message_content },
-            message_type: data.message_type,
+            id: data.message_id || data.id,
+            sender_type: data.sender_type || (data.from_me ? 'agent' : 'customer'),
+            sender_name: data.sender_name || (data.from_me ? 'You' : 'Customer'),
+            message_text: data.message_content || data.content || data.text || data.body,
+            text: data.message_content || data.content || data.text || data.body, // For compatibility
+            content: { text: data.message_content || data.content || data.text || data.body },
+            message_type: data.message_type || data.type || 'text',
             media_url: data.media_url,
             media_type: data.media_type,
-            is_read: data.is_read,
+            is_read: data.is_read || false,
             delivered_at: data.delivered_at,
-            created_at: data.sent_at || data.timestamp,
-            sent_at: data.sent_at || data.timestamp
+            created_at: data.sent_at || data.timestamp || data.created_at || new Date().toISOString(),
+            sent_at: data.sent_at || data.timestamp || data.created_at || new Date().toISOString()
           };
+
+          // console.log('📝 Formatted new message:', newMessage);
 
           setMessages(prev => {
             // Check if message already exists to avoid duplicates
             const exists = prev.some(msg => msg.id === newMessage.id);
-            if (exists) return prev;
+            if (exists) {
+              // console.log('⚠️ Message already exists, skipping:', newMessage.id);
+              return prev;
+            }
 
             // Don't add agent messages from real-time handler to avoid duplicates
             if (newMessage.sender_type === 'agent') {
+              // console.log('⚠️ Skipping agent message from real-time handler');
               return prev;
+            }
+
+            // Ensure customer messages are properly identified
+            if (!newMessage.sender_type || newMessage.sender_type === 'customer') {
+              newMessage.sender_type = 'customer';
+              newMessage.sender_name = newMessage.sender_name || 'Customer';
             }
 
             // Add new message and sort by created_at
@@ -147,30 +176,68 @@ const ConversationDialog = ({
               new Date(a.created_at || a.sent_at) - new Date(b.created_at || b.sent_at)
             );
 
+            // console.log('✅ Added new message to conversation:', newMessage.sender_type, newMessage.message_text);
+
             // Show notification for new message from customer
             if (newMessage.sender_type === 'customer') {
+              // console.log('🔔 New message from customer:', newMessage.message_text);
+              // Auto-scroll to bottom when new customer message arrives
+              setTimeout(() => {
+                scrollToBottom();
+              }, 100);
               // You can add a toast notification here if needed
-              // console.log('New message from customer:', newMessage.message_text);
             }
 
             return sortedMessages;
           });
         } else {
           // Handle regular message type
+          // console.log('📨 Handling regular message type:', data);
+
+          // Format the message data to ensure consistency
+          const formattedMessage = {
+            id: data.id || `msg-${Date.now()}`,
+            sender_type: data.sender_type || (data.from_me ? 'agent' : 'customer'),
+            sender_name: data.sender_name || (data.from_me ? 'You' : 'Customer'),
+            message_text: data.content || data.text || data.body || data.message,
+            text: data.content || data.text || data.body || data.message,
+            content: { text: data.content || data.text || data.body || data.message },
+            message_type: data.type || 'text',
+            is_read: data.is_read || false,
+            created_at: data.timestamp || data.created_at || new Date().toISOString(),
+            sent_at: data.timestamp || data.created_at || new Date().toISOString(),
+            ...data // Include any additional properties
+          };
+
           setMessages(prev => {
             // Check if message already exists to avoid duplicates
-            const exists = prev.some(msg => msg.id === data.id);
-            if (exists) return prev;
+            const exists = prev.some(msg => msg.id === formattedMessage.id);
+            if (exists) {
+              // console.log('⚠️ Regular message already exists, skipping:', formattedMessage.id);
+              return prev;
+            }
 
-            return [...prev, data];
+            // console.log('✅ Added regular message to conversation:', formattedMessage.sender_type, formattedMessage.message_text);
+
+            // Auto-scroll to bottom when new customer message arrives
+            if (formattedMessage.sender_type === 'customer') {
+              setTimeout(() => {
+                scrollToBottom();
+              }, 100);
+            }
+
+            return [...prev, formattedMessage];
           });
         }
-      } else if (data.type === 'message_read') {
+      } else if (data.type === 'message_read' || data.event === 'message.read') {
+        // console.log('📖 Message read event:', data);
         setMessages(prev => prev.map(msg =>
           msg.id === data.message_id
             ? { ...msg, is_read: true, read_at: data.read_at }
             : msg
         ));
+      } else {
+        // console.log('❓ Unknown message event type:', data.type || data.event, data);
       }
     });
 
@@ -185,13 +252,16 @@ const ConversationDialog = ({
     });
 
     return () => {
+      // console.log('🔌 Unregistering message handler for session:', session.id);
       unregisterMessage();
       unregisterTyping();
     };
   }, [session?.id, registerMessageHandler, registerTypingHandler]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleSendMessage = async () => {
@@ -216,12 +286,18 @@ const ConversationDialog = ({
           created_at: new Date().toISOString(),
           sent_at: new Date().toISOString()
         };
-        console.log('📤 Sending agent message:', agentMessage);
+        // console.log('📤 Sending agent message:', agentMessage);
         setMessages(prev => {
           const updated = [...prev, agentMessage];
-          console.log('📨 Updated messages after sending:', updated);
+          // console.log('📨 Updated messages after sending:', updated);
           return updated;
         });
+
+        // Auto-scroll to bottom after sending message
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+
         onSendMessage?.(agentMessage);
       } else {
         throw new Error(response.error || 'Failed to send message');

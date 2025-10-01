@@ -583,7 +583,14 @@ class WahaService extends BaseHttpClient
                             'phone_format' => $phoneFormat,
                             'session_id' => $sessionId
                         ]);
-                        return $this->handleResponse($response, 'send text message');
+                        $result = $this->handleResponse($response, 'send text message');
+
+                        // Ensure result has success key
+                        if (!isset($result['success'])) {
+                            $result['success'] = true;
+                        }
+
+                        return $result;
                     }
 
                     // If 500 error, try next format/endpoint
@@ -607,7 +614,14 @@ class WahaService extends BaseHttpClient
                     }
 
                     // For other errors, return immediately
-                    return $this->handleResponse($response, 'send text message');
+                    $result = $this->handleResponse($response, 'send text message');
+
+                    // Ensure result has success key
+                    if (!isset($result['success'])) {
+                        $result['success'] = false;
+                    }
+
+                    return $result;
 
                 } catch (\Exception $e) {
                     $lastError = $e->getMessage();
@@ -1217,7 +1231,14 @@ class WahaService extends BaseHttpClient
     protected function handleResponse(Response $response, string $operation = 'request'): array
     {
         if ($response->successful()) {
-            return $response->json() ?? [];
+            $data = $response->json() ?? [];
+
+            // Ensure response has success key for consistency
+            if (!isset($data['success'])) {
+                $data['success'] = true;
+            }
+
+            return $data;
         }
 
         $statusCode = $response->status();
