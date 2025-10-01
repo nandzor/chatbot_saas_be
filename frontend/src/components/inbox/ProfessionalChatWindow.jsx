@@ -126,23 +126,46 @@ const ProfessionalChatWindow = ({ sessionId, onClose: _onClose }) => {
     }
   };
 
-  // Get message status icon
-  const getMessageStatusIcon = (message) => {
+  // Get message status icons (proper WhatsApp-like status)
+  const getMessageStatusIcons = (message) => {
+    // Only show status for non-customer messages
+    if (message.sender?.type === 'customer') {
+      return null;
+    }
+
+    // Debug log
+    console.log('getMessageStatusIcons called for message:', {
+      id: message.id,
+      sender_type: message.sender?.type,
+      status: message.status
+    });
+
+    // Check if message has status data
+    if (!message.status) {
+      return <Clock className="w-3 h-3 text-gray-400" />;
+    }
+
+    // Failed message
     if (message.status?.failed_at) {
       return <AlertCircle className="w-3 h-3 text-red-500" />;
     }
 
+    // Delivered and read (double checkmark - blue)
+    if (message.status?.delivered_at && message.status?.read_at) {
+      return <CheckCheck className="w-3 h-3 text-blue-500" />;
+    }
+
+    // Delivered but not read (double checkmark - gray)
     if (message.status?.delivered_at) {
-      if (message.status?.read_at) {
-        return <CheckCheck className="w-3 h-3 text-blue-500" />;
-      }
       return <CheckCheck className="w-3 h-3 text-gray-400" />;
     }
 
-    if (message.status?.is_read) {
-      return <Check className="w-3 h-3 text-blue-500" />;
+    // Sent but not delivered (single checkmark)
+    if (message.status?.sent_at) {
+      return <Check className="w-3 h-3 text-gray-400" />;
     }
 
+    // Default: sending (clock)
     return <Clock className="w-3 h-3 text-gray-400" />;
   };
 
@@ -342,11 +365,15 @@ const ProfessionalChatWindow = ({ sessionId, onClose: _onClose }) => {
                     <span className="text-xs opacity-70">
                       {formatMessageTime(message.created_at)}
                     </span>
-                    {!isCustomer && (
-                      <div className="ml-2">
-                        {getMessageStatusIcon(message)}
-                      </div>
-                    )}
+                    {(() => {
+                      const statusIcon = getMessageStatusIcons(message);
+                      console.log('Rendering status icon for message:', message.id, 'icon:', statusIcon);
+                      return statusIcon && (
+                        <div key={`status-${message.id}`} className="ml-2">
+                          {statusIcon}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

@@ -8,18 +8,19 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 
 class MessageSent implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets;
+    use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public string $messageId;
-    public string $sessionId;
-    public array $data;
+    public string $messageId = '';
+    public string $sessionId = '';
+    public array $data = [];
 
     // Store message data directly to avoid serialization issues
-    public array $messageData;
-    public array $sessionData;
+    public array $messageData = [];
+    public array $sessionData = [];
 
     /**
      * Create a new event instance.

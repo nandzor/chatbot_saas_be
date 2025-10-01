@@ -472,6 +472,9 @@ class WhatsAppMessageProcessor
                 'greeting_message' => $conversationTemplate['greeting_message'] ?? null
             ]);
 
+            // Initialize response variable
+            $response = null;
+
             // Use greeting message for first customer message
             if ($isFirstMessage && !empty($conversationTemplate['greeting_message'])) {
                 Log::info('Using greeting message from conversation template', [
