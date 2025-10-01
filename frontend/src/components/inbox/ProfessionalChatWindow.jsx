@@ -12,12 +12,12 @@ import {
   Clock,
   AlertCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/Avatar';
+import { Badge } from '@/components/ui/Badge';
+import { ScrollArea } from '@/components/ui/ScrollArea';
+import { Separator } from '@/components/ui/Separator';
 import {
   DropdownMenu,
   DropdownMenuContent,

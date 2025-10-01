@@ -291,7 +291,7 @@ class MessageService
     {
         try {
             // Get session information
-            $session = \App\Models\ChatSession::with(['customer', 'channelConfig'])->find($sessionId);
+            $session = ChatSession::with(['customer', 'channelConfig'])->find($sessionId);
             if (!$session) {
                 Log::warning('Session not found for typing indicator', ['session_id' => $sessionId]);
                 return;
@@ -305,10 +305,10 @@ class MessageService
                 if ($wahaSessionId && $customerPhone) {
                     // Initialize WAHA service
                     $wahaService = new \App\Services\Waha\WahaService();
-                    
+
                     // Send typing indicator to WAHA
                     $wahaService->sendTypingIndicator($wahaSessionId, $customerPhone, $isTyping);
-                    
+
                     Log::info('Typing indicator sent to WAHA', [
                         'session_id' => $sessionId,
                         'waha_session_id' => $wahaSessionId,

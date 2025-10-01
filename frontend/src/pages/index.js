@@ -17,6 +17,7 @@ export { default as Analytics } from './analytics/Analytics';
 export { default as Knowledge } from './knowledge/Knowledge';
 export { default as Automations } from './automations/Automations';
 export { default as N8nAutomations } from './n8n-automations/N8nAutomations';
+export { default as N8nToolsIntegration } from './n8n-tools/N8nToolsIntegration';
 export { default as Settings } from './settings/Settings';
 
 // Management Pages

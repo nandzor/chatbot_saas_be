@@ -152,6 +152,16 @@ export const PERMISSIONS = {
     EXECUTE: 'workflows.execute'
   },
 
+  // Automations
+  AUTOMATIONS: {
+    VIEW: 'automations.view',
+    CREATE: 'automations.create',
+    UPDATE: 'automations.update',
+    DELETE: 'automations.delete',
+    MANAGE: 'automations.manage',
+    EXECUTE: 'automations.execute'
+  },
+
   // Organizations (Admin)
   ORGANIZATIONS: {
     VIEW: 'organizations.view',
@@ -236,6 +246,15 @@ export const PERMISSION_GROUPS = {
     'manage_n8n_automations',
     'manage_workflows',
     'configure_bots'
+  ],
+
+  AUTOMATION_MANAGEMENT: [
+    PERMISSIONS.AUTOMATIONS.VIEW,
+    PERMISSIONS.AUTOMATIONS.CREATE,
+    PERMISSIONS.AUTOMATIONS.UPDATE,
+    PERMISSIONS.AUTOMATIONS.DELETE,
+    PERMISSIONS.AUTOMATIONS.MANAGE,
+    PERMISSIONS.AUTOMATIONS.EXECUTE
   ]
 };
 
@@ -248,6 +267,7 @@ export const ROLE_PERMISSIONS = {
     ...PERMISSION_GROUPS.CONTENT_MANAGEMENT,
     ...PERMISSION_GROUPS.ORGANIZATION_ADMIN,
     ...PERMISSION_GROUPS.CHAT_MANAGEMENT,
+    ...PERMISSION_GROUPS.AUTOMATION_MANAGEMENT,
     PERMISSIONS.ANALYTICS.VIEW,
     PERMISSIONS.BILLING.MANAGE,
     PERMISSIONS.SETTINGS.MANAGE,

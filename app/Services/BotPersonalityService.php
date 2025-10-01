@@ -2,30 +2,37 @@
 
 namespace App\Services;
 
-use App\Models\BotPersonality;
-use App\Models\ChatSession;
+use Exception;
+use Carbon\Carbon;
+use App\Models\AiModel;
 use App\Models\Message;
 use App\Models\Customer;
-use App\Models\AiModel;
-use App\Services\AiInstructionService;
-use App\Services\N8n\N8nService;
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\ChatSession;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\BotPersonality;
+use App\Services\N8n\N8nService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\RagWorkflowService;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
+use App\Services\AiInstructionService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class BotPersonalityService
 {
     protected AiInstructionService $aiInstructionService;
     protected N8nService $n8nService;
+    protected RagWorkflowService $ragWorkflowService;
 
-    public function __construct(AiInstructionService $aiInstructionService, N8nService $n8nService)
-    {
+    public function __construct(
+        AiInstructionService $aiInstructionService,
+        N8nService $n8nService,
+        RagWorkflowService $ragWorkflowService
+    ) {
         $this->aiInstructionService = $aiInstructionService;
         $this->n8nService = $n8nService;
+        $this->ragWorkflowService = $ragWorkflowService;
     }
 
     /**
@@ -262,7 +269,7 @@ class BotPersonalityService
 
             return $response;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('AI response generation failed', [
                 'personality_id' => $personalityId,
                 'error' => $e->getMessage(),
@@ -347,7 +354,7 @@ class BotPersonalityService
                 ]
             ];
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return [
                 'success' => false,
                 'error' => 'AI model call failed: ' . $e->getMessage()
@@ -537,7 +544,7 @@ class BotPersonalityService
                     'system_message_length' => strlen($systemMessage),
                     'n8n_workflow_id' => $botPersonality->n8n_workflow_id
                 ]);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Failed to generate system message for new bot personality', [
                     'bot_personality_id' => $botPersonality->id,
                     'error' => $e->getMessage()
@@ -619,7 +626,7 @@ class BotPersonalityService
                     'system_message_length' => strlen($systemMessage),
                     'n8n_workflow_id' => $personality->n8n_workflow_id
                 ]);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Failed to regenerate system message for updated bot personality', [
                     'bot_personality_id' => $personality->id,
                     'error' => $e->getMessage()
@@ -681,7 +688,7 @@ class BotPersonalityService
                 'actual_workflow_id' => $actualWorkflowId,
                 'system_message_length' => strlen($systemMessage)
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to update N8N workflow system message', [
                 'n8n_workflow_id' => $n8nWorkflowId,
                 'error' => $e->getMessage()
@@ -692,7 +699,7 @@ class BotPersonalityService
                 $this->updateN8nWorkflowSystemMessageInDatabase($n8nWorkflowId, $systemMessage);
                 // Also try to activate after database update
                 $this->activateN8nWorkflow($n8nWorkflowId, $n8nWorkflow->workflow_id ?? null);
-            } catch (\Exception $dbException) {
+            } catch (Exception $dbException) {
                 Log::error('Failed to update N8N workflow system message in database', [
                     'n8n_workflow_id' => $n8nWorkflowId,
                     'error' => $dbException->getMessage()
@@ -756,7 +763,7 @@ class BotPersonalityService
                     'database_updated' => true
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to activate N8N workflow', [
                 'n8n_workflow_id' => $n8nWorkflowId,
                 'actual_workflow_id' => $actualWorkflowId,
@@ -834,7 +841,7 @@ class BotPersonalityService
                                 break;
                             }
                         }
-                    } catch (\Exception $e) {
+                    } catch (Exception $e) {
                         // Skip workflows that can't be accessed
                         continue;
                     }
@@ -871,7 +878,7 @@ class BotPersonalityService
                 'workflows_with_system_message' => $workflowsWithSystemMessage
             ];
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to check N8N workflows', [
                 'error' => $e->getMessage()
             ]);
@@ -936,7 +943,7 @@ class BotPersonalityService
                 'waha_session_id' => $wahaSessionId,
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error during bot personality cleanup', [
                 'organization_id' => $organizationId,
                 'n8n_workflow_id' => $n8nWorkflowId,
@@ -968,7 +975,7 @@ class BotPersonalityService
                         'n8n_workflow_id' => $n8nWorkflowId,
                         'workflow_id' => $workflow->workflow_id,
                     ]);
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::warning('Failed to deactivate N8N workflow in server, but database updated', [
                         'n8n_workflow_id' => $n8nWorkflowId,
                         'workflow_id' => $workflow->workflow_id,
@@ -976,7 +983,7 @@ class BotPersonalityService
                     ]);
                 }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error deactivating unused N8N workflow', [
                 'n8n_workflow_id' => $n8nWorkflowId,
                 'error' => $e->getMessage(),
@@ -1088,5 +1095,318 @@ class BotPersonalityService
                 'synced_at' => now()
             ]
         ];
+    }
+
+    /**
+     * Create bot personality dengan RAG workflow
+     */
+    public function createPersonalityWithRag(array $data): array
+    {
+        try {
+            DB::beginTransaction();
+
+            // Create bot personality
+            $personality = BotPersonality::create([
+                'organization_id' => $data['organization_id'],
+                'name' => $data['name'],
+                'display_name' => $data['display_name'],
+                'description' => $data['description'],
+                'personality_traits' => $data['personality_traits'] ?? [],
+                'communication_style' => $data['communication_style'] ?? 'professional',
+                'language' => $data['language'] ?? 'en',
+                'ai_model_id' => $data['ai_model_id'],
+                'system_message' => $data['system_message'],
+                'max_response_length' => $data['max_response_length'] ?? 500,
+                'response_delay_ms' => $data['response_delay_ms'] ?? 1000,
+                'confidence_threshold' => $data['confidence_threshold'] ?? 0.7,
+                'color_scheme' => $data['color_scheme'] ?? ['primary' => '#3B82F6', 'secondary' => '#10B981'],
+                'status' => $data['status'] ?? 'active',
+                'rag_settings' => $data['rag_settings'] ?? null,
+                'google_drive_file_id' => $data['google_drive_file_id'] ?? null,
+                'google_drive_file_name' => $data['google_drive_file_name'] ?? null,
+                'google_drive_file_type' => $data['google_drive_file_type'] ?? null,
+                'google_drive_web_view_link' => $data['google_drive_web_view_link'] ?? null,
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id()
+            ]);
+
+            // Create RAG workflow jika ada selected files
+            if (!empty($data['rag_files']) && is_array($data['rag_files'])) {
+                $ragResult = $this->createRagWorkflowForPersonality($personality, $data['rag_files'], $data['rag_settings'] ?? []);
+
+                if (!$ragResult['success']) {
+                    DB::rollBack();
+                    return [
+                        'success' => false,
+                        'error' => 'Failed to create RAG workflow: ' . $ragResult['error']
+                    ];
+                }
+
+                // Update personality dengan RAG settings
+                $personality->update([
+                    'rag_settings' => json_encode([
+                        'enabled' => true,
+                        'workflowId' => $ragResult['data']['workflowId'],
+                        'sources' => $data['rag_files'],
+                        'lastUpdated' => now()->toISOString()
+                    ])
+                ]);
+            }
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'data' => [
+                    'personality' => $personality,
+                    'rag_workflow' => !empty($data['rag_files']) ? $ragResult['data'] : null
+                ]
+            ];
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to create bot personality with RAG', [
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to create bot personality: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Update bot personality dengan RAG workflow
+     */
+    public function updatePersonalityWithRag(string $personalityId, array $data): array
+    {
+        try {
+            $personality = BotPersonality::find($personalityId);
+
+            if (!$personality) {
+                return [
+                    'success' => false,
+                    'error' => 'Bot personality not found'
+                ];
+            }
+
+            DB::beginTransaction();
+
+            // Update basic personality data
+            $personality->update([
+                'name' => $data['name'] ?? $personality->name,
+                'display_name' => $data['display_name'] ?? $personality->display_name,
+                'description' => $data['description'] ?? $personality->description,
+                'personality_traits' => $data['personality_traits'] ?? $personality->personality_traits,
+                'communication_style' => $data['communication_style'] ?? $personality->communication_style,
+                'language' => $data['language'] ?? $personality->language,
+                'ai_model_id' => $data['ai_model_id'] ?? $personality->ai_model_id,
+                'system_message' => $data['system_message'] ?? $personality->system_message,
+                'max_response_length' => $data['max_response_length'] ?? $personality->max_response_length,
+                'response_delay_ms' => $data['response_delay_ms'] ?? $personality->response_delay_ms,
+                'confidence_threshold' => $data['confidence_threshold'] ?? $personality->confidence_threshold,
+                'color_scheme' => $data['color_scheme'] ?? $personality->color_scheme,
+                'status' => $data['status'] ?? $personality->status,
+                'google_drive_file_id' => $data['google_drive_file_id'] ?? $personality->google_drive_file_id,
+                'google_drive_file_name' => $data['google_drive_file_name'] ?? $personality->google_drive_file_name,
+                'google_drive_file_type' => $data['google_drive_file_type'] ?? $personality->google_drive_file_type,
+                'google_drive_web_view_link' => $data['google_drive_web_view_link'] ?? $personality->google_drive_web_view_link,
+                'updated_by' => Auth::id()
+            ]);
+
+            // Handle RAG files update
+            if (isset($data['rag_files'])) {
+                if (!empty($data['rag_files']) && is_array($data['rag_files'])) {
+                    // Update RAG workflow
+                    $ragResult = $this->updateRagWorkflowForPersonality($personality, $data['rag_files'], $data['rag_settings'] ?? []);
+
+                    if (!$ragResult['success']) {
+                        DB::rollBack();
+                        return [
+                            'success' => false,
+                            'error' => 'Failed to update RAG workflow: ' . $ragResult['error']
+                        ];
+                    }
+
+                    // Update RAG settings
+                    $personality->update([
+                        'rag_settings' => json_encode([
+                            'enabled' => true,
+                            'workflowId' => $ragResult['data']['workflowId'],
+                            'sources' => $data['rag_files'],
+                            'lastUpdated' => now()->toISOString()
+                        ])
+                    ]);
+                } else {
+                    // Disable RAG
+                    $this->disableRagWorkflowForPersonality($personality);
+                    $personality->update([
+                        'rag_settings' => json_encode([
+                            'enabled' => false,
+                            'sources' => [],
+                            'workflowId' => null,
+                            'lastUpdated' => now()->toISOString()
+                        ])
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'data' => [
+                    'personality' => $personality,
+                    'rag_workflow' => isset($data['rag_files']) && !empty($data['rag_files']) ? $ragResult['data'] : null
+                ]
+            ];
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update bot personality with RAG', [
+                'personalityId' => $personalityId,
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to update bot personality: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Create RAG workflow untuk bot personality
+     */
+    private function createRagWorkflowForPersonality(BotPersonality $personality, array $ragFiles, array $ragSettings = []): array
+    {
+        try {
+            $workflowData = [
+                'organizationId' => $personality->organization_id,
+                'botPersonalityId' => $personality->id,
+                'selectedFiles' => $ragFiles,
+                'config' => [
+                    'syncInterval' => 300,
+                    'includeMetadata' => true,
+                    'autoProcess' => true,
+                    'notificationEnabled' => true
+                ],
+                'ragSettings' => array_merge([
+                    'chunkSize' => 1000,
+                    'chunkOverlap' => 200,
+                    'embeddingModel' => 'text-embedding-ada-002',
+                    'vectorStore' => 'chroma',
+                    'similarityThreshold' => 0.7,
+                    'maxResults' => 5
+                ], $ragSettings)
+            ];
+
+            return $this->ragWorkflowService->createRagWorkflow($workflowData);
+
+        } catch (Exception $e) {
+            Log::error('Failed to create RAG workflow for personality', [
+                'personalityId' => $personality->id,
+                'ragFiles' => $ragFiles,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to create RAG workflow: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Update RAG workflow untuk bot personality
+     */
+    private function updateRagWorkflowForPersonality(BotPersonality $personality, array $ragFiles, array $ragSettings = []): array
+    {
+        try {
+            // Check if existing workflow
+            $existingWorkflow = DB::table('rag_workflows')
+                ->where('organization_id', $personality->organization_id)
+                ->where('bot_personality_id', $personality->id)
+                ->where('status', 'active')
+                ->first();
+
+            if ($existingWorkflow) {
+                // Update existing workflow
+                $updateData = [
+                    'organizationId' => $personality->organization_id,
+                    'botPersonalityId' => $personality->id,
+                    'action' => 'update',
+                    'files' => $ragFiles,
+                    'ragSettings' => array_merge([
+                        'chunkSize' => 1000,
+                        'chunkOverlap' => 200,
+                        'embeddingModel' => 'text-embedding-ada-002',
+                        'similarityThreshold' => 0.7,
+                        'maxResults' => 5
+                    ], $ragSettings)
+                ];
+
+                return $this->ragWorkflowService->updateRagDocuments($updateData);
+            } else {
+                // Create new workflow
+                return $this->createRagWorkflowForPersonality($personality, $ragFiles, $ragSettings);
+            }
+
+        } catch (Exception $e) {
+            Log::error('Failed to update RAG workflow for personality', [
+                'personalityId' => $personality->id,
+                'ragFiles' => $ragFiles,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to update RAG workflow: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Disable RAG workflow untuk bot personality
+     */
+    private function disableRagWorkflowForPersonality(BotPersonality $personality): void
+    {
+        try {
+            $workflow = DB::table('rag_workflows')
+                ->where('organization_id', $personality->organization_id)
+                ->where('bot_personality_id', $personality->id)
+                ->where('status', 'active')
+                ->first();
+
+            if ($workflow) {
+                // Deactivate workflow di N8N
+                $this->n8nService->deactivateWorkflow($workflow->n8n_workflow_id);
+
+                // Update status di database
+                DB::table('rag_workflows')
+                    ->where('id', $workflow->id)
+                    ->update([
+                        'status' => 'inactive',
+                        'updated_at' => now()
+                    ]);
+
+                // Update documents status
+                DB::table('rag_documents')
+                    ->where('organization_id', $personality->organization_id)
+                    ->where('bot_personality_id', $personality->id)
+                    ->update([
+                        'status' => 'inactive',
+                        'updated_at' => now()
+                    ]);
+            }
+        } catch (Exception $e) {
+            Log::error('Failed to disable RAG workflow for personality', [
+                'personalityId' => $personality->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

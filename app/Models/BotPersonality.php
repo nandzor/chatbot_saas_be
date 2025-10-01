@@ -56,6 +56,10 @@ class BotPersonality extends Model
         'n8n_workflow_id',
         'waha_session_id',
         'knowledge_base_item_id',
+        'google_drive_file_id',
+        'google_drive_file_type',
+        'google_drive_file_name',
+        'google_drive_integration_enabled',
     ];
 
     protected $casts = [

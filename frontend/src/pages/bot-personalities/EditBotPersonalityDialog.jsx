@@ -34,16 +34,21 @@ import {
   Database,
   Save,
   Settings,
+  HardDrive,
+  FileText,
+  Table,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@/utils/errorHandler';
 import { sanitizeInput } from '@/utils/securityUtils';
+import GoogleDriveFileSelector from '@/components/bot-personalities/GoogleDriveFileSelector';
 import BotPersonalityService from '@/services/BotPersonalityService';
 
 const botPersonalityService = new BotPersonalityService();
 
 const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonalityUpdated }) => {
   const [loading, setLoading] = useState(false);
+  const [showGoogleDriveSelector, setShowGoogleDriveSelector] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
@@ -63,7 +68,12 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
     status: 'active',
     // Assignment fields
     waha_session_id: null,
-    knowledge_base_item_id: null
+    knowledge_base_item_id: null,
+    // Google Drive fields
+    google_drive_file_id: null,
+    google_drive_file_type: null,
+    google_drive_file_name: null,
+    google_drive_integration_enabled: false
   });
 
   // Related data states
@@ -115,7 +125,12 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
         status: personality.status || 'active',
         // Assignment fields
         waha_session_id: personality.waha_session_id || null,
-        knowledge_base_item_id: personality.knowledge_base_item_id || null
+        knowledge_base_item_id: personality.knowledge_base_item_id || null,
+        // Google Drive fields
+        google_drive_file_id: personality.google_drive_file_id || null,
+        google_drive_file_type: personality.google_drive_file_type || null,
+        google_drive_file_name: personality.google_drive_file_name || null,
+        google_drive_integration_enabled: personality.google_drive_integration_enabled || false
       });
       setErrors({});
       setWahaSessionSearch('');
@@ -168,6 +183,17 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
+  // Handle Google Drive file selection
+  const handleGoogleDriveFileSelect = useCallback((file) => {
+    setFormData(prev => ({
+      ...prev,
+      google_drive_file_id: file.id,
+      google_drive_file_type: file.type,
+      google_drive_file_name: file.name,
+      google_drive_integration_enabled: true
+    }));
+  }, []);
+
   // Validate form
   const validateForm = useCallback(() => {
     const newErrors = {};
@@ -212,7 +238,22 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // Handle form submission
+  // Handle Google Drive file selection
+  const handleGoogleDriveFileSelected = useCallback((files) => {
+    setFormData(prev => ({
+      ...prev,
+      google_drive_files: files
+    }));
+    setShowGoogleDriveSelector(false);
+  }, []);
+
+  // Handle Google Drive file removal
+  const handleGoogleDriveFileRemove = useCallback((index) => {
+    setFormData(prev => ({
+      ...prev,
+      google_drive_files: prev.google_drive_files.filter((_, i) => i !== index)
+    }));
+  }, []);
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -673,6 +714,61 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
                 </div>
               </div>
 
+              {/* Google Drive Integration */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-blue-600" />
+                  Google Drive Integration
+                  <span className="text-xs text-gray-500 font-normal">(Optional)</span>
+                </Label>
+                <div className="space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowGoogleDriveSelector(true)}
+                    className="w-full justify-start"
+                  >
+                    <HardDrive className="w-4 h-4 mr-2" />
+                    {formData.google_drive_files?.length > 0
+                      ? `Change Google Drive Files (${formData.google_drive_files.length})`
+                      : 'Select Google Drive Files'}
+                  </Button>
+
+                  {formData.google_drive_files?.length > 0 && (
+                    <div className="space-y-2">
+                      {formData.google_drive_files.map((file, index) => (
+                        <div key={file.id} className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {file.type === 'sheets' ? (
+                              <Table className="w-4 h-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-blue-900 truncate">
+                                {file.name}
+                              </p>
+                              <p className="text-xs text-blue-600">
+                                {file.type === 'sheets' ? 'Google Sheets' : 'Google Docs'}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleGoogleDriveFileRemove(index)}
+                            className="h-8 w-8 p-0 hover:bg-blue-100"
+                          >
+                            <X className="w-4 h-4 text-blue-600" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
             </CardContent>
           </Card>
 
@@ -764,7 +860,27 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
             </Button>
           </DialogFooter>
         </form>
+
+        {/* Google Drive File Selector */}
+        <GoogleDriveFileSelector
+          open={showGoogleDriveSelector}
+          onOpenChange={setShowGoogleDriveSelector}
+          onFileSelected={handleGoogleDriveFileSelect}
+          selectedFile={formData.google_drive_file_id ? {
+            id: formData.google_drive_file_id,
+            name: formData.google_drive_file_name,
+            type: formData.google_drive_file_type
+          } : null}
+        />
       </DialogContent>
+
+      {/* Google Drive File Selector */}
+      <GoogleDriveFileSelector
+        open={showGoogleDriveSelector}
+        onOpenChange={setShowGoogleDriveSelector}
+        onFileSelected={handleGoogleDriveFileSelected}
+        selectedFiles={formData.google_drive_files || []}
+      />
     </Dialog>
   );
 };

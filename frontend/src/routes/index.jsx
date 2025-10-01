@@ -28,6 +28,7 @@ import ProfileSettings from '@/features/shared/ProfileSettings';
 import WhatsAppIntegration from '@/pages/WhatsAppIntegration';
 import UserList from '@/pages/org-user-management/UserList';
 import BotPersonalityList from '@/pages/bot-personalities/BotPersonalityList';
+import GoogleDriveIntegration from '@/pages/google-drive/GoogleDriveIntegration';
 
 // Role Management Pages
 import RoleList from '@/pages/roles/RoleList';
@@ -182,6 +183,14 @@ export const router = createBrowserRouter([
             element: (
               <RoleBasedRoute requiredPermission="users.view">
                 <UserList />
+              </RoleBasedRoute>
+            )
+          },
+          {
+            path: 'google-drive',
+            element: (
+              <RoleBasedRoute requiredPermission="automations.manage">
+                <GoogleDriveIntegration />
               </RoleBasedRoute>
             )
           },

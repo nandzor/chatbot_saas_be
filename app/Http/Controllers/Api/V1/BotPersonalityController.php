@@ -51,7 +51,21 @@ class BotPersonalityController extends BaseApiController
         $data = $request->getSanitizedData();
         $data['organization_id'] = $user->organization_id;
 
-        $created = $this->service->createForOrganization($data, $user->organization_id);
+        // Handle RAG files jika ada
+        if ($request->has('rag_files') && !empty($request->input('rag_files'))) {
+            $data['rag_files'] = $request->input('rag_files');
+            $data['rag_settings'] = $request->input('rag_settings', []);
+
+            $result = $this->service->createPersonalityWithRag($data);
+
+            if (!$result['success']) {
+                return $this->errorResponse($result['error'], 500);
+            }
+
+            $created = $result['data']['personality'];
+        } else {
+            $created = $this->service->createForOrganization($data, $user->organization_id);
+        }
 
         $this->logApiAction('bot_personality_created', [
             'id' => $created->id,
@@ -97,7 +111,23 @@ class BotPersonalityController extends BaseApiController
             return $this->unauthorizedResponse('Authentication required');
         }
 
-        $updated = $this->service->updateForOrganization($id, $request->getSanitizedData(), $user->organization_id);
+        $data = $request->getSanitizedData();
+
+        // Handle RAG files jika ada
+        if ($request->has('rag_files')) {
+            $data['rag_files'] = $request->input('rag_files');
+            $data['rag_settings'] = $request->input('rag_settings', []);
+
+            $result = $this->service->updatePersonalityWithRag($id, $data);
+
+            if (!$result['success']) {
+                return $this->errorResponse($result['error'], 500);
+            }
+
+            $updated = $result['data']['personality'];
+        } else {
+            $updated = $this->service->updateForOrganization($id, $data, $user->organization_id);
+        }
 
         if (!$updated) {
             return $this->handleResourceNotFound('BotPersonality', $id);

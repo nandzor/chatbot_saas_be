@@ -16,7 +16,8 @@ import {
   UserPlus,
   Zap,
   Smartphone,
-  Brain
+  Brain,
+  FileText
 } from 'lucide-react';
 
 const Sidebar = ({ role, isCollapsed, isMobile }) => {
@@ -46,6 +47,7 @@ const Sidebar = ({ role, isCollapsed, isMobile }) => {
           { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, href: '/dashboard/knowledge' },
           { id: 'bot-personalities', label: 'Bot Personalities', icon: Brain, href: '/dashboard/bot-personalities' },
           { id: 'whatsapp', label: 'WhatsApp Integration', icon: Smartphone, href: '/dashboard/whatsapp' },
+              { id: 'google-drive', label: 'Google Drive Integration', icon: FileText, href: '/dashboard/google-drive' },
           { id: 'users', label: 'User Management', icon: Users, href: '/dashboard/users' },
           { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' },
           { id: 'profile', label: 'Profile Settings', icon: User, href: '/dashboard/profile' }

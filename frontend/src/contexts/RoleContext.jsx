@@ -28,7 +28,13 @@ const PERMISSIONS = {
     'manage_billing',
     'manage_n8n_automations',
     'manage_knowledge_base',
-    'manage_settings'
+    'manage_settings',
+    'automations.manage',
+    'automations.view',
+    'automations.create',
+    'automations.update',
+    'automations.delete',
+    'automations.execute'
   ],
 
   // Agent permissions
