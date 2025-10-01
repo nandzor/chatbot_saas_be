@@ -82,6 +82,14 @@ class Message extends Model
     }
 
     /**
+     * Set the content attribute (alias for message_text).
+     */
+    public function setContentAttribute($value)
+    {
+        $this->attributes['message_text'] = $value;
+    }
+
+    /**
      * Get the chat session this message belongs to.
      */
     public function chatSession(): BelongsTo

@@ -63,6 +63,38 @@ class InboxController extends BaseApiController
     }
 
     /**
+     * Get available agents for transfer functionality
+     */
+    public function agents(Request $request): JsonResponse
+    {
+        try {
+            $filters = $this->getFilterParams($request, [
+                'per_page', 'page', 'status', 'department'
+            ]);
+
+            $agents = $this->inboxService->getAvailableAgents($filters);
+
+            $this->logApiAction('agents_retrieved', [
+                'filters' => $filters
+            ]);
+
+            return $this->successResponseWithLog(
+                'agents_retrieved',
+                'Available agents retrieved successfully',
+                $agents
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'agents_error',
+                'Failed to retrieve agents',
+                $e->getMessage(),
+                500,
+                'AGENTS_ERROR'
+            );
+        }
+    }
+
+    /**
      * Get all chat sessions for inbox
      */
     public function sessions(Request $request): JsonResponse

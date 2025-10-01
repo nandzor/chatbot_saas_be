@@ -206,12 +206,15 @@ Route::prefix('v1')->group(function () {
         // ====================================================================
 
         Route::prefix('inbox')
-            ->middleware(['permission:inbox.view', 'organization'])
+            ->middleware(['permission:inbox.read', 'organization'])
             ->group(function () {
 
             // Statistics and overview
             Route::get('/statistics', [InboxController::class, 'statistics']);
             Route::get('/export', [InboxController::class, 'export']);
+
+            // Agents for transfer functionality
+            Route::get('/agents', [InboxController::class, 'agents']);
 
             // Session management
             Route::get('/sessions', [InboxController::class, 'sessions']);
@@ -231,6 +234,25 @@ Route::prefix('v1')->group(function () {
 
             // Message operations
             Route::post('/sessions/{sessionId}/messages/{messageId}/read', [InboxController::class, 'markMessageRead']);
+
+            // Agent endpoints
+            Route::get('/agents', [\App\Http\Controllers\Api\V1\AgentController::class, 'index']);
+            Route::get('/agents/available', [\App\Http\Controllers\Api\V1\AgentController::class, 'available']);
+            Route::get('/agents/{id}', [\App\Http\Controllers\Api\V1\AgentController::class, 'show']);
+            Route::get('/agents/{id}/statistics', [\App\Http\Controllers\Api\V1\AgentController::class, 'statistics']);
+            Route::put('/agents/{id}/availability', [\App\Http\Controllers\Api\V1\AgentController::class, 'updateAvailability']);
+
+            // Agent Dashboard endpoints
+            Route::prefix('agent-dashboard')->group(function () {
+                Route::get('/statistics', [\App\Http\Controllers\Api\V1\AgentDashboardController::class, 'statistics']);
+                Route::get('/recent-sessions', [\App\Http\Controllers\Api\V1\AgentDashboardController::class, 'recentSessions']);
+                Route::get('/performance-metrics', [\App\Http\Controllers\Api\V1\AgentDashboardController::class, 'performanceMetrics']);
+                Route::get('/conversation-analytics', [\App\Http\Controllers\Api\V1\AgentDashboardController::class, 'conversationAnalytics']);
+                Route::get('/workload', [\App\Http\Controllers\Api\V1\AgentDashboardController::class, 'workload']);
+                Route::get('/realtime-activity', [\App\Http\Controllers\Api\V1\AgentDashboardController::class, 'realtimeActivity']);
+                Route::get('/conversation-insights', [\App\Http\Controllers\Api\V1\AgentDashboardController::class, 'conversationInsights']);
+            });
+
 
             // Bot personality endpoints
             Route::get('/bot-personalities', [InboxController::class, 'botPersonalities']);

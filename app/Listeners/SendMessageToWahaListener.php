@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\MessageSent;
+use App\Models\Message;
 use App\Services\Waha\WahaService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -40,22 +41,23 @@ class SendMessageToWahaListener implements ShouldQueue
     public function handle(MessageSent $event): void
     {
         try {
-            $message = $event->message;
-            $session = $event->session;
-            $this->messageId = $message->id;
+            // Use array data instead of objects to avoid serialization issues
+            $messageData = $event->messageData;
+            $sessionData = $event->sessionData;
+            $this->messageId = $messageData['id'];
 
             // Generate unique processing key to prevent duplicate processing
-            $processingKey = 'waha_processing_' . $message->id;
+            $processingKey = 'waha_processing_' . $messageData['id'];
 
             // Use atomic cache operation to prevent race conditions
-            $lockAcquired = Cache::lock($processingKey, 60)->get(function () use ($message, $session, $processingKey) {
-                return $this->processMessage($message, $session, $processingKey);
+            $lockAcquired = Cache::lock($processingKey, 60)->get(function () use ($messageData, $sessionData, $processingKey) {
+                return $this->processMessage($messageData, $sessionData, $processingKey);
             });
 
             if (!$lockAcquired) {
                 Log::info('Message processing lock could not be acquired, skipping duplicate', [
-                    'session_id' => $session->id,
-                    'message_id' => $message->id,
+                    'session_id' => $sessionData['id'],
+                    'message_id' => $messageData['id'],
                     'processing_key' => $processingKey
                 ]);
                 return;
@@ -63,8 +65,8 @@ class SendMessageToWahaListener implements ShouldQueue
 
         } catch (\Exception $e) {
             Log::error('WAHA listener failed to process message', [
-                'session_id' => $event->session->id,
-                'message_id' => $event->message->id,
+                'session_id' => $sessionData['id'],
+                'message_id' => $messageData['id'],
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -75,66 +77,65 @@ class SendMessageToWahaListener implements ShouldQueue
     /**
      * Process the message with WAHA service
      */
-    private function processMessage($message, $session, $processingKey): bool
+    private function processMessage(array $messageData, array $sessionData, string $processingKey): bool
     {
         try {
             Log::info('WAHA listener processing message', [
-                'session_id' => $session->id,
-                'message_id' => $message->id,
+                'session_id' => $sessionData['id'],
+                'message_id' => $messageData['id'],
                 'processing_key' => $processingKey,
                 'lock_acquired_at' => now()->toISOString()
             ]);
 
             // Prevent duplicate processing by checking if message already has WAHA metadata
-            if (isset($message->metadata['waha_sent_via'])) {
+            if (isset($messageData['metadata']['waha_sent_via'])) {
                 Log::info('Message already processed by WAHA listener, skipping duplicate', [
-                    'session_id' => $session->id,
-                    'message_id' => $message->id,
-                    'waha_sent_via' => $message->metadata['waha_sent_via']
+                    'session_id' => $sessionData['id'],
+                    'message_id' => $messageData['id'],
+                    'waha_sent_via' => $messageData['metadata']['waha_sent_via']
                 ]);
                 return true;
             }
 
             // Check if session has WAHA integration
-            $sessionData = $session->session_data ?? [];
-            $wahaSessionName = $sessionData['session_name'] ?? null;
+            $sessionMetadata = $sessionData['session_data'] ?? [];
+            $wahaSessionName = $sessionMetadata['session_name'] ?? null;
 
             if (!$wahaSessionName) {
                 Log::info('No WAHA session name found for session', [
-                    'session_id' => $session->id,
-                    'session_data' => $sessionData
+                    'session_id' => $sessionData['id'],
+                    'session_data' => $sessionMetadata
                 ]);
                 return true;
             }
 
             // Get customer phone number
-            $customerPhone = $sessionData['phone_number'] ?? null;
+            $customerPhone = $sessionMetadata['phone_number'] ?? null;
             if (!$customerPhone) {
                 Log::warning('No customer phone number found for WAHA message', [
-                    'session_id' => $session->id,
-                    'session_data' => $sessionData
+                    'session_id' => $sessionData['id'],
+                    'session_data' => $sessionMetadata
                 ]);
                 return true;
             }
 
             // Only send if message is from agent (not from customer or bot)
-            if ($message->sender_type !== 'agent') {
+            if ($messageData['sender_type'] !== 'agent') {
                 Log::info('Skipping WAHA send for non-agent message', [
-                    'session_id' => $session->id,
-                    'sender_type' => $message->sender_type
+                    'session_id' => $sessionData['id'],
+                    'sender_type' => $messageData['sender_type']
                 ]);
                 return true;
             }
 
             // Get message content
-            $messageContent = $message->content ?? $message->message_text ?? '';
+            $messageContent = $messageData['content'] ?? '';
 
             if (empty($messageContent)) {
                 Log::warning('No message content found for WAHA send', [
-                    'session_id' => $session->id,
-                    'message_id' => $message->id,
-                    'content' => $message->content,
-                    'message_text' => $message->message_text
+                    'session_id' => $sessionData['id'],
+                    'message_id' => $messageData['id'],
+                    'content' => $messageData['content']
                 ]);
                 return true;
             }
@@ -155,15 +156,15 @@ class SendMessageToWahaListener implements ShouldQueue
                                null;
 
                 Log::info('Message sent to WAHA successfully via event listener', [
-                    'session_id' => $session->id,
+                    'session_id' => $sessionData['id'],
                     'waha_session' => $wahaSessionName,
-                    'message_id' => $message->id,
+                    'message_id' => $messageData['id'],
                     'waha_message_id' => $wahaMessageId
                 ]);
 
                 // Update message with WAHA response
-                $message->update([
-                    'metadata' => array_merge($message->metadata ?? [], [
+                Message::where('id', $messageData['id'])->update([
+                    'metadata' => array_merge($messageData['metadata'] ?? [], [
                         'waha_message_id' => $wahaMessageId,
                         'waha_timestamp' => $result['timestamp'] ?? null,
                         'waha_sent_at' => now()->toISOString(),
@@ -173,15 +174,15 @@ class SendMessageToWahaListener implements ShouldQueue
                 ]);
             } else {
                 Log::warning('Failed to send message to WAHA via event listener', [
-                    'session_id' => $session->id,
+                    'session_id' => $sessionData['id'],
                     'waha_session' => $wahaSessionName,
-                    'message_id' => $message->id,
+                    'message_id' => $messageData['id'],
                     'result' => $result
                 ]);
 
                 // Update message with error status
-                $message->update([
-                    'metadata' => array_merge($message->metadata ?? [], [
+                Message::where('id', $messageData['id'])->update([
+                    'metadata' => array_merge($messageData['metadata'] ?? [], [
                         'waha_error' => 'Invalid response format',
                         'waha_failed_at' => now()->toISOString(),
                         'waha_sent_via' => 'event_listener_failed',
@@ -194,8 +195,8 @@ class SendMessageToWahaListener implements ShouldQueue
 
         } catch (\Exception $e) {
             Log::error('Exception while processing message in WAHA listener', [
-                'session_id' => $session->id,
-                'message_id' => $message->id,
+                'session_id' => $sessionData['id'],
+                'message_id' => $messageData['id'],
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
