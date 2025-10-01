@@ -16,7 +16,7 @@ import {
   useFocusManagement
 } from '@/utils/accessibilityUtils';
 import { inboxService } from '@/services/InboxService';
-import conversationService from '@/services/conversationService';
+import conversationService from '@/services/ConversationService';
 import { usePaginatedApi } from '@/hooks/useApi';
 import {
   Button,
