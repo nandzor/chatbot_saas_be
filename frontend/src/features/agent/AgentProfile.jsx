@@ -279,6 +279,39 @@ const AgentProfile = () => {
     refresh('all');
   };
 
+  // Save handlers for each tab
+  const handleSaveProfile = async () => {
+    try {
+      await updateProfile(userProfile);
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+    }
+  };
+
+  const handleSaveAvailability = async () => {
+    try {
+      await updateAvailability(availabilityData);
+    } catch (error) {
+      console.error('Failed to save availability:', error);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    try {
+      await updateNotificationPreferences(notificationSettings);
+    } catch (error) {
+      console.error('Failed to save notifications:', error);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    try {
+      await updateUIPreferences(uiPrefs);
+    } catch (error) {
+      console.error('Failed to save preferences:', error);
+    }
+  };
+
   const getAvailabilityStatusColor = (status) => {
     const colors = {
       online: 'bg-green-500',
@@ -623,6 +656,14 @@ const AgentProfile = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSaveProfile} disabled={loading.profile}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Profile
+            </Button>
+          </div>
         </TabsContent>
 
         {/* Availability Tab */}
@@ -756,6 +797,14 @@ const AgentProfile = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSaveAvailability} disabled={loading.availability}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Availability Settings
+            </Button>
           </div>
         </TabsContent>
 
@@ -939,6 +988,14 @@ const AgentProfile = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSaveNotifications} disabled={loading.notificationPreferences}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Notification Settings
+            </Button>
           </div>
         </TabsContent>
 
@@ -1261,6 +1318,14 @@ const AgentProfile = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSavePreferences} disabled={loading.uiPreferences}>
+              <Save className="w-4 h-4 mr-2" />
+              Save UI Preferences
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
