@@ -99,6 +99,23 @@ class AgentDashboardService extends BaseService
                 'from' => $dateFrom,
                 'to' => $dateTo
             ],
+            // Flat structure for frontend compatibility
+            'total_sessions' => $totalSessions,
+            'active_sessions' => $activeSessions,
+            'resolved_sessions' => $resolvedSessions,
+            'pending_sessions' => $pendingSessions,
+            'today_sessions' => $todaySessions,
+            'this_week_sessions' => $weekSessions,
+            'resolution_rate' => round($resolutionRate, 2),
+            'avg_response_time' => round($avgResponseTime, 2),
+            'avg_rating' => round($avgRating, 2),
+            'avg_resolution_time' => round($avgResolutionTime, 2),
+            'satisfaction_count' => $satisfactionCount,
+            'total_messages' => $totalMessages,
+            'agent_messages' => $agentMessages,
+            'customer_messages' => $customerMessages,
+            'today_messages' => $todayMessages,
+            // Keep nested structure for backward compatibility
             'sessions' => [
                 'total' => $totalSessions,
                 'active' => $activeSessions,
@@ -219,6 +236,18 @@ class AgentDashboardService extends BaseService
             ->orderBy('sessions_count', 'desc')
             ->get();
 
+        // Generate trend data for charts
+        $trendData = $dailyStats->map(function($stat) {
+            return [
+                'date' => Carbon::parse($stat->date)->format('d M'),
+                'csat' => $stat->avg_rating ? round($stat->avg_rating, 1) : 4.0,
+                'aht' => $stat->avg_response_time ? round($stat->avg_response_time / 60, 1) : 5.0, // Convert to minutes
+                'resolved' => $stat->resolved_count,
+                'sessions' => $stat->sessions_count,
+                'messages' => $stat->total_messages
+            ];
+        });
+
         return [
             'period' => [
                 'from' => $dateFrom->toDateString(),
@@ -227,7 +256,8 @@ class AgentDashboardService extends BaseService
             ],
             'daily_stats' => $dailyStats,
             'hourly_distribution' => $hourlyStats,
-            'category_distribution' => $categoryStats
+            'category_distribution' => $categoryStats,
+            'trend_data' => $trendData
         ];
     }
 
@@ -373,7 +403,7 @@ class AgentDashboardService extends BaseService
 
         // Workload metrics
         $currentLoad = $activeSessions->count();
-        $maxCapacity = $agent->max_concurrent_sessions ?? 10;
+        $maxCapacity = $agent->max_concurrent_chats ?? 10;
         $utilizationRate = $maxCapacity > 0 ? ($currentLoad / $maxCapacity) * 100 : 0;
 
         // Available capacity
@@ -388,7 +418,7 @@ class AgentDashboardService extends BaseService
         return [
             'agent' => [
                 'id' => $agent->id,
-                'name' => $agent->user->name,
+                'name' => $agent->user->name ?? $agent->display_name,
                 'max_concurrent_sessions' => $maxCapacity,
                 'current_sessions' => $currentLoad,
                 'utilization_rate' => round($utilizationRate, 2),
@@ -416,6 +446,87 @@ class AgentDashboardService extends BaseService
             'priority_sessions' => $prioritySessions->count(),
             'workload_status' => $utilizationRate > 90 ? 'high' :
                                ($utilizationRate > 70 ? 'medium' : 'low')
+        ];
+    }
+
+    /**
+     * Get agent's conversation insights
+     */
+    public function getConversationInsights(Request $request): array
+    {
+        $agentId = Auth::user()->agent?->id;
+        $organizationId = Auth::user()->organization_id;
+
+        if (!$agentId) {
+            throw new \Exception('User is not registered as an agent');
+        }
+
+        $dateFrom = $request->get('date_from', now()->subDays(30)->toDateString());
+        $dateTo = $request->get('date_to', now()->toDateString());
+        $limit = $request->get('limit', 10);
+
+        // Get conversation insights by category and priority
+        $categoryInsights = ChatSession::where('organization_id', $organizationId)
+            ->where('agent_id', $agentId)
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->selectRaw('
+                COALESCE(category, \'uncategorized\') as category,
+                COALESCE(priority, \'normal\') as priority,
+                COUNT(*) as session_count,
+                AVG(satisfaction_rating) as avg_rating,
+                AVG(resolution_time) as avg_resolution_time,
+                AVG(total_messages) as avg_message_count,
+                SUM(CASE WHEN is_resolved = true THEN 1 ELSE 0 END) as resolved_count
+            ')
+            ->groupBy('category', 'priority')
+            ->orderBy('session_count', 'desc')
+            ->limit($limit)
+            ->get();
+
+        // Get common issues/topics
+        $commonIssues = ChatSession::where('organization_id', $organizationId)
+            ->where('agent_id', $agentId)
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->whereNotNull('intent')
+            ->selectRaw('
+                intent,
+                COUNT(*) as frequency,
+                AVG(satisfaction_rating) as avg_rating
+            ')
+            ->groupBy('intent')
+            ->orderBy('frequency', 'desc')
+            ->limit($limit)
+            ->get();
+
+        // Get sentiment insights
+        $sentimentInsights = ChatSession::where('organization_id', $organizationId)
+            ->where('agent_id', $agentId)
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->whereNotNull('sentiment_analysis')
+            ->selectRaw('
+                sentiment_analysis->>\'overall_sentiment\' as sentiment,
+                COUNT(*) as count,
+                AVG((sentiment_analysis->>\'sentiment_score\')::float) as avg_score
+            ')
+            ->groupBy('sentiment')
+            ->orderBy('count', 'desc')
+            ->get();
+
+        return [
+            'period' => [
+                'from' => $dateFrom,
+                'to' => $dateTo
+            ],
+            'category_insights' => $categoryInsights,
+            'common_issues' => $commonIssues,
+            'sentiment_insights' => $sentimentInsights,
+            'summary' => [
+                'total_sessions' => $categoryInsights->sum('session_count'),
+                'avg_rating' => $categoryInsights->avg('avg_rating'),
+                'resolution_rate' => $categoryInsights->sum('session_count') > 0
+                    ? ($categoryInsights->sum('resolved_count') / $categoryInsights->sum('session_count')) * 100
+                    : 0
+            ]
         ];
     }
 

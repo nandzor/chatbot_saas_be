@@ -1,29 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Badge,
   Button,
   Progress,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
+  Skeleton,
+  Alert,
+  AlertDescription
 } from '@/components/ui';
-import { 
+import {
   MessageSquare,
   Clock,
   TrendingUp,
-  TrendingDown,
   Target,
   Star,
   Users,
@@ -32,109 +24,49 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowUp,
-  ArrowDown,
-  Minus,
   Activity,
   Bell,
-  Award,
-  Zap,
   Timer,
   MessageCircle,
   ThumbsUp,
-  Coffee
+  Coffee,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAgentDashboard } from '@/hooks/useAgentDashboard';
 
 const AgentDashboard = () => {
   const [timeFrame, setTimeFrame] = useState('7d');
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Mock data untuk agent performance
-  const [agentMetrics, setAgentMetrics] = useState({
-    realtime: {
-      activeChats: 5,
-      pendingChats: 2,
-      avgResponseTime: '2.3 menit',
-      currentCSAT: 4.7,
-      todayResolved: 12,
-      onlineTime: '6h 45m'
-    },
-    goals: {
-      monthly: {
-        targetCSAT: 4.5,
-        currentCSAT: 4.7,
-        targetResolutions: 100,
-        currentResolutions: 78,
-        targetAHT: '5 menit',
-        currentAHT: '4.2 menit'
-      }
-    },
-    followUps: [
-      {
-        id: 1,
-        customer: 'PT Maju Jaya',
-        issue: 'Masalah integrasi API',
-        priority: 'high',
-        dueDate: '2024-01-26T14:00:00Z',
-        tags: ['technical', 'api']
-      },
-      {
-        id: 2,
-        customer: 'CV Digital Solution',
-        issue: 'Follow-up training user',
-        priority: 'medium',
-        dueDate: '2024-01-27T10:00:00Z',
-        tags: ['training', 'onboarding']
-      },
-      {
-        id: 3,
-        customer: 'StartupXYZ',
-        issue: 'Konfirmasi upgrade plan',
-        priority: 'low',
-        dueDate: '2024-01-28T16:00:00Z',
-        tags: ['sales', 'upgrade']
-      }
-    ]
-  });
+  // Memoize dateRange to prevent unnecessary re-renders
+  const dateRange = useMemo(() => ({
+    days: timeFrame === '7d' ? 7 : 30
+  }), [timeFrame]);
 
-  // Mock data untuk trend performance
-  const [performanceTrend, setPerformanceTrend] = useState([
-    { date: '19 Jan', csat: 4.2, aht: 5.1, resolved: 8 },
-    { date: '20 Jan', csat: 4.4, aht: 4.8, resolved: 12 },
-    { date: '21 Jan', csat: 4.3, aht: 5.2, resolved: 9 },
-    { date: '22 Jan', csat: 4.6, aht: 4.5, resolved: 15 },
-    { date: '23 Jan', csat: 4.5, aht: 4.7, resolved: 11 },
-    { date: '24 Jan', csat: 4.8, aht: 4.2, resolved: 14 },
-    { date: '25 Jan', csat: 4.7, aht: 4.3, resolved: 12 }
-  ]);
-
-  // Mock data untuk achievements
-  const [achievements, setAchievements] = useState([
-    {
-      id: 1,
-      title: 'Customer Hero',
-      description: 'Mencapai CSAT 4.5+ selama 7 hari berturut-turut',
-      icon: Award,
-      unlocked: true,
-      unlockedDate: '2024-01-20'
+  // Use agent dashboard hook
+  const {
+    stats,
+    recentSessions,
+    performanceMetrics,
+    realtimeActivity,
+    loading,
+    isLoading,
+    hasErrors,
+    refresh,
+    lastUpdated
+  } = useAgentDashboard({
+    autoRefresh: true,
+    refreshInterval: 30000, // 30 seconds
+    dateRange,
+    onError: (type, error) => {
+      console.error(`Error in ${type}:`, error);
     },
-    {
-      id: 2,
-      title: 'Speed Master',
-      description: 'Average Handle Time di bawah 5 menit',
-      icon: Zap,
-      unlocked: true,
-      unlockedDate: '2024-01-22'
-    },
-    {
-      id: 3,
-      title: 'Resolution Expert',
-      description: 'Menyelesaikan 50+ chat dalam sebulan',
-      icon: Target,
-      unlocked: false,
-      progress: 78
+    onSuccess: (type, data) => {
+      console.log(`Successfully loaded ${type}:`, data);
     }
-  ]);
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -144,39 +76,39 @@ const AgentDashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const getMetricTrend = (current, previous) => {
-    if (current > previous) return { icon: TrendingUp, color: 'text-green-500', direction: 'up' };
-    if (current < previous) return { icon: TrendingDown, color: 'text-red-500', direction: 'down' };
-    return { icon: Minus, color: 'text-gray-500', direction: 'stable' };
-  };
+  // Helper functions
 
-  const getPriorityBadge = (priority) => {
-    const config = {
-      high: { color: 'red', label: 'High' },
-      medium: { color: 'yellow', label: 'Medium' },
-      low: { color: 'green', label: 'Low' }
-    };
-    const priorityConfig = config[priority] || config.medium;
-    return <Badge variant={priorityConfig.color}>{priorityConfig.label}</Badge>;
-  };
+  const formatTime = (seconds) => {
+    if (!seconds) return '0m';
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
 
-  const formatTimeRemaining = (dueDate) => {
-    const now = new Date();
-    const due = new Date(dueDate);
-    const diff = due - now;
-    
-    if (diff < 0) return 'Overdue';
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (hours > 24) {
-      const days = Math.floor(hours / 24);
-      return `${days}d ${hours % 24}h`;
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m`;
     }
-    
-    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    return `${minutes}m`;
   };
+
+  const formatNumber = (num) => {
+    if (num === null || num === undefined) return '0';
+    return num.toLocaleString('id-ID');
+  };
+
+  const formatRating = (rating) => {
+    if (!rating) return '0.0';
+    return parseFloat(rating).toFixed(1);
+  };
+
+  const handleRefresh = () => {
+    refresh('all');
+  };
+
+  const handleTimeFrameChange = (newTimeFrame) => {
+    setTimeFrame(newTimeFrame);
+    // Refresh data with new timeframe
+    refresh('all', { days: newTimeFrame === '7d' ? 7 : 30 });
+  };
+
 
   return (
     <div className="space-y-6">
@@ -187,17 +119,42 @@ const AgentDashboard = () => {
           <div className="flex items-center space-x-4 mt-2">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-gray-600">Online sejam {agentMetrics.realtime.onlineTime}</span>
+              <span className="text-sm text-gray-600">
+                {loading.realtimeActivity ? (
+                  <Skeleton className="h-4 w-24" />
+                ) : (
+                  `Online - ${realtimeActivity?.active_sessions_count || 0} aktif`
+                )}
+              </span>
             </div>
             <div className="text-sm text-gray-500">
               {currentTime.toLocaleTimeString('id-ID')} WIB
             </div>
+            {lastUpdated && (
+              <div className="text-xs text-gray-400">
+                Terakhir update: {lastUpdated.toLocaleTimeString('id-ID')}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleTimeFrameChange(timeFrame === '7d' ? '30d' : '7d')}
+            disabled={isLoading}
+          >
             <Calendar className="w-4 h-4 mr-2" />
             {timeFrame === '7d' ? '7 Hari' : '30 Hari'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
           <Button variant="outline" size="sm">
             <Coffee className="w-4 h-4 mr-2" />
@@ -205,6 +162,19 @@ const AgentDashboard = () => {
           </Button>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {hasErrors && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Terjadi kesalahan saat memuat data dashboard. Beberapa data mungkin tidak tersedia.
+            <Button variant="link" onClick={handleRefresh} className="ml-2 p-0 h-auto">
+              Coba lagi
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Real-time Metrics */}
       <div className="grid grid-cols-6 gap-4">
@@ -216,13 +186,17 @@ const AgentDashboard = () => {
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Obrolan Aktif
                 </p>
-                <p className="text-2xl font-bold text-blue-600 mb-1">
-                  {agentMetrics.realtime.activeChats}
-                </p>
+                {loading.stats ? (
+                  <Skeleton className="h-8 w-16 mb-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-blue-600 mb-1">
+                    {stats?.active_sessions || 0}
+                  </p>
+                )}
                 <div className="flex items-center space-x-1">
                   <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                   <p className="text-xs text-gray-500">
-                    +{agentMetrics.realtime.pendingChats} pending
+                    +{stats?.pending_sessions || 0} pending
                   </p>
                 </div>
               </div>
@@ -241,16 +215,20 @@ const AgentDashboard = () => {
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   CSAT Saya
                 </p>
-                <div className="flex items-center space-x-2 mb-1">
-                  <p className="text-2xl font-bold text-yellow-600">
-                    {agentMetrics.realtime.currentCSAT}
-                  </p>
-                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                </div>
+                {loading.stats ? (
+                  <Skeleton className="h-8 w-16 mb-2" />
+                ) : (
+                  <div className="flex items-center space-x-2 mb-1">
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {formatRating(stats?.avg_rating)}
+                    </p>
+                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                  </div>
+                )}
                 <div className="flex items-center space-x-1">
                   <ArrowUp className="w-3 h-3 text-green-500" />
                   <p className="text-xs text-green-600 font-medium">
-                    +0.2 dari kemarin
+                    {stats?.satisfaction_count || 0} rating
                   </p>
                 </div>
               </div>
@@ -269,13 +247,17 @@ const AgentDashboard = () => {
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Avg Handle Time
                 </p>
-                <p className="text-2xl font-bold text-green-600 mb-1">
-                  {agentMetrics.goals.monthly.currentAHT}
-                </p>
+                {loading.stats ? (
+                  <Skeleton className="h-8 w-16 mb-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-green-600 mb-1">
+                    {formatTime(stats?.avg_resolution_time)}
+                  </p>
+                )}
                 <div className="flex items-center space-x-1">
                   <CheckCircle className="w-3 h-3 text-green-500" />
                   <p className="text-xs text-green-600 font-medium">
-                    Target: {agentMetrics.goals.monthly.targetAHT}
+                    Target: 5 menit
                   </p>
                 </div>
               </div>
@@ -294,9 +276,13 @@ const AgentDashboard = () => {
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Resolved Hari Ini
                 </p>
-                <p className="text-2xl font-bold text-purple-600 mb-1">
-                  {agentMetrics.realtime.todayResolved}
-                </p>
+                {loading.stats ? (
+                  <Skeleton className="h-8 w-16 mb-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-purple-600 mb-1">
+                    {stats?.today_sessions || 0}
+                  </p>
+                )}
                 <div className="flex items-center space-x-1">
                   <Target className="w-3 h-3 text-purple-500" />
                   <p className="text-xs text-purple-600 font-medium">
@@ -319,9 +305,13 @@ const AgentDashboard = () => {
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Response Time
                 </p>
-                <p className="text-2xl font-bold text-indigo-600 mb-1">
-                  {agentMetrics.realtime.avgResponseTime}
-                </p>
+                {loading.stats ? (
+                  <Skeleton className="h-8 w-16 mb-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-indigo-600 mb-1">
+                    {formatTime(stats?.avg_response_time)}
+                  </p>
+                )}
                 <div className="flex items-center space-x-1">
                   <Clock className="w-3 h-3 text-indigo-500" />
                   <p className="text-xs text-indigo-600 font-medium">
@@ -342,15 +332,19 @@ const AgentDashboard = () => {
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                  Follow-ups
+                  Total Messages
                 </p>
-                <p className="text-2xl font-bold text-orange-600 mb-1">
-                  {agentMetrics.followUps.length}
-                </p>
+                {loading.stats ? (
+                  <Skeleton className="h-8 w-16 mb-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-orange-600 mb-1">
+                    {formatNumber(stats?.total_messages || 0)}
+                  </p>
+                )}
                 <div className="flex items-center space-x-1">
                   <AlertCircle className="w-3 h-3 text-orange-500" />
                   <p className="text-xs text-orange-600 font-medium">
-                    Perlu ditindaklanjuti
+                    {formatNumber(stats?.agent_messages || 0)} dari agent
                   </p>
                 </div>
               </div>
@@ -374,7 +368,7 @@ const AgentDashboard = () => {
                   <span>Trend Performa</span>
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  CSAT dan AHT 7 hari terakhir
+                  CSAT dan AHT {timeFrame === '7d' ? '7' : '30'} hari terakhir
                 </CardDescription>
               </div>
               <div className="flex items-center space-x-4">
@@ -391,64 +385,77 @@ const AgentDashboard = () => {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={performanceTrend} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#6b7280"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    yAxisId="left" 
-                    domain={[4, 5]} 
-                    stroke="#6b7280"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => value.toFixed(1)}
-                  />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right" 
-                    domain={[0, 8]} 
-                    stroke="#6b7280"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}
-                  />
-                  <Line 
-                    yAxisId="left"
-                    type="monotone" 
-                    dataKey="csat" 
-                    stroke="#fbbf24" 
-                    strokeWidth={3}
-                    name="CSAT"
-                    dot={{ fill: '#fbbf24', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: '#fbbf24', strokeWidth: 2 }}
-                  />
-                  <Line 
-                    yAxisId="right"
-                    type="monotone" 
-                    dataKey="aht" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    name="AHT (min)"
-                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {loading.performanceMetrics ? (
+                <div className="flex items-center justify-center h-full">
+                  <Skeleton className="h-full w-full" />
+                </div>
+              ) : performanceMetrics?.trend_data ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={performanceMetrics.trend_data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis
+                      dataKey="date"
+                      stroke="#6b7280"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      domain={[4, 5]}
+                      stroke="#6b7280"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => value.toFixed(1)}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      domain={[0, 8]}
+                      stroke="#6b7280"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="csat"
+                      stroke="#fbbf24"
+                      strokeWidth={3}
+                      name="CSAT"
+                      dot={{ fill: '#fbbf24', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: '#fbbf24', strokeWidth: 2 }}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="aht"
+                      stroke="#10b981"
+                      strokeWidth={3}
+                      name="AHT (min)"
+                      dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <BarChart3 className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">Tidak ada data performa tersedia</p>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -461,7 +468,7 @@ const AgentDashboard = () => {
               <span>Target Bulanan</span>
             </CardTitle>
             <CardDescription className="mt-1">
-              Progress pencapaian target Januari 2024
+              Progress pencapaian target {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 space-y-6">
@@ -473,16 +480,24 @@ const AgentDashboard = () => {
                   <span className="text-sm font-semibold text-yellow-800">CSAT Target</span>
                 </div>
                 <span className="text-sm font-bold text-yellow-700">
-                  {agentMetrics.goals.monthly.currentCSAT}/{agentMetrics.goals.monthly.targetCSAT}
+                  {loading.stats ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (
+                    `${formatRating(stats?.avg_rating)}/4.5`
+                  )}
                 </span>
               </div>
-              <Progress 
-                value={(agentMetrics.goals.monthly.currentCSAT / agentMetrics.goals.monthly.targetCSAT) * 100} 
+              <Progress
+                value={loading.stats ? 0 : (stats?.avg_rating / 4.5) * 100}
                 className="h-2.5 mb-2"
               />
               <div className="flex items-center justify-between">
                 <p className="text-xs text-yellow-700">
-                  +{((agentMetrics.goals.monthly.currentCSAT / agentMetrics.goals.monthly.targetCSAT) * 100 - 100).toFixed(1)}% dari target
+                  {loading.stats ? (
+                    <Skeleton className="h-3 w-24" />
+                  ) : (
+                    `${stats?.avg_rating > 4.5 ? '+' : ''}${((stats?.avg_rating / 4.5) * 100 - 100).toFixed(1)}% dari target`
+                  )}
                 </p>
                 <div className="flex items-center space-x-1">
                   <ArrowUp className="w-3 h-3 text-green-500" />
@@ -499,21 +514,33 @@ const AgentDashboard = () => {
                   <span className="text-sm font-semibold text-blue-800">Resolusi</span>
                 </div>
                 <span className="text-sm font-bold text-blue-700">
-                  {agentMetrics.goals.monthly.currentResolutions}/{agentMetrics.goals.monthly.targetResolutions}
+                  {loading.stats ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (
+                    `${stats?.resolved_sessions || 0}/100`
+                  )}
                 </span>
               </div>
-              <Progress 
-                value={(agentMetrics.goals.monthly.currentResolutions / agentMetrics.goals.monthly.targetResolutions) * 100} 
+              <Progress
+                value={loading.stats ? 0 : ((stats?.resolved_sessions || 0) / 100) * 100}
                 className="h-2.5 mb-2"
               />
               <div className="flex items-center justify-between">
                 <p className="text-xs text-blue-700">
-                  {((agentMetrics.goals.monthly.currentResolutions / agentMetrics.goals.monthly.targetResolutions) * 100).toFixed(0)}% tercapai
+                  {loading.stats ? (
+                    <Skeleton className="h-3 w-24" />
+                  ) : (
+                    `${((stats?.resolved_sessions || 0) / 100 * 100).toFixed(0)}% tercapai`
+                  )}
                 </p>
                 <div className="flex items-center space-x-1">
                   <Target className="w-3 h-3 text-blue-500" />
                   <span className="text-xs text-blue-600 font-medium">
-                    {agentMetrics.goals.monthly.targetResolutions - agentMetrics.goals.monthly.currentResolutions} lagi
+                    {loading.stats ? (
+                      <Skeleton className="h-3 w-16" />
+                    ) : (
+                      `${100 - (stats?.resolved_sessions || 0)} lagi`
+                    )}
                   </span>
                 </div>
               </div>
@@ -527,16 +554,26 @@ const AgentDashboard = () => {
                   <span className="text-sm font-semibold text-green-800">Average Handle Time</span>
                 </div>
                 <span className="text-sm font-bold text-green-700">
-                  {agentMetrics.goals.monthly.currentAHT}
+                  {loading.stats ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (
+                    formatTime(stats?.avg_resolution_time)
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-xs text-green-700">
-                  Target: {agentMetrics.goals.monthly.targetAHT}
+                  Target: 5 menit
                 </p>
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-600 font-medium">Target Tercapai!</span>
+                  <span className="text-sm text-green-600 font-medium">
+                    {loading.stats ? (
+                      <Skeleton className="h-3 w-20" />
+                    ) : (
+                      stats?.avg_resolution_time < 300 ? 'Target Tercapai!' : 'Perlu Perbaikan'
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
@@ -546,137 +583,156 @@ const AgentDashboard = () => {
 
       {/* Follow-ups & Achievements */}
       <div className="grid grid-cols-3 gap-6">
-        {/* Follow-up Tasks */}
+        {/* Recent Sessions */}
         <Card className="col-span-2 hover:shadow-md transition-shadow">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center space-x-2 text-lg">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                  <span>Daftar Follow-up</span>
+                  <MessageSquare className="w-5 h-5 text-blue-600" />
+                  <span>Sesi Terbaru</span>
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  Pelanggan yang perlu ditindaklanjuti
+                  Obrolan yang baru saja ditangani
                 </CardDescription>
               </div>
               <Badge variant="blue" className="px-3 py-1">
-                {agentMetrics.followUps.length} aktif
+                {loading.recentSessions ? (
+                  <Skeleton className="h-4 w-8" />
+                ) : (
+                  `${recentSessions?.data?.length || 0} sesi`
+                )}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-4">
-              {agentMetrics.followUps.map((followUp) => (
-                <div key={followUp.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
-                  {/* Header dengan Customer dan Priority */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <h4 className="font-semibold text-gray-900">{followUp.customer}</h4>
-                      {getPriorityBadge(followUp.priority)}
-                    </div>
-                    <div className={`text-sm font-medium px-2 py-1 rounded-full ${
-                      formatTimeRemaining(followUp.dueDate) === 'Overdue' 
-                        ? 'bg-red-100 text-red-700' 
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {formatTimeRemaining(followUp.dueDate)}
+              {loading.recentSessions ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-3 w-1/2 mb-3" />
+                    <div className="flex justify-between">
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-8 w-24" />
                     </div>
                   </div>
-                  
-                  {/* Issue Description */}
-                  <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                    {followUp.issue}
-                  </p>
-                  
-                  {/* Footer dengan Tags dan Action */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-wrap gap-2">
-                      {followUp.tags.map((tag) => (
-                        <Badge key={tag} variant="gray" className="text-xs px-2 py-1 bg-gray-100 text-gray-700 border-gray-200">
-                          {tag}
+                ))
+              ) : recentSessions?.data?.length > 0 ? (
+                recentSessions.data.map((session) => (
+                  <div key={session.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
+                    {/* Header dengan Customer dan Status */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          session.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                        }`}></div>
+                        <h4 className="font-semibold text-gray-900">
+                          {session.customer?.name || 'Unknown Customer'}
+                        </h4>
+                        <Badge variant={session.priority === 'high' ? 'red' : session.priority === 'medium' ? 'yellow' : 'green'}>
+                          {session.priority || 'normal'}
                         </Badge>
-                      ))}
+                      </div>
+                      <div className={`text-sm font-medium px-2 py-1 rounded-full ${
+                        session.is_resolved
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {session.is_resolved ? 'Resolved' : 'Pending'}
+                      </div>
                     </div>
-                    <Button size="sm" variant="outline" className="hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700">
-                      Tindak Lanjut
-                    </Button>
+
+                    {/* Session Details */}
+                    <div className="text-sm text-gray-600 mb-3">
+                      <div className="flex items-center space-x-4">
+                        <span>Kategori: {session.category || 'General'}</span>
+                        <span>•</span>
+                        <span>{session.total_messages || 0} pesan</span>
+                        {session.satisfaction_rating && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center space-x-1">
+                              <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                              <span>{session.satisfaction_rating}</span>
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer dengan Time dan Action */}
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-gray-500">
+                        {new Date(session.last_activity_at).toLocaleString('id-ID')}
+                      </div>
+                      <Button size="sm" variant="outline" className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700">
+                        Lihat Detail
+                      </Button>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">Tidak ada sesi terbaru</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Achievements */}
+        {/* Real-time Activity */}
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center space-x-2 text-lg">
-              <Award className="w-5 h-5 text-yellow-600" />
-              <span>Pencapaian</span>
+              <Activity className="w-5 h-5 text-green-600" />
+              <span>Aktivitas Real-time</span>
             </CardTitle>
             <CardDescription className="mt-1">
-              Badge dan milestone Anda
+              Aktivitas terkini dan pesan terbaru
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 space-y-4">
-            {achievements.map((achievement) => (
-              <div key={achievement.id} className={`p-4 rounded-lg border transition-all duration-200 ${
-                achievement.unlocked 
-                  ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 hover:shadow-sm' 
-                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-              }`}>
-                {/* Achievement Header */}
-                <div className="flex items-start space-x-3 mb-3">
-                  <div className={`p-2.5 rounded-lg flex-shrink-0 ${
-                    achievement.unlocked ? 'bg-yellow-100' : 'bg-gray-200'
-                  }`}>
-                    <achievement.icon className={`w-4 h-4 ${
-                      achievement.unlocked ? 'text-yellow-600' : 'text-gray-500'
-                    }`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className={`font-semibold text-sm mb-1 ${
-                      achievement.unlocked ? 'text-yellow-800' : 'text-gray-700'
-                    }`}>
-                      {achievement.title}
-                    </h4>
-                    <p className={`text-xs leading-relaxed ${
-                      achievement.unlocked ? 'text-yellow-700' : 'text-gray-600'
-                    }`}>
-                      {achievement.description}
-                    </p>
+            {loading.realtimeActivity ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="p-3 border border-gray-200 rounded-lg">
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))
+            ) : realtimeActivity?.recent_messages?.length > 0 ? (
+              realtimeActivity.recent_messages.slice(0, 5).map((message) => (
+                <div key={message.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start space-x-3">
+                    <div className={`w-2 h-2 rounded-full mt-2 ${
+                      message.sender_type === 'agent' ? 'bg-blue-500' : 'bg-gray-400'
+                    }`}></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-sm font-medium text-gray-900">
+                          {message.sender_name || 'Unknown'}
+                        </span>
+                        <Badge variant="gray" className="text-xs">
+                          {message.sender_type}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 truncate">
+                        {message.content || message.message_content || 'No content'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(message.created_at).toLocaleTimeString('id-ID')}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                
-                {/* Achievement Status */}
-                {achievement.unlocked ? (
-                  <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <div className="flex-1">
-                      <span className="text-xs font-medium text-green-700">
-                        Unlocked {new Date(achievement.unlockedDate).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Progress</span>
-                      <span className="font-medium text-gray-700">{achievement.progress}%</span>
-                    </div>
-                    <Progress value={achievement.progress} className="h-2" />
-                    <p className="text-xs text-gray-500 text-center">
-                      {100 - achievement.progress}% lagi untuk unlock
-                    </p>
-                  </div>
-                )}
+              ))
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                <Activity className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">Tidak ada aktivitas terkini</p>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>
@@ -691,49 +747,54 @@ const AgentDashboard = () => {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-5 gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-24 flex-col hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 group"
+              onClick={() => window.location.href = '/agent/inbox'}
             >
               <div className="p-2 bg-blue-100 rounded-lg mb-2 group-hover:bg-blue-200 transition-colors">
                 <MessageCircle className="w-6 h-6 text-blue-600" />
               </div>
               <span className="text-sm font-medium">Buka Inbox</span>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="h-24 flex-col hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all duration-200 group"
+              onClick={() => window.location.href = '/agent/customers'}
             >
               <div className="p-2 bg-green-100 rounded-lg mb-2 group-hover:bg-green-200 transition-colors">
                 <Users className="w-6 h-6 text-green-600" />
               </div>
               <span className="text-sm font-medium">Cari Customer</span>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="h-24 flex-col hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-all duration-200 group"
+              onClick={() => window.location.href = '/agent/knowledge-base'}
             >
               <div className="p-2 bg-purple-100 rounded-lg mb-2 group-hover:bg-purple-200 transition-colors">
                 <Activity className="w-6 h-6 text-purple-600" />
               </div>
               <span className="text-sm font-medium">Knowledge Base</span>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="h-24 flex-col hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all duration-200 group"
+              onClick={() => window.location.href = '/agent/schedule'}
             >
               <div className="p-2 bg-orange-100 rounded-lg mb-2 group-hover:bg-orange-200 transition-colors">
                 <Calendar className="w-6 h-6 text-orange-600" />
               </div>
               <span className="text-sm font-medium">Jadwal Follow-up</span>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="h-24 flex-col hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all duration-200 group"
+              onClick={() => window.location.href = '/agent/reports'}
             >
               <div className="p-2 bg-indigo-100 rounded-lg mb-2 group-hover:bg-indigo-200 transition-colors">
                 <BarChart3 className="w-6 h-6 text-indigo-600" />
