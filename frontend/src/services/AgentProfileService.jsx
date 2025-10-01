@@ -263,7 +263,7 @@ class AgentProfileService {
       return await this._makeApiCall(
         this.authService.api.put,
         url,
-        preferences
+        { preferences }
       );
     } catch (error) {
       console.error('❌ Error updating notification preferences:', error);
@@ -375,7 +375,7 @@ class AgentProfileService {
       return await this._makeApiCall(
         this.authService.api.put,
         url,
-        preferences
+        { preferences }
       );
     } catch (error) {
       console.error('❌ Error updating UI preferences:', error);
