@@ -663,8 +663,8 @@ class WahaService extends BaseHttpClient
         $this->validatePhoneNumber($to);
 
         $response = $this->post(
-            sprintf(self::ENDPOINT_SEND_MEDIA, $sessionId),
-            $this->buildMediaMessageData($to, $mediaUrl, $caption)
+            self::ENDPOINT_SEND_MEDIA,
+            $this->buildMediaMessageData($sessionId, $to, $mediaUrl, $caption)
         );
         return $this->handleResponse($response, 'send media message');
     }
@@ -763,13 +763,122 @@ class WahaService extends BaseHttpClient
     /**
      * Build media message data
      */
-    private function buildMediaMessageData(string $to, string $mediaUrl, string $caption): array
+    private function buildMediaMessageData(string $sessionId, string $to, string $mediaUrl, string $caption): array
     {
+        $fileData = [];
+
+        // Check if it's a base64 data URL
+        if (str_starts_with($mediaUrl, 'data:')) {
+            // Extract base64 data and mime type from data URL
+            $dataUrlParts = explode(',', $mediaUrl, 2);
+            $mimeTypePart = $dataUrlParts[0];
+            $base64Data = $dataUrlParts[1] ?? '';
+
+            // Extract mime type
+            $mimeType = 'image/jpeg'; // default
+            if (preg_match('/data:([^;]+)/', $mimeTypePart, $matches)) {
+                $mimeType = $matches[1];
+            }
+
+            // Extract filename from mime type
+            $extension = $this->getExtensionFromMimeType($mimeType);
+            $filename = 'image.' . $extension;
+
+            $fileData = [
+                'data' => $base64Data,
+                'filename' => $filename,
+                'mimetype' => $mimeType
+            ];
+        } else {
+            // Regular URL
+            $fileData = [
+                'url' => $mediaUrl,
+                'filename' => basename(parse_url($mediaUrl, PHP_URL_PATH)) ?: 'image.jpg',
+                'mimetype' => $this->getMimeTypeFromUrl($mediaUrl)
+            ];
+        }
+
         return [
-            'to' => $to,
-            'media' => $mediaUrl,
+            'session' => $sessionId,
+            'chatId' => $to . '@c.us',
+            'file' => $fileData,
             'caption' => $caption,
+            'reply_to' => null
         ];
+    }
+
+    /**
+     * Get MIME type from URL
+     */
+    private function getMimeTypeFromUrl(string $url): string
+    {
+        $extension = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
+
+        $mimeTypes = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'bmp' => 'image/bmp',
+            'svg' => 'image/svg+xml',
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'ppt' => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'mp4' => 'video/mp4',
+            'avi' => 'video/x-msvideo',
+            'mov' => 'video/quicktime',
+            'wmv' => 'video/x-ms-wmv',
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            'ogg' => 'audio/ogg',
+            'txt' => 'text/plain',
+            'csv' => 'text/csv',
+            'zip' => 'application/zip',
+            'rar' => 'application/x-rar-compressed'
+        ];
+
+        return $mimeTypes[$extension] ?? 'image/jpeg'; // Default to JPEG if unknown
+    }
+
+    /**
+     * Get file extension from MIME type
+     */
+    private function getExtensionFromMimeType(string $mimeType): string
+    {
+        $extensions = [
+            'image/jpeg' => 'jpg',
+            'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            'image/bmp' => 'bmp',
+            'image/svg+xml' => 'svg',
+            'application/pdf' => 'pdf',
+            'application/msword' => 'doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+            'application/vnd.ms-excel' => 'xls',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+            'application/vnd.ms-powerpoint' => 'ppt',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+            'video/mp4' => 'mp4',
+            'video/x-msvideo' => 'avi',
+            'video/quicktime' => 'mov',
+            'video/x-ms-wmv' => 'wmv',
+            'audio/mpeg' => 'mp3',
+            'audio/wav' => 'wav',
+            'audio/ogg' => 'ogg',
+            'text/plain' => 'txt',
+            'text/csv' => 'csv',
+            'application/zip' => 'zip',
+            'application/x-rar-compressed' => 'rar'
+        ];
+
+        return $extensions[$mimeType] ?? 'jpg'; // Default to jpg if unknown
     }
 
     /**

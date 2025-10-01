@@ -238,9 +238,31 @@ Route::prefix('v1')->group(function () {
             // Agent endpoints
             Route::get('/agents', [\App\Http\Controllers\Api\V1\AgentController::class, 'index']);
             Route::get('/agents/available', [\App\Http\Controllers\Api\V1\AgentController::class, 'available']);
+            Route::get('/agents/me', [\App\Http\Controllers\Api\V1\AgentController::class, 'me']);
             Route::get('/agents/{id}', [\App\Http\Controllers\Api\V1\AgentController::class, 'show']);
             Route::get('/agents/{id}/statistics', [\App\Http\Controllers\Api\V1\AgentController::class, 'statistics']);
             Route::put('/agents/{id}/availability', [\App\Http\Controllers\Api\V1\AgentController::class, 'updateAvailability']);
+            Route::put('/agents/me/availability', [\App\Http\Controllers\Api\V1\AgentController::class, 'updateMyAvailability']);
+
+            // Agent Profile endpoints
+            Route::get('/agents/me/profile', [\App\Http\Controllers\Api\V1\AgentController::class, 'getMyProfile']);
+            Route::put('/agents/me/profile', [\App\Http\Controllers\Api\V1\AgentController::class, 'updateMyProfile']);
+            Route::post('/agents/me/avatar', [\App\Http\Controllers\Api\V1\AgentController::class, 'uploadMyAvatar']);
+
+            // Agent Preferences endpoints
+            Route::get('/agents/me/notifications', [\App\Http\Controllers\Api\V1\AgentController::class, 'getMyNotifications']);
+            Route::put('/agents/me/notifications', [\App\Http\Controllers\Api\V1\AgentController::class, 'updateMyNotifications']);
+            Route::get('/agents/me/preferences', [\App\Http\Controllers\Api\V1\AgentController::class, 'getMyPreferences']);
+            Route::put('/agents/me/preferences', [\App\Http\Controllers\Api\V1\AgentController::class, 'updateMyPreferences']);
+
+            // Agent Templates endpoints
+            Route::get('/agents/me/templates', [\App\Http\Controllers\Api\V1\AgentController::class, 'getMyTemplates']);
+            Route::post('/agents/me/templates', [\App\Http\Controllers\Api\V1\AgentController::class, 'createMyTemplate']);
+            Route::put('/agents/me/templates/{id}', [\App\Http\Controllers\Api\V1\AgentController::class, 'updateMyTemplate']);
+            Route::delete('/agents/me/templates/{id}', [\App\Http\Controllers\Api\V1\AgentController::class, 'deleteMyTemplate']);
+
+            // Agent Export endpoint
+            Route::get('/agents/me/export', [\App\Http\Controllers\Api\V1\AgentController::class, 'exportMyData']);
 
             // Agent Dashboard endpoints
             Route::prefix('agent-dashboard')->group(function () {
