@@ -33,6 +33,16 @@ export const useAgentInbox = () => {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const searchTimeoutRef = useRef(null);
+  const processedMessageIdsRef = useRef(new Set());
+
+  // Duplicate prevention callback
+  const shouldProcessMessage = useCallback((messageId) => {
+    if (processedMessageIdsRef.current.has(messageId)) {
+      return false;
+    }
+    processedMessageIdsRef.current.add(messageId);
+    return true;
+  }, []);
 
   // Memoized filtered sessions for better performance
   const filteredSessions = useMemo(() => {
@@ -484,7 +494,7 @@ export const useAgentInbox = () => {
           setMessages(prev => {
             // Only update if there are new messages
             const currentIds = new Set(prev.map(m => m.id));
-            const newMessages = reversedMessages.filter(m => !currentIds.has(m.id));
+            const newMessages = reversedMessages.filter(m => !currentIds.has(m.id) && shouldProcessMessage(m.id));
 
             if (newMessages.length > 0) {
               console.log('🔄 Polling found new messages:', newMessages.length);
@@ -499,7 +509,7 @@ export const useAgentInbox = () => {
     }, 2000); // Poll every 2 seconds
 
     return () => clearInterval(pollInterval);
-  }, [selectedSession?.id]);
+  }, [selectedSession?.id, shouldProcessMessage]);
 
 
 
@@ -544,6 +554,13 @@ export const useAgentInbox = () => {
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
+    };
+  }, []);
+
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      processedMessageIdsRef.current.clear();
     };
   }, []);
 

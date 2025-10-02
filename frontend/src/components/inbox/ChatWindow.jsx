@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Send, 
-  Paperclip, 
-  Smile, 
+import {
+  Send,
+  Paperclip,
+  Smile,
   MoreVertical,
   Phone,
   Video,
@@ -40,12 +40,12 @@ import { inboxService } from '@/services/InboxService';
 import { useApi } from '@/hooks/useApi';
 import { handleError } from '@/utils/errorHandler';
 
-const ChatWindow = ({ 
-  conversation, 
+const ChatWindow = ({
+  conversation,
   onSendMessage,
   onAssignConversation,
   onResolveConversation,
-  className = "" 
+  className = ""
 }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -67,6 +67,81 @@ const ChatWindow = ({
     }
   }, [messagesData]);
 
+  // Duplicate prevention refs
+  const processedMessageIdsRef = useRef(new Set());
+
+  const shouldProcessMessage = useCallback((messageId) => {
+    if (processedMessageIdsRef.current.has(messageId)) {
+      return false;
+    }
+    processedMessageIdsRef.current.add(messageId);
+    return true;
+  }, []);
+
+  // Polling fallback for message updates (enhanced duplicate prevention)
+  useEffect(() => {
+    if (!conversation?.id) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await inboxService.getSessionMessages(conversation.id, {
+          page: 1,
+          per_page: 50,
+          sort_by: 'created_at',
+          sort_direction: 'desc'
+        });
+
+        if (response?.success && response.data) {
+          const messagesData = response.data || [];
+          const transformedMessages = messagesData.map(msg => ({
+            id: msg.id,
+            session_id: msg.chat_session_id,
+            sender_type: msg.sender_type,
+            sender_name: msg.sender_name,
+            message_text: msg.content,
+            text: msg.content,
+            content: { text: msg.content },
+            message_type: msg.message_type,
+            is_read: msg.is_read,
+            created_at: msg.created_at,
+            sent_at: msg.created_at,
+            delivered_at: msg.delivered_at,
+            media_url: msg.media_url,
+            media_type: msg.media_type,
+            metadata: msg.metadata
+          }));
+
+          const reversedMessages = transformedMessages.reverse();
+
+          setMessages(prev => {
+            // Only update if there are new messages AND they haven't been processed
+            const currentIds = new Set(prev.map(m => m.id));
+            const newMessages = reversedMessages.filter(m =>
+              !currentIds.has(m.id) && shouldProcessMessage(m.id)
+            );
+
+            if (newMessages.length > 0) {
+              // Polling found new messages
+              return [...prev, ...newMessages];
+            }
+            return prev;
+          });
+        }
+      } catch (error) {
+        // Polling error in ChatWindow - silently handle
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [conversation?.id, shouldProcessMessage]);
+
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      processedMessageIdsRef.current.clear();
+    };
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -81,7 +156,7 @@ const ChatWindow = ({
     setSending(true);
     try {
       const response = await inboxService.sendMessage(conversation.id, newMessage.trim());
-      
+
       if (response.success) {
         setNewMessage('');
         // Add message to local state immediately for better UX
@@ -107,15 +182,15 @@ const ChatWindow = ({
 
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
-    
+
     // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    
+
     // Set typing indicator
     setIsTyping(true);
-    
+
     // Clear typing indicator after 3 seconds of no typing
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
@@ -124,7 +199,7 @@ const ChatWindow = ({
 
   const getMessageStatus = (message) => {
     if (message.sender_type !== 'agent') return null;
-    
+
     if (message.is_read) {
       return <CheckCheck className="h-4 w-4 text-blue-500" />;
     } else if (message.delivered_at) {
@@ -203,7 +278,7 @@ const ChatWindow = ({
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {!conversation.agent && (
               <Button
@@ -213,7 +288,7 @@ const ChatWindow = ({
                 Assign to Me
               </Button>
             )}
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm">
@@ -234,7 +309,7 @@ const ChatWindow = ({
                   Flag
                 </DropdownMenuItem>
                 <Separator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => onResolveConversation?.(conversation)}
                   className="text-green-600"
                 >
@@ -274,16 +349,16 @@ const ChatWindow = ({
                         </AvatarFallback>
                       </Avatar>
                     )}
-                    
+
                     <div className={`rounded-lg px-3 py-2 ${
-                      message.sender_type === 'agent' 
-                        ? 'bg-blue-500 text-white' 
+                      message.sender_type === 'agent'
+                        ? 'bg-blue-500 text-white'
                         : message.sender_type === 'bot'
                         ? 'bg-purple-100 text-purple-800'
                         : 'bg-gray-200 text-gray-800'
                     }`}>
                       <p className="text-sm">{message.text}</p>
-                      
+
                       <div className={`flex items-center justify-between mt-1 text-xs ${
                         message.sender_type === 'agent' ? 'text-blue-100' : 'text-gray-500'
                       }`}>
@@ -298,7 +373,7 @@ const ChatWindow = ({
                   </div>
                 </div>
               ))}
-              
+
               {/* Typing Indicator */}
               {typingUsers.length > 0 && (
                 <div className="flex justify-start">
@@ -316,7 +391,7 @@ const ChatWindow = ({
                   </div>
                 </div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -342,7 +417,7 @@ const ChatWindow = ({
               <Button variant="ghost" size="sm">
                 <Smile className="h-4 w-4" />
               </Button>
-              <Button 
+              <Button
                 onClick={handleSendMessage}
                 disabled={!newMessage.trim() || sending}
                 size="sm"
