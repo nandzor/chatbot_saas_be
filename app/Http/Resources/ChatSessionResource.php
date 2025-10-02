@@ -52,6 +52,8 @@ class ChatSessionResource extends JsonResource
             'resolution_notes' => $this->resolution_notes,
             'sentiment_analysis' => $this->sentiment_analysis,
             'ai_summary' => $this->ai_summary,
+            'last_message' => $this->getLastMessage(),
+            'last_message_at' => $this->getLastMessageAt(),
             'topics_discussed' => $this->topics_discussed,
             'session_data' => $this->session_data,
             'metadata' => $this->metadata,
@@ -67,5 +69,31 @@ class ChatSessionResource extends JsonResource
             'channel_config' => new ChannelConfigResource($this->whenLoaded('channelConfig')),
             'messages' => MessageResource::collection($this->whenLoaded('messages')),
         ];
+    }
+
+    /**
+     * Get the last message content
+     */
+    private function getLastMessage(): ?string
+    {
+        if ($this->relationLoaded('messages') && $this->messages->isNotEmpty()) {
+            $lastMessage = $this->messages->sortByDesc('created_at')->first();
+            return $lastMessage->message_text ?? $lastMessage->content ?? null;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get the last message timestamp
+     */
+    private function getLastMessageAt(): ?string
+    {
+        if ($this->relationLoaded('messages') && $this->messages->isNotEmpty()) {
+            $lastMessage = $this->messages->sortByDesc('created_at')->first();
+            return $lastMessage->created_at?->toISOString();
+        }
+        
+        return null;
     }
 }
