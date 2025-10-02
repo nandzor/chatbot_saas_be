@@ -152,11 +152,17 @@ class WahaWebhookService
                 ];
             }
 
-            // Log webhook processing for deduplication
-            $this->logWebhookProcessing($messageData['message_id'], $organizationId, $messageData);
-
             // Fire event for asynchronous processing
             event(new \App\Events\WhatsAppMessageReceived($messageData, $organizationId));
+
+            Log::info('WhatsAppMessageReceived event fired from WahaWebhookService', [
+                'organization_id' => $organizationId,
+                'message_id' => $messageData['message_id'] ?? 'unknown',
+                'from' => $messageData['from'] ?? 'unknown'
+            ]);
+
+            // NOTE: Webhook logging moved to AFTER successful message processing
+            // to prevent race condition where webhook log exists but message doesn't
 
             return [
                 'success' => true,

@@ -55,8 +55,8 @@ class MessageService
             // Update session activity
             $session->updateActivity();
 
-            // Fire message processed event for real-time updates
-            event(new MessageProcessed($session, $message, ['status' => 'sent']));
+            // Fire MessageSent event for WAHA integration
+            event(new \App\Events\MessageSent($message, $session, $data));
 
             Log::info('Message sent successfully', [
                 'message_id' => $message->id,
@@ -89,7 +89,7 @@ class MessageService
 
         // Set first response time if this is the first non-customer message
         if (!$session->first_response_at && $senderType !== 'customer') {
-            $firstResponseTime = $session->started_at->diffInSeconds(now());
+            $firstResponseTime = (int) $session->started_at->diffInSeconds(now());
             $session->update([
                 'first_response_at' => now(),
                 'response_time_avg' => $firstResponseTime
@@ -305,10 +305,10 @@ class MessageService
                 if ($wahaSessionId && $customerPhone) {
                     // Initialize WAHA service
                     $wahaService = new \App\Services\Waha\WahaService();
-                    
+
                     // Send typing indicator to WAHA
                     $wahaService->sendTypingIndicator($wahaSessionId, $customerPhone, $isTyping);
-                    
+
                     Log::info('Typing indicator sent to WAHA', [
                         'session_id' => $sessionId,
                         'waha_session_id' => $wahaSessionId,

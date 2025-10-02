@@ -45,6 +45,8 @@ class MessageSent implements ShouldBroadcast
         $this->sessionData = [
             'id' => $session->id,
             'organization_id' => $session->organization_id,
+            'session_data' => $session->session_data ?? [],
+            'metadata' => $session->metadata ?? [],
         ];
     }
 

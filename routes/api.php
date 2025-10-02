@@ -201,6 +201,9 @@ Route::prefix('v1')->group(function () {
             // Routes requiring additional permissions
             Route::middleware(['permission:conversations.create'])->post('/', [ConversationController::class, 'store']);
             Route::middleware(['permission:conversations.send_message'])->post('/{id}/messages', [ConversationController::class, 'sendMessage']);
+
+            // Get conversation with recent messages
+            Route::middleware(['permission:conversations.create'])->get('/{id}/recent', [ConversationController::class, 'getConversationWithRecent']);
         });
 
         // ====================================================================

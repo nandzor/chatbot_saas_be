@@ -57,14 +57,23 @@ class WhatsAppMessageProcessor
             // 3. Save customer message to database
             $customerMessage = $this->saveCustomerMessage($messageData, $session);
 
-            // 4. Process with bot personality using conversation template
-            Log::info('About to process with bot using conversation template', [
+            // 3.1. Update session activity immediately after saving customer message
+            $this->updateSessionActivityOnly($session);
+
+            // 4. Bot processing DISABLED - No automatic bot responses
+            Log::info('Bot processing disabled - skipping bot response generation', [
                 'session_id' => $session->id,
                 'organization_id' => $session->organization_id,
-                'template_applied' => $session->metadata['template_applied'] ?? false
+                'bot_processing' => 'disabled'
             ]);
 
-            $botResponse = $this->processWithBot($session, $messageData);
+            // $botResponse = $this->processWithBot($session, $messageData);
+            $botResponse = [
+                'sent' => false,
+                'content' => null,
+                'message_id' => null,
+                'disabled' => true
+            ];
 
             Log::info('Bot processing completed', [
                 'session_id' => $session->id,
@@ -204,6 +213,9 @@ class WhatsAppMessageProcessor
      /**
      * Save customer message to database
      */
+    /**
+     * Save customer message to database with proper error handling
+     */
     private function saveCustomerMessage(array $messageData, ChatSession $session): Message
     {
         Log::info('Saving customer message', [
@@ -212,127 +224,215 @@ class WhatsAppMessageProcessor
             'text' => $messageData['text'] ?? 'no text'
         ]);
 
-        // Debug media_metadata
-        $mediaData = $messageData['media'] ?? null;
-        Log::info('Media data debug', [
-            'media_type' => gettype($mediaData),
-            'media_is_array' => is_array($mediaData),
-            'media_is_string' => is_string($mediaData),
-            'media_length' => is_string($mediaData) ? strlen($mediaData) : 'N/A',
-            'media_preview' => is_string($mediaData) ? substr($mediaData, 0, 100) . '...' : $mediaData
-        ]);
+        // Check for existing message first
+        $existingMessage = $this->findExistingMessage($messageData, $session->organization_id);
+        if ($existingMessage) {
+            return $existingMessage;
+        }
 
-        // Check if message already exists to prevent duplicates
-        $existingMessage = Message::where('organization_id', $session->organization_id)
-            ->where('metadata->waha_message_id', $messageData['message_id'] ?? null)
+        // Create new message with proper error handling
+        $message = $this->createNewCustomerMessage($messageData, $session);
+
+        // Verify message was saved successfully
+        $this->verifyMessageSaved($message, $messageData, $session->organization_id);
+
+        // Log webhook processing after successful save
+        $this->logWebhookProcessing($messageData, $session->organization_id);
+
+        return $message;
+    }
+
+    /**
+     * Find existing message to prevent duplicates
+     */
+    private function findExistingMessage(array $messageData, string $organizationId): ?Message
+    {
+        $wahaMessageId = $messageData['message_id'] ?? null;
+        if (!$wahaMessageId) {
+            return null;
+        }
+
+        $existingMessage = Message::where('organization_id', $organizationId)
+            ->where('metadata->waha_message_id', $wahaMessageId)
             ->first();
 
         if ($existingMessage) {
-            Log::info('Message already exists, skipping duplicate', [
+            Log::info('Message already exists, returning existing', [
                 'existing_message_id' => $existingMessage->id,
-                'waha_message_id' => $messageData['message_id'] ?? null,
-                'organization_id' => $session->organization_id,
+                'waha_message_id' => $wahaMessageId,
+                'organization_id' => $organizationId,
             ]);
-            $message = $existingMessage;
-        } else {
-            try {
-                // Create new message
-                $message = Message::create([
-                    'session_id' => $session->id,
-                    'organization_id' => $session->organization_id,
-                    'waha_session_id' => $messageData['waha_session'] ?? null,
-                    'sender_type' => 'customer',
-                    'sender_id' => $session->customer_id,
-                    'sender_name' => $messageData['customer_name'] ?? 'Customer',
-                    'message_text' => $messageData['text'] ?? '',
-                    'message_type' => $messageData['message_type'] ?? 'text',
-                    'media_url' => is_string($messageData['media'] ?? null) ? $messageData['media'] : null,
-                    'media_type' => ($messageData['has_media'] ?? false) ? 'image' : null,
-                    'media_size' => null,
-                    'media_metadata' => $this->ensureArray($messageData['media'] ?? null),
-                    'thumbnail_url' => null,
-                    'quick_replies' => null,
-                    'buttons' => null,
-                    'template_data' => null,
-                    'intent' => null,
-                    'entities' => [],
-                    'confidence_score' => null,
-                    'ai_generated' => false,
-                    'ai_model_used' => null,
-                    'sentiment_score' => null,
-                    'sentiment_label' => null,
-                    'emotion_scores' => [],
-                    'is_read' => false,
-                    'read_at' => null,
-                    'delivered_at' => now(),
-                    'failed_at' => null,
-                    'failed_reason' => null,
-                    'reply_to_message_id' => $messageData['reply_to'] ?? null,
-                    'thread_id' => null,
-                    'context' => [
-                        'waha_message_id' => $messageData['message_id'] ?? null,
-                        'waha_session' => $messageData['session_name'] ?? null,
-                        'waha_event_id' => $messageData['waha_event_id'] ?? null,
-                        'from_me' => $messageData['from_me'] ?? false,
-                        'source' => $messageData['source'] ?? 'webhook',
-                        'participant' => $messageData['participant'] ?? null,
-                        'ack' => $messageData['ack'] ?? -1,
-                        'ack_name' => $messageData['ack_name'] ?? null,
-                        'author' => $messageData['author'] ?? null,
-                        'location' => $messageData['location'] ?? null,
-                        'v_cards' => $messageData['v_cards'] ?? [],
-                        'me' => $messageData['me'] ?? null,
-                        'environment' => $messageData['environment'] ?? null,
-                    ],
-                    'processing_time_ms' => null,
-                    'metadata' => [
-                        'waha_message_id' => $messageData['message_id'] ?? null,
-                        'waha_session' => $messageData['session_name'] ?? null,
-                        'raw_data' => $messageData,
-                        'processed_at' => now()->toISOString()
-                    ]
-                ]);
-            } catch (\Illuminate\Database\QueryException $e) {
-                // Handle unique constraint violation - message was created by another process
-                if (str_contains($e->getMessage(), 'duplicate key value violates unique constraint')) {
-                    Log::warning('Message was created by another process, fetching existing message', [
-                        'waha_message_id' => $messageData['message_id'] ?? null,
-                        'organization_id' => $session->organization_id,
-                        'error' => $e->getMessage()
-                    ]);
-
-                    // Fetch the existing message
-                    $message = Message::where('organization_id', $session->organization_id)
-                        ->where('metadata->waha_message_id', $messageData['message_id'] ?? null)
-                        ->first();
-
-                    if (!$message) {
-                        throw new \Exception('Message should exist but could not be found after unique constraint violation');
-                    }
-                } else {
-                    // Re-throw if it's not a unique constraint violation
-                    throw $e;
-                }
-            }
         }
 
-        Log::info('Customer message saved', [
-            'message_id' => $message->id,
+        return $existingMessage;
+    }
+
+    /**
+     * Create new customer message with proper data structure
+     */
+    private function createNewCustomerMessage(array $messageData, ChatSession $session): Message
+    {
+        try {
+            $messageAttributes = $this->buildMessageAttributes($messageData, $session);
+
+            Log::info('Creating customer message', [
+                'session_id' => $session->id,
+                'waha_message_id' => $messageData['message_id'] ?? null,
+                'text' => $messageData['text'] ?? ''
+            ]);
+
+            $message = Message::create($messageAttributes);
+
+            Log::info('Customer message created successfully', [
+                'message_id' => $message->id,
+                'session_id' => $session->id,
+                'sender_type' => $message->sender_type,
+                'text' => $message->message_text
+            ]);
+
+            return $message;
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->handleDuplicateConstraintViolation($e, $messageData, $session->organization_id);
+        }
+    }
+
+    /**
+     * Build message attributes array
+     */
+    private function buildMessageAttributes(array $messageData, ChatSession $session): array
+    {
+        return [
             'session_id' => $session->id,
-            'text' => $message->message_text
+            'organization_id' => $session->organization_id,
+            'waha_session_id' => $messageData['waha_session'] ?? null,
+            'sender_type' => 'customer',
+            'sender_id' => $session->customer_id,
+            'sender_name' => $messageData['customer_name'] ?? 'Customer',
+            'message_text' => $messageData['text'] ?? '',
+            'message_type' => $messageData['message_type'] ?? 'text',
+            'media_url' => $this->extractMediaUrl($messageData),
+            'media_type' => $this->extractMediaType($messageData),
+            'media_metadata' => $this->ensureArray($messageData['media'] ?? null),
+            'is_read' => false,
+            'delivered_at' => now(),
+            'reply_to_message_id' => $messageData['reply_to'] ?? null,
+            'context' => $this->buildContextData($messageData),
+            'metadata' => $this->buildMetadata($messageData)
+        ];
+    }
+
+    /**
+     * Extract media URL from message data
+     */
+    private function extractMediaUrl(array $messageData): ?string
+    {
+        $media = $messageData['media'] ?? null;
+        return is_string($media) ? $media : null;
+    }
+
+    /**
+     * Extract media type from message data
+     */
+    private function extractMediaType(array $messageData): ?string
+    {
+        return ($messageData['has_media'] ?? false) ? 'image' : null;
+    }
+
+    /**
+     * Build context data for message
+     */
+    private function buildContextData(array $messageData): array
+    {
+        return [
+            'waha_message_id' => $messageData['message_id'] ?? null,
+            'waha_session' => $messageData['session_name'] ?? null,
+            'waha_event_id' => $messageData['waha_event_id'] ?? null,
+            'from_me' => $messageData['from_me'] ?? false,
+            'source' => $messageData['source'] ?? 'webhook',
+            'ack' => $messageData['ack'] ?? -1,
+            'ack_name' => $messageData['ack_name'] ?? null,
+        ];
+    }
+
+    /**
+     * Build metadata for message
+     */
+    private function buildMetadata(array $messageData): array
+    {
+        return [
+            'waha_message_id' => $messageData['message_id'] ?? null,
+            'waha_session' => $messageData['session_name'] ?? null,
+            'raw_data' => $messageData,
+            'processed_at' => now()->toISOString()
+        ];
+    }
+
+    /**
+     * Handle duplicate constraint violation
+     */
+    private function handleDuplicateConstraintViolation(\Illuminate\Database\QueryException $e, array $messageData, string $organizationId): Message
+    {
+        if (!str_contains($e->getMessage(), 'duplicate key value violates unique constraint')) {
+            throw $e;
+        }
+
+        Log::warning('Message was created by another process, fetching existing message', [
+            'waha_message_id' => $messageData['message_id'] ?? null,
+            'organization_id' => $organizationId,
+            'error' => $e->getMessage()
         ]);
 
-        // Verify message was actually saved
-        $savedMessage = Message::find($message->id);
-        if (!$savedMessage) {
-            Log::error('Message was not actually saved to database', [
-                'message_id' => $message->id,
-                'session_id' => $session->id
-            ]);
-            throw new \Exception('Message was not saved to database');
+        $message = Message::where('organization_id', $organizationId)
+            ->where('metadata->waha_message_id', $messageData['message_id'] ?? null)
+            ->first();
+
+        if (!$message) {
+            throw new \Exception('Message should exist but could not be found after unique constraint violation');
         }
 
         return $message;
+    }
+
+    /**
+     * Verify message was saved successfully to database
+     */
+    private function verifyMessageSaved(Message $message, array $messageData, string $organizationId): void
+    {
+        Log::info('Verifying message was saved to database', [
+            'message_id' => $message->id,
+            'waha_message_id' => $messageData['message_id'] ?? null
+        ]);
+
+        // Use fresh query to verify persistence
+        $savedMessage = Message::find($message->id);
+
+        if (!$savedMessage) {
+            Log::error('Message was not persisted to database', [
+                'message_id' => $message->id,
+                'waha_message_id' => $messageData['message_id'] ?? null,
+                'organization_id' => $organizationId
+            ]);
+
+            // Try alternative lookup
+            $alternativeMessage = $this->findExistingMessage($messageData, $organizationId);
+            if ($alternativeMessage) {
+                Log::warning('Message found by alternative lookup after verification failure', [
+                    'original_id' => $message->id,
+                    'found_id' => $alternativeMessage->id,
+                    'waha_message_id' => $messageData['message_id'] ?? null
+                ]);
+                return;
+            }
+
+            throw new \Exception('Message was not saved to database');
+        }
+
+        Log::info('Message verification successful', [
+            'message_id' => $savedMessage->id,
+            'sender_type' => $savedMessage->sender_type,
+            'created_at' => $savedMessage->created_at
+        ]);
     }
 
     /**
@@ -594,7 +694,22 @@ class WhatsAppMessageProcessor
     }
 
     /**
-     * Update session metrics
+     * Update session activity only (lightweight)
+     */
+    private function updateSessionActivityOnly(ChatSession $session): void
+    {
+        $session->update([
+            'last_activity_at' => now()
+        ]);
+
+        Log::info('Session activity updated', [
+            'session_id' => $session->id,
+            'last_activity_at' => now()->toISOString()
+        ]);
+    }
+
+    /**
+     * Update session metrics (comprehensive)
      */
     private function updateSessionMetrics(ChatSession $session): void
     {
@@ -937,6 +1052,36 @@ class WhatsAppMessageProcessor
                 'success' => false,
                 'error' => 'Escalation check failed: ' . $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Log webhook processing for deduplication
+     */
+    private function logWebhookProcessing(array $messageData, string $organizationId): void
+    {
+        try {
+            \App\Models\WebhookLog::create([
+                'message_id' => $messageData['message_id'] ?? null,
+                'organization_id' => $organizationId,
+                'webhook_type' => 'whatsapp_waha',
+                'status' => 'processed',
+                'payload' => $messageData,
+                'processed_at' => now()
+            ]);
+
+            Log::info('Webhook processing logged after successful message save', [
+                'message_id' => $messageData['message_id'] ?? null,
+                'organization_id' => $organizationId
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to log webhook processing', [
+                'message_id' => $messageData['message_id'] ?? null,
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage()
+            ]);
+            // Don't throw - this is not critical
         }
     }
 }
