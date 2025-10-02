@@ -154,7 +154,7 @@ class AgentDashboardService extends BaseService
 
         $query = ChatSession::where('organization_id', $organizationId)
             ->where('agent_id', $agentId)
-            ->with(['customer:id,name,email,avatar', 'botPersonality:id,name'])
+            ->with(['customer:id,name,email,first_name,last_name', 'botPersonality:id,name'])
             ->orderBy('last_activity_at', 'desc');
 
         // Apply filters
