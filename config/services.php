@@ -106,4 +106,20 @@ return [
         'secret' => env('MIXPANEL_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | HTTP Client Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Default configuration for HTTP client timeouts and retries.
+    |
+    */
+
+    'http' => [
+        'timeout' => env('HTTP_TIMEOUT', 60), // seconds
+        'connect_timeout' => env('HTTP_CONNECT_TIMEOUT', 10), // seconds
+        'retry_attempts' => env('HTTP_RETRY_ATTEMPTS', 3),
+        'retry_delay' => env('HTTP_RETRY_DELAY', 1000), // milliseconds
+    ],
+
 ];

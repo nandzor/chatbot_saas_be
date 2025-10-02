@@ -340,7 +340,7 @@ class WahaWebhookService
                 return;
             }
 
-            // Determine sender information
+            // Determine sender information (now always returns agent)
             $senderInfo = $this->determineSenderInfo($session, $organizationId);
 
             // Create the message
@@ -481,6 +481,25 @@ class WahaWebhookService
      */
     private function determineSenderInfo(ChatSession $session, string $organizationId): array
     {
+        // For outgoing messages from frontend, always use agent as sender
+        // Check if there's a recent agent message with same content (within 2 minutes)
+        $recentAgentMessage = \App\Models\Message::where('organization_id', $organizationId)
+            ->where('sender_type', 'agent')
+            ->where('created_at', '>=', now()->subMinutes(2))
+            ->whereHas('chatSession', function($query) use ($session) {
+                $query->where('id', $session->id);
+            })
+            ->first();
+
+        if ($recentAgentMessage) {
+            // Use the same agent from recent message
+            return [
+                'type' => 'agent',
+                'id' => $recentAgentMessage->agent_id,
+                'name' => $recentAgentMessage->agent->display_name ?? 'Agent'
+            ];
+        }
+
         // If session has assigned agent, use agent as sender
         if ($session->agent_id) {
             return [
@@ -490,25 +509,12 @@ class WahaWebhookService
             ];
         }
 
-        // Otherwise, use bot personality
-        $botPersonality = BotPersonality::where('organization_id', $organizationId)
-            ->where('status', 'active')
-            ->where('is_default', true)
-            ->first();
-
-        if ($botPersonality) {
-            return [
-                'type' => 'bot',
-                'id' => $botPersonality->id,
-                'name' => $botPersonality->name
-            ];
-        }
-
-        // Fallback to system bot
+        // For outgoing messages, default to agent (not bot)
+        // This ensures frontend messages are always marked as agent messages
         return [
-            'type' => 'bot',
+            'type' => 'agent',
             'id' => null,
-            'name' => 'System Bot'
+            'name' => 'Agent'
         ];
     }
 

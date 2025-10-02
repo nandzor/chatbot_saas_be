@@ -214,32 +214,72 @@ class WhatsAppMessageProcessor
      * Save customer message to database
      */
     /**
-     * Save customer message to database with proper error handling
+     * Save customer message to database with comprehensive error handling
      */
     private function saveCustomerMessage(array $messageData, ChatSession $session): Message
     {
         Log::info('Saving customer message', [
             'session_id' => $session->id,
             'from' => $messageData['from'] ?? $messageData['customer_phone'] ?? 'unknown',
-            'text' => $messageData['text'] ?? 'no text'
+            'text' => $messageData['text'] ?? 'no text',
+            'waha_message_id' => $messageData['message_id'] ?? null
         ]);
 
-        // Check for existing message first
-        $existingMessage = $this->findExistingMessage($messageData, $session->organization_id);
-        if ($existingMessage) {
-            return $existingMessage;
+        try {
+            // Check for existing message first
+            $existingMessage = $this->findExistingMessage($messageData, $session->organization_id);
+            if ($existingMessage) {
+                Log::info('Using existing message', [
+                    'existing_message_id' => $existingMessage->id,
+                    'session_id' => $session->id,
+                    'waha_message_id' => $messageData['message_id'] ?? null
+                ]);
+                return $existingMessage;
+            }
+
+            // Create new message with proper error handling
+            $message = $this->createNewCustomerMessage($messageData, $session);
+
+            Log::info('Message created, proceeding with verification', [
+                'message_id' => $message->id,
+                'session_id' => $session->id,
+                'waha_message_id' => $messageData['message_id'] ?? null
+            ]);
+
+            // Verify message was saved successfully
+            $this->verifyMessageSaved($message, $messageData, $session->organization_id);
+
+            Log::info('Message verification completed, logging webhook processing', [
+                'message_id' => $message->id,
+                'session_id' => $session->id,
+                'waha_message_id' => $messageData['message_id'] ?? null
+            ]);
+
+            // Log webhook processing after successful save
+            $this->logWebhookProcessing($messageData, $session->organization_id);
+
+            Log::info('Customer message saved successfully', [
+                'message_id' => $message->id,
+                'session_id' => $session->id,
+                'sender_type' => $message->sender_type,
+                'text' => $message->message_text,
+                'waha_message_id' => $messageData['message_id'] ?? null
+            ]);
+
+            return $message;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to save customer message', [
+                'session_id' => $session->id,
+                'waha_message_id' => $messageData['message_id'] ?? null,
+                'from' => $messageData['from'] ?? $messageData['customer_phone'] ?? 'unknown',
+                'text' => $messageData['text'] ?? 'no text',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            throw $e;
         }
-
-        // Create new message with proper error handling
-        $message = $this->createNewCustomerMessage($messageData, $session);
-
-        // Verify message was saved successfully
-        $this->verifyMessageSaved($message, $messageData, $session->organization_id);
-
-        // Log webhook processing after successful save
-        $this->logWebhookProcessing($messageData, $session->organization_id);
-
-        return $message;
     }
 
     /**
@@ -268,17 +308,33 @@ class WhatsAppMessageProcessor
     }
 
     /**
-     * Create new customer message with proper data structure
+     * Create new customer message with proper data structure and explicit transaction handling
      */
     private function createNewCustomerMessage(array $messageData, ChatSession $session): Message
     {
-        try {
-            $messageAttributes = $this->buildMessageAttributes($messageData, $session);
+        Log::info('Creating customer message', [
+            'session_id' => $session->id,
+            'waha_message_id' => $messageData['message_id'] ?? null,
+            'text' => $messageData['text'] ?? ''
+        ]);
 
-            Log::info('Creating customer message', [
+        try {
+            // Start explicit transaction with monitoring
+            \Illuminate\Support\Facades\DB::beginTransaction();
+
+            // Log transaction start
+            Log::info('Transaction started for message creation', [
                 'session_id' => $session->id,
                 'waha_message_id' => $messageData['message_id'] ?? null,
-                'text' => $messageData['text'] ?? ''
+                'transaction_id' => \Illuminate\Support\Facades\DB::connection()->select('SELECT txid_current() as txid')[0]->txid ?? 'unknown'
+            ]);
+
+            $messageAttributes = $this->buildMessageAttributes($messageData, $session);
+
+            Log::info('Message attributes prepared', [
+                'session_id' => $session->id,
+                'attributes_count' => count($messageAttributes),
+                'attributes_keys' => array_keys($messageAttributes)
             ]);
 
             $message = Message::create($messageAttributes);
@@ -290,10 +346,65 @@ class WhatsAppMessageProcessor
                 'text' => $message->message_text
             ]);
 
+            // Verify message exists within transaction
+            $verifyMessage = Message::find($message->id);
+            if (!$verifyMessage) {
+                Log::error('Message not found within transaction - possible race condition', [
+                    'message_id' => $message->id,
+                    'session_id' => $session->id,
+                    'waha_message_id' => $messageData['message_id'] ?? null
+                ]);
+                throw new \Exception('Message not found within transaction');
+            }
+
+            // Commit transaction explicitly
+            \Illuminate\Support\Facades\DB::commit();
+
+            Log::info('Transaction committed successfully', [
+                'message_id' => $message->id,
+                'session_id' => $session->id,
+                'transaction_id' => \Illuminate\Support\Facades\DB::connection()->select('SELECT txid_current() as txid')[0]->txid ?? 'unknown'
+            ]);
+
+            // Verify message exists after commit
+            $postCommitMessage = Message::find($message->id);
+            if (!$postCommitMessage) {
+                Log::error('Message not found after commit - possible rollback', [
+                    'message_id' => $message->id,
+                    'session_id' => $session->id,
+                    'waha_message_id' => $messageData['message_id'] ?? null
+                ]);
+                throw new \Exception('Message not found after commit');
+            }
+
             return $message;
 
         } catch (\Illuminate\Database\QueryException $e) {
+            \Illuminate\Support\Facades\DB::rollback();
+
+            Log::error('Database query exception during message creation', [
+                'session_id' => $session->id,
+                'waha_message_id' => $messageData['message_id'] ?? null,
+                'error' => $e->getMessage(),
+                'sql_state' => $e->getCode(),
+                'trace' => $e->getTraceAsString(),
+                'transaction_id' => \Illuminate\Support\Facades\DB::connection()->select('SELECT txid_current() as txid')[0]->txid ?? 'unknown'
+            ]);
+
             return $this->handleDuplicateConstraintViolation($e, $messageData, $session->organization_id);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollback();
+
+            Log::error('Unexpected exception during message creation', [
+                'session_id' => $session->id,
+                'waha_message_id' => $messageData['message_id'] ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'transaction_id' => \Illuminate\Support\Facades\DB::connection()->select('SELECT txid_current() as txid')[0]->txid ?? 'unknown'
+            ]);
+
+            throw $e;
         }
     }
 
@@ -395,7 +506,7 @@ class WhatsAppMessageProcessor
     }
 
     /**
-     * Verify message was saved successfully to database
+     * Verify message was saved successfully to database with comprehensive error handling
      */
     private function verifyMessageSaved(Message $message, array $messageData, string $organizationId): void
     {
@@ -404,35 +515,73 @@ class WhatsAppMessageProcessor
             'waha_message_id' => $messageData['message_id'] ?? null
         ]);
 
-        // Use fresh query to verify persistence
-        $savedMessage = Message::find($message->id);
+        try {
+            // Force database refresh to ensure we get latest data
+            \Illuminate\Support\Facades\DB::commit();
 
-        if (!$savedMessage) {
-            Log::error('Message was not persisted to database', [
-                'message_id' => $message->id,
-                'waha_message_id' => $messageData['message_id'] ?? null,
-                'organization_id' => $organizationId
-            ]);
+            // Use fresh query to verify persistence
+            $savedMessage = Message::find($message->id);
 
-            // Try alternative lookup
-            $alternativeMessage = $this->findExistingMessage($messageData, $organizationId);
-            if ($alternativeMessage) {
-                Log::warning('Message found by alternative lookup after verification failure', [
-                    'original_id' => $message->id,
-                    'found_id' => $alternativeMessage->id,
-                    'waha_message_id' => $messageData['message_id'] ?? null
+            if (!$savedMessage) {
+                Log::error('Message was not persisted to database', [
+                    'message_id' => $message->id,
+                    'waha_message_id' => $messageData['message_id'] ?? null,
+                    'organization_id' => $organizationId,
+                    'message_attributes' => $message->getAttributes(),
+                    'database_connection' => \Illuminate\Support\Facades\DB::connection()->getName(),
+                    'transaction_status' => 'committed'
                 ]);
-                return;
+
+                // Try alternative lookup
+                $alternativeMessage = $this->findExistingMessage($messageData, $organizationId);
+                if ($alternativeMessage) {
+                    Log::warning('Message found by alternative lookup after verification failure', [
+                        'original_id' => $message->id,
+                        'found_id' => $alternativeMessage->id,
+                        'waha_message_id' => $messageData['message_id'] ?? null,
+                        'alternative_created_at' => $alternativeMessage->created_at
+                    ]);
+                    return;
+                }
+
+                // Try to find message by other criteria
+                $alternativeMessage = Message::where('organization_id', $organizationId)
+                    ->where('message_text', $message->message_text)
+                    ->where('sender_type', 'customer')
+                    ->where('created_at', '>=', now()->subMinutes(5))
+                    ->first();
+
+                if ($alternativeMessage) {
+                    Log::warning('Found alternative message with same content', [
+                        'original_message_id' => $message->id,
+                        'alternative_message_id' => $alternativeMessage->id,
+                        'alternative_created_at' => $alternativeMessage->created_at
+                    ]);
+                    return;
+                }
+
+                throw new \Exception('Message was not saved to database');
             }
 
-            throw new \Exception('Message was not saved to database');
-        }
+            Log::info('Message verification successful', [
+                'message_id' => $savedMessage->id,
+                'sender_type' => $savedMessage->sender_type,
+                'created_at' => $savedMessage->created_at,
+                'session_id' => $savedMessage->session_id,
+                'organization_id' => $savedMessage->organization_id
+            ]);
 
-        Log::info('Message verification successful', [
-            'message_id' => $savedMessage->id,
-            'sender_type' => $savedMessage->sender_type,
-            'created_at' => $savedMessage->created_at
-        ]);
+        } catch (\Exception $e) {
+            Log::error('Message verification exception', [
+                'message_id' => $message->id,
+                'waha_message_id' => $messageData['message_id'] ?? null,
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            throw $e;
+        }
     }
 
     /**
@@ -1056,12 +1205,28 @@ class WhatsAppMessageProcessor
     }
 
     /**
-     * Log webhook processing for deduplication
+     * Log webhook processing for deduplication with comprehensive monitoring
      */
     private function logWebhookProcessing(array $messageData, string $organizationId): void
     {
         try {
-            \App\Models\WebhookLog::create([
+            // Check for existing webhook log to prevent duplicates
+            $existingLog = \App\Models\WebhookLog::where('message_id', $messageData['message_id'] ?? null)
+                ->where('organization_id', $organizationId)
+                ->where('webhook_type', 'whatsapp_waha')
+                ->first();
+
+            if ($existingLog) {
+                Log::warning('Webhook log already exists, skipping duplicate', [
+                    'message_id' => $messageData['message_id'] ?? null,
+                    'organization_id' => $organizationId,
+                    'existing_log_id' => $existingLog->id,
+                    'existing_processed_at' => $existingLog->processed_at
+                ]);
+                return;
+            }
+
+            $webhookLog = \App\Models\WebhookLog::create([
                 'message_id' => $messageData['message_id'] ?? null,
                 'organization_id' => $organizationId,
                 'webhook_type' => 'whatsapp_waha',
@@ -1072,14 +1237,17 @@ class WhatsAppMessageProcessor
 
             Log::info('Webhook processing logged after successful message save', [
                 'message_id' => $messageData['message_id'] ?? null,
-                'organization_id' => $organizationId
+                'organization_id' => $organizationId,
+                'webhook_log_id' => $webhookLog->id,
+                'webhook_log_created_at' => $webhookLog->created_at
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to log webhook processing', [
                 'message_id' => $messageData['message_id'] ?? null,
                 'organization_id' => $organizationId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             // Don't throw - this is not critical
         }

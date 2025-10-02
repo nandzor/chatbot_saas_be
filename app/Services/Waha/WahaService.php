@@ -14,7 +14,7 @@ class WahaService extends BaseHttpClient
 {
     // Constants
     private const DEFAULT_BASE_URL = 'http://localhost:3000';
-    private const DEFAULT_TIMEOUT = 30;
+    private const DEFAULT_TIMEOUT = 60;
     private const DEFAULT_RETRY_ATTEMPTS = 3;
     private const DEFAULT_RETRY_DELAY = 1000;
     private const DEFAULT_MAX_RETRY_DELAY = 10000;

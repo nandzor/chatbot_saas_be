@@ -30,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiting();
         $this->registerObservers();
+        $this->configureGlobalHttpTimeout();
 
         // Allow publishing our custom config files via: php artisan vendor:publish --tag="waha-config" or --tag="n8n-config"
         if ($this->app->runningInConsole()) {
@@ -41,6 +42,18 @@ class AppServiceProvider extends ServiceProvider
                 base_path('config/n8n.php') => config_path('n8n.php'),
             ], 'n8n-config');
         }
+    }
+
+    /**
+     * Configure global HTTP timeout settings.
+     */
+    protected function configureGlobalHttpTimeout(): void
+    {
+        // Set default timeout for all HTTP requests to prevent 10-second timeout
+        \Illuminate\Support\Facades\Http::globalOptions([
+            'timeout' => 120, // 120 seconds
+            'connect_timeout' => 30 // 30 seconds
+        ]);
     }
 
     /**
