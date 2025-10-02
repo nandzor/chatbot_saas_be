@@ -327,6 +327,18 @@ class PermissionService extends BaseService
     }
 
     /**
+     * Check if user has permission by permission code
+     */
+    public function userHasPermissionByCode(string $userId, ?string $organizationId, string $permissionCode): bool
+    {
+        $permissions = $this->getUserPermissions($userId, $organizationId);
+
+        return $permissions->contains(function ($permission) use ($permissionCode) {
+            return $permission->code === $permissionCode;
+        });
+    }
+
+    /**
      * Check if user has a specific permission
      */
     public function userHasPermission(string $userId, ?string $organizationId, string $resource, string $action, string $scope = 'organization'): bool
