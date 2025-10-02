@@ -33,7 +33,6 @@ export const useAgentInbox = () => {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const searchTimeoutRef = useRef(null);
-  const lastFetchTimeRef = useRef(0);
 
   // Memoized filtered sessions for better performance
   const filteredSessions = useMemo(() => {
@@ -67,35 +66,20 @@ export const useAgentInbox = () => {
     }, 300);
   }, []);
 
-  // Throttled API calls to prevent spam
-  const throttledApiCall = useCallback((apiFunction, ...args) => {
-    const now = Date.now();
-    if (now - lastFetchTimeRef.current < 1000) { // 1 second throttle
-      console.log('🚫 API call throttled');
-      return Promise.resolve();
-    }
-
-    lastFetchTimeRef.current = now;
-    console.log('🚀 Making API call:', apiFunction.name, args);
-    return apiFunction(...args);
-  }, []);
 
   /**
-   * Load sessions from API with throttling
+   * Load sessions from API
    */
   const loadSessions = useCallback(async (page = 1, newFilters = filters) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await throttledApiCall(
-        inboxService.getSessions.bind(inboxService),
-        {
-          page,
-          per_page: pagination.per_page,
-          ...newFilters
-        }
-      );
+      const response = await inboxService.getSessions({
+        page,
+        per_page: pagination.per_page,
+        ...newFilters
+      });
 
       if (response?.success) {
         // Backend returns sessions directly in data, not data.data
@@ -116,22 +100,19 @@ export const useAgentInbox = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination.per_page, throttledApiCall]);
+  }, [filters, pagination.per_page]);
 
   /**
-   * Load active sessions with throttling
+   * Load active sessions
    */
   const loadActiveSessions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await throttledApiCall(
-        inboxService.getActiveSessions.bind(inboxService),
-        {
-          per_page: 50
-        }
-      );
+      const response = await inboxService.getActiveSessions({
+        per_page: 50
+      });
 
       if (response?.success) {
         // Backend returns sessions directly in data, not data.data
@@ -146,22 +127,19 @@ export const useAgentInbox = () => {
     } finally {
       setLoading(false);
     }
-  }, [throttledApiCall]);
+  }, []);
 
   /**
-   * Load pending sessions with throttling
+   * Load pending sessions
    */
   const loadPendingSessions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await throttledApiCall(
-        inboxService.getPendingSessions.bind(inboxService),
-        {
-          per_page: 50
-        }
-      );
+      const response = await inboxService.getPendingSessions({
+        per_page: 50
+      });
 
       if (response?.success) {
         // Backend returns sessions directly in data, not data.data
@@ -176,26 +154,22 @@ export const useAgentInbox = () => {
     } finally {
       setLoading(false);
     }
-  }, [throttledApiCall]);
+  }, []);
 
   /**
-   * Load session messages with throttling
+   * Load session messages
    */
   const loadSessionMessages = useCallback(async (sessionId, page = 1) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await throttledApiCall(
-        inboxService.getSessionMessages.bind(inboxService),
-        sessionId,
-        {
-          page,
-          per_page: 50,
-          sort_by: 'created_at',
-          sort_direction: 'desc'
-        }
-      );
+      const response = await inboxService.getSessionMessages(sessionId, {
+        page,
+        per_page: 50,
+        sort_by: 'created_at',
+        sort_direction: 'desc'
+      });
 
       console.log('🔍 Session messages response:', response);
 
@@ -240,7 +214,7 @@ export const useAgentInbox = () => {
     } finally {
       setLoading(false);
     }
-  }, [throttledApiCall]);
+  }, []);
 
   /**
    * Select a session
@@ -472,22 +446,18 @@ export const useAgentInbox = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Polling fallback for message updates
+  // Polling fallback for message updates (enhanced without throttling)
   useEffect(() => {
     if (!selectedSession?.id) return;
 
     const pollInterval = setInterval(async () => {
       try {
-        const response = await throttledApiCall(
-          inboxService.getSessionMessages.bind(inboxService),
-          selectedSession.id,
-          {
-            page: 1,
-            per_page: 50,
-            sort_by: 'created_at',
-            sort_direction: 'desc'
-          }
-        );
+        const response = await inboxService.getSessionMessages(selectedSession.id, {
+          page: 1,
+          per_page: 50,
+          sort_by: 'created_at',
+          sort_direction: 'desc'
+        });
 
         if (response?.success && response.data) {
           const messagesData = response.data || [];
@@ -526,76 +496,12 @@ export const useAgentInbox = () => {
       } catch (error) {
         console.error('Polling error:', error);
       }
-    }, 3000); // Poll every 3 seconds
+    }, 2000); // Poll every 2 seconds
 
     return () => clearInterval(pollInterval);
-  }, [selectedSession?.id, throttledApiCall]);
+  }, [selectedSession?.id]);
 
-  // Real-time message handling
-  useEffect(() => {
-    if (!selectedSession?.id) return;
 
-    const unregisterMessage = registerMessageHandler(selectedSession.id, (data) => {
-      console.log('🔔 AgentInbox received message:', data);
-
-      // Handle incoming messages
-      if (data.type === 'message' ||
-          data.event === 'message.processed' ||
-          data.event === 'message.sent' ||
-          data.event === 'MessageSent' ||
-          data.event === 'MessageProcessed' ||
-          data.message_id) {
-
-        const newMessage = {
-          id: data.message_id || data.id || `msg-${Date.now()}`,
-          session_id: selectedSession.id,
-          sender_type: data.sender_type || (data.from_me ? 'agent' : 'customer'),
-          sender_name: data.sender_name || (data.from_me ? 'You' : 'Customer'),
-          message_text: data.message_content || data.content || data.text || data.body,
-          text: data.message_content || data.content || data.text || data.body,
-          content: { text: data.message_content || data.content || data.text || data.body },
-          message_type: data.message_type || data.type || 'text',
-          is_read: data.is_read || false,
-          created_at: data.sent_at || data.timestamp || data.created_at || new Date().toISOString(),
-          sent_at: data.sent_at || data.timestamp || data.created_at || new Date().toISOString(),
-          delivered_at: data.delivered_at,
-          media_url: data.media_url,
-          media_type: data.media_type,
-          metadata: data.metadata
-        };
-
-        // Add message if it's for the current session
-        if (data.session_id === selectedSession.id) {
-          setMessages(prev => {
-            const exists = prev.some(msg => msg.id === newMessage.id);
-            if (exists) return prev;
-            return [...prev, newMessage];
-          });
-
-          // Update session last message
-          setSessions(prev => prev.map(s =>
-            s.id === selectedSession.id
-              ? {
-                  ...s,
-                  last_message_at: newMessage.created_at,
-                  last_message: newMessage.message_text,
-                  unread_count: (newMessage.sender_type !== 'agent' && newMessage.sender_type !== 'bot') ? (s.unread_count || 0) + 1 : s.unread_count
-                }
-              : s
-          ));
-
-          // Auto-scroll to bottom when new message arrives
-          setTimeout(() => {
-            scrollToBottom();
-          }, 100);
-        }
-      }
-    });
-
-    return () => {
-      unregisterMessage();
-    };
-  }, [selectedSession?.id, registerMessageHandler]);
 
   // Global message handler for all sessions
   useEffect(() => {
