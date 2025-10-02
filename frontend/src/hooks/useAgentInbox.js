@@ -549,13 +549,30 @@ export const useAgentInbox = () => {
     const unregisterMessage = registerMessageHandler(selectedSession.id, (data) => {
       console.log('🔔 AgentInbox received session-specific message:', data);
 
-      // Parse JSON string if data is a string
-      let eventData = data.data || data;
-      if (typeof eventData === 'string') {
+      // Handle Laravel Reverb format: { event: "message.processed", data: "JSON_STRING", channel: "..." }
+      let eventData = data;
+      
+      if (data.event && typeof data.data === 'string') {
         try {
-          eventData = JSON.parse(eventData);
+          eventData = JSON.parse(data.data);
+          console.log('🔔 Parsed session-specific Laravel Reverb data:', eventData);
         } catch (e) {
-          console.error('❌ Failed to parse session event data:', e);
+          console.error('❌ Failed to parse session-specific Laravel Reverb data:', e);
+          return;
+        }
+      }
+      // Handle direct data format
+      else if (data.data && typeof data.data === 'object') {
+        eventData = data.data;
+        console.log('🔔 Using session-specific direct data object:', eventData);
+      }
+      // Handle string data format
+      else if (typeof data === 'string') {
+        try {
+          eventData = JSON.parse(data);
+          console.log('🔔 Parsed session-specific string data:', eventData);
+        } catch (e) {
+          console.error('❌ Failed to parse session-specific string data:', e);
           return;
         }
       }
@@ -621,16 +638,31 @@ export const useAgentInbox = () => {
       console.log('🔔 Raw data type:', typeof data);
       console.log('🔔 Raw data keys:', Object.keys(data));
       
-      // Extract event data from nested structure if needed
-      let eventData = data.data || data;
+      // Extract event data from nested structure - handle Laravel Reverb format
+      let eventData = data;
       
-      // Parse JSON string if data is a string
-      if (typeof eventData === 'string') {
+      // Handle Laravel Reverb format: { event: "message.processed", data: "JSON_STRING", channel: "..." }
+      if (data.event && typeof data.data === 'string') {
         try {
-          eventData = JSON.parse(eventData);
-          console.log('🔔 Parsed JSON string:', eventData);
+          eventData = JSON.parse(data.data);
+          console.log('🔔 Parsed Laravel Reverb data:', eventData);
         } catch (e) {
-          console.error('❌ Failed to parse event data:', e);
+          console.error('❌ Failed to parse Laravel Reverb data:', e);
+          return;
+        }
+      }
+      // Handle direct data format
+      else if (data.data && typeof data.data === 'object') {
+        eventData = data.data;
+        console.log('🔔 Using direct data object:', eventData);
+      }
+      // Handle string data format
+      else if (typeof data === 'string') {
+        try {
+          eventData = JSON.parse(data);
+          console.log('🔔 Parsed string data:', eventData);
+        } catch (e) {
+          console.error('❌ Failed to parse string data:', e);
           return;
         }
       }
