@@ -52,18 +52,34 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
                 'from' => $event->messageData['from'] ?? 'unknown'
             ]);
 
-            // IMPLEMENT SIMPLE DUPLICATE PREVENTION FOR JOB DISPATCH
+            // ENHANCED DUPLICATE PREVENTION FOR JOB DISPATCH
             $messageId = $event->messageData['message_id'] ?? 'unknown';
+            $from = $event->messageData['from'] ?? 'unknown';
             $jobKey = "job_dispatched:{$event->organizationId}:{$messageId}";
+            $processingKey = "job_processing:{$event->organizationId}:{$messageId}";
 
             // Check if job already dispatched for this message (expire in 5 minutes)
             if (Redis::exists($jobKey)) {
                 Log::info('Job already dispatched for this message, skipping duplicate dispatch', [
                     'organization_id' => $event->organizationId,
-                    'message_id' => $messageId
+                    'message_id' => $messageId,
+                    'from' => $from
                 ]);
                 return;
             }
+
+            // Check if job is currently being processed (prevent race conditions)
+            if (Redis::exists($processingKey)) {
+                Log::info('Job is currently being processed, skipping duplicate dispatch', [
+                    'organization_id' => $event->organizationId,
+                    'message_id' => $messageId,
+                    'from' => $from
+                ]);
+                return;
+            }
+
+            // Mark job as being processed (expire in 2 minutes)
+            Redis::setex($processingKey, 120, 'processing');
 
             // Mark job as dispatched (expire in 5 minutes)
             Redis::setex($jobKey, 300, 'dispatched');

@@ -313,52 +313,88 @@ class WahaWebhookService
     }
 
     /**
-     * Save outgoing message to database
+     * Save outgoing message to database with 2-second delay (no job creation)
      */
     public function saveOutgoingMessage(array $messageData, string $organizationId): void
     {
         try {
+            Log::info('Processing outgoing message with 2-second delay', [
+                'organization_id' => $organizationId,
+                'message_id' => $messageData['message_id'] ?? 'unknown',
+                'from_me' => $messageData['from_me'] ?? false,
+                'to' => $messageData['to'] ?? 'unknown'
+            ]);
+
+            // Add 2-second delay before processing
+            sleep(2);
+
             // Extract and validate message data
             $messageInfo = $this->extractMessageInfo($messageData);
             if (!$messageInfo) {
+                Log::warning('Failed to extract message info for outgoing message', [
+                    'organization_id' => $organizationId,
+                    'message_data' => $messageData
+                ]);
                 return;
             }
 
             // Check for duplicates using database lock
             if ($this->isDuplicateMessage($messageInfo, $organizationId)) {
+                Log::info('Outgoing message is duplicate, skipping', [
+                    'organization_id' => $organizationId,
+                    'waha_message_id' => $messageInfo['waha_message_id'] ?? 'unknown'
+                ]);
                 return;
             }
 
             // Find customer and session
             $customer = $this->findCustomerByPhone($messageInfo['phone'], $organizationId);
             if (!$customer) {
+                Log::warning('Customer not found for outgoing message', [
+                    'organization_id' => $organizationId,
+                    'phone' => $messageInfo['phone'] ?? 'unknown'
+                ]);
                 return;
             }
 
             $session = $this->findActiveSession($customer->id, $organizationId);
             if (!$session) {
+                Log::warning('Active session not found for outgoing message', [
+                    'organization_id' => $organizationId,
+                    'customer_id' => $customer->id
+                ]);
                 return;
             }
 
-            // Determine sender information (now always returns agent)
+            // Determine sender information (always returns agent for outgoing messages)
             $senderInfo = $this->determineSenderInfo($session, $organizationId);
 
-            // Create the message
+            // Create the message directly (no job creation)
+            Log::info('About to create outgoing message', [
+                'session_id' => $session->id,
+                'sender_info' => $senderInfo,
+                'message_info' => $messageInfo,
+                'organization_id' => $organizationId
+            ]);
+
             $message = $this->createOutgoingMessage($messageData, $messageInfo, $session, $senderInfo, $organizationId);
 
-            Log::info('Outgoing message saved successfully', [
+            Log::info('Outgoing message saved successfully (no job created)', [
                 'message_id' => $message->id,
                 'session_id' => $session->id,
                 'sender_type' => $senderInfo['type'],
                 'sender_name' => $senderInfo['name'],
-                'content' => $message->message_text
+                'content' => $message->message_text,
+                'waha_message_id' => $messageInfo['waha_message_id'] ?? 'unknown',
+                'processing_time' => '2 seconds delay'
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to save outgoing message', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'message_data' => $messageData
+                'message_data' => $messageData,
+                'organization_id' => $organizationId
             ]);
         }
     }
@@ -413,9 +449,9 @@ class WahaWebhookService
 
             // Check by content and phone within last 30 seconds
             $existingByContent = Message::where('message_text', $messageInfo['text'])
-                ->where('metadata->whatsapp->to', $messageInfo['phone'])
+                ->where('metadata->phone_number', $messageInfo['phone'])
                 ->where('created_at', '>=', now()->subSeconds(30))
-                ->where('sender_type', 'bot')
+                ->where('sender_type', 'agent') // Changed from 'bot' to 'agent'
                 ->lockForUpdate()
                 ->first();
 
@@ -519,7 +555,7 @@ class WahaWebhookService
     }
 
     /**
-     * Create outgoing message record
+     * Create outgoing message record as agent with proper timing
      */
     private function createOutgoingMessage(
         array $messageData,
@@ -528,28 +564,47 @@ class WahaWebhookService
         array $senderInfo,
         string $organizationId
     ): Message {
-        return Message::create([
+        // Ensure message is saved as agent (not bot)
+        $senderType = 'agent';
+        $agentId = $senderInfo['id'] ?? $session->agent_id;
+        $agentName = $senderInfo['name'] ?? 'Agent';
+
+        Log::info('Creating outgoing message as agent', [
             'organization_id' => $organizationId,
             'session_id' => $session->id,
-            'waha_session_id' => $messageData['waha_session'] ?? null,
-            'sender_type' => $senderInfo['type'],
-            'sender_id' => $senderInfo['id'],
-            'sender_name' => $senderInfo['name'],
-            'message_type' => $messageInfo['message_type'],
+            'sender_type' => $senderType,
+            'agent_id' => $agentId,
+            'agent_name' => $agentName,
+            'message_text' => $messageInfo['text'],
+            'waha_message_id' => $messageInfo['waha_message_id'] ?? 'unknown'
+        ]);
+
+        return Message::create([
+            'id' => \Illuminate\Support\Str::uuid(),
+            'organization_id' => $organizationId,
+            'session_id' => $session->id, // Correct field name
+            'sender_type' => $senderType,
+            'sender_id' => $agentId,
+            'sender_name' => $agentName,
+            'message_type' => $messageInfo['message_type'] ?? 'text',
             'message_text' => $messageInfo['text'],
             'metadata' => [
-                'whatsapp_message_id' => $messageInfo['waha_message_id'],
-                'phone_number' => $messageInfo['phone'],
+                'whatsapp_message_id' => $messageInfo['waha_message_id'] ?? null,
+                'waha_message_id' => $messageInfo['waha_message_id'] ?? null,
+                'phone_number' => $messageInfo['phone'] ?? null,
                 'timestamp' => $messageInfo['timestamp'] ?? now()->timestamp,
                 'raw_data' => $messageData['raw_data'] ?? null,
                 'direction' => 'outgoing',
                 'from_me' => true,
-                'waha_message_id' => $messageInfo['waha_message_id']
+                'processed_with_delay' => true,
+                'delay_seconds' => 2,
+                'no_job_created' => true
             ],
             'is_read' => true, // Outgoing messages are considered read
             'read_at' => now(),
             'delivered_at' => now(),
-            'created_at' => now()->addMilliseconds(rand(100, 500))
+            'created_at' => now()->addSeconds(2), // Add 2-second delay to created_at
+            'waha_session_id' => $messageData['waha_session'] ?? null
         ]);
     }
 

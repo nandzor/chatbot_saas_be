@@ -135,6 +135,9 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
             // Mark message as processed in Redis
             $this->markMessageAsProcessed();
 
+            // Clean up processing key
+            $this->cleanupProcessingKey();
+
             Log::info('WhatsApp message job completed successfully', [
                 'organization_id' => $this->organizationId,
                 'session_id' => $result['session_id'] ?? null,
@@ -155,6 +158,9 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
 
                 // Mark as processed since it was already processed by another job
                 $this->markMessageAsProcessed();
+
+                // Clean up processing key
+                $this->cleanupProcessingKey();
 
                 Log::info('WhatsApp message job completed (duplicate key handled gracefully)', [
                     'organization_id' => $this->organizationId,
@@ -220,5 +226,33 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
         // - Sending notification to administrators
         // - Storing failed message for manual review
         // - Updating metrics/analytics
+
+        // Clean up processing key on failure
+        $this->cleanupProcessingKey();
+    }
+
+    /**
+     * Clean up processing key from Redis
+     */
+    private function cleanupProcessingKey(): void
+    {
+        try {
+            $messageId = $this->messageData['message_id'] ?? 'unknown';
+            $processingKey = "job_processing:{$this->organizationId}:{$messageId}";
+
+            \Illuminate\Support\Facades\Redis::del($processingKey);
+
+            \Illuminate\Support\Facades\Log::debug('Processing key cleaned up', [
+                'organization_id' => $this->organizationId,
+                'message_id' => $messageId,
+                'processing_key' => $processingKey
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to clean up processing key', [
+                'organization_id' => $this->organizationId,
+                'message_id' => $this->messageData['message_id'] ?? 'unknown',
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
