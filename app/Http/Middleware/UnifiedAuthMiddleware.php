@@ -131,7 +131,12 @@ class UnifiedAuthMiddleware
             $accessToken = PersonalAccessToken::findToken($token);
 
             if (!$accessToken) {
-                return null;
+                // Try to find token in raw format (for backward compatibility)
+                $accessToken = PersonalAccessToken::where('token', $token)->first();
+                
+                if (!$accessToken) {
+                    return null;
+                }
             }
 
             // Check if token is valid and not expired

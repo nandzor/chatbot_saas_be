@@ -211,7 +211,7 @@ Route::prefix('v1')->group(function () {
         // ====================================================================
 
         Route::prefix('inbox')
-            ->middleware(['permission:inbox.read', 'organization'])
+            ->middleware(['permission:inbox.view', 'organization'])
             ->group(function () {
 
             // Statistics and overview

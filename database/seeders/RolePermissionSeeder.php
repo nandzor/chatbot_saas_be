@@ -165,12 +165,14 @@ class RolePermissionSeeder extends Seeder
                     'agents.view', 'agents.execute',
                     'customers.view',
                     'chat_sessions.view', 'chat_sessions.create', 'chat_sessions.update',
-                    'messages.view', 'messages.create', 'messages.update',
+                    'messages.view', 'messages.create', 'messages.update', 'messages.edit', 'messages.mark_read', 'messages.react',
                     'knowledge_articles.view',
                     'bot_personalities.view',
                     'channel_configs.view',
                     'analytics.view',
-                    'inbox.view', 'inbox.create', 'inbox.update'
+                    'inbox.view', 'inbox.create', 'inbox.update', 'inbox.manage',
+                    'inbox.sessions.manual_create', 'inbox.sessions.manual_assign', 'inbox.sessions.manual_transfer', 'inbox.sessions.manual_end',
+                    'conversations.view', 'conversations.create', 'conversations.update', 'conversations.send_message', 'conversations.end', 'conversations.transfer', 'conversations.history', 'conversations.log', 'conversations.statistics'
                 ];
 
                 foreach ($permissions as $permission) {

@@ -60,7 +60,6 @@ class MessageProcessed implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('organization.' . $this->organizationId),
             new PrivateChannel('inbox.' . $this->organizationId),
             new PrivateChannel('conversation.' . $this->sessionData['id']),
         ];

@@ -98,6 +98,34 @@ export const PERMISSIONS = {
     MANUAL_END: 'inbox.sessions.manual_end'
   },
 
+  // Conversation Management (Enhanced)
+  CONVERSATIONS: {
+    VIEW: 'conversations.view',
+    CREATE: 'conversations.create',
+    UPDATE: 'conversations.update',
+    DELETE: 'conversations.delete',
+    SEND_MESSAGE: 'conversations.send_message',
+    END: 'conversations.end',
+    TRANSFER: 'conversations.transfer',
+    HISTORY: 'conversations.history',
+    LOG: 'conversations.log',
+    STATISTICS: 'conversations.statistics'
+  },
+
+  // Message Management (Enhanced)
+  MESSAGES: {
+    VIEW: 'messages.view',
+    CREATE: 'messages.create',
+    UPDATE: 'messages.update',
+    DELETE: 'messages.delete',
+    VIEW_ALL: 'messages.view_all',
+    EDIT: 'messages.edit',
+    MARK_READ: 'messages.mark_read',
+    REACT: 'messages.react',
+    FORWARD: 'messages.forward',
+    EXPORT: 'messages.export'
+  },
+
   // Billing
   BILLING: {
     VIEW: 'billing.view',
@@ -266,6 +294,9 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.MESSAGES.VIEW,
     PERMISSIONS.MESSAGES.CREATE,
     PERMISSIONS.MESSAGES.UPDATE,
+    PERMISSIONS.MESSAGES.EDIT,
+    PERMISSIONS.MESSAGES.MARK_READ,
+    PERMISSIONS.MESSAGES.REACT,
     PERMISSIONS.KNOWLEDGE.VIEW,
     PERMISSIONS.INBOX.VIEW,
     PERMISSIONS.INBOX.CREATE,
@@ -274,7 +305,16 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.INBOX.MANUAL_CREATE,
     PERMISSIONS.INBOX.MANUAL_ASSIGN,
     PERMISSIONS.INBOX.MANUAL_TRANSFER,
-    PERMISSIONS.INBOX.MANUAL_END
+    PERMISSIONS.INBOX.MANUAL_END,
+    PERMISSIONS.CONVERSATIONS.VIEW,
+    PERMISSIONS.CONVERSATIONS.CREATE,
+    PERMISSIONS.CONVERSATIONS.UPDATE,
+    PERMISSIONS.CONVERSATIONS.SEND_MESSAGE,
+    PERMISSIONS.CONVERSATIONS.END,
+    PERMISSIONS.CONVERSATIONS.TRANSFER,
+    PERMISSIONS.CONVERSATIONS.HISTORY,
+    PERMISSIONS.CONVERSATIONS.LOG,
+    PERMISSIONS.CONVERSATIONS.STATISTICS
   ],
   CUSTOMER: [
     PERMISSIONS.CHAT_SESSIONS.VIEW,

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Services\PermissionService;
+use App\Models\Permission;
 use App\Exceptions\PermissionDeniedException;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
@@ -182,7 +183,21 @@ class PermissionMiddleware
      */
     protected function checkSinglePermission($user, $organizationId, string $permission): bool
     {
-        // Parse permission format: resource.action
+        // First try to find permission by code
+        $permissionModel = Permission::where('code', $permission)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if ($permissionModel) {
+            // Check if user has this specific permission
+            return $this->permissionService->userHasPermissionByCode(
+                $user->id,
+                $organizationId,
+                $permission
+            );
+        }
+
+        // Fallback to old method for backward compatibility
         $parts = explode('.', $permission);
         if (count($parts) !== 2) {
             return false;

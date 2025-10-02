@@ -13,9 +13,21 @@ class BroadcastingController extends BaseApiController
      */
     public function authenticate(Request $request)
     {
+        Log::info('Broadcasting authentication attempt', [
+            'headers' => $request->headers->all(),
+            'auth_header' => $request->header('Authorization'),
+            'bearer_token' => $request->bearerToken(),
+            'session_token' => $request->header('X-Session-Token'),
+            'user_agent' => $request->userAgent()
+        ]);
 
         // Use our unified auth middleware to get the authenticated user
         $user = $request->user();
+        
+        Log::info('Broadcasting auth user check', [
+            'user' => $user ? $user->id : 'null',
+            'auth_method' => $request->get('auth_method', 'unknown')
+        ]);
 
         if (!$user) {
             return $this->unauthorizedResponse(
