@@ -16,11 +16,18 @@ export const EchoProvider = ({ children }) => {
   useEffect(() => {
     const getOrganizationId = async () => {
       try {
+        // Check if user is authenticated first
+        const isAuthenticated = authService.isAuthenticated();
+        if (!isAuthenticated) {
+          return; // Don't initialize Echo if not authenticated
+        }
+
         const user = await authService.getCurrentUser();
         const orgId = user?.organization_id || user?.organization?.id;
         setOrganizationId(orgId);
       } catch (error) {
-        console.error('Failed to get organization ID:', error);
+        // console.error('Failed to get organization ID:', error);
+        // Don't set organizationId if there's an error
       }
     };
 
