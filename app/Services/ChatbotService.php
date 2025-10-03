@@ -362,19 +362,19 @@ class ChatbotService extends BaseService
                 ];
             }
 
-            // Process the message with AI (only if no agent assigned)
-            $aiResponse = $this->generateAIResponse($chatbot, $data['message'], $session);
+            // // // Process the message with AI (only if no agent assigned)
+            // // $aiResponse = $this->generateAIResponse($chatbot, $data['message'], $session);
 
-            // Create bot response message
-            $botMessage = Message::create([
-                'organization_id' => $this->getCurrentOrganizationId(),
-                'chat_session_id' => $session->id,
-                'sender_type' => 'bot',
-                'sender_id' => $chatbot->id,
-                'message_type' => 'text',
-                'content' => $aiResponse['content'],
-                'metadata' => $aiResponse['metadata'] ?? []
-            ]);
+            // // Create bot response message
+            // $botMessage = Message::create([
+            //     'organization_id' => $this->getCurrentOrganizationId(),
+            //     'chat_session_id' => $session->id,
+            //     'sender_type' => 'bot',
+            //     'sender_id' => $chatbot->id,
+            //     'message_type' => 'text',
+            //     'content' => $aiResponse['content'],
+            //     'metadata' => $aiResponse['metadata'] ?? []
+            // ]);
 
             // Update session statistics
             $session->increment('total_messages');
@@ -397,8 +397,8 @@ class ChatbotService extends BaseService
                 'data' => [
                     'session_id' => $session->id,
                     'customer_message' => $customerMessage,
-                    'bot_response' => $botMessage,
-                    'ai_response' => $aiResponse,
+                    // 'bot_response' => $botMessage,
+                    // 'ai_response' => $aiResponse,
                     'response_time' => round($responseTime, 2),
                     'confidence_score' => $aiResponse['confidence'] ?? 0.8,
                     'suggested_actions' => $aiResponse['suggested_actions'] ?? [],

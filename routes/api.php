@@ -30,6 +30,8 @@ use App\Http\Controllers\Api\V1\QueueController;
 use App\Http\Controllers\Api\V1\PermissionSyncController;
 use App\Http\Controllers\Api\V1\OrganizationApprovalController;
 use App\Http\Controllers\Api\V1\EscalationController;
+use App\Http\Controllers\Api\V1\AgentController;
+use App\Http\Controllers\Api\V1\AgentDashboardController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmailVerificationController;
 
@@ -199,6 +201,9 @@ Route::prefix('v1')->group(function () {
             // Routes requiring additional permissions
             Route::middleware(['permission:conversations.create'])->post('/', [ConversationController::class, 'store']);
             Route::middleware(['permission:conversations.send_message'])->post('/{id}/messages', [ConversationController::class, 'sendMessage']);
+
+            // Get conversation with recent messages
+            Route::middleware(['permission:conversations.create'])->get('/{id}/recent', [ConversationController::class, 'getConversationWithRecent']);
         });
 
         // ====================================================================
@@ -206,12 +211,15 @@ Route::prefix('v1')->group(function () {
         // ====================================================================
 
         Route::prefix('inbox')
-            ->middleware(['permission:inbox.view', 'organization'])
+            ->middleware(['permission:inbox.read', 'organization'])
             ->group(function () {
 
             // Statistics and overview
             Route::get('/statistics', [InboxController::class, 'statistics']);
             Route::get('/export', [InboxController::class, 'export']);
+
+            // Agents for transfer functionality
+            Route::get('/agents', [InboxController::class, 'agents']);
 
             // Session management
             Route::get('/sessions', [InboxController::class, 'sessions']);
@@ -231,6 +239,47 @@ Route::prefix('v1')->group(function () {
 
             // Message operations
             Route::post('/sessions/{sessionId}/messages/{messageId}/read', [InboxController::class, 'markMessageRead']);
+
+            // Agent endpoints
+            Route::get('/agents', [AgentController::class, 'index']);
+            Route::get('/agents/available', [AgentController::class, 'available']);
+            Route::get('/agents/me', [AgentController::class, 'me']);
+            Route::put('/agents/me/availability', [AgentController::class, 'updateMyAvailability']);
+            Route::get('/agents/{id}', [AgentController::class, 'show']);
+            Route::get('/agents/{id}/statistics', [AgentController::class, 'statistics']);
+            Route::put('/agents/{id}/availability', [AgentController::class, 'updateAvailability']);
+
+            // Agent Profile endpoints
+            Route::get('/agents/me/profile', [AgentController::class, 'getMyProfile']);
+            Route::put('/agents/me/profile', [AgentController::class, 'updateMyProfile']);
+            Route::post('/agents/me/avatar', [AgentController::class, 'uploadMyAvatar']);
+
+            // Agent Preferences endpoints
+            Route::get('/agents/me/notifications', [AgentController::class, 'getMyNotifications']);
+            Route::put('/agents/me/notifications', [AgentController::class, 'updateMyNotifications']);
+            Route::get('/agents/me/preferences', [AgentController::class, 'getMyPreferences']);
+            Route::put('/agents/me/preferences', [AgentController::class, 'updateMyPreferences']);
+
+            // Agent Templates endpoints
+            Route::get('/agents/me/templates', [AgentController::class, 'getMyTemplates']);
+            Route::post('/agents/me/templates', [AgentController::class, 'createMyTemplate']);
+            Route::put('/agents/me/templates/{id}', [AgentController::class, 'updateMyTemplate']);
+            Route::delete('/agents/me/templates/{id}', [AgentController::class, 'deleteMyTemplate']);
+
+            // Agent Export endpoint
+            Route::get('/agents/me/export', [AgentController::class, 'exportMyData']);
+
+            // Agent Dashboard endpoints
+            Route::prefix('agent-dashboard')->group(function () {
+                Route::get('/statistics', [AgentDashboardController::class, 'statistics']);
+                Route::get('/recent-sessions', [AgentDashboardController::class, 'recentSessions']);
+                Route::get('/performance-metrics', [AgentDashboardController::class, 'performanceMetrics']);
+                Route::get('/conversation-analytics', [AgentDashboardController::class, 'conversationAnalytics']);
+                Route::get('/workload', [AgentDashboardController::class, 'workload']);
+                Route::get('/realtime-activity', [AgentDashboardController::class, 'realtimeActivity']);
+                Route::get('/conversation-insights', [AgentDashboardController::class, 'conversationInsights']);
+            });
+
 
             // Bot personality endpoints
             Route::get('/bot-personalities', [InboxController::class, 'botPersonalities']);

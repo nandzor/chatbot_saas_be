@@ -396,35 +396,73 @@ class InboxService
             $data['message_text'] = $data['message'];
         }
 
-        // Create message
-        try {
-            $message = Message::create($data);
-        } catch (\Exception $e) {
-            Log::error('Failed to create message', [
-                'session_id' => $session->id,
-                'data' => $data,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
-        }
+        // Create message object without saving to database
+        $messageId = \Illuminate\Support\Str::uuid();
+        $message = (object) [
+            'id' => $messageId,
+            'session_id' => $sessionId,
+            'chat_session_id' => $sessionId, // Required for MessageResource
+            'organization_id' => $data['organization_id'],
+            'sender_type' => $data['sender_type'],
+            'sender_id' => $data['sender_id'],
+            'sender_name' => $data['sender_name'],
+            'content' => $data['content'] ?? $data['message_text'],
+            'message_text' => $data['message_text'],
+            'message_type' => $data['message_type'],
+            'status' => $data['status'] ?? 'sent',
+            'media_url' => $data['media_url'] ?? null,
+            'media_type' => $data['media_type'] ?? null,
+            'media_size' => $data['media_size'] ?? null,
+            'media_metadata' => $data['media_metadata'] ?? null,
+            'thumbnail_url' => $data['thumbnail_url'] ?? null,
+            'quick_replies' => $data['quick_replies'] ?? null,
+            'buttons' => $data['buttons'] ?? null,
+            'template_data' => $data['template_data'] ?? null,
+            'intent' => $data['intent'] ?? null,
+            'entities' => $data['entities'] ?? null,
+            'confidence_score' => $data['confidence_score'] ?? null,
+            'ai_generated' => $data['ai_generated'] ?? false,
+            'ai_model_used' => $data['ai_model_used'] ?? null,
+            'sentiment_score' => $data['sentiment_score'] ?? null,
+            'sentiment_label' => $data['sentiment_label'] ?? null,
+            'emotion_scores' => $data['emotion_scores'] ?? null,
+            'is_read' => false,
+            'read_at' => null,
+            'is_edited' => false,
+            'edited_at' => null,
+            'delivered_at' => now(),
+            'failed_at' => null,
+            'failed_reason' => null,
+            'reply_to_message_id' => $data['reply_to_message_id'] ?? null,
+            'thread_id' => $data['thread_id'] ?? null,
+            'context' => $data['context'] ?? null,
+            'processing_time_ms' => null,
+            'metadata' => $data['metadata'] ?? [],
+            'human_readable_media_size' => null,
+            'sentiment_text' => null,
+            'confidence_percentage' => null,
+            'processing_time_human' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
 
         // Log before triggering event
-        Log::info('Triggering MessageSent event', [
+        Log::info('Triggering MessageSent event (no database save)', [
             'session_id' => $session->id,
-            'message_id' => $message->id,
-            'content' => $message->content ?? $message->message_text,
-            'sender_type' => $message->sender_type
+            'message_id' => $messageId,
+            'content' => $message->content,
+            'sender_type' => $message->sender_type,
+            'action' => 'event_only'
         ]);
 
         // Trigger MessageSent event for WAHA integration
         event(new MessageSent($message, $session, $data));
 
-        // Update session activity
-        $session->updateActivity();
+        // Update session activity (temporarily disabled due to hang issue)
+        // $session->updateActivity();
 
-        // Update message counts
-        $this->updateSessionMessageCounts($session);
+        // Update message counts (temporarily disabled due to hang issue)
+        // $this->updateSessionMessageCounts($session);
 
         return [
             'message' => $message,
@@ -614,5 +652,53 @@ class InboxService
             'bot_messages' => $botCount,
             'agent_messages' => $agentCount,
         ]);
+    }
+
+    /**
+     * Get available agents for transfer functionality
+     */
+    public function getAvailableAgents(array $filters = []): array
+    {
+        try {
+            // Use DB query directly to avoid any model scopes
+            $agents = DB::table('agents')
+                ->join('users', 'agents.user_id', '=', 'users.id')
+                ->where('agents.status', 'active')
+                ->where('agents.organization_id', Auth::user()->organization_id)
+                ->select([
+                    'agents.id',
+                    'agents.display_name',
+                    'agents.department',
+                    'agents.specialization',
+                    'agents.max_concurrent_chats',
+                    'agents.availability_status',
+                    'agents.skills',
+                    'agents.languages',
+                    'agents.rating',
+                    'users.name as user_name',
+                    'users.email as user_email'
+                ])
+                ->get();
+
+            return $agents->map(function ($agent) {
+                return [
+                    'id' => $agent->id,
+                    'name' => $agent->display_name ?: $agent->user_name ?: 'Unknown',
+                    'email' => $agent->user_email,
+                    'department' => $agent->department,
+                    'specialization' => $agent->specialization,
+                    'current_active_chats' => 0, // Simplified for now
+                    'max_concurrent_chats' => $agent->max_concurrent_chats ?? 5,
+                    'availability_status' => $agent->availability_status ?? 'available',
+                    'skills' => $agent->skills ? json_decode($agent->skills, true) : [],
+                    'languages' => $agent->languages ? json_decode($agent->languages, true) : [],
+                    'rating' => $agent->rating ?? 0,
+                    'is_available' => true // Simplified for now
+                ];
+            })->toArray();
+        } catch (\Exception $e) {
+            Log::error('Error in getAvailableAgents: ' . $e->getMessage());
+            throw $e;
+        }
     }
 }

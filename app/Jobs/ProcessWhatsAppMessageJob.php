@@ -82,32 +82,47 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
             $messageDataWithOrg = $this->messageData;
             $messageDataWithOrg['organization_id'] = $this->organizationId;
 
-            // Process the message
-            $result = DB::transaction(function () use ($messageProcessor, $messageDataWithOrg) {
-                return $messageProcessor->processIncomingMessage($messageDataWithOrg);
-            });
+            // Process the message without transaction to avoid silent rollbacks
+            // The processIncomingMessage method already handles exceptions properly
+            $result = $messageProcessor->processIncomingMessage($messageDataWithOrg);
 
             // Calculate processing time
             $processingTime = microtime(true) - $startTime;
 
             // Fire event for real-time updates
             if (isset($result['session_id']) && isset($result['message_id'])) {
-                $session = \App\Models\ChatSession::find($result['session_id']);
-                $message = \App\Models\Message::find($result['message_id']);
+                try {
+                    $session = \App\Models\ChatSession::find($result['session_id']);
+                    $message = \App\Models\Message::find($result['message_id']);
 
-                if ($session && $message) {
-                    event(new MessageProcessed($session, $message, [
-                        'processing_time' => $processingTime,
-                        'response_sent' => $result['response_sent'] ?? false,
-                        'bot_response' => $result['bot_response'] ?? null,
-                    ]));
-                } else {
-                    Log::warning('Session or message not found for MessageProcessed event', [
+                    if ($session && $message) {
+                        event(new MessageProcessed($session, $message, [
+                            'processing_time' => $processingTime,
+                            'response_sent' => $result['response_sent'] ?? false,
+                            'bot_response' => $result['bot_response'] ?? null,
+                        ]));
+
+                        Log::info('MessageProcessed event fired successfully', [
+                            'session_id' => $result['session_id'],
+                            'message_id' => $result['message_id'],
+                            'processing_time' => $processingTime
+                        ]);
+                    } else {
+                        Log::warning('Session or message not found for MessageProcessed event', [
+                            'session_id' => $result['session_id'] ?? null,
+                            'message_id' => $result['message_id'] ?? null,
+                            'session_found' => $session ? 'yes' : 'no',
+                            'message_found' => $message ? 'yes' : 'no'
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to fire MessageProcessed event', [
                         'session_id' => $result['session_id'] ?? null,
                         'message_id' => $result['message_id'] ?? null,
-                        'session_found' => $session ? 'yes' : 'no',
-                        'message_found' => $message ? 'yes' : 'no'
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
                     ]);
+                    // Don't re-throw - this is not critical for message processing
                 }
             } else {
                 Log::warning('Missing session_id or message_id in result', [
@@ -119,6 +134,9 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
 
             // Mark message as processed in Redis
             $this->markMessageAsProcessed();
+
+            // Clean up processing key
+            $this->cleanupProcessingKey();
 
             Log::info('WhatsApp message job completed successfully', [
                 'organization_id' => $this->organizationId,
@@ -140,6 +158,9 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
 
                 // Mark as processed since it was already processed by another job
                 $this->markMessageAsProcessed();
+
+                // Clean up processing key
+                $this->cleanupProcessingKey();
 
                 Log::info('WhatsApp message job completed (duplicate key handled gracefully)', [
                     'organization_id' => $this->organizationId,
@@ -205,5 +226,33 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
         // - Sending notification to administrators
         // - Storing failed message for manual review
         // - Updating metrics/analytics
+
+        // Clean up processing key on failure
+        $this->cleanupProcessingKey();
+    }
+
+    /**
+     * Clean up processing key from Redis
+     */
+    private function cleanupProcessingKey(): void
+    {
+        try {
+            $messageId = $this->messageData['message_id'] ?? 'unknown';
+            $processingKey = "job_processing:{$this->organizationId}:{$messageId}";
+
+            \Illuminate\Support\Facades\Redis::del($processingKey);
+
+            \Illuminate\Support\Facades\Log::debug('Processing key cleaned up', [
+                'organization_id' => $this->organizationId,
+                'message_id' => $messageId,
+                'processing_key' => $processingKey
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to clean up processing key', [
+                'organization_id' => $this->organizationId,
+                'message_id' => $this->messageData['message_id'] ?? 'unknown',
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

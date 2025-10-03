@@ -10,6 +10,7 @@ use App\Http\Requests\EndSessionRequest;
 use App\Http\Requests\SendMessageRequest;
 use App\Http\Resources\ChatSessionResource;
 use App\Http\Resources\MessageResource;
+use App\Http\Resources\TemporaryMessageResource;
 use App\Http\Resources\InboxStatsResource;
 use App\Http\Resources\BotPersonalityResource;
 use App\Services\InboxService;
@@ -58,6 +59,38 @@ class InboxController extends BaseApiController
                 $e->getMessage(),
                 500,
                 'INBOX_STATISTICS_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Get available agents for transfer functionality
+     */
+    public function agents(Request $request): JsonResponse
+    {
+        try {
+            $filters = $this->getFilterParams($request, [
+                'per_page', 'page', 'status', 'department'
+            ]);
+
+            $agents = $this->inboxService->getAvailableAgents($filters);
+
+            $this->logApiAction('agents_retrieved', [
+                'filters' => $filters
+            ]);
+
+            return $this->successResponseWithLog(
+                'agents_retrieved',
+                'Available agents retrieved successfully',
+                $agents
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponseWithLog(
+                'agents_error',
+                'Failed to retrieve agents',
+                $e->getMessage(),
+                500,
+                'AGENTS_ERROR'
             );
         }
     }
@@ -477,7 +510,7 @@ class InboxController extends BaseApiController
                 'message_sent',
                 'Message sent successfully',
                 [
-                    'message' => new MessageResource($result['message']),
+                    'message' => new TemporaryMessageResource($result['message']),
                     'session' => new ChatSessionResource($result['session'])
                 ]
             );

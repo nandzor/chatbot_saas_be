@@ -424,7 +424,7 @@ class WahaController extends BaseApiController
 
             $data = $request->validate([
                 'to' => 'required|string',
-                'media_url' => 'required|string|url',
+                'media_url' => 'required|string',
                 'caption' => 'nullable|string|max:1024',
             ]);
 

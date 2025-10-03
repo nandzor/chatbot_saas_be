@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import conversationService from '../services/conversationService';
+import conversationService from '../services/ConversationService';
 import { handleError } from '../utils/errorHandler';
 
 /**

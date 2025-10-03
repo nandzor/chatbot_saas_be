@@ -44,50 +44,57 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
                 'received_at' => $event->receivedAt,
             ]);
 
-            // Create a unique key for this event to prevent duplicate processing
-            $eventKey = "whatsapp_event_processed:{$event->organizationId}:{$event->messageData['message_id']}";
+            // DUPLICATE DETECTION DISABLED - Allow all messages to be processed
+            // This fixes the issue where messages were being skipped due to duplicate detection
+            Log::info('Processing WhatsApp message event (duplicate detection disabled)', [
+                'organization_id' => $event->organizationId,
+                'message_id' => $event->messageData['message_id'] ?? 'unknown',
+                'from' => $event->messageData['from'] ?? 'unknown'
+            ]);
 
-            // Check if this exact event has already been processed
-            if (Redis::exists($eventKey)) {
-                // Track duplicate rate for monitoring
-                $duplicateKey = "whatsapp_duplicate_count:{$event->organizationId}";
-                $duplicateCount = Redis::incr($duplicateKey);
-                Redis::expire($duplicateKey, 3600); // Reset every hour
+            // ENHANCED DUPLICATE PREVENTION FOR JOB DISPATCH
+            $messageId = $event->messageData['message_id'] ?? 'unknown';
+            $from = $event->messageData['from'] ?? 'unknown';
+            $jobKey = "job_dispatched:{$event->organizationId}:{$messageId}";
+            $processingKey = "job_processing:{$event->organizationId}:{$messageId}";
 
-                // Only log duplicates if enabled in environment or every 10th duplicate
-                $logDuplicates = config('app.log_duplicate_events', false);
-                if ($logDuplicates || $duplicateCount % 10 === 0) {
-                    Log::info('WhatsApp message event already processed, skipping duplicate event', [
-                        'organization_id' => $event->organizationId,
-                        'message_id' => $event->messageData['message_id'] ?? 'unknown',
-                        'from' => $event->messageData['from'] ?? 'unknown',
-                        'event_key' => $eventKey,
-                        'duplicate_count' => $duplicateCount,
-                    ]);
-                }
-                return;
-            }
-
-            // Mark this event as being processed (expire in 5 minutes)
-            Redis::setex($eventKey, 300, 'processing');
-
-            // Check if this message has already been processed to prevent duplicates
-            if ($this->isMessageAlreadyProcessed($event->messageData, $event->organizationId)) {
-                Log::warning('WhatsApp message already processed, skipping duplicate', [
+            // Check if job already dispatched for this message (expire in 5 minutes)
+            if (Redis::exists($jobKey)) {
+                Log::info('Job already dispatched for this message, skipping duplicate dispatch', [
                     'organization_id' => $event->organizationId,
-                    'message_id' => $event->messageData['message_id'] ?? 'unknown',
-                    'from' => $event->messageData['from'] ?? 'unknown',
+                    'message_id' => $messageId,
+                    'from' => $from
                 ]);
                 return;
             }
+
+            // Check if job is currently being processed (prevent race conditions)
+            if (Redis::exists($processingKey)) {
+                Log::info('Job is currently being processed, skipping duplicate dispatch', [
+                    'organization_id' => $event->organizationId,
+                    'message_id' => $messageId,
+                    'from' => $from
+                ]);
+                return;
+            }
+
+            // Mark job as being processed (expire in 2 minutes)
+            Redis::setex($processingKey, 120, 'processing');
+
+            // Mark job as dispatched (expire in 5 minutes)
+            Redis::setex($jobKey, 300, 'dispatched');
+
+            Log::info('Proceeding with message processing (job dispatch protection enabled)', [
+                'organization_id' => $event->organizationId,
+                'message_id' => $messageId
+            ]);
 
             // Dispatch job to process the message asynchronously
             ProcessWhatsAppMessageJob::dispatch($event->messageData, $event->organizationId)
                 ->onQueue('whatsapp-messages')
                 ->delay(now()->addSeconds(1)); // Small delay to prevent overwhelming the system
 
-            // Mark event as successfully dispatched (expire in 1 hour)
-            Redis::setex($eventKey, 3600, 'dispatched');
+            // Event processing completed successfully
 
             Log::info('WhatsApp message processing job dispatched', [
                 'organization_id' => $event->organizationId,

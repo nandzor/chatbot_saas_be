@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Label, Select, SelectItem, Textarea, Switch, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui';
-import { 
+import { useState, useEffect } from 'react';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Label, Select, SelectItem, Textarea, Switch, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Skeleton, Alert, AlertDescription} from '@/components/ui';
+import {
   User,
   Settings,
   Bell,
   MessageSquare,
-  Upload,
   Camera,
   Edit,
   Trash2,
@@ -14,52 +13,74 @@ import {
   Eye,
   EyeOff,
   Volume2,
-  VolumeX,
   Monitor,
   Smartphone,
   Mail,
   Clock,
   Zap,
   Copy,
-  FileText,
   Star,
-  Calendar,
-  Globe,
   Shield,
-  Palette,
-  Moon,
-  Sun,
   RefreshCw,
-  CheckCircle,
-  AlertCircle,
-  Download
+  Download,
+  AlertTriangle
 } from 'lucide-react';
+import { useAgentProfile } from '@/hooks/useAgentProfile';
 
 const AgentProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [avatarFile, setAvatarFile] = useState(null);
 
-  // Profile data
-  const [profileData, setProfileData] = useState({
-    fullName: 'Sarah Johnson',
-    email: 'sarah.johnson@company.com',
-    phone: '+62812345678',
-    avatar: null,
-    jobTitle: 'Senior Customer Success Agent',
-    department: 'Customer Support',
-    employeeId: 'EMP-001',
-    startDate: '2023-01-15',
-    location: 'Jakarta, Indonesia',
-    timezone: 'Asia/Jakarta'
+  // Use agent profile hook
+  const {
+    userProfile,
+    agentInfo,
+    agentStatistics,
+    notificationPreferences,
+    personalTemplates,
+    uiPreferences,
+    loading,
+    isLoading,
+    hasErrors,
+    refresh,
+    lastUpdated,
+    updateProfile,
+    updateAvailability,
+    uploadAvatar,
+    changePassword,
+    updateNotificationPreferences,
+    createPersonalTemplate,
+    updatePersonalTemplate,
+    deletePersonalTemplate,
+    updateUIPreferences,
+    exportUserData
+  } = useAgentProfile({
+    autoRefresh: true,
+    refreshInterval: 60000, // 60 seconds
+    onError: (type, error) => {
+      console.error(`Error in ${type}:`, error);
+    },
+    onSuccess: (type, data) => {
+      console.log(`Successfully loaded ${type}:`, data);
+    }
   });
 
-  // Availability settings
+  // Local state for form data
+  const [profileData, setProfileData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    avatar: null,
+    bio: '',
+    timezone: 'Asia/Jakarta',
+    language: 'id'
+  });
+
   const [availabilityData, setAvailabilityData] = useState({
     status: 'online',
-    autoStatusChange: true,
+    isAvailable: true,
     maxConcurrentChats: 5,
     workingHours: {
       start: '09:00',
@@ -67,100 +88,20 @@ const AgentProfile = () => {
       timezone: 'Asia/Jakarta'
     },
     workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-    breakMode: false,
     awayMessage: 'Saya sedang tidak tersedia. Akan segera membalas pesan Anda.'
   });
 
-  // Notification preferences
   const [notificationSettings, setNotificationSettings] = useState({
-    newMessage: {
-      desktop: true,
-      sound: true,
-      email: false,
-      mobile: true
-    },
-    sessionAssigned: {
-      desktop: true,
-      sound: true,
-      email: true,
-      mobile: true
-    },
-    urgentMessage: {
-      desktop: true,
-      sound: true,
-      email: true,
-      mobile: true
-    },
-    teamMention: {
-      desktop: true,
-      sound: false,
-      email: false,
-      mobile: true
-    },
-    systemAlert: {
-      desktop: true,
-      sound: false,
-      email: true,
-      mobile: false
-    },
+    newMessage: { desktop: true, sound: true, email: false, mobile: true },
+    sessionAssigned: { desktop: true, sound: true, email: true, mobile: true },
+    urgentMessage: { desktop: true, sound: true, email: true, mobile: true },
+    teamMention: { desktop: true, sound: false, email: false, mobile: true },
+    systemAlert: { desktop: true, sound: false, email: true, mobile: false },
     soundVolume: 75,
-    quietHours: {
-      enabled: true,
-      start: '22:00',
-      end: '07:00'
-    },
-    emailDigest: {
-      enabled: true,
-      frequency: 'daily',
-      time: '18:00'
-    }
+    quietHours: { enabled: true, start: '22:00', end: '07:00' },
+    emailDigest: { enabled: true, frequency: 'daily', time: '18:00' }
   });
 
-  // Personal templates
-  const [personalTemplates, setPersonalTemplates] = useState([
-    {
-      id: 'temp-001',
-      title: 'Salam Pembuka',
-      category: 'greeting',
-      content: 'Halo! Saya Sarah dari tim Customer Support. Saya akan membantu Anda hari ini. Ada yang bisa saya bantu?',
-      tags: ['greeting', 'introduction'],
-      usageCount: 45,
-      lastUsed: '2024-01-25T10:30:00Z',
-      createdAt: '2024-01-10T14:20:00Z'
-    },
-    {
-      id: 'temp-002',
-      title: 'Konfirmasi Masalah Teknis',
-      category: 'technical',
-      content: 'Terima kasih telah melaporkan masalah ini. Saya sedang mengecek sistem dan akan segera memberikan solusi. Mohon ditunggu sebentar ya.',
-      tags: ['technical', 'acknowledgment'],
-      usageCount: 32,
-      lastUsed: '2024-01-24T15:45:00Z',
-      createdAt: '2024-01-12T09:15:00Z'
-    },
-    {
-      id: 'temp-003',
-      title: 'Eskalasi ke Tim Teknis',
-      category: 'escalation',
-      content: 'Untuk masalah ini, saya perlu menghubungkan Anda dengan tim teknis kami yang lebih spesialis. Mereka akan segera menghubungi Anda dalam 30 menit.',
-      tags: ['escalation', 'technical'],
-      usageCount: 18,
-      lastUsed: '2024-01-23T11:20:00Z',
-      createdAt: '2024-01-15T16:30:00Z'
-    },
-    {
-      id: 'temp-004',
-      title: 'Penutup Positif',
-      category: 'closing',
-      content: 'Senang bisa membantu Anda! Jika ada pertanyaan lain, jangan ragu untuk menghubungi kami kembali. Semoga harinya menyenangkan! 😊',
-      tags: ['closing', 'positive'],
-      usageCount: 67,
-      lastUsed: '2024-01-25T14:10:00Z',
-      createdAt: '2024-01-08T11:45:00Z'
-    }
-  ]);
-
-  // Template form data
   const [templateForm, setTemplateForm] = useState({
     title: '',
     category: '',
@@ -168,8 +109,7 @@ const AgentProfile = () => {
     tags: []
   });
 
-  // UI preferences
-  const [uiPreferences, setUiPreferences] = useState({
+  const [uiPrefs, setUiPrefs] = useState({
     theme: 'light',
     language: 'id',
     fontSize: 'medium',
@@ -182,52 +122,107 @@ const AgentProfile = () => {
     sidebarCollapsed: false
   });
 
-  const handleProfileUpdate = () => {
-    // Logic to update profile
+  // Update local state when data is loaded
+  useEffect(() => {
+    if (userProfile) {
+      setProfileData({
+        fullName: userProfile.full_name || userProfile.name || '',
+        email: userProfile.email || '',
+        phone: userProfile.phone || '',
+        avatar: userProfile.avatar_url || userProfile.avatar || null,
+        bio: userProfile.bio || '',
+        timezone: userProfile.timezone || 'Asia/Jakarta',
+        language: userProfile.language || 'id'
+      });
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (agentInfo) {
+      setAvailabilityData({
+        status: agentInfo.status || 'online',
+        isAvailable: agentInfo.is_available !== undefined ? agentInfo.is_available : true,
+        maxConcurrentChats: agentInfo.max_concurrent_chats || agentInfo.max_concurrent_sessions || 5,
+        workingHours: agentInfo.working_hours || {
+          start: '09:00',
+          end: '18:00',
+          timezone: 'Asia/Jakarta'
+        },
+        workingDays: agentInfo.working_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        awayMessage: agentInfo.away_message || 'Saya sedang tidak tersedia. Akan segera membalas pesan Anda.'
+      });
+    }
+  }, [agentInfo]);
+
+  useEffect(() => {
+    if (notificationPreferences) {
+      setNotificationSettings(prev => ({
+        ...prev,
+        ...notificationPreferences
+      }));
+    }
+  }, [notificationPreferences]);
+
+  useEffect(() => {
+    if (uiPreferences) {
+      setUiPrefs(uiPreferences);
+    }
+  }, [uiPreferences]);
+
+  const handleProfileUpdate = async () => {
+    try {
+      await updateProfile(profileData);
+      // Profile will be automatically refreshed by the hook
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
   };
 
-  const handlePasswordChange = () => {
-    // Logic to change password
+  const handlePasswordChange = async () => {
+    try {
+      const passwordData = {
+        current_password: document.getElementById('currentPassword').value,
+        new_password: document.getElementById('newPassword').value,
+        new_password_confirmation: document.getElementById('confirmPassword').value
+      };
+
+      await changePassword(passwordData);
+
+      // Clear password fields
+      document.getElementById('currentPassword').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+    } catch (error) {
+      console.error('Error changing password:', error);
+    }
   };
 
-  const handleAvatarUpload = (event) => {
+  const handleAvatarUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      setAvatarFile(file);
-      // Here you would typically upload to server
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileData(prev => ({ ...prev, avatar: e.target.result }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        await uploadAvatar(file);
+        // Avatar will be automatically refreshed by the hook
+      } catch (error) {
+        console.error('Error uploading avatar:', error);
+      }
     }
   };
 
-  const handleTemplateSubmit = () => {
-    if (editingTemplate) {
-      // Update existing template
-      setPersonalTemplates(templates => 
-        templates.map(t => 
-          t.id === editingTemplate.id 
-            ? { ...t, ...templateForm, lastModified: new Date().toISOString() }
-            : t
-        )
-      );
-    } else {
-      // Create new template
-      const newTemplate = {
-        id: `temp-${Date.now()}`,
-        ...templateForm,
-        usageCount: 0,
-        lastUsed: null,
-        createdAt: new Date().toISOString()
-      };
-      setPersonalTemplates(templates => [newTemplate, ...templates]);
+  const handleTemplateSubmit = async () => {
+    try {
+      if (editingTemplate) {
+        await updatePersonalTemplate(editingTemplate.id, templateForm);
+      } else {
+        await createPersonalTemplate(templateForm);
+      }
+
+      setTemplateForm({ title: '', category: '', content: '', tags: [] });
+      setEditingTemplate(null);
+      setIsTemplateDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving template:', error);
     }
-    
-    setTemplateForm({ title: '', category: '', content: '', tags: [] });
-    setEditingTemplate(null);
-    setIsTemplateDialogOpen(false);
   };
 
   const handleTemplateEdit = (template) => {
@@ -241,19 +236,80 @@ const AgentProfile = () => {
     setIsTemplateDialogOpen(true);
   };
 
-  const handleTemplateDelete = (templateId) => {
-    setPersonalTemplates(templates => templates.filter(t => t.id !== templateId));
+  const handleTemplateDelete = async (templateId) => {
+    try {
+      await deletePersonalTemplate(templateId);
+    } catch (error) {
+      console.error('Error deleting template:', error);
+    }
   };
 
   const handleTemplateUse = (template) => {
     // Logic to insert template into active chat
-    setPersonalTemplates(templates => 
-      templates.map(t => 
-        t.id === template.id 
-          ? { ...t, usageCount: t.usageCount + 1, lastUsed: new Date().toISOString() }
-          : t
-      )
-    );
+    // This would typically copy the template content to clipboard or insert into active chat
+    navigator.clipboard.writeText(template.content);
+  };
+
+  const handleAvailabilityUpdate = async () => {
+    try {
+      await updateAvailability(availabilityData);
+    } catch (error) {
+      console.error('Error updating availability:', error);
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const data = await exportUserData('json');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `user-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+    }
+  };
+
+  const handleRefresh = () => {
+    refresh('all');
+  };
+
+  // Save handlers for each tab
+  const handleSaveProfile = async () => {
+    try {
+      await updateProfile(userProfile);
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+    }
+  };
+
+  const handleSaveAvailability = async () => {
+    try {
+      await updateAvailability(availabilityData);
+    } catch (error) {
+      console.error('Failed to save availability:', error);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    try {
+      await updateNotificationPreferences(notificationSettings);
+    } catch (error) {
+      console.error('Failed to save notifications:', error);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    try {
+      await updateUIPreferences(uiPrefs);
+    } catch (error) {
+      console.error('Failed to save preferences:', error);
+    }
   };
 
   const getAvailabilityStatusColor = (status) => {
@@ -282,20 +338,57 @@ const AgentProfile = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">My Profile & Settings</h1>
           <p className="text-gray-600">Kelola profil dan preferensi akun Anda</p>
+          {lastUpdated && (
+            <p className="text-xs text-gray-400 mt-1">
+              Terakhir update: {lastUpdated.toLocaleTimeString('id-ID')}
+            </p>
+          )}
         </div>
         <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <div className="flex items-center space-x-2">
-            <div className={`w-3 h-3 rounded-full ${getAvailabilityStatusColor(availabilityData.status)}`}></div>
-            <Select value={availabilityData.status} onValueChange={(value) => setAvailabilityData(prev => ({ ...prev, status: value }))}>
-              8172
+            {loading.agentInfo ? (
+              <Skeleton className="w-3 h-3 rounded-full" />
+            ) : (
+              <div className={`w-3 h-3 rounded-full ${getAvailabilityStatusColor(availabilityData.status)}`}></div>
+            )}
+            <Select
+              value={availabilityData.status}
+              onValueChange={(value) => {
+                setAvailabilityData(prev => ({ ...prev, status: value }));
+                handleAvailabilityUpdate();
+              }}
+              disabled={loading.agentInfo}
+            >
               <SelectItem value="online">Online</SelectItem>
-                <SelectItem value="away">Away</SelectItem>
-                <SelectItem value="busy">Busy</SelectItem>
-                <SelectItem value="offline">Offline</SelectItem>
+              <SelectItem value="away">Away</SelectItem>
+              <SelectItem value="busy">Busy</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
             </Select>
           </div>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {hasErrors && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Terjadi kesalahan saat memuat data profil. Beberapa data mungkin tidak tersedia.
+            <Button variant="link" onClick={handleRefresh} className="ml-2 p-0 h-auto">
+              Coba lagi
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Profile Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -335,55 +428,85 @@ const AgentProfile = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      value={profileData.fullName}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, fullName: e.target.value }))}
-                    />
+                    {loading.userProfile ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Input
+                        id="fullName"
+                        value={profileData.fullName}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, fullName: e.target.value }))}
+                      />
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                    />
+                    {loading.userProfile ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Input
+                        id="email"
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                      />
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={profileData.phone}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                    />
+                    {loading.userProfile ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Input
+                        id="phone"
+                        value={profileData.phone}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                      />
+                    )}
                   </div>
                   <div>
-                    <Label htmlFor="jobTitle">Job Title</Label>
-                    <Input
-                      id="jobTitle"
-                      value={profileData.jobTitle}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, jobTitle: e.target.value }))}
-                    />
+                    <Label htmlFor="bio">Bio</Label>
+                    {loading.userProfile ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Input
+                        id="bio"
+                        value={profileData.bio}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+                        placeholder="Tell us about yourself"
+                      />
+                    )}
                   </div>
                   <div>
-                    <Label htmlFor="department">Department</Label>
-                    <Input
-                      id="department"
-                      value={profileData.department}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, department: e.target.value }))}
-                    />
+                    <Label htmlFor="timezone">Timezone</Label>
+                    {loading.userProfile ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Select
+                        value={profileData.timezone}
+                        onValueChange={(value) => setProfileData(prev => ({ ...prev, timezone: value }))}
+                      >
+                        <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB)</SelectItem>
+                        <SelectItem value="Asia/Makassar">Asia/Makassar (WITA)</SelectItem>
+                        <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT)</SelectItem>
+                      </Select>
+                    )}
                   </div>
                   <div>
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                      id="location"
-                      value={profileData.location}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, location: e.target.value }))}
-                    />
+                    <Label htmlFor="language">Language</Label>
+                    {loading.userProfile ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Select
+                        value={profileData.language}
+                        onValueChange={(value) => setProfileData(prev => ({ ...prev, language: value }))}
+                      >
+                        <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
+                        <SelectItem value="en">🇺🇸 English</SelectItem>
+                      </Select>
+                    )}
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end space-x-2">
                   <Button variant="outline">Cancel</Button>
                   <Button onClick={handleProfileUpdate}>
@@ -421,31 +544,62 @@ const AgentProfile = () => {
                       />
                     </label>
                   </div>
-                  
+
                   <div className="text-center">
-                    <h3 className="font-medium">{profileData.fullName}</h3>
-                    <p className="text-sm text-gray-600">{profileData.jobTitle}</p>
-                    <Badge variant="blue" className="mt-2">{profileData.employeeId}</Badge>
+                    {loading.userProfile ? (
+                      <>
+                        <Skeleton className="h-6 w-32 mx-auto mb-2" />
+                        <Skeleton className="h-4 w-24 mx-auto mb-2" />
+                        <Skeleton className="h-6 w-16 mx-auto" />
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="font-medium">{profileData.fullName || 'Unknown User'}</h3>
+                        <p className="text-sm text-gray-600">{agentInfo?.department || 'Agent'}</p>
+                        <Badge variant="blue" className="mt-2">{agentInfo?.id?.slice(-8) || 'N/A'}</Badge>
+                      </>
+                    )}
                   </div>
                 </div>
 
                 {/* Quick Stats */}
                 <div className="space-y-3 pt-4 border-t">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Start Date</span>
-                    <span>{new Date(profileData.startDate).toLocaleDateString('id-ID')}</span>
+                    <span className="text-gray-600">Timezone</span>
+                    {loading.userProfile ? (
+                      <Skeleton className="h-4 w-20" />
+                    ) : (
+                      <span>{profileData.timezone}</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Timezone</span>
-                    <span>{profileData.timezone}</span>
+                    <span className="text-gray-600">Language</span>
+                    {loading.userProfile ? (
+                      <Skeleton className="h-4 w-16" />
+                    ) : (
+                      <span>{profileData.language === 'id' ? 'Indonesian' : 'English'}</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Status</span>
-                    <div className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full ${getAvailabilityStatusColor(availabilityData.status)}`}></div>
-                      <span className="capitalize">{availabilityData.status}</span>
-                    </div>
+                    {loading.agentInfo ? (
+                      <Skeleton className="h-4 w-16" />
+                    ) : (
+                      <div className="flex items-center space-x-1">
+                        <div className={`w-2 h-2 rounded-full ${getAvailabilityStatusColor(availabilityData.status)}`}></div>
+                        <span className="capitalize">{availabilityData.status}</span>
+                      </div>
+                    )}
                   </div>
+                  {agentStatistics && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Avg Rating</span>
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                        <span>{agentStatistics.performance?.avg_rating?.toFixed(1) || '0.0'}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -502,6 +656,14 @@ const AgentProfile = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSaveProfile} disabled={loading.profile}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Profile
+            </Button>
+          </div>
         </TabsContent>
 
         {/* Availability Tab */}
@@ -602,7 +764,7 @@ const AgentProfile = () => {
                         monday: 'Sen', tuesday: 'Sel', wednesday: 'Rab', thursday: 'Kam',
                         friday: 'Jum', saturday: 'Sab', sunday: 'Min'
                       };
-                      
+
                       return (
                         <Button
                           key={day}
@@ -635,6 +797,14 @@ const AgentProfile = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSaveAvailability} disabled={loading.availability}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Availability Settings
+            </Button>
           </div>
         </TabsContent>
 
@@ -731,22 +901,22 @@ const AgentProfile = () => {
                       <p className="text-sm text-gray-600">Disable notifications during specific hours</p>
                     </div>
                     <Switch
-                      checked={notificationSettings.quietHours.enabled}
+                      checked={notificationSettings.quietHours?.enabled ?? false}
                       onCheckedChange={(checked) => setNotificationSettings(prev => ({
                         ...prev,
                         quietHours: { ...prev.quietHours, enabled: checked }
                       }))}
                     />
                   </div>
-                  
-                  {notificationSettings.quietHours.enabled && (
+
+                  {notificationSettings.quietHours?.enabled && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="quietStart">Start</Label>
                         <Input
                           id="quietStart"
                           type="time"
-                          value={notificationSettings.quietHours.start}
+                          value={notificationSettings.quietHours?.start ?? '22:00'}
                           onChange={(e) => setNotificationSettings(prev => ({
                             ...prev,
                             quietHours: { ...prev.quietHours, start: e.target.value }
@@ -758,7 +928,7 @@ const AgentProfile = () => {
                         <Input
                           id="quietEnd"
                           type="time"
-                          value={notificationSettings.quietHours.end}
+                          value={notificationSettings.quietHours?.end ?? '07:00'}
                           onChange={(e) => setNotificationSettings(prev => ({
                             ...prev,
                             quietHours: { ...prev.quietHours, end: e.target.value }
@@ -776,20 +946,20 @@ const AgentProfile = () => {
                       <p className="text-sm text-gray-600">Receive summary of activities</p>
                     </div>
                     <Switch
-                      checked={notificationSettings.emailDigest.enabled}
+                      checked={notificationSettings.emailDigest?.enabled ?? false}
                       onCheckedChange={(checked) => setNotificationSettings(prev => ({
                         ...prev,
                         emailDigest: { ...prev.emailDigest, enabled: checked }
                       }))}
                     />
                   </div>
-                  
-                  {notificationSettings.emailDigest.enabled && (
+
+                  {notificationSettings.emailDigest?.enabled && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="digestFreq">Frequency</Label>
-                        <Select 
-                          value={notificationSettings.emailDigest.frequency}
+                        <Select
+                          value={notificationSettings.emailDigest?.frequency ?? 'daily'}
                           onValueChange={(value) => setNotificationSettings(prev => ({
                             ...prev,
                             emailDigest: { ...prev.emailDigest, frequency: value }
@@ -806,7 +976,7 @@ const AgentProfile = () => {
                         <Input
                           id="digestTime"
                           type="time"
-                          value={notificationSettings.emailDigest.time}
+                          value={notificationSettings.emailDigest?.time ?? '18:00'}
                           onChange={(e) => setNotificationSettings(prev => ({
                             ...prev,
                             emailDigest: { ...prev.emailDigest, time: e.target.value }
@@ -818,6 +988,14 @@ const AgentProfile = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSaveNotifications} disabled={loading.notificationPreferences}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Notification Settings
+            </Button>
           </div>
         </TabsContent>
 
@@ -863,7 +1041,7 @@ const AgentProfile = () => {
                       </Select>
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="templateContent">Content</Label>
                     <Textarea
@@ -874,20 +1052,20 @@ const AgentProfile = () => {
                       onChange={(e) => setTemplateForm(prev => ({ ...prev, content: e.target.value }))}
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="templateTags">Tags (comma separated)</Label>
                     <Input
                       id="templateTags"
                       placeholder="e.g., greeting, technical, urgent"
                       value={templateForm.tags.join(', ')}
-                      onChange={(e) => setTemplateForm(prev => ({ 
-                        ...prev, 
-                        tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) 
+                      onChange={(e) => setTemplateForm(prev => ({
+                        ...prev,
+                        tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
                       }))}
                     />
                   </div>
-                  
+
                   <div className="flex justify-end space-x-2">
                     <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>
                       Cancel
@@ -914,57 +1092,89 @@ const AgentProfile = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {personalTemplates.map((template) => (
-                    <TableRow key={template.id}>
-                      <TableCell>
-                        <div>
-                          <h4 className="font-medium text-gray-900">{template.title}</h4>
-                          <p className="text-sm text-gray-600 truncate max-w-xs">
-                            {template.content}
-                          </p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {template.tags.map(tag => (
-                              <Badge key={tag} variant="gray" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
+                  {loading.personalTemplates ? (
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Skeleton className="h-6 w-32 mb-2" />
+                          <Skeleton className="h-4 w-48 mb-2" />
+                          <div className="flex space-x-1">
+                            <Skeleton className="h-5 w-16" />
+                            <Skeleton className="h-5 w-20" />
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="blue" className="text-xs">
-                          {templateCategories.find(cat => cat.value === template.category)?.label || template.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Zap className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm">{template.usageCount}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-gray-600">
-                          {template.lastUsed 
-                            ? new Date(template.lastUsed).toLocaleDateString('id-ID')
-                            : 'Never'
-                          }
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleTemplateUse(template)}>
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleTemplateEdit(template)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleTemplateDelete(template.id)} className="text-red-600">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        </TableCell>
+                        <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-12" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Skeleton className="h-8 w-8" />
+                            <Skeleton className="h-8 w-8" />
+                            <Skeleton className="h-8 w-8" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : personalTemplates?.data?.length > 0 ? (
+                    personalTemplates.data.map((template) => (
+                      <TableRow key={template.id}>
+                        <TableCell>
+                          <div>
+                            <h4 className="font-medium text-gray-900">{template.title}</h4>
+                            <p className="text-sm text-gray-600 truncate max-w-xs">
+                              {template.content}
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {template.tags?.map(tag => (
+                                <Badge key={tag} variant="gray" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="blue" className="text-xs">
+                            {templateCategories.find(cat => cat.value === template.category)?.label || template.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-1">
+                            <Zap className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm">{template.usage_count || 0}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-gray-600">
+                            {template.last_used
+                              ? new Date(template.last_used).toLocaleDateString('id-ID')
+                              : 'Never'
+                            }
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button variant="ghost" size="sm" onClick={() => handleTemplateUse(template)}>
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleTemplateEdit(template)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleTemplateDelete(template.id)} className="text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                        <p className="text-sm">Tidak ada template tersedia</p>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -983,7 +1193,7 @@ const AgentProfile = () => {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="theme">Theme</Label>
-                  <Select value={uiPreferences.theme} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, theme: value }))}>
+                  <Select value={uiPrefs.theme} onValueChange={(value) => setUiPrefs(prev => ({ ...prev, theme: value }))}>
                     40312
                     <SelectItem value="light">🌞 Light</SelectItem>
                       <SelectItem value="dark">🌙 Dark</SelectItem>
@@ -993,7 +1203,7 @@ const AgentProfile = () => {
 
                 <div>
                   <Label htmlFor="language">Language</Label>
-                  <Select value={uiPreferences.language} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, language: value }))}>
+                  <Select value={uiPrefs.language} onValueChange={(value) => setUiPrefs(prev => ({ ...prev, language: value }))}>
                     40979
                     <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
                       <SelectItem value="en">🇺🇸 English</SelectItem>
@@ -1002,7 +1212,7 @@ const AgentProfile = () => {
 
                 <div>
                   <Label htmlFor="fontSize">Font Size</Label>
-                  <Select value={uiPreferences.fontSize} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, fontSize: value }))}>
+                  <Select value={uiPrefs.fontSize} onValueChange={(value) => setUiPrefs(prev => ({ ...prev, fontSize: value }))}>
                     41592
                     <SelectItem value="small">Small</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
@@ -1012,7 +1222,7 @@ const AgentProfile = () => {
 
                 <div>
                   <Label htmlFor="density">Density</Label>
-                  <Select value={uiPreferences.density} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, density: value }))}>
+                  <Select value={uiPrefs.density} onValueChange={(value) => setUiPrefs(prev => ({ ...prev, density: value }))}>
                     42252
                     <SelectItem value="compact">Compact</SelectItem>
                       <SelectItem value="comfortable">Comfortable</SelectItem>
@@ -1035,8 +1245,8 @@ const AgentProfile = () => {
                     <p className="text-sm text-gray-600">Display profile pictures in chat</p>
                   </div>
                   <Switch
-                    checked={uiPreferences.showAvatars}
-                    onCheckedChange={(checked) => setUiPreferences(prev => ({ ...prev, showAvatars: checked }))}
+                    checked={uiPrefs.showAvatars}
+                    onCheckedChange={(checked) => setUiPrefs(prev => ({ ...prev, showAvatars: checked }))}
                   />
                 </div>
 
@@ -1046,8 +1256,8 @@ const AgentProfile = () => {
                     <p className="text-sm text-gray-600">Display message timestamps</p>
                   </div>
                   <Switch
-                    checked={uiPreferences.showTimestamps}
-                    onCheckedChange={(checked) => setUiPreferences(prev => ({ ...prev, showTimestamps: checked }))}
+                    checked={uiPrefs.showTimestamps}
+                    onCheckedChange={(checked) => setUiPrefs(prev => ({ ...prev, showTimestamps: checked }))}
                   />
                 </div>
 
@@ -1057,12 +1267,12 @@ const AgentProfile = () => {
                     <p className="text-sm text-gray-600">Automatically refresh data</p>
                   </div>
                   <Switch
-                    checked={uiPreferences.autoRefresh}
-                    onCheckedChange={(checked) => setUiPreferences(prev => ({ ...prev, autoRefresh: checked }))}
+                    checked={uiPrefs.autoRefresh}
+                    onCheckedChange={(checked) => setUiPrefs(prev => ({ ...prev, autoRefresh: checked }))}
                   />
                 </div>
 
-                {uiPreferences.autoRefresh && (
+                {uiPrefs.autoRefresh && (
                   <div>
                     <Label htmlFor="refreshInterval">Refresh Interval (seconds)</Label>
                     <Input
@@ -1070,15 +1280,15 @@ const AgentProfile = () => {
                       type="number"
                       min="10"
                       max="300"
-                      value={uiPreferences.refreshInterval}
-                      onChange={(e) => setUiPreferences(prev => ({ ...prev, refreshInterval: parseInt(e.target.value) }))}
+                      value={uiPrefs.refreshInterval}
+                      onChange={(e) => setUiPrefs(prev => ({ ...prev, refreshInterval: parseInt(e.target.value) }))}
                     />
                   </div>
                 )}
 
                 <div>
                   <Label htmlFor="chatLayout">Chat Layout</Label>
-                  <Select value={uiPreferences.chatLayout} onValueChange={(value) => setUiPreferences(prev => ({ ...prev, chatLayout: value }))}>
+                  <Select value={uiPrefs.chatLayout} onValueChange={(value) => setUiPrefs(prev => ({ ...prev, chatLayout: value }))}>
                     45439
                     <SelectItem value="bubbles">Message Bubbles</SelectItem>
                       <SelectItem value="compact">Compact View</SelectItem>
@@ -1101,13 +1311,21 @@ const AgentProfile = () => {
                   <h4 className="font-medium">Export Settings</h4>
                   <p className="text-sm text-gray-600">Download your personal data and settings</p>
                 </div>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleExportData}>
                   <Download className="w-4 h-4 mr-2" />
                   Export Data
                 </Button>
               </div>
             </CardContent>
           </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSavePreferences} disabled={loading.uiPreferences}>
+              <Save className="w-4 h-4 mr-2" />
+              Save UI Preferences
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

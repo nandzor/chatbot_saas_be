@@ -11,6 +11,7 @@ import {
   LogOut 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
 
 const AgentContent = () => {
   const { logout } = useAuth();
@@ -62,9 +63,11 @@ const AgentContent = () => {
 
 const AgentLayout = () => {
   return (
-    <SidebarProvider>
-      <AgentContent />
-    </SidebarProvider>
+    <RealtimeMessageProvider>
+      <SidebarProvider>
+        <AgentContent />
+      </SidebarProvider>
+    </RealtimeMessageProvider>
   );
 };
 

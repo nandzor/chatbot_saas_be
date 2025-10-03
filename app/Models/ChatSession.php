@@ -235,7 +235,7 @@ class ChatSession extends Model
     /**
      * End the chat session.
      */
-    public function endSession(string $resolutionType = null, string $notes = null): void
+    public function endSession(?string $resolutionType = null, ?string $notes = null): void
     {
         $updates = [
             'is_active' => false,
@@ -264,7 +264,7 @@ class ChatSession extends Model
     /**
      * Handover session to an agent.
      */
-    public function handoverToAgent(Agent $agent, string $reason = null): bool
+    public function handoverToAgent(Agent $agent, ?string $reason = null): bool
     {
         if (!$agent->canHandleMoreChats()) {
             return false;
@@ -285,7 +285,7 @@ class ChatSession extends Model
     /**
      * Record feedback for the session.
      */
-    public function recordFeedback(int $rating, string $text = null, array $tags = []): void
+    public function recordFeedback(int $rating, ?string $text = null, array $tags = []): void
     {
         $this->update([
             'satisfaction_rating' => $rating,

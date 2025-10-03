@@ -36,7 +36,12 @@ export const PERMISSIONS = {
     VIEW: 'chat_sessions.view',
     CREATE: 'chat_sessions.create',
     UPDATE: 'chat_sessions.update',
-    DELETE: 'chat_sessions.delete'
+    DELETE: 'chat_sessions.delete',
+    // Manual session management
+    MANUAL_CREATE: 'chat_sessions.manual_create',
+    MANUAL_ASSIGN: 'chat_sessions.manual_assign',
+    MANUAL_TRANSFER: 'chat_sessions.manual_transfer',
+    MANUAL_END: 'chat_sessions.manual_end'
   },
 
   // Messages
@@ -76,6 +81,21 @@ export const PERMISSIONS = {
   ANALYTICS: {
     VIEW: 'analytics.view',
     EXPORT: 'analytics.export'
+  },
+
+  // Inbox Management
+  INBOX: {
+    VIEW: 'inbox.view',
+    CREATE: 'inbox.create',
+    UPDATE: 'inbox.update',
+    DELETE: 'inbox.delete',
+    MANAGE: 'inbox.manage',
+    EXPORT: 'inbox.export',
+    // Manual session management
+    MANUAL_CREATE: 'inbox.sessions.manual_create',
+    MANUAL_ASSIGN: 'inbox.sessions.manual_assign',
+    MANUAL_TRANSFER: 'inbox.sessions.manual_transfer',
+    MANUAL_END: 'inbox.sessions.manual_end'
   },
 
   // Billing
@@ -238,9 +258,23 @@ export const ROLE_PERMISSIONS = {
   AGENT: [
     PERMISSIONS.CHAT_SESSIONS.VIEW,
     PERMISSIONS.CHAT_SESSIONS.CREATE,
+    PERMISSIONS.CHAT_SESSIONS.UPDATE,
+    PERMISSIONS.CHAT_SESSIONS.MANUAL_CREATE,
+    PERMISSIONS.CHAT_SESSIONS.MANUAL_ASSIGN,
+    PERMISSIONS.CHAT_SESSIONS.MANUAL_TRANSFER,
+    PERMISSIONS.CHAT_SESSIONS.MANUAL_END,
     PERMISSIONS.MESSAGES.VIEW,
     PERMISSIONS.MESSAGES.CREATE,
-    PERMISSIONS.KNOWLEDGE.VIEW
+    PERMISSIONS.MESSAGES.UPDATE,
+    PERMISSIONS.KNOWLEDGE.VIEW,
+    PERMISSIONS.INBOX.VIEW,
+    PERMISSIONS.INBOX.CREATE,
+    PERMISSIONS.INBOX.UPDATE,
+    PERMISSIONS.INBOX.MANAGE,
+    PERMISSIONS.INBOX.MANUAL_CREATE,
+    PERMISSIONS.INBOX.MANUAL_ASSIGN,
+    PERMISSIONS.INBOX.MANUAL_TRANSFER,
+    PERMISSIONS.INBOX.MANUAL_END
   ],
   CUSTOMER: [
     PERMISSIONS.CHAT_SESSIONS.VIEW,

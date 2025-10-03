@@ -16,7 +16,7 @@ import {
   useFocusManagement
 } from '@/utils/accessibilityUtils';
 import { inboxService } from '@/services/InboxService';
-import conversationService from '@/services/conversationService';
+import conversationService from '@/services/ConversationService';
 import { usePaginatedApi } from '@/hooks/useApi';
 import {
   Button,
@@ -119,6 +119,21 @@ const SessionManagerComponent = () => {
     initialFilters,
     onError: onErrorCallback
   });
+
+  // Polling fallback for session updates (enhanced without throttling)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        // Refresh sessions data every 3 seconds
+        await refresh();
+        // Polling refreshed sessions in SessionManager
+      } catch (error) {
+        // Polling error in SessionManager - silently handle
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [refresh]);
 
 
   // Helper functions for DataTable columns

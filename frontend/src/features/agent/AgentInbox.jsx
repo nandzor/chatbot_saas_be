@@ -39,227 +39,89 @@ import {
   History,
   Users,
   MessageCircle,
-  X
+  X,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
+import { useAgentInbox } from '@/hooks/useAgentInbox';
+import { useApi } from '@/hooks/useApi';
+import { inboxService } from '@/services/InboxService';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import {
+  SessionListSkeleton,
+  MessagesSkeleton,
+  CustomerInfoSkeleton,
+  KnowledgeSkeleton,
+  HistorySkeleton,
+  LoadingSpinner,
+  EmptySessions,
+  EmptyMessages,
+  EmptyKnowledge,
+  EmptyHistory,
+  ErrorState,
+  ConnectionStatus
+} from '@/components/LoadingStates';
 
 const AgentInbox = () => {
-  const [selectedSession, setSelectedSession] = useState(null);
+  // Use custom hook for inbox functionality
+  const {
+    sessions,
+    selectedSession,
+    messages,
+    loading,
+    error,
+    filters,
+    pagination,
+    isConnected,
+    filteredSessions,
+    loadSessions,
+    loadActiveSessions,
+    loadPendingSessions,
+    selectSession,
+    sendMessage,
+    transferSession,
+    endSession,
+    assignSession,
+    updateFilters,
+    refreshSessions,
+    handleTyping,
+    debouncedSearch,
+    messagesEndRef,
+    typingTimeoutRef
+  } = useAgentInbox();
+
+  // Local state for UI
   const [messageText, setMessageText] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [activeTab, setActiveTab] = useState('my-queue');
   const [contextTab, setContextTab] = useState('customer-info');
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [isWrapUpDialogOpen, setIsWrapUpDialogOpen] = useState(false);
   const [internalNotes, setInternalNotes] = useState('');
   const [showInternalNotes, setShowInternalNotes] = useState(false);
-  const messagesEndRef = useRef(null);
+  const [transferData, setTransferData] = useState({
+    agent_id: '',
+    reason: '',
+    notes: ''
+  });
+  const [endData, setEndData] = useState({
+    category: '',
+    summary: '',
+    tags: []
+  });
 
-  // Mock data untuk chat sessions
-  const [chatSessions, setChatSessions] = useState([
-    {
-      id: 'session-001',
-      customer: {
-        id: 'cust-001',
-        name: 'Ahmad Rahman',
-        email: 'ahmad.rahman@abccorp.com',
-        company: 'PT ABC Corporation',
-        plan: 'Enterprise',
-        avatar: null,
-        phone: '+62812345678',
-        lastActivity: '2024-01-25T15:30:00Z',
-        joinDate: '2023-06-15',
-        totalSessions: 12,
-        avgRating: 4.5
-      },
-      status: 'active',
-      priority: 'high',
-      startTime: '2024-01-25T15:15:00Z',
-      lastMessage: '2024-01-25T15:29:00Z',
-      waitingTime: 2,
-      slaStatus: 'warning',
-      unreadCount: 2,
-      category: 'technical',
-      tags: ['api', 'integration'],
-      messages: [
-        {
-          id: 'msg-001',
-          type: 'customer',
-          content: 'Halo, saya mengalami masalah dengan integrasi API. Status code 401 terus muncul.',
-          timestamp: '2024-01-25T15:15:00Z',
-          delivered: true,
-          read: true
-        },
-        {
-          id: 'msg-002',
-          type: 'agent',
-          content: 'Halo Ahmad! Saya akan membantu Anda dengan masalah API ini. Bisakah Anda share endpoint yang Anda gunakan?',
-          timestamp: '2024-01-25T15:17:00Z',
-          delivered: true,
-          read: true
-        },
-        {
-          id: 'msg-003',
-          type: 'customer',
-          content: 'Saya menggunakan POST /api/v1/users untuk membuat user baru. API key sudah benar.',
-          timestamp: '2024-01-25T15:20:00Z',
-          delivered: true,
-          read: true
-        },
-        {
-          id: 'msg-004',
-          type: 'customer',
-          content: 'Apakah ada perubahan pada authentikasi?',
-          timestamp: '2024-01-25T15:29:00Z',
-          delivered: true,
-          read: false
-        }
-      ],
-      internalNotes: 'Customer menggunakan old API key. Perlu update ke v2. Follow up untuk training tim development mereka.'
-    },
-    {
-      id: 'session-002',
-      customer: {
-        id: 'cust-002',
-        name: 'Sari Dewi',
-        email: 'sari.dewi@techstart.id',
-        company: 'CV TechStart Indonesia',
-        plan: 'Professional',
-        avatar: null,
-        phone: '+62821234567',
-        lastActivity: '2024-01-25T14:45:00Z',
-        joinDate: '2023-09-20',
-        totalSessions: 8,
-        avgRating: 4.8
-      },
-      status: 'waiting',
-      priority: 'medium',
-      startTime: '2024-01-25T14:30:00Z',
-      lastMessage: '2024-01-25T14:45:00Z',
-      waitingTime: 45,
-      slaStatus: 'danger',
-      unreadCount: 1,
-      category: 'billing',
-      tags: ['payment', 'upgrade'],
-      messages: [
-        {
-          id: 'msg-005',
-          type: 'customer',
-          content: 'Saya ingin upgrade ke plan Enterprise. Bagaimana prosesnya?',
-          timestamp: '2024-01-25T14:30:00Z',
-          delivered: true,
-          read: true
-        },
-        {
-          id: 'msg-006',
-          type: 'customer',
-          content: 'Apakah ada diskon untuk upgrade annual?',
-          timestamp: '2024-01-25T14:45:00Z',
-          delivered: true,
-          read: false
-        }
-      ],
-      internalNotes: 'High-value customer. Tanyakan ke sales team tentang diskon khusus. Potential upsell opportunity.'
-    },
-    {
-      id: 'session-003',
-      customer: {
-        id: 'cust-003',
-        name: 'Budi Santoso',
-        email: 'budi@digitalsolutions.com',
-        company: 'Digital Solutions Pro',
-        plan: 'Basic',
-        avatar: null,
-        phone: '+62813456789',
-        lastActivity: '2024-01-25T13:20:00Z',
-        joinDate: '2024-01-10',
-        totalSessions: 3,
-        avgRating: 4.2
-      },
-      status: 'pending',
-      priority: 'low',
-      startTime: '2024-01-25T13:00:00Z',
-      lastMessage: '2024-01-25T13:20:00Z',
-      waitingTime: 125,
-      slaStatus: 'safe',
-      unreadCount: 0,
-      category: 'general',
-      tags: ['onboarding', 'training'],
-      messages: [
-        {
-          id: 'msg-007',
-          type: 'customer',
-          content: 'Terima kasih atas bantuan setup awal. Semuanya sudah berjalan dengan baik.',
-          timestamp: '2024-01-25T13:20:00Z',
-          delivered: true,
-          read: true
-        }
-      ],
-      internalNotes: 'New customer. Perlu follow-up training untuk advanced features. Schedule demo session.'
-    }
-  ]);
+  // API hooks for additional data
+  const { data: agents, loading: agentsLoading, error: agentsError } = useApi('/inbox/agents', { per_page: 100 });
+  const { data: knowledgeArticles, loading: knowledgeLoading } = useApi('/inbox/bot-personalities', { per_page: 50 });
+  const { data: customerHistory, loading: historyLoading } = useApi(`/inbox/sessions/${selectedSession?.id}/analytics`, {}, !!selectedSession?.id);
 
-  // Mock data untuk quick replies
-  const [quickReplies, setQuickReplies] = useState([
+  // Quick replies data
+  const quickReplies = [
     'Halo! Saya akan membantu Anda hari ini.',
     'Terima kasih telah menghubungi support. Saya sedang mengecek masalah Anda.',
     'Apakah masalah ini sudah teratasi?',
     'Saya akan eskalasi masalah ini ke tim teknis.',
     'Terima kasih atas kesabaran Anda.'
-  ]);
-
-  // Mock data untuk knowledge base
-  const [knowledgeArticles, setKnowledgeArticles] = useState([
-    {
-      id: 'kb-001',
-      title: 'API Authentication Setup',
-      category: 'technical',
-      relevance: 95,
-      url: '/kb/api-auth'
-    },
-    {
-      id: 'kb-002',
-      title: 'Troubleshooting 401 Errors',
-      category: 'technical',
-      relevance: 90,
-      url: '/kb/401-errors'
-    },
-    {
-      id: 'kb-003',
-      title: 'Upgrade Pricing Plans',
-      category: 'billing',
-      relevance: 85,
-      url: '/kb/pricing'
-    }
-  ]);
-
-  // Mock data untuk customer history
-  const [customerHistory, setCustomerHistory] = useState([
-    {
-      id: 'hist-001',
-      date: '2024-01-20',
-      type: 'chat',
-      summary: 'Setup initial configuration',
-      rating: 5,
-      agent: 'Agent Sarah'
-    },
-    {
-      id: 'hist-002',
-      date: '2024-01-15',
-      type: 'email',
-      summary: 'Welcome onboarding sequence',
-      rating: null,
-      agent: 'System'
-    },
-    {
-      id: 'hist-003',
-      date: '2024-01-10',
-      type: 'phone',
-      summary: 'Account activation assistance',
-      rating: 4,
-      agent: 'Agent Mike'
-    }
-  ]);
+  ];
 
   const getSLAIndicator = (slaStatus, waitingTime) => {
     const colors = {
@@ -291,27 +153,18 @@ const AgentInbox = () => {
     return <Badge variant={priorityConfig.color} className="text-xs">{priorityConfig.label}</Badge>;
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedSession) return;
 
-    const newMessage = {
-      id: `msg-${Date.now()}`,
-      type: 'agent',
-      content: messageText,
-      timestamp: new Date().toISOString(),
-      delivered: true,
-      read: false
-    };
-
-    setChatSessions(sessions =>
-      sessions.map(session =>
-        session.id === selectedSession.id
-          ? { ...session, messages: [...session.messages, newMessage] }
-          : session
-      )
-    );
-
+    try {
+      await sendMessage(selectedSession.id, messageText, 'text');
     setMessageText('');
+      // Stop typing indicator
+      handleTypingStop();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // You could add a toast notification here
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -321,43 +174,95 @@ const AgentInbox = () => {
     }
   };
 
-  const handleSessionSelect = (session) => {
-    setSelectedSession(session);
-    // Mark messages as read
-    setChatSessions(sessions =>
-      sessions.map(s =>
-        s.id === session.id
-          ? { ...s, unreadCount: 0, messages: s.messages.map(msg => ({ ...msg, read: true })) }
-          : s
-      )
-    );
-  };
-
-  const handleTransferSession = () => {
-    // Logic for transferring session
-    setIsTransferDialogOpen(false);
-  };
-
-  const handleWrapUpSession = () => {
-    // Logic for wrapping up session
-    setIsWrapUpDialogOpen(false);
-  };
-
-  const filteredSessions = chatSessions.filter(session => {
-    const matchesSearch = session.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         session.customer.company.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || session.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
-
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  const handleSessionSelect = async (session) => {
+    try {
+      await selectSession(session);
+    } catch (error) {
+      console.error('Error selecting session:', error);
     }
-  }, [selectedSession?.messages]);
+  };
+
+  const handleTransferSession = async () => {
+    if (!selectedSession || !transferData.agent_id) return;
+
+    try {
+      await transferSession(selectedSession.id, transferData);
+    setIsTransferDialogOpen(false);
+      setTransferData({ agent_id: '', reason: '', notes: '' });
+    } catch (error) {
+      console.error('Error transferring session:', error);
+    }
+  };
+
+  const handleWrapUpSession = async () => {
+    if (!selectedSession) return;
+
+    try {
+      await endSession(selectedSession.id, endData);
+    setIsWrapUpDialogOpen(false);
+      setEndData({ category: '', summary: '', tags: [] });
+    } catch (error) {
+      console.error('Error ending session:', error);
+    }
+  };
+
+  const handleAssignSession = async (sessionId) => {
+    try {
+      await assignSession(sessionId);
+    } catch (error) {
+      console.error('Error assigning session:', error);
+    }
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    switch (tab) {
+      case 'my-queue':
+        loadSessions();
+        break;
+      case 'active':
+        loadActiveSessions();
+        break;
+      case 'pending':
+        loadPendingSessions();
+        break;
+      default:
+        loadSessions();
+    }
+  };
+
+  const handleFilterChange = (key, value) => {
+    updateFilters({ [key]: value });
+  };
+
+  const handleTypingStart = () => {
+    if (selectedSession) {
+      handleTyping(selectedSession.id, true);
+    }
+  };
+
+  const handleTypingStop = () => {
+    if (selectedSession) {
+      handleTyping(selectedSession.id, false);
+    }
+  };
+
+  // Filtered sessions are now handled in the hook for better performance
+
+  // Auto-scroll effect is handled in the hook
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+    }
+    };
+  }, []);
 
   return (
-    <div className="h-screen flex bg-gray-50 overflow-hidden">
+    <ErrorBoundary>
+      <div className="h-screen flex bg-gray-50 overflow-hidden">
       {/* Left Panel - Chat Queue */}
       <div className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm flex-shrink-0">
         {/* Queue Header */}
@@ -365,11 +270,54 @@ const AgentInbox = () => {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-blue-600" />
-              <h2 className="text-sm font-semibold text-gray-900">My Queue</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Agent Inbox</h2>
+              <ConnectionStatus isConnected={isConnected} isConnecting={loading} />
             </div>
+            <div className="flex items-center space-x-2">
             <Badge variant="blue" className="px-2 py-0.5 text-xs">
-              {filteredSessions.length}
+                {filteredSessions.length}
             </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refreshSessions}
+                disabled={loading}
+                className="p-1 h-6 w-6 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </div>
+
+          {/* Queue Tabs */}
+          <div className="flex space-x-1 mb-2">
+            <Button
+              variant={activeTab === 'my-queue' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleTabChange('my-queue')}
+              disabled={loading}
+              className="text-xs px-2 py-1 h-6 disabled:opacity-50"
+            >
+              My Queue
+            </Button>
+            <Button
+              variant={activeTab === 'active' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleTabChange('active')}
+              disabled={loading}
+              className="text-xs px-2 py-1 h-6 disabled:opacity-50"
+            >
+              Active
+            </Button>
+            <Button
+              variant={activeTab === 'pending' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleTabChange('pending')}
+              disabled={loading}
+              className="text-xs px-2 py-1 h-6 disabled:opacity-50"
+            >
+              Pending
+            </Button>
           </div>
 
           {/* Search & Filter */}
@@ -378,53 +326,88 @@ const AgentInbox = () => {
               <Search className="absolute left-2 top-2 h-3 w-3 text-gray-400" />
               <Input
                 placeholder="Cari customer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-7 h-7 text-xs bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                value={filters.search}
+                onChange={(e) => debouncedSearch(e.target.value)}
+                disabled={loading}
+                className="pl-7 h-7 text-xs bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50"
               />
             </div>
 
-            <Select value={filterStatus} onValueChange={setFilterStatus} className="h-7 text-xs bg-white border-gray-300" placeholder="Filter status">
+            <div className="grid grid-cols-2 gap-1">
+            <Select
+                value={filters.status}
+                onValueChange={(value) => handleFilterChange('status', value)}
+                disabled={loading}
+                className="h-7 text-xs bg-white border-gray-300 disabled:opacity-50"
+                placeholder="Status"
+            >
               <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="waiting">Waiting</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="ended">Ended</SelectItem>
+              </Select>
+
+              <Select
+                value={filters.priority}
+                onValueChange={(value) => handleFilterChange('priority', value)}
+                disabled={loading}
+                className="h-7 text-xs bg-white border-gray-300 disabled:opacity-50"
+                placeholder="Priority"
+              >
+                <SelectItem value="all">Semua Priority</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
 </Select>
+            </div>
           </div>
         </div>
 
         {/* Chat Sessions List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredSessions.map((session) => (
+          {loading ? (
+            <SessionListSkeleton />
+          ) : error ? (
+            <ErrorState error={error} onRetry={refreshSessions} />
+          ) : filteredSessions.length === 0 ? (
+            <EmptySessions />
+          ) : (
+            filteredSessions.map((session) => {
+              const customer = session.customer || {};
+              const waitingTime = session.wait_time || 0;
+              const slaStatus = waitingTime > 30 ? 'danger' : waitingTime > 15 ? 'warning' : 'safe';
+
+              return (
             <div
               key={session.id}
-              onClick={() => handleSessionSelect(session)}
+                  onClick={() => handleSessionSelect(session)}
               className={`p-2.5 border-b border-gray-100 cursor-pointer transition-all duration-200 ${
                 selectedSession?.id === session.id
                   ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500'
                   : 'hover:bg-gray-50 hover:border-l-4 hover:border-l-gray-300'
-              }`}
+                  }`}
             >
               {/* Session Header */}
               <div className="flex items-start justify-between mb-1.5">
                 <div className="flex items-center space-x-2">
                   <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium text-xs">
-                    {session.customer.name.charAt(0).toUpperCase()}
+                        {(customer.name || customer.first_name || 'C').charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-gray-900 text-xs truncate">
-                      {session.customer.name}
+                          {customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown Customer'}
                     </h3>
                     <p className="text-xs text-gray-500 truncate">
-                      {session.customer.company}
+                          {customer.email || 'No email'}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-col items-end space-y-1">
-                  {getSLAIndicator(session.slaStatus, session.waitingTime)}
-                  {session.unreadCount > 0 && (
+                      {getSLAIndicator(slaStatus, waitingTime)}
+                    {session.unread_count > 0 && (
                     <Badge variant="red" className="text-xs px-1 py-0.5 animate-pulse">
-                      {session.unreadCount}
+                        {session.unread_count}
                     </Badge>
                   )}
                 </div>
@@ -433,21 +416,39 @@ const AgentInbox = () => {
               {/* Session Info */}
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center space-x-1">
-                  {getPriorityBadge(session.priority)}
+                    {getPriorityBadge(session.priority || 'medium')}
                   <Badge variant="blue" className="text-xs px-1 py-0.5">
-                    {session.category}
+                      {session.category || 'general'}
                   </Badge>
                 </div>
                 <div className="flex items-center space-x-1">
-                  {session.tags.slice(0, 1).map(tag => (
+                      {(session.tags || []).slice(0, 1).map(tag => (
                     <Badge key={tag} variant="gray" className="text-xs px-1 py-0.5 bg-gray-100 text-gray-700 border-gray-200">
                       {tag}
                     </Badge>
                   ))}
-                  {session.tags.length > 1 && (
+                      {(session.tags || []).length > 1 && (
                     <Badge variant="gray" className="text-xs px-1 py-0.5">
-                      +{session.tags.length - 1}
+                          +{(session.tags || []).length - 1}
                     </Badge>
+                  )}
+                      {session.status === 'pending' && !session.agent_id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAssignSession(session.id);
+                          }}
+                          disabled={loading}
+                          className="text-xs px-1 py-0.5 h-5 text-green-600 hover:text-green-700 hover:bg-green-50 disabled:opacity-50"
+                        >
+                          {loading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <UserPlus className="w-3 h-3" />
+                          )}
+                        </Button>
                   )}
                 </div>
               </div>
@@ -455,28 +456,31 @@ const AgentInbox = () => {
               {/* Last Message Preview */}
               <div className="mb-1.5">
                 <p className="text-xs text-gray-600 line-clamp-1 leading-relaxed">
-                  {session.messages[session.messages.length - 1]?.content}
+                      {session.ai_summary || 'No messages yet'}
                 </p>
               </div>
 
               {/* Timestamp & Status */}
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">
-                  {new Date(session.lastMessage).toLocaleTimeString('id-ID', {
+                      {session.last_activity_at ? new Date(session.last_activity_at).toLocaleTimeString('id-ID', {
                     hour: '2-digit',
                     minute: '2-digit'
-                  })}
+                      }) : 'No activity'}
                 </p>
                 <div className="flex items-center space-x-1">
                   <div className={`w-2 h-2 rounded-full ${
-                    session.status === 'active' ? 'bg-green-500' :
-                    session.status === 'waiting' ? 'bg-yellow-500' : 'bg-gray-400'
+                    session.is_active ? 'bg-green-500' :
+                        session.session_type === 'bot' ? 'bg-blue-500' :
+                        session.session_type === 'agent' ? 'bg-purple-500' : 'bg-gray-400'
                   }`}></div>
-                  <span className="text-xs text-gray-500 capitalize">{session.status}</span>
+                      <span className="text-xs text-gray-500 capitalize">{session.session_type || 'unknown'}</span>
                 </div>
               </div>
             </div>
-          ))}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -489,25 +493,25 @@ const AgentInbox = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2 min-w-0">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                    {selectedSession.customer.name.charAt(0).toUpperCase()}
+                    {(selectedSession.customer?.name || selectedSession.customer?.first_name || 'C').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-gray-900 mb-1 truncate">
-                      {selectedSession.customer.name}
+                      {selectedSession.customer?.name || `${selectedSession.customer?.first_name || ''} ${selectedSession.customer?.last_name || ''}`.trim() || 'Unknown Customer'}
                     </h3>
                     <div className="flex items-center space-x-1 text-xs">
                       <div className="flex items-center space-x-1 min-w-0">
                         <Building className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-600 truncate">{selectedSession.customer.company}</span>
+                        <span className="text-gray-600 truncate">{selectedSession.customer?.email || 'No email'}</span>
                       </div>
                       <div className="w-1 h-1 bg-gray-300 rounded-full flex-shrink-0"></div>
                       <Badge variant="blue" className="text-xs px-1 py-0.5 flex-shrink-0">
-                        {selectedSession.customer.plan}
+                        {selectedSession.priority || 'normal'}
                       </Badge>
                       <div className="w-1 h-1 bg-gray-300 rounded-full flex-shrink-0"></div>
                       <div className="flex items-center space-x-1 flex-shrink-0">
                         <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                        <span className="text-gray-600">{selectedSession.customer.avgRating}</span>
+                        <span className="text-gray-600">{selectedSession.satisfaction_rating || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
@@ -518,7 +522,8 @@ const AgentInbox = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowInternalNotes(!showInternalNotes)}
-                    className={`hover:bg-yellow-50 hover:text-yellow-700 p-2 ${
+                    disabled={loading}
+                    className={`hover:bg-yellow-50 hover:text-yellow-700 p-2 disabled:opacity-50 ${
                       showInternalNotes ? 'bg-yellow-100 text-yellow-700' : ''
                     }`}
                   >
@@ -527,7 +532,12 @@ const AgentInbox = () => {
 
                   <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="hover:bg-orange-50 hover:text-orange-700">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={loading}
+                        className="hover:bg-orange-50 hover:text-orange-700 disabled:opacity-50"
+                      >
                         <ArrowRightLeft className="w-4 h-4" />
                       </Button>
                     </DialogTrigger>
@@ -544,26 +554,79 @@ const AgentInbox = () => {
                       <div className="px-6 py-4 space-y-4">
                         <div>
                           <Label htmlFor="transferTo" className="text-sm font-medium">Transfer ke</Label>
-                          <Select className="mt-1" placeholder="Pilih agent atau departemen">
-              <SelectItem value="agent-sarah">Agent Sarah</SelectItem>
-                              <SelectItem value="agent-mike">Agent Mike</SelectItem>
-                              <SelectItem value="technical-team">Tim Teknis</SelectItem>
-                              <SelectItem value="billing-team">Tim Billing</SelectItem>
+                          <Select
+                            value={transferData.agent_id}
+                            onValueChange={(value) => setTransferData(prev => ({ ...prev, agent_id: value }))}
+                            disabled={loading}
+                            className="mt-1 disabled:opacity-50"
+                            placeholder="Pilih agent atau departemen"
+                          >
+                            {agentsLoading ? (
+                              <SelectItem value="loading" disabled>
+                                <div className="flex items-center">
+                                  <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                                  Loading agents...
+                                </div>
+                              </SelectItem>
+                            ) : agentsError ? (
+                              <SelectItem value="error" disabled>
+                                <div className="flex items-center text-gray-500">
+                                  Agents unavailable
+                                </div>
+                              </SelectItem>
+                            ) : (agents?.data || []).length > 0 ? (
+                              (agents?.data || []).map((agent) => (
+                                <SelectItem key={agent.id} value={agent.id}>
+                                  {agent.name} ({agent.email})
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-agents" disabled>
+                                <div className="flex items-center text-gray-500">
+                                  No agents available
+                                </div>
+                              </SelectItem>
+                            )}
 </Select>
                         </div>
                         <div>
                           <Label htmlFor="transferReason" className="text-sm font-medium">Alasan Transfer</Label>
                           <Textarea
+                            value={transferData.reason}
+                            onChange={(e) => setTransferData(prev => ({ ...prev, reason: e.target.value }))}
                             placeholder="Jelaskan alasan transfer..."
                             rows={3}
-                            className="mt-1"
+                            disabled={loading}
+                            className="mt-1 disabled:opacity-50"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="transferNotes" className="text-sm font-medium">Catatan Tambahan</Label>
+                          <Textarea
+                            value={transferData.notes}
+                            onChange={(e) => setTransferData(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="Catatan internal untuk agent yang menerima..."
+                            rows={2}
+                            disabled={loading}
+                            className="mt-1 disabled:opacity-50"
                           />
                         </div>
                         <div className="flex justify-end space-x-2 pt-2">
-                          <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)}>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsTransferDialogOpen(false)}
+                            disabled={loading}
+                          >
                             Batal
                           </Button>
-                          <Button onClick={handleTransferSession} className="bg-orange-600 hover:bg-orange-700">
+                          <Button
+                            onClick={handleTransferSession}
+                            disabled={loading || !transferData.agent_id}
+                            className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300"
+                          >
+                            {loading ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            ) : null}
                             Transfer
                           </Button>
                         </div>
@@ -573,7 +636,12 @@ const AgentInbox = () => {
 
                   <Dialog open={isWrapUpDialogOpen} onOpenChange={setIsWrapUpDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="hover:bg-green-50 hover:text-green-700">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={loading}
+                        className="hover:bg-green-50 hover:text-green-700 disabled:opacity-50"
+                      >
                         <CheckCircle className="w-4 h-4" />
                       </Button>
                     </DialogTrigger>
@@ -590,26 +658,34 @@ const AgentInbox = () => {
                       <div className="px-6 py-4 space-y-4">
                         <div>
                           <Label htmlFor="category" className="text-sm font-medium">Kategori Sesi</Label>
-                          <Select className="mt-1" placeholder="Pilih kategori">
+                          <Select
+                            value={endData.category}
+                            onValueChange={(value) => setEndData(prev => ({ ...prev, category: value }))}
+                            disabled={loading}
+                            className="mt-1 disabled:opacity-50"
+                            placeholder="Pilih kategori"
+                          >
               <SelectItem value="technical">Masalah Teknis</SelectItem>
                               <SelectItem value="billing">Pertanyaan Billing</SelectItem>
                               <SelectItem value="general">Pertanyaan Umum</SelectItem>
                               <SelectItem value="feature">Permintaan Fitur</SelectItem>
+                            <SelectItem value="support">Support Request</SelectItem>
+                            <SelectItem value="complaint">Complaint</SelectItem>
 </Select>
                         </div>
                         <div>
                           <Label className="text-sm font-medium">Tandai untuk Tim Lain</Label>
                           <div className="space-y-2 mt-2">
                             <div className="flex items-center space-x-2">
-                              <input type="checkbox" id="sales" className="rounded border-gray-300" />
+                              <input type="checkbox" id="sales" disabled={loading} className="rounded border-gray-300 disabled:opacity-50" />
                               <Label htmlFor="sales" className="text-sm">Peluang Sales</Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <input type="checkbox" id="churn" className="rounded border-gray-300" />
+                              <input type="checkbox" id="churn" disabled={loading} className="rounded border-gray-300 disabled:opacity-50" />
                               <Label htmlFor="churn" className="text-sm">Risiko Churn</Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <input type="checkbox" id="feedback" className="rounded border-gray-300" />
+                              <input type="checkbox" id="feedback" disabled={loading} className="rounded border-gray-300 disabled:opacity-50" />
                               <Label htmlFor="feedback" className="text-sm">Feedback Produk</Label>
                             </div>
                           </div>
@@ -617,16 +693,30 @@ const AgentInbox = () => {
                         <div>
                           <Label htmlFor="summary" className="text-sm font-medium">Ringkasan Session</Label>
                           <Textarea
+                            value={endData.summary}
+                            onChange={(e) => setEndData(prev => ({ ...prev, summary: e.target.value }))}
                             placeholder="Ringkas masalah dan solusi yang diberikan..."
                             rows={3}
-                            className="mt-1"
+                            disabled={loading}
+                            className="mt-1 disabled:opacity-50"
                           />
                         </div>
                         <div className="flex justify-end space-x-2 pt-2">
-                          <Button variant="outline" onClick={() => setIsWrapUpDialogOpen(false)}>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsWrapUpDialogOpen(false)}
+                            disabled={loading}
+                          >
                             Batal
                           </Button>
-                          <Button onClick={handleWrapUpSession} className="bg-green-600 hover:bg-green-700">
+                          <Button
+                            onClick={handleWrapUpSession}
+                            disabled={loading || !endData.category}
+                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300"
+                          >
+                            {loading ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            ) : null}
                             Selesaikan Session
                           </Button>
                         </div>
@@ -649,24 +739,34 @@ const AgentInbox = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowInternalNotes(false)}
-                    className="hover:bg-yellow-100 hover:text-yellow-800"
+                    disabled={loading}
+                    className="hover:bg-yellow-100 hover:text-yellow-800 disabled:opacity-50"
                   >
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
                 <Textarea
-                  value={internalNotes || selectedSession.internalNotes}
+                  value={internalNotes || selectedSession.internal_notes || ''}
                   onChange={(e) => setInternalNotes(e.target.value)}
                   placeholder="Catatan internal untuk tim..."
                   rows={2}
-                  className="bg-white border-yellow-300 focus:border-yellow-500 focus:ring-yellow-500 resize-none text-sm"
+                  disabled={loading}
+                  className="bg-white border-yellow-300 focus:border-yellow-500 focus:ring-yellow-500 resize-none text-sm disabled:opacity-50"
                 />
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-xs text-yellow-700">
                     💡 Hanya visible untuk tim internal
                   </p>
-                  <Button size="sm" className="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1">
+                  <Button
+                    size="sm"
+                    disabled={loading}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1 disabled:bg-gray-300"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
                     <FileText className="w-3 h-3 mr-1" />
+                    )}
                     Simpan
                   </Button>
                 </div>
@@ -675,46 +775,51 @@ const AgentInbox = () => {
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-gray-50 to-white">
-              {selectedSession.messages.map((message) => (
+              {loading ? (
+                <MessagesSkeleton />
+              ) : messages.length === 0 ? (
+                <EmptyMessages />
+              ) : (
+                messages.map((message) => {
+                  const isAgent = message.sender_type === 'agent' || message.sender_type === 'bot';
+                  const messageContent = message.message_text || message.text || message.content?.text || message.content || 'No content';
+
+                  return (
                 <div
                   key={message.id}
-                  className={`flex ${message.type === 'agent' ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-xs lg:max-w-md px-3 py-2 rounded-xl shadow-sm ${
-                    message.type === 'agent'
+                        isAgent
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
                       : 'bg-white text-gray-900 border border-gray-200 shadow-md'
                   }`}>
-                    <p className="text-sm leading-relaxed">{message.content}</p>
+                        <p className="text-sm leading-relaxed">{messageContent}</p>
                     <div className={`text-xs mt-1.5 flex items-center justify-between ${
-                      message.type === 'agent' ? 'text-blue-100' : 'text-gray-500'
+                          isAgent ? 'text-blue-100' : 'text-gray-500'
                     }`}>
                       <span className="font-medium">
-                        {new Date(message.timestamp).toLocaleTimeString('id-ID', {
+                          {new Date(message.created_at || message.sent_at).toLocaleTimeString('id-ID', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
                       </span>
-                      {message.type === 'agent' && (
+                          {isAgent && (
                         <div className="flex items-center space-x-1">
-                          {message.delivered && (
-                            <div className="flex items-center space-x-1">
+                            {message.delivered_at && (
                               <CheckCircle className="w-3 h-3" />
-                              <span className="text-xs">✓</span>
-                            </div>
-                          )}
-                          {message.read && (
-                            <div className="flex items-center space-x-1">
+                            )}
+                            {message.is_read && (
                               <Eye className="w-3 h-3" />
-                              <span className="text-xs">👁</span>
-                            </div>
-                          )}
+                            )}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-              ))}
+                  );
+                })
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -730,7 +835,8 @@ const AgentInbox = () => {
                     key={index}
                     variant="outline"
                     size="sm"
-                    className="whitespace-nowrap text-xs px-2 py-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200"
+                    disabled={loading}
+                    className="whitespace-nowrap text-xs px-2 py-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 disabled:opacity-50"
                     onClick={() => setMessageText(reply)}
                   >
                     {reply}
@@ -745,11 +851,27 @@ const AgentInbox = () => {
                 <div className="flex-1">
                   <Textarea
                     value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
+                    onChange={(e) => {
+                      setMessageText(e.target.value);
+                      if (e.target.value.length > 0) {
+                        handleTypingStart();
+                        // Clear previous timeout
+                        if (typingTimeoutRef.current) {
+                          clearTimeout(typingTimeoutRef.current);
+                        }
+                        // Set new timeout to stop typing
+                        typingTimeoutRef.current = setTimeout(() => {
+                          handleTypingStop();
+                        }, 1000);
+                      } else {
+                        handleTypingStop();
+                      }
+                    }}
                     onKeyPress={handleKeyPress}
                     placeholder="Ketik pesan..."
                     rows={2}
-                    className="resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    disabled={loading}
+                    className="resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm disabled:opacity-50"
                   />
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-gray-500">
@@ -764,18 +886,23 @@ const AgentInbox = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="hover:bg-gray-100 hover:text-gray-700 p-2"
+                    disabled={loading}
+                    className="hover:bg-gray-100 hover:text-gray-700 p-2 disabled:opacity-50"
                     title="Attach file"
                   >
                     <Paperclip className="w-3 h-3" />
                   </Button>
                   <Button
                     onClick={handleSendMessage}
-                    disabled={!messageText.trim()}
+                    disabled={!messageText.trim() || loading}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed p-2"
                     title="Send message"
                   >
+                    {loading ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
                     <Send className="w-3 h-3" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -787,6 +914,14 @@ const AgentInbox = () => {
               <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Pilih Chat Session</h3>
               <p className="text-gray-600">Pilih chat dari antrian untuk mulai membantu customer</p>
+              {error && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-4 h-4 text-red-600 mr-2" />
+                    <span className="text-sm text-red-700">{error}</span>
+              </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -822,10 +957,10 @@ const AgentInbox = () => {
                   <CardContent className="space-y-2.5">
                     <div className="flex items-center space-x-2">
                       <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
-                        {selectedSession.customer.name.charAt(0).toUpperCase()}
+                        {(selectedSession.customer.name || selectedSession.customer.first_name || 'C').charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-semibold text-gray-900 text-xs truncate">{selectedSession.customer.name}</h3>
+                        <h3 className="font-semibold text-gray-900 text-xs truncate">{selectedSession.customer.name || `${selectedSession.customer.first_name || ''} ${selectedSession.customer.last_name || ''}`.trim()}</h3>
                         <p className="text-xs text-gray-600 truncate">{selectedSession.customer.email}</p>
                       </div>
                     </div>
@@ -833,16 +968,16 @@ const AgentInbox = () => {
                     <div className="space-y-1.5 text-xs">
                       <div className="flex items-center space-x-2 p-1 bg-gray-50 rounded-lg">
                         <Building className="w-3 h-3 text-blue-600 flex-shrink-0" />
-                        <span className="text-gray-700 font-medium truncate">{selectedSession.customer.company}</span>
+                        <span className="text-gray-700 font-medium truncate">{selectedSession.customer.profile_data?.company_name || 'No company'}</span>
                       </div>
                       <div className="flex items-center space-x-2 p-1 bg-gray-50 rounded-lg">
                         <Phone className="w-3 h-3 text-green-600 flex-shrink-0" />
-                        <span className="text-gray-700 font-medium truncate">{selectedSession.customer.phone}</span>
+                        <span className="text-gray-700 font-medium truncate">{selectedSession.customer.phone || 'No phone'}</span>
                       </div>
                       <div className="flex items-center space-x-2 p-1 bg-gray-50 rounded-lg">
                         <Calendar className="w-3 h-3 text-purple-600 flex-shrink-0" />
                         <span className="text-gray-700 font-medium truncate">
-                          Member since {new Date(selectedSession.customer.joinDate).toLocaleDateString('id-ID')}
+                          Member since {new Date(selectedSession.customer.created_at).toLocaleDateString('id-ID')}
                         </span>
                       </div>
                     </div>
@@ -857,23 +992,23 @@ const AgentInbox = () => {
                   <CardContent className="space-y-1.5">
                     <div className="flex items-center justify-between p-1 bg-blue-50 rounded-lg">
                       <span className="text-xs text-blue-700 font-medium truncate">Current Plan</span>
-                      <Badge variant="blue" className="px-1 py-0.5 text-xs flex-shrink-0">{selectedSession.customer.plan}</Badge>
+                      <Badge variant="blue" className="px-1 py-0.5 text-xs flex-shrink-0">{selectedSession.customer.profile_data?.company_size || 'Unknown'}</Badge>
                     </div>
                     <div className="flex items-center justify-between p-1 bg-green-50 rounded-lg">
                       <span className="text-xs text-green-700 font-medium truncate">Total Sessions</span>
-                      <span className="text-xs font-bold text-green-700 flex-shrink-0">{selectedSession.customer.totalSessions}</span>
+                      <span className="text-xs font-bold text-green-700 flex-shrink-0">{selectedSession.customer.total_interactions || 0}</span>
                     </div>
                     <div className="flex items-center justify-between p-1 bg-yellow-50 rounded-lg">
                       <span className="text-xs text-yellow-700 font-medium truncate">Avg Rating</span>
                       <div className="flex items-center space-x-1 flex-shrink-0">
                         <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                        <span className="text-xs font-bold text-yellow-700">{selectedSession.customer.avgRating}</span>
+                        <span className="text-xs font-bold text-yellow-700">{selectedSession.customer.satisfaction_score || 'N/A'}</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between p-1 bg-purple-50 rounded-lg">
                       <span className="text-xs text-purple-700 font-medium truncate">Last Activity</span>
                       <span className="text-xs font-bold text-purple-700 flex-shrink-0">
-                        {new Date(selectedSession.customer.lastActivity).toLocaleDateString('id-ID')}
+                        {new Date(selectedSession.customer.last_interaction_at || selectedSession.customer.created_at).toLocaleDateString('id-ID')}
                       </span>
                     </div>
                   </CardContent>
@@ -886,7 +1021,7 @@ const AgentInbox = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-1">
-                      {selectedSession.tags.map(tag => (
+                      {(selectedSession.tags || []).map(tag => (
                         <Badge key={tag} variant="gray" className="text-xs px-1 py-0.5 bg-gray-100 text-gray-700 border-gray-200">
                           {tag}
                         </Badge>
@@ -915,34 +1050,44 @@ const AgentInbox = () => {
                 <Search className="absolute left-2 top-2 h-3 w-3 text-gray-400" />
                 <Input
                   placeholder="Cari knowledge..."
-                  className="pl-7 h-7 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  disabled={knowledgeLoading}
+                  className="pl-7 h-7 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50"
                 />
               </div>
 
               <div className="space-y-1.5">
-                {knowledgeArticles.map((article) => (
-                  <Card key={article.id} className="p-2.5 hover:shadow-md cursor-pointer transition-all duration-200 border-gray-200 hover:border-blue-300">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-semibold text-gray-900 mb-1 truncate">{article.title}</h4>
-                        <div className="flex items-center space-x-1">
-                          <Badge variant="blue" className="text-xs px-1 py-0.5">
-                            {article.category}
+                {knowledgeLoading ? (
+                  <KnowledgeSkeleton />
+                ) : (knowledgeArticles?.data || []).length === 0 ? (
+                  <EmptyKnowledge />
+                ) : (
+                  (knowledgeArticles?.data || []).map((article) => (
+                    <Card
+                      key={article.id}
+                      className="p-2.5 hover:shadow-md cursor-pointer transition-all duration-200 border-gray-200 hover:border-blue-300 disabled:opacity-50"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-semibold text-gray-900 mb-1 truncate">{article.name || article.title}</h4>
+                          <div className="flex items-center space-x-1">
+                            <Badge variant="blue" className="text-xs px-1 py-0.5">
+                              {article.category || 'general'}
+                            </Badge>
+                            <span className="text-xs text-gray-500">
+                              {article.relevance || 0}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-1 flex-shrink-0">
+                          <BookOpen className="w-3 h-3 text-blue-600" />
+                          <Badge variant="green" className="text-xs px-1 py-0.5">
+                            {article.relevance || 0}%
                           </Badge>
-                          <span className="text-xs text-gray-500">
-                            {article.relevance}%
-                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-1 flex-shrink-0">
-                        <BookOpen className="w-3 h-3 text-blue-600" />
-                        <Badge variant="green" className="text-xs px-1 py-0.5">
-                          {article.relevance}%
-                        </Badge>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           </TabsContent>
@@ -951,32 +1096,43 @@ const AgentInbox = () => {
           <TabsContent value="history" className="flex-1 overflow-y-auto p-2.5 pt-0">
             {selectedSession ? (
               <div className="space-y-1.5">
-                {customerHistory.map((item) => (
-                  <Card key={item.id} className="p-2.5 hover:shadow-sm transition-shadow border-gray-200">
-                    <div className="flex items-start justify-between mb-1.5">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          item.type === 'chat' ? 'bg-blue-500' :
-                          item.type === 'email' ? 'bg-green-500' : 'bg-purple-500'
-                        }`}></div>
-                        <span className="text-xs font-medium text-gray-600">{item.date}</span>
-                      </div>
-                      {item.rating && (
-                        <div className="flex items-center space-x-1 flex-shrink-0">
-                          <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                          <span className="text-xs font-medium text-yellow-700">{item.rating}</span>
+                {historyLoading ? (
+                  <HistorySkeleton />
+                ) : (customerHistory?.data || []).length === 0 ? (
+                  <EmptyHistory />
+                ) : (
+                  (customerHistory?.data || []).map((item) => (
+                    <Card
+                      key={item.id}
+                      className="p-2.5 hover:shadow-sm transition-shadow border-gray-200 disabled:opacity-50"
+                    >
+                      <div className="flex items-start justify-between mb-1.5">
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            item.type === 'chat' ? 'bg-blue-500' :
+                            item.type === 'email' ? 'bg-green-500' : 'bg-purple-500'
+                          }`}></div>
+                          <span className="text-xs font-medium text-gray-600">
+                            {new Date(item.created_at || item.date).toLocaleDateString('id-ID')}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                    <h4 className="text-xs font-semibold text-gray-900 mb-1 truncate">{item.summary}</h4>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-600 truncate">by {item.agent}</p>
-                      <Badge variant="gray" className="text-xs px-1 py-0.5 bg-gray-100 text-gray-700 flex-shrink-0">
-                        {item.type}
-                      </Badge>
-                    </div>
-                  </Card>
-                ))}
+                        {item.rating && (
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                            <span className="text-xs font-medium text-yellow-700">{item.rating}</span>
+                          </div>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-semibold text-gray-900 mb-1 truncate">{item.summary || item.description || 'No summary'}</h4>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-600 truncate">by {item.agent?.name || item.agent || 'System'}</p>
+                        <Badge variant="gray" className="text-xs px-1 py-0.5 bg-gray-100 text-gray-700 flex-shrink-0">
+                          {item.type || 'unknown'}
+                        </Badge>
+                      </div>
+                    </Card>
+                  ))
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
@@ -990,6 +1146,7 @@ const AgentInbox = () => {
         </Tabs>
       </div>
     </div>
+    </ErrorBoundary>
   );
 };
 
