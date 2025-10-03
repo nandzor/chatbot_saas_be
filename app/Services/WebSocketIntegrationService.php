@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Events\MessageSent;
 use App\Events\TypingIndicator;
-use App\Models\InboxSession;
+use App\Models\ChatSession;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -15,18 +15,18 @@ class WebSocketIntegrationService
     /**
      * Broadcast message to conversation participants
      */
-    public function broadcastMessage(Message $message, InboxSession $session)
+    public function broadcastMessage(Message $message, ChatSession $session)
     {
         try {
             // Broadcast to conversation channel
             broadcast(new MessageSent($message, $session->id, $session->organization_id));
-            
+
             Log::info('Message broadcasted successfully', [
                 'message_id' => $message->id,
                 'session_id' => $session->id,
                 'organization_id' => $session->organization_id
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to broadcast message', [
@@ -40,17 +40,17 @@ class WebSocketIntegrationService
     /**
      * Broadcast typing indicator
      */
-    public function broadcastTypingIndicator(InboxSession $session, User $user, bool $isTyping)
+    public function broadcastTypingIndicator(ChatSession $session, User $user, bool $isTyping)
     {
         try {
             broadcast(new TypingIndicator($session->id, $user->id, $isTyping, $user->name));
-            
+
             Log::debug('Typing indicator broadcasted', [
                 'session_id' => $session->id,
                 'user_id' => $user->id,
                 'is_typing' => $isTyping
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to broadcast typing indicator', [
@@ -64,7 +64,7 @@ class WebSocketIntegrationService
     /**
      * Broadcast session updates
      */
-    public function broadcastSessionUpdate(InboxSession $session, string $eventType, array $data = [])
+    public function broadcastSessionUpdate(ChatSession $session, string $eventType, array $data = [])
     {
         try {
             $eventData = array_merge([
@@ -76,12 +76,12 @@ class WebSocketIntegrationService
 
             // Broadcast to organization channel
             broadcast(new \App\Events\SessionUpdated($session, $eventType, $eventData));
-            
+
             Log::info('Session update broadcasted', [
                 'session_id' => $session->id,
                 'event_type' => $eventType
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to broadcast session update', [
@@ -123,9 +123,9 @@ class WebSocketIntegrationService
         try {
             $host = config('reverb.host', 'localhost');
             $port = config('reverb.port', 8081);
-            
+
             $connection = @fsockopen($host, $port, $errno, $errstr, 5);
-            
+
             if (!$connection) {
                 return [
                     'status' => 'error',
@@ -137,9 +137,9 @@ class WebSocketIntegrationService
                     ]
                 ];
             }
-            
+
             fclose($connection);
-            
+
             return [
                 'status' => 'ok',
                 'message' => 'WebSocket server is running',
@@ -150,7 +150,7 @@ class WebSocketIntegrationService
                     'heartbeat_interval' => config('reverb.server.heartbeat_interval'),
                 ]
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'status' => 'error',
@@ -167,13 +167,13 @@ class WebSocketIntegrationService
     {
         try {
             broadcast(new \App\Events\TestMessage($message, $channel));
-            
+
             return [
                 'status' => 'success',
                 'message' => 'Test message broadcasted',
                 'channel' => $channel
             ];
-            
+
         } catch (\Exception $e) {
             return [
                 'status' => 'error',

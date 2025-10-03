@@ -2,18 +2,19 @@
 
 namespace App\Providers;
 
-use App\Models\PaymentTransaction;
-use App\Models\BillingInvoice;
 use App\Models\User;
-use App\Observers\PaymentTransactionObserver;
+use Illuminate\Http\Request;
+use App\Models\BillingInvoice;
+use App\Models\PaymentTransaction;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Cache\RateLimiting\Limit;
 use App\Observers\BillingInvoiceObserver;
 use App\Observers\UserPermissionObserver;
-use App\Services\WebSocketIntegrationService;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Broadcast;
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\RateLimiter;
+use App\Observers\PaymentTransactionObserver;
+use App\Services\WebSocketIntegrationService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -63,9 +64,9 @@ class AppServiceProvider extends ServiceProvider
                 Broadcast::routes();
             }
 
-            \Log::info('WebSocket integration initialized successfully');
+            Log::info('WebSocket integration initialized successfully');
         } catch (\Exception $e) {
-            \Log::error('Failed to initialize WebSocket integration: ' . $e->getMessage());
+            Log::error('Failed to initialize WebSocket integration: ' . $e->getMessage());
         }
     }
 

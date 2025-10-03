@@ -155,7 +155,7 @@ class BroadcastEventService
     public function broadcastSessionUpdated(ChatSession $session, array $changes = [])
     {
         try {
-            event(new SessionUpdated($session->id, $changes));
+            event(new SessionUpdated($session->id, 'session_updated', $changes));
 
             Log::channel("broadcast")->info('SessionUpdated event broadcasted', [
                 'session_id' => $session->id,
