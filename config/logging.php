@@ -106,6 +106,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'broadcast' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/broadcast.log'),
+            'level' => env('BROADCAST_LOG_LEVEL', 'info'),
+            'days' => env('BROADCAST_LOG_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'audit' => [
             'driver' => 'daily',
             'path' => storage_path('logs/audit.log'),
@@ -127,14 +135,6 @@ return [
             'path' => storage_path('logs/performance.log'),
             'level' => env('PERFORMANCE_LOG_LEVEL', 'info'),
             'days' => env('PERFORMANCE_LOG_DAYS', 30),
-            'replace_placeholders' => true,
-        ],
-
-        'waha' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/waha.log'),
-            'level' => env('WAHA_LOG_LEVEL', 'info'),
-            'days' => env('WAHA_LOG_DAYS', 30),
             'replace_placeholders' => true,
         ],
 

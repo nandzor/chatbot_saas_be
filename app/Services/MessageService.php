@@ -58,6 +58,10 @@ class MessageService
             // Fire MessageSent event for WAHA integration
             event(new \App\Events\MessageSent($message, $session->id, $session->organization_id));
 
+            // Broadcast via BroadcastEventService for frontend realtime
+            $broadcastService = app(\App\Services\BroadcastEventService::class);
+            $broadcastService->broadcastMessageSent($message, $session->id, $session->organization_id);
+
             Log::info('Message sent successfully', [
                 'message_id' => $message->id,
                 'session_id' => $sessionId,
@@ -264,12 +268,11 @@ class MessageService
             cache()->put($typingKey, $typingUsers, 60);
 
             // Broadcast typing indicator event
-            broadcast(new \App\Events\TypingIndicatorEvent(
+            broadcast(new \App\Events\TypingIndicator(
                 $sessionId,
-                $organizationId,
                 $userId,
-                $userName,
-                $isTyping
+                $isTyping,
+                $userName
             ));
 
             // Send typing indicator to WAHA if session is WhatsApp

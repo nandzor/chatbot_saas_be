@@ -5,32 +5,31 @@ namespace App\Events;
 use App\Models\ChatSession;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class TypingIndicatorEvent implements ShouldBroadcast
+class SessionEnded implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $session;
     public $organizationId;
-    public $userId;
-    public $userName;
-    public $isTyping;
+    public $endData;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(string $sessionId, string $organizationId, string $userId, string $userName, bool $isTyping = true)
+    public function __construct(ChatSession $session, $reason = null, $endedBy = null)
     {
-        $this->session = $sessionId;
-        $this->organizationId = $organizationId;
-        $this->userId = $userId;
-        $this->userName = $userName;
-        $this->isTyping = $isTyping;
+        $this->session = $session;
+        $this->organizationId = $session->organization_id;
+        $this->endData = [
+            'reason' => $reason,
+            'ended_by' => $endedBy,
+            'ended_at' => now()->toISOString(),
+        ];
     }
 
     /**
@@ -39,7 +38,8 @@ class TypingIndicatorEvent implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('conversation.' . $this->session),
+            new PrivateChannel('organization.' . $this->organizationId),
+            new PrivateChannel('conversation.' . $this->session->id),
         ];
     }
 
@@ -49,11 +49,13 @@ class TypingIndicatorEvent implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'session_id' => $this->session,
-            'user_id' => $this->userId,
-            'user_name' => $this->userName,
-            'is_typing' => $this->isTyping,
+            'event' => 'SessionEnded',
+            'session_id' => $this->session->id,
             'organization_id' => $this->organizationId,
+            'status' => 'ended',
+            'ended_at' => $this->endData['ended_at'],
+            'reason' => $this->endData['reason'],
+            'ended_by' => $this->endData['ended_by'],
             'timestamp' => now()->toISOString(),
         ];
     }
@@ -63,6 +65,6 @@ class TypingIndicatorEvent implements ShouldBroadcast
      */
     public function broadcastAs(): string
     {
-        return $this->isTyping ? 'TypingStart' : 'TypingStop';
+        return 'SessionEnded';
     }
 }

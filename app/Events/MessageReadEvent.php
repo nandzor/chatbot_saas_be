@@ -67,6 +67,6 @@ class MessageReadEvent implements ShouldBroadcast
      */
     public function broadcastAs(): string
     {
-        return 'message.read';
+        return 'MessageRead';
     }
 }
