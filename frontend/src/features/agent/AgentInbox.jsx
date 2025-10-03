@@ -69,6 +69,7 @@ const AgentInbox = () => {
     selectedSession,
     messages,
     loading,
+    sendingMessage,
     error,
     filters,
     pagination,
@@ -456,8 +457,7 @@ const AgentInbox = () => {
               {/* Last Message Preview */}
               <div className="mb-1.5">
                 <p className="text-xs text-gray-600 line-clamp-1 leading-relaxed">
-                  {console.log(session.last_message)}
-                      {session.last_message?.body || 'No messages yet'}
+                      {session.last_message?.body || session.last_message || 'No messages yet'}
                 </p>
               </div>
 
@@ -836,7 +836,7 @@ const AgentInbox = () => {
                     key={index}
                     variant="outline"
                     size="sm"
-                    disabled={loading}
+                    disabled={sendingMessage}
                     className="whitespace-nowrap text-xs px-2 py-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 disabled:opacity-50"
                     onClick={() => setMessageText(reply)}
                   >
@@ -871,7 +871,7 @@ const AgentInbox = () => {
                     onKeyPress={handleKeyPress}
                     placeholder="Ketik pesan..."
                     rows={2}
-                    disabled={loading}
+                    disabled={sendingMessage}
                     className="resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm disabled:opacity-50"
                   />
                   <div className="flex items-center justify-between mt-1">
@@ -895,11 +895,11 @@ const AgentInbox = () => {
                   </Button>
                   <Button
                     onClick={handleSendMessage}
-                    disabled={!messageText.trim() || loading}
+                    disabled={!messageText.trim() || sendingMessage}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed p-2"
                     title="Send message"
                   >
-                    {loading ? (
+                    {sendingMessage ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
                     ) : (
                     <Send className="w-3 h-3" />

@@ -12,6 +12,7 @@ export const useAgentInbox = () => {
   const [selectedSession, setSelectedSession] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     status: 'all',
@@ -249,32 +250,14 @@ export const useAgentInbox = () => {
    */
   const sendMessage = useCallback(async (sessionId, content, type = 'text') => {
     try {
-      setLoading(true);
+      setSendingMessage(true);
       setError(null);
 
       const response = await inboxService.sendMessage.bind(inboxService)(sessionId, content, type);
 
       if (response.success) {
-        // Add message to local state immediately for better UX
-        const newMessage = {
-          id: response.data?.id || `msg-${Date.now()}`,
-          session_id: sessionId,
-          sender_type: 'agent',
-          sender_name: 'You',
-          message_text: content,
-          text: content,
-          content: { text: content },
-          message_type: type,
-          is_read: true,
-          created_at: new Date().toISOString(),
-          sent_at: new Date().toISOString(),
-          delivered_at: null,
-          media_url: null,
-          media_type: null,
-          metadata: {}
-        };
-
-        setMessages(prev => [...prev, newMessage]);
+        // Don't add message to local state immediately - wait for real-time update
+        // The message will be added via real-time message handler
 
         // Update session last message
         setSessions(prev => prev.map(s =>
@@ -296,7 +279,7 @@ export const useAgentInbox = () => {
       setError(err.message);
       throw err;
     } finally {
-      setLoading(false);
+      setSendingMessage(false);
     }
   }, []);
 
@@ -535,12 +518,25 @@ export const useAgentInbox = () => {
             : s
         ));
       }
+
+      // Handle new messages
+      if (data.event === 'message.new' && data.message) {
+        const message = data.message;
+
+        // Only add message if it belongs to the currently selected session
+        if (selectedSession && message.session_id === selectedSession.id) {
+          if (shouldProcessMessage(message.id)) {
+            console.log('📨 AgentInbox received new message:', message);
+            setMessages(prev => [...prev, message]);
+          }
+        }
+      }
     });
 
     return () => {
       unregisterGlobalMessage();
     };
-  }, [registerMessageHandler]);
+  }, [registerMessageHandler, selectedSession, shouldProcessMessage]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -570,6 +566,7 @@ export const useAgentInbox = () => {
     selectedSession,
     messages,
     loading,
+    sendingMessage,
     error,
     filters,
     pagination,

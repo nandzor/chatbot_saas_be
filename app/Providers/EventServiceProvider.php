@@ -57,10 +57,10 @@ class EventServiceProvider extends ServiceProvider
             ProcessWhatsAppMessageListener::class,
         ],
 
-        // Message Sent Events
-        MessageSent::class => [
-            SendMessageToWahaListener::class,
-        ],
+        // // Message Sent Events
+        // MessageSent::class => [
+        //     SendMessageToWahaListener::class,
+        // ],
     ];
 
     /**
