@@ -3,19 +3,10 @@
  * Context provider for Laravel Echo WebSocket connections
  */
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useEcho } from '@/hooks/useEcho';
 import { authService } from '@/services/AuthService';
-
-const EchoContext = createContext();
-
-export const useEchoContext = () => {
-  const context = useContext(EchoContext);
-  if (!context) {
-    throw new Error('useEchoContext must be used within an EchoProvider');
-  }
-  return context;
-};
+import { EchoContext } from '@/contexts/EchoContext';
 
 export const EchoProvider = ({ children }) => {
   const [organizationId, setOrganizationId] = useState(null);

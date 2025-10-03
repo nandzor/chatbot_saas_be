@@ -259,7 +259,7 @@ class InboxService {
           page: params.page || 1,
           per_page: params.per_page || 50,
           sort_by: params.sort_by || 'created_at',
-          sort_direction: params.sort_direction || 'asc',
+          sort_direction: params.sort_direction || 'desc',
           ...params.filters
         }
       });

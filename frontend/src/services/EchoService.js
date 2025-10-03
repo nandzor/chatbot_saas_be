@@ -200,27 +200,47 @@ class EchoService {
       // Store channel
       this.channels.set(`conversation-${sessionId}`, channel);
 
-      // Set up message listeners
+      // Set up message listeners with error handling
       channel
         .listen(EventNames.MESSAGE_SENT, (data) => {
-          // console.log('📨 Message sent event:', data);
-          onMessage?.(data);
+          try {
+            // console.log('📨 Message sent event:', data);
+            onMessage?.(data);
+          } catch (error) {
+            console.error('Error handling MESSAGE_SENT event:', error, data);
+          }
         })
         .listen(EventNames.MESSAGE_PROCESSED, (data) => {
-          // console.log('📨 Message processed event:', data);
-          onMessage?.(data);
+          try {
+            // console.log('📨 Message processed event:', data);
+            onMessage?.(data);
+          } catch (error) {
+            console.error('Error handling MESSAGE_PROCESSED event:', error, data);
+          }
         })
         .listen(EventNames.MESSAGE_READ, (data) => {
-          // console.log('📨 Message read event:', data);
-          onMessage?.(data);
+          try {
+            // console.log('📨 Message read event:', data);
+            onMessage?.(data);
+          } catch (error) {
+            console.error('Error handling MESSAGE_READ event:', error, data);
+          }
         })
         .listen(EventNames.TYPING_START, (data) => {
-          // console.log('⌨️ Typing start event:', data);
-          onTyping?.(data);
+          try {
+            // console.log('⌨️ Typing start event:', data);
+            onTyping?.(data);
+          } catch (error) {
+            console.error('Error handling TYPING_START event:', error, data);
+          }
         })
         .listen(EventNames.TYPING_STOP, (data) => {
-          // console.log('⌨️ Typing stop event:', data);
-          onTyping?.(data);
+          try {
+            // console.log('⌨️ Typing stop event:', data);
+            onTyping?.(data);
+          } catch (error) {
+            console.error('Error handling TYPING_STOP event:', error, data);
+          }
         });
 
       // console.log(`📡 Subscribed to conversation channel: ${channelName}`);

@@ -57,19 +57,60 @@ export const useAgentInbox = () => {
 
   // Echo message handler
   const handleEchoMessage = useCallback((data) => {
-    // console.log('📨 Echo message received:', data);
+    try {
+      // console.log('📨 Echo message received:', data);
 
-    switch (data.type || data.event) {
+      // Validate data
+      if (!data || typeof data !== 'object') {
+        console.warn('Invalid Echo message data:', data);
+        return;
+      }
+
+      switch (data.type || data.event) {
       case 'message.sent':
       case 'MessageSent':
         // Add new message to current session
         if (data.session_id === selectedSessionRef.current?.id) {
-          setMessages(prev => [...prev, data.message || data]);
+          const messageData = {
+            id: data.message_id || data.id,
+            content: data.content || data.message_content || data.text || data.body,
+            sender_type: data.sender_type,
+            sender_name: data.sender_name,
+            message_type: data.message_type || data.type,
+            is_read: data.is_read || false,
+            created_at: data.created_at || data.sent_at || data.timestamp,
+            ...data
+          };
+          setMessages(prev => [...prev, messageData]);
         }
         // Update session last message
         setSessions(prev => prev.map(session =>
           session.id === data.session_id
-            ? { ...session, last_message: data.message || data, last_activity_at: new Date().toISOString() }
+            ? { ...session, last_message: data, last_activity_at: new Date().toISOString() }
+            : session
+        ));
+        break;
+
+      case 'message.processed':
+      case 'MessageProcessed':
+        // Add new message to current session (incoming messages from customers)
+        if (data.session_id === selectedSessionRef.current?.id) {
+          const messageData = {
+            id: data.message_id || data.id,
+            content: data.content || data.message_content || data.text || data.body,
+            sender_type: data.sender_type,
+            sender_name: data.sender_name,
+            message_type: data.message_type || data.type,
+            is_read: data.is_read || false,
+            created_at: data.created_at || data.sent_at || data.timestamp,
+            ...data
+          };
+          setMessages(prev => [...prev, messageData]);
+        }
+        // Update session last message
+        setSessions(prev => prev.map(session =>
+          session.id === data.session_id
+            ? { ...session, last_message: data, last_activity_at: new Date().toISOString() }
             : session
         ));
         break;
@@ -132,13 +173,23 @@ export const useAgentInbox = () => {
       default:
         // console.log('Unhandled Echo message type:', data.type || data.event);
     }
+    } catch (error) {
+      console.error('Error handling Echo message:', error, data);
+    }
   }, []);
 
   // Echo typing handler
   const handleEchoTyping = useCallback((data) => {
-    // console.log('⌨️ Echo typing indicator received:', data);
+    try {
+      // console.log('⌨️ Echo typing indicator received:', data);
 
-    if (data.session_id === selectedSessionRef.current?.id) {
+      // Validate data
+      if (!data || typeof data !== 'object') {
+        console.warn('Invalid Echo typing data:', data);
+        return;
+      }
+
+      if (data.session_id === selectedSessionRef.current?.id) {
       setTypingUsers(prev => {
         const newMap = new Map(prev);
         if (data.is_typing) {
@@ -164,12 +215,19 @@ export const useAgentInbox = () => {
         }, 3000);
       }
     }
+    } catch (error) {
+      console.error('Error handling Echo typing:', error, data);
+    }
   }, []);
 
   // Echo connection handler
   const handleConnectionChange = useCallback((connected) => {
-    // console.log('🔌 Echo connection status:', connected);
-    setIsConnected(connected);
+    try {
+      // console.log('🔌 Echo connection status:', connected);
+      setIsConnected(connected);
+    } catch (error) {
+      console.error('Error handling Echo connection change:', error);
+    }
   }, []);
 
   // Initialize Laravel Echo connection
@@ -323,6 +381,11 @@ export const useAgentInbox = () => {
   const selectSession = useCallback(async (session) => {
     if (!session) return;
 
+    // Unsubscribe from previous session channel
+    if (selectedSessionRef.current?.id && isConnected) {
+      unsubscribeFromConversation(selectedSessionRef.current.id);
+    }
+
     setSelectedSession(session);
     selectedSessionRef.current = session;
     setMessages([]);
@@ -332,7 +395,9 @@ export const useAgentInbox = () => {
       // Load session messages
       const result = await inboxService.getSessionMessages(session.id);
       if (result.success) {
-        setMessages(result.data || []);
+        // Reverse the order so latest messages appear at the bottom
+        const messages = (result.data || []).reverse();
+        setMessages(messages);
       } else {
         setError(result.error || 'Failed to load messages');
       }
@@ -344,7 +409,7 @@ export const useAgentInbox = () => {
     } catch (err) {
       setError(err.message || 'Failed to select session');
     }
-  }, [isConnected, subscribeToConversation]);
+  }, [isConnected, subscribeToConversation, unsubscribeFromConversation]);
 
   // Handle typing indicator
   const handleTyping = useCallback((sessionId, isTyping) => {

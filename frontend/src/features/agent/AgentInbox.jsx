@@ -37,8 +37,7 @@ import {
   EmptyMessages,
   EmptyKnowledge,
   EmptyHistory,
-  ErrorState,
-  ConnectionStatus
+  ErrorState
 } from '@/components/LoadingStates';
 
 const AgentInbox = () => {
@@ -257,7 +256,6 @@ const AgentInbox = () => {
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-blue-600" />
               <h2 className="text-sm font-semibold text-gray-900">Agent Inbox</h2>
-              <ConnectionStatus isConnected={isConnected} isConnecting={loading} />
               {/* Laravel Echo connection status */}
               <EchoStatus showUsers={true} />
             </div>
