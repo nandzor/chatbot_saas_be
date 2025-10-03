@@ -314,6 +314,10 @@ class ConversationService extends BaseService
                 'assigned_by' => $user->id
             ]);
 
+            // Broadcast SessionAssigned event
+            $broadcastService = app(\App\Services\BroadcastEventService::class);
+            $broadcastService->broadcastSessionAssigned($conversation);
+
             // Clear cache
             $this->clearConversationCache();
 
@@ -345,6 +349,9 @@ class ConversationService extends BaseService
                 ]);
             }
 
+            // Store old agent_id for broadcast
+            $oldAgentId = $conversation->agent_id;
+
             // Update conversation
             $conversation->update([
                 'agent_id' => $data['agent_id'],
@@ -353,6 +360,15 @@ class ConversationService extends BaseService
                 'is_bot_session' => false,
                 'session_type' => 'agent'
             ]);
+
+            // Broadcast SessionTransferred event
+            $broadcastService = app(\App\Services\BroadcastEventService::class);
+            $broadcastService->broadcastSessionTransferred(
+                $conversation,
+                $oldAgentId,
+                $data['agent_id'],
+                $data['reason'] ?? 'Manual transfer'
+            );
 
             // Clear cache
             $this->clearConversationCache();

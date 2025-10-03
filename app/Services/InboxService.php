@@ -475,7 +475,7 @@ class InboxService
      */
     public function markMessageAsRead(string $sessionId, string $messageId): ?Message
     {
-        $message = Message::where('chat_session_id', $sessionId)
+        $message = Message::where('waha_session_id', $sessionId)
             ->where('id', $messageId)
             ->first();
 
@@ -484,6 +484,14 @@ class InboxService
         }
 
         $message->markAsRead();
+
+        // Broadcast MessageRead event
+        $session = ChatSession::find($sessionId);
+        if ($session && $message) {
+            $broadcastService = app(\App\Services\BroadcastEventService::class);
+            $broadcastService->broadcastMessageRead($message, $session);
+        }
+
         return $message->fresh();
     }
 
