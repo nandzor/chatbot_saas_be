@@ -53,6 +53,13 @@ class ChatSessionResource extends JsonResource
             'sentiment_analysis' => $this->sentiment_analysis,
             'ai_summary' => $this->ai_summary,
             'topics_discussed' => $this->topics_discussed,
+            'last_message' => $this->lastMessage() ? [
+                'id' => $this->lastMessage()->id,
+                'body' => $this->lastMessage()->message_text ?? $this->lastMessage()->content,
+                'timestamp' => $this->lastMessage()->created_at?->toISOString(),
+                'from_me' => $this->lastMessage()->sender_type === 'agent' || $this->lastMessage()->sender_type === 'bot',
+                'type' => $this->lastMessage()->message_type ?? 'text'
+            ] : null,
             'session_data' => $this->session_data,
             'metadata' => $this->metadata,
             'duration' => $this->duration,

@@ -506,7 +506,7 @@ export const useAgentInbox = () => {
       } catch (error) {
         console.error('Polling error:', error);
       }
-    }, 2000); // Poll every 2 seconds
+    }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);
   }, [selectedSession?.id, shouldProcessMessage]);
