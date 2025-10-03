@@ -807,17 +807,11 @@ const AgentInbox = () => {
                           {isAgent && (
                         <div className="flex items-center space-x-1">
                             {message.delivered_at && (
-                            <div className="flex items-center space-x-1">
                               <CheckCircle className="w-3 h-3" />
-                              <span className="text-xs">✓</span>
-                            </div>
-                          )}
+                            )}
                             {message.is_read && (
-                            <div className="flex items-center space-x-1">
                               <Eye className="w-3 h-3" />
-                              <span className="text-xs">👁</span>
-                            </div>
-                          )}
+                            )}
                         </div>
                       )}
                     </div>
