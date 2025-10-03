@@ -118,7 +118,10 @@ class InboxService {
 
       // Handle different endpoint prefixes
       // Since AuthService baseURL already includes '/api', we only need to add '/v1' for API endpoints
-      const url = endpoint.startsWith('/waha/') ? endpoint : endpoint.startsWith('/api/') ? endpoint : `/v1${endpoint}`;
+      const url = endpoint.startsWith('/waha/') ? endpoint :
+                  endpoint.startsWith('/api/') ? endpoint :
+                  endpoint.startsWith('/v1/') ? endpoint :
+                  `/v1${endpoint}`;
 
       const response = await this.authService.api.request({
         method,
@@ -147,7 +150,7 @@ class InboxService {
    */
   async getStatistics(filters = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/statistics', null, { params: filters });
+      const response = await this._makeApiCall('GET', '/v1/inbox/statistics', null, { params: filters });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching inbox statistics:', error);
@@ -163,7 +166,7 @@ class InboxService {
    */
   async getSessions(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/sessions', null, {
+      const response = await this._makeApiCall('GET', '/v1/inbox/sessions', null, {
         params: {
           page: params.page || 1,
           per_page: params.per_page || 15,
@@ -187,7 +190,7 @@ class InboxService {
    */
   async getActiveSessions(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/sessions/active', null, {
+      const response = await this._makeApiCall('GET', '/v1/inbox/sessions/active', null, {
         params: {
           page: params.page || 1,
           per_page: params.per_page || 15,
@@ -211,7 +214,7 @@ class InboxService {
    */
   async getPendingSessions(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/sessions/pending', null, {
+      const response = await this._makeApiCall('GET', '/v1/inbox/sessions/pending', null, {
         params: {
           page: params.page || 1,
           per_page: params.per_page || 15,
@@ -235,7 +238,7 @@ class InboxService {
    */
   async getSessionById(sessionId) {
     try {
-      const response = await this._makeApiCall('GET', `/inbox/sessions/${sessionId}`);
+      const response = await this._makeApiCall('GET', `/v1/inbox/sessions/${sessionId}`);
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching session:', error);
@@ -251,7 +254,7 @@ class InboxService {
    */
   async getSessionMessages(sessionId, params = {}) {
     try {
-      const response = await this._makeApiCall('GET', `/inbox/sessions/${sessionId}/messages`, null, {
+      const response = await this._makeApiCall('GET', `/v1/inbox/sessions/${sessionId}/messages`, null, {
         params: {
           page: params.page || 1,
           per_page: params.per_page || 50,
@@ -275,7 +278,7 @@ class InboxService {
    */
   async getSessionAnalytics(sessionId, params = {}) {
     try {
-      const response = await this._makeApiCall('GET', `/inbox/sessions/${sessionId}/analytics`, null, {
+      const response = await this._makeApiCall('GET', `/v1/inbox/sessions/${sessionId}/analytics`, null, {
         params: {
           period: params.period || '7d',
           ...params.filters
@@ -296,7 +299,7 @@ class InboxService {
    */
   async updateSessionStatus(sessionId, status) {
     try {
-      const response = await this._makeApiCall('PATCH', `/inbox/sessions/${sessionId}/status`, { status });
+      const response = await this._makeApiCall('PATCH', `/v1/inbox/sessions/${sessionId}/status`, { status });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error updating session status:', error);
@@ -312,7 +315,7 @@ class InboxService {
    */
   async assignSession(sessionId, agentId) {
     try {
-      const response = await this._makeApiCall('POST', `/inbox/sessions/${sessionId}/assign`, { agent_id: agentId });
+      const response = await this._makeApiCall('POST', `/v1/inbox/sessions/${sessionId}/assign`, { agent_id: agentId });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error assigning session:', error);
@@ -328,7 +331,7 @@ class InboxService {
    */
   async unassignSession(sessionId) {
     try {
-      const response = await this._makeApiCall('POST', `/inbox/sessions/${sessionId}/unassign`);
+      const response = await this._makeApiCall('POST', `/v1/inbox/sessions/${sessionId}/unassign`);
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error unassigning session:', error);
@@ -344,7 +347,7 @@ class InboxService {
    */
   async sendMessage(sessionId, message, type = 'text') {
     try {
-      const response = await this._makeApiCall('POST', `/inbox/sessions/${sessionId}/messages`, {
+      const response = await this._makeApiCall('POST', `/v1/inbox/sessions/${sessionId}/messages`, {
         content: message,
         message_type: type
       });
@@ -363,7 +366,7 @@ class InboxService {
    */
   async exportData(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/export', null, {
+      const response = await this._makeApiCall('GET', '/v1/inbox/export', null, {
         params: {
           format: params.format || 'csv',
           ...params.filters
@@ -386,7 +389,7 @@ class InboxService {
    */
   async getBotPersonalities(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/bot-personalities', null, { params });
+      const response = await this._makeApiCall('GET', '/v1/inbox/bot-personalities', null, { params });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching bot personalities:', error);
@@ -402,7 +405,7 @@ class InboxService {
    */
   async getAvailableBotPersonalities(filters = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/bot-personalities/available', null, { params: filters });
+      const response = await this._makeApiCall('GET', '/v1/inbox/bot-personalities/available', null, { params: filters });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching available bot personalities:', error);
@@ -418,7 +421,7 @@ class InboxService {
    */
   async assignBotPersonality(sessionId, personalityId) {
     try {
-      const response = await this._makeApiCall('POST', `/inbox/sessions/${sessionId}/assign-personality`, {
+      const response = await this._makeApiCall('POST', `/v1/inbox/sessions/${sessionId}/assign-personality`, {
         personality_id: personalityId
       });
       return response; // API already returns { success: true, data: {...} }
@@ -436,7 +439,7 @@ class InboxService {
    */
   async generateAiResponse(sessionId, message, personalityId, context = {}) {
     try {
-      const response = await this._makeApiCall('POST', `/inbox/sessions/${sessionId}/generate-ai-response`, {
+      const response = await this._makeApiCall('POST', `/v1/inbox/sessions/${sessionId}/generate-ai-response`, {
         message: message,
         personality_id: personalityId,
         context: context
@@ -456,7 +459,7 @@ class InboxService {
    */
   async getBotPersonalityStatistics(filters = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/bot-personalities/statistics', null, { params: filters });
+      const response = await this._makeApiCall('GET', '/v1/inbox/bot-personalities/statistics', null, { params: filters });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching bot personality statistics:', error);
@@ -472,7 +475,7 @@ class InboxService {
    */
   async getBotPersonalityPerformance(personalityId, days = 30) {
     try {
-      const response = await this._makeApiCall('GET', `/inbox/bot-personalities/${personalityId}/performance`, null, {
+      const response = await this._makeApiCall('GET', `/v1/inbox/bot-personalities/${personalityId}/performance`, null, {
         params: { days }
       });
       return response; // API already returns { success: true, data: {...} }
@@ -490,7 +493,7 @@ class InboxService {
    */
   async getSettings() {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/settings');
+      const response = await this._makeApiCall('GET', '/v1/inbox/settings');
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching inbox settings:', error);
@@ -506,7 +509,7 @@ class InboxService {
    */
   async updateSettings(settings) {
     try {
-      const response = await this._makeApiCall('PUT', '/inbox/settings', settings);
+      const response = await this._makeApiCall('PUT', '/v1/inbox/settings', settings);
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error updating inbox settings:', error);
@@ -522,7 +525,7 @@ class InboxService {
    */
   async getAgents(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/agents', null, { params });
+      const response = await this._makeApiCall('GET', '/v1/inbox/agents', null, { params });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching agents:', error);
@@ -538,7 +541,7 @@ class InboxService {
    */
   async getCustomers(params = {}) {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/customers', null, { params });
+      const response = await this._makeApiCall('GET', '/v1/inbox/customers', null, { params });
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching customers:', error);
@@ -554,7 +557,7 @@ class InboxService {
    */
   async getSessionFilters() {
     try {
-      const response = await this._makeApiCall('GET', '/inbox/session-filters');
+      const response = await this._makeApiCall('GET', '/v1/inbox/session-filters');
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error fetching session filters:', error);
@@ -570,7 +573,7 @@ class InboxService {
    */
   async transferSession(sessionId, transferData) {
     try {
-      const response = await this._makeApiCall('POST', `/inbox/sessions/${sessionId}/transfer`, transferData);
+      const response = await this._makeApiCall('POST', `/v1/inbox/sessions/${sessionId}/transfer`, transferData);
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error transferring session:', error);
@@ -586,7 +589,7 @@ class InboxService {
    */
   async endSession(sessionId, endData) {
     try {
-      const response = await this._makeApiCall('POST', `/inbox/sessions/${sessionId}/end`, endData);
+      const response = await this._makeApiCall('POST', `/v1/inbox/sessions/${sessionId}/end`, endData);
       return response; // API already returns { success: true, data: {...} }
     } catch (error) {
       console.error('❌ Error ending session:', error);

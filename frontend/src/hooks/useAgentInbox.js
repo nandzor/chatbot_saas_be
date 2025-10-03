@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useEcho } from './useEcho';
 import { inboxService } from '@/services/InboxService';
-import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { authService } from '@/services/AuthService';
+import { debounce } from '@/utils/helpers';
 
 /**
- * Custom hook for Agent Inbox functionality
- * Provides session management, messaging, and real-time updates with performance optimizations
+ * Custom hook for Agent Inbox functionality with real-time Laravel Echo integration
+ * Uses Laravel Echo and Reverb for real-time messaging and session management
  */
 export const useAgentInbox = () => {
   // State management
@@ -15,550 +17,492 @@ export const useAgentInbox = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
-    status: 'all',
     search: '',
+    status: 'all',
     priority: 'all',
     category: 'all'
   });
   const [pagination, setPagination] = useState({
-    page: 1,
-    per_page: 20,
-    total: 0,
-    last_page: 1
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 15
   });
+  const [isConnected, setIsConnected] = useState(false);
+  const [typingUsers, setTypingUsers] = useState(new Map());
 
-  // Real-time messaging
-  const { isConnected, registerMessageHandler, sendTyping } = useRealtimeMessages();
-
-  // Refs
+  // Refs for cleanup and optimization
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const searchTimeoutRef = useRef(null);
-  const processedMessageIdsRef = useRef(new Set());
+  const organizationIdRef = useRef(null);
+  const selectedSessionRef = useRef(null);
 
-  // Duplicate prevention callback
-  const shouldProcessMessage = useCallback((messageId) => {
-    if (processedMessageIdsRef.current.has(messageId)) {
-      return false;
+  // Get organization ID from auth service
+  const getOrganizationId = useCallback(async () => {
+    try {
+      const user = await authService.getCurrentUser();
+      const orgId = user?.organization_id || user?.organization?.id;
+      organizationIdRef.current = orgId;
+      return orgId;
+    } catch (error) {
+      // console.error('Failed to get organization ID:', error);
+      return null;
     }
-    processedMessageIdsRef.current.add(messageId);
-    return true;
   }, []);
 
-  // Memoized filtered sessions for better performance
+  // Initialize organization ID
+  useEffect(() => {
+    getOrganizationId();
+  }, [getOrganizationId]);
+
+  // Echo message handler
+  const handleEchoMessage = useCallback((data) => {
+    // console.log('📨 Echo message received:', data);
+
+    switch (data.type || data.event) {
+      case 'message.sent':
+      case 'MessageSent':
+        // Add new message to current session
+        if (data.session_id === selectedSessionRef.current?.id) {
+          setMessages(prev => [...prev, data.message || data]);
+        }
+        // Update session last message
+        setSessions(prev => prev.map(session =>
+          session.id === data.session_id
+            ? { ...session, last_message: data.message || data, last_activity_at: new Date().toISOString() }
+            : session
+        ));
+        break;
+
+      case 'message.read':
+      case 'MessageRead':
+        // Update message read status
+        if (data.session_id === selectedSessionRef.current?.id) {
+          setMessages(prev => prev.map(msg =>
+            msg.id === data.message_id
+              ? { ...msg, is_read: true, read_at: data.read_at }
+              : msg
+          ));
+        }
+        break;
+
+      case 'session.updated':
+      case 'SessionUpdated':
+        // Update session data
+        setSessions(prev => prev.map(session =>
+          session.id === data.session_id
+            ? { ...session, ...data.session }
+            : session
+        ));
+        break;
+
+      case 'session.assigned':
+      case 'SessionAssigned':
+        // Update session assignment
+        setSessions(prev => prev.map(session =>
+          session.id === data.session_id
+            ? { ...session, agent_id: data.agent_id, status: 'active' }
+            : session
+        ));
+        break;
+
+      case 'session.transferred':
+      case 'SessionTransferred':
+        // Remove transferred session from current agent's queue
+        setSessions(prev => prev.filter(session => session.id !== data.session_id));
+        if (selectedSessionRef.current?.id === data.session_id) {
+          setSelectedSession(null);
+          setMessages([]);
+        }
+        break;
+
+      case 'session.ended':
+      case 'SessionEnded':
+        // Update session status
+        setSessions(prev => prev.map(session =>
+          session.id === data.session_id
+            ? { ...session, status: 'ended', ended_at: data.ended_at }
+            : session
+        ));
+        if (selectedSessionRef.current?.id === data.session_id) {
+          setSelectedSession(prev => ({ ...prev, status: 'ended', ended_at: data.ended_at }));
+        }
+        break;
+
+      default:
+        // console.log('Unhandled Echo message type:', data.type || data.event);
+    }
+  }, []);
+
+  // Echo typing handler
+  const handleEchoTyping = useCallback((data) => {
+    // console.log('⌨️ Echo typing indicator received:', data);
+
+    if (data.session_id === selectedSessionRef.current?.id) {
+      setTypingUsers(prev => {
+        const newMap = new Map(prev);
+        if (data.is_typing) {
+          newMap.set(data.user_id, {
+            user_id: data.user_id,
+            user_name: data.user_name,
+            timestamp: Date.now()
+          });
+        } else {
+          newMap.delete(data.user_id);
+        }
+        return newMap;
+      });
+
+      // Auto-clear typing indicator after 3 seconds
+      if (data.is_typing) {
+        setTimeout(() => {
+          setTypingUsers(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(data.user_id);
+            return newMap;
+          });
+        }, 3000);
+      }
+    }
+  }, []);
+
+  // Echo connection handler
+  const handleConnectionChange = useCallback((connected) => {
+    // console.log('🔌 Echo connection status:', connected);
+    setIsConnected(connected);
+  }, []);
+
+  // Initialize Laravel Echo connection
+  const {
+    isConnected: echoConnected,
+    subscribeToConversation,
+    unsubscribeFromConversation,
+    sendTypingIndicator,
+    markMessageAsRead
+  } = useEcho({
+    organizationId: organizationIdRef.current,
+        onMessage: handleEchoMessage,
+        onTyping: handleEchoTyping,
+    onConnectionChange: handleConnectionChange
+  });
+
+  // Update connection status
+  useEffect(() => {
+    setIsConnected(echoConnected);
+  }, [echoConnected]);
+
+  // Filtered sessions with memoization for performance
   const filteredSessions = useMemo(() => {
     return sessions.filter(session => {
-      const customer = session.customer || {};
-      const matchesSearch = !filters.search ||
-        customer.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        customer.email?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        customer.first_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        customer.last_name?.toLowerCase().includes(filters.search.toLowerCase());
+      // Search filter
+      if (filters.search) {
+        const searchTerm = filters.search.toLowerCase();
+        const customerName = (session.customer?.name ||
+          `${session.customer?.first_name || ''} ${session.customer?.last_name || ''}`.trim() ||
+          'Unknown Customer').toLowerCase();
+        const customerEmail = (session.customer?.email || '').toLowerCase();
+        const lastMessage = (session.last_message?.body || session.last_message || '').toLowerCase();
 
-      // Map backend status to frontend status
-      const sessionStatus = session.is_active ? 'active' : 'ended';
-      const matchesStatus = filters.status === 'all' || sessionStatus === filters.status;
+        if (!customerName.includes(searchTerm) &&
+            !customerEmail.includes(searchTerm) &&
+            !lastMessage.includes(searchTerm)) {
+          return false;
+        }
+      }
 
-      const matchesPriority = filters.priority === 'all' || session.priority === filters.priority;
-      const matchesCategory = filters.category === 'all' || session.category === filters.category;
+      // Status filter
+      if (filters.status !== 'all' && session.status !== filters.status) {
+        return false;
+      }
 
-      return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+      // Priority filter
+      if (filters.priority !== 'all' && session.priority !== filters.priority) {
+        return false;
+      }
+
+      // Category filter
+      if (filters.category !== 'all' && session.category !== filters.category) {
+        return false;
+      }
+
+      return true;
     });
   }, [sessions, filters]);
 
-  // Debounced search to prevent excessive API calls
-  const debouncedSearch = useCallback((searchTerm) => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+  // Load sessions
+  const loadSessions = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError(null);
 
-    searchTimeoutRef.current = setTimeout(() => {
-      setFilters(prev => ({ ...prev, search: searchTerm }));
-    }, 300);
-  }, []);
-
-
-  /**
-   * Load sessions from API
-   */
-  const loadSessions = useCallback(async (page = 1, newFilters = filters) => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await inboxService.getSessions({
-        page,
-        per_page: pagination.per_page,
-        ...newFilters
+      const result = await inboxService.getSessions({
+        page: pagination.currentPage,
+        per_page: pagination.itemsPerPage,
+        ...params
       });
 
-      if (response?.success) {
-        // Backend returns sessions directly in data, not data.data
-        const sessionsData = response.data || [];
-        setSessions(sessionsData);
-        setPagination({
-          page: response.current_page || 1,
-          per_page: response.per_page || 20,
-          total: response.total || sessionsData.length,
-          last_page: response.last_page || 1
-        });
-      } else {
-        throw new Error(response?.message || 'Failed to load sessions');
-      }
-    } catch (err) {
-      console.error('Error loading sessions:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, pagination.per_page]);
-
-  /**
-   * Load active sessions
-   */
-  const loadActiveSessions = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await inboxService.getActiveSessions({
-        per_page: 50
-      });
-
-      if (response?.success) {
-        // Backend returns sessions directly in data, not data.data
-        const sessionsData = response.data || [];
-        setSessions(sessionsData);
-      } else {
-        throw new Error(response?.message || 'Failed to load active sessions');
-      }
-    } catch (err) {
-      console.error('Error loading active sessions:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  /**
-   * Load pending sessions
-   */
-  const loadPendingSessions = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await inboxService.getPendingSessions({
-        per_page: 50
-      });
-
-      if (response?.success) {
-        // Backend returns sessions directly in data, not data.data
-        const sessionsData = response.data || [];
-        setSessions(sessionsData);
-      } else {
-        throw new Error(response?.message || 'Failed to load pending sessions');
-      }
-    } catch (err) {
-      console.error('Error loading pending sessions:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  /**
-   * Load session messages
-   */
-  const loadSessionMessages = useCallback(async (sessionId, page = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await inboxService.getSessionMessages(sessionId, {
-        page,
-        per_page: 50,
-        sort_by: 'created_at',
-        sort_direction: 'desc'
-      });
-
-      console.log('🔍 Session messages response:', response);
-
-      if (response?.success) {
-        // Backend returns messages directly in data, not data.data
-        const messagesData = response.data || [];
-        console.log('🔍 Messages data:', messagesData.length, messagesData);
-
-        // Transform backend message format to frontend format
-        const transformedMessages = messagesData.map(msg => ({
-          id: msg.id,
-          session_id: msg.chat_session_id,
-          sender_type: msg.sender_type,
-          sender_name: msg.sender_name,
-          message_text: msg.content,
-          text: msg.content,
-          content: { text: msg.content },
-          message_type: msg.message_type,
-          is_read: msg.is_read,
-          created_at: msg.created_at,
-          sent_at: msg.created_at,
-          delivered_at: msg.delivered_at,
-          media_url: msg.media_url,
-          media_type: msg.media_type,
-          metadata: msg.metadata
+      if (result.success) {
+        setSessions(result.data || []);
+        setPagination(prev => ({
+          ...prev,
+          currentPage: result.pagination?.current_page || result.pagination?.page || prev.currentPage,
+          totalPages: result.pagination?.last_page || result.pagination?.total_pages || 1,
+          totalItems: result.pagination?.total || result.pagination?.total_items || 0
         }));
-
-        console.log('🔍 Transformed messages:', transformedMessages);
-
-        if (page === 1) {
-          setMessages(transformedMessages.reverse()); // Reverse to show oldest first
-        } else {
-          setMessages(prev => [...transformedMessages.reverse(), ...prev]);
-        }
       } else {
-        console.error('❌ Response not successful:', response);
-        throw new Error(response?.message || 'Failed to load messages');
+        setError(result.error || 'Failed to load sessions');
       }
     } catch (err) {
-      console.error('Error loading session messages:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to load sessions');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.currentPage, pagination.itemsPerPage]);
 
-  /**
-   * Select a session
-   */
-  const selectSession = useCallback(async (session) => {
-    setSelectedSession(session);
-    await loadSessionMessages(session.id);
+  // Load active sessions
+  const loadActiveSessions = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError(null);
 
-    // Mark messages as read
-    if (session.unread_count > 0) {
-      // Update local state immediately
-      setSessions(prev => prev.map(s =>
-        s.id === session.id
-          ? { ...s, unread_count: 0 }
-          : s
-      ));
-    }
-  }, [loadSessionMessages]);
-
-  /**
-   * Send a message
-   */
-  const sendMessage = useCallback(async (sessionId, content, type = 'text') => {
     try {
-      setSendingMessage(true);
-      setError(null);
+      const result = await inboxService.getActiveSessions({
+        page: pagination.currentPage,
+        per_page: pagination.itemsPerPage,
+        ...params
+      });
 
-      const response = await inboxService.sendMessage.bind(inboxService)(sessionId, content, type);
-
-      if (response.success) {
-        // Don't add message to local state immediately - wait for real-time update
-        // The message will be added via real-time message handler
-
-        // Update session last message
-        setSessions(prev => prev.map(s =>
-          s.id === sessionId
-            ? {
-                ...s,
-                last_message_at: new Date().toISOString(),
-                last_message: content
-              }
-            : s
-        ));
-
-        return response;
+      if (result.success) {
+        setSessions(result.data || []);
+        setPagination(prev => ({
+          ...prev,
+          currentPage: result.pagination?.current_page || result.pagination?.page || prev.currentPage,
+          totalPages: result.pagination?.last_page || result.pagination?.total_pages || 1,
+          totalItems: result.pagination?.total || result.pagination?.total_items || 0
+        }));
       } else {
-        throw new Error(response.message || 'Failed to send message');
+        setError(result.error || 'Failed to load active sessions');
       }
     } catch (err) {
-      console.error('Error sending message:', err);
-      setError(err.message);
-      throw err;
+      setError(err.message || 'Failed to load active sessions');
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.currentPage, pagination.itemsPerPage]);
+
+  // Load pending sessions
+  const loadPendingSessions = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await inboxService.getPendingSessions({
+        page: pagination.currentPage,
+        per_page: pagination.itemsPerPage,
+        ...params
+      });
+
+      if (result.success) {
+        setSessions(result.data || []);
+        setPagination(prev => ({
+          ...prev,
+          currentPage: result.pagination?.current_page || result.pagination?.page || prev.currentPage,
+          totalPages: result.pagination?.last_page || result.pagination?.total_pages || 1,
+          totalItems: result.pagination?.total || result.pagination?.total_items || 0
+        }));
+      } else {
+        setError(result.error || 'Failed to load pending sessions');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load pending sessions');
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.currentPage, pagination.itemsPerPage]);
+
+  // Select session
+  const selectSession = useCallback(async (session) => {
+    if (!session) return;
+
+    setSelectedSession(session);
+    selectedSessionRef.current = session;
+    setMessages([]);
+    setError(null);
+
+    try {
+      // Load session messages
+      const result = await inboxService.getSessionMessages(session.id);
+      if (result.success) {
+        setMessages(result.data || []);
+      } else {
+        setError(result.error || 'Failed to load messages');
+      }
+
+      // Subscribe to session-specific Echo channel
+      if (isConnected && session.id) {
+        subscribeToConversation(session.id);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to select session');
+    }
+  }, [isConnected, subscribeToConversation]);
+
+  // Handle typing indicator
+  const handleTyping = useCallback((sessionId, isTyping) => {
+    if (!sessionId) return;
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Send typing indicator via Echo
+    sendTypingIndicator(sessionId, isTyping);
+
+    // Auto-stop typing after 1 second
+    if (isTyping) {
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingIndicator(sessionId, false);
+      }, 1000);
+    }
+  }, [sendTypingIndicator]);
+
+  // Send message
+  const sendMessage = useCallback(async (sessionId, message, type = 'text') => {
+    if (!sessionId || !message) return;
+
+    setSendingMessage(true);
+    setError(null);
+
+    try {
+      const result = await inboxService.sendMessage(sessionId, message, type);
+      if (result.success) {
+        // Message will be added via Echo event
+        // Clear typing indicator
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        handleTyping(sessionId, false);
+      } else {
+        setError(result.error || 'Failed to send message');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to send message');
     } finally {
       setSendingMessage(false);
     }
-  }, []);
+  }, [handleTyping]);
 
-  /**
-   * Transfer session
-   */
+  // Transfer session
   const transferSession = useCallback(async (sessionId, transferData) => {
+    if (!sessionId || !transferData.agent_id) return;
+
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await inboxService.transferSession.bind(inboxService)(sessionId, transferData);
-
-      if (response.success) {
-        // Update session in local state
-        setSessions(prev => prev.map(s =>
-          s.id === sessionId
-            ? { ...s, status: 'transferred', agent_id: transferData.agent_id }
-            : s
-        ));
-
-        // Clear selected session if it was transferred
-        if (selectedSession?.id === sessionId) {
+      const result = await inboxService.transferSession(sessionId, transferData);
+      if (result.success) {
+        // Session will be removed via Echo event
+        if (selectedSessionRef.current?.id === sessionId) {
           setSelectedSession(null);
           setMessages([]);
         }
-
-        return response;
       } else {
-        throw new Error(response.message || 'Failed to transfer session');
+        setError(result.error || 'Failed to transfer session');
       }
     } catch (err) {
-      console.error('Error transferring session:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedSession]);
-
-  /**
-   * End session
-   */
-  const endSession = useCallback(async (sessionId, endData) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await inboxService.endSession.bind(inboxService)(sessionId, endData);
-
-      if (response.success) {
-        // Update session in local state
-        setSessions(prev => prev.map(s =>
-          s.id === sessionId
-            ? { ...s, status: 'ended', is_active: false }
-            : s
-        ));
-
-        // Clear selected session if it was ended
-        if (selectedSession?.id === sessionId) {
-          setSelectedSession(null);
-          setMessages([]);
-        }
-
-        return response;
-      } else {
-        throw new Error(response.message || 'Failed to end session');
-      }
-    } catch (err) {
-      console.error('Error ending session:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedSession]);
-
-  /**
-   * Assign session to current agent
-   */
-  const assignSession = useCallback(async (sessionId) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await inboxService.assignSession.bind(inboxService)(sessionId, null); // null means assign to current user
-
-      if (response.success) {
-        // Update session in local state
-        setSessions(prev => prev.map(s =>
-          s.id === sessionId
-            ? { ...s, status: 'active', agent_id: response.data?.agent_id }
-            : s
-        ));
-
-        return response;
-      } else {
-        throw new Error(response.message || 'Failed to assign session');
-      }
-    } catch (err) {
-      console.error('Error assigning session:', err);
-      setError(err.message);
-      throw err;
+      setError(err.message || 'Failed to transfer session');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  /**
-   * Update filters with debouncing
-   */
+  // End session
+  const endSession = useCallback(async (sessionId, endData) => {
+    if (!sessionId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await inboxService.endSession(sessionId, endData);
+      if (result.success) {
+        // Session status will be updated via Echo event
+      } else {
+        setError(result.error || 'Failed to end session');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to end session');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Assign session
+  const assignSession = useCallback(async (sessionId) => {
+    if (!sessionId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await inboxService.assignSession(sessionId);
+      if (result.success) {
+        // Session assignment will be updated via Echo event
+      } else {
+        setError(result.error || 'Failed to assign session');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to assign session');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Update filters
   const updateFilters = useCallback((newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
-
-    // Debounce API call
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      loadSessions(1, { ...filters, ...newFilters });
-    }, 300);
-  }, [filters, loadSessions]);
-
-  /**
-   * Refresh sessions
-   */
-  const refreshSessions = useCallback(() => {
-    loadSessions(pagination.page, filters);
-  }, [loadSessions, pagination.page, filters]);
-
-  /**
-   * Auto-scroll to bottom
-   */
-  const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
   }, []);
 
-  /**
-   * Handle typing indicator
-   */
-  const handleTyping = useCallback((sessionId, isTyping) => {
-    if (sessionId) {
-      sendTyping(sessionId, isTyping);
-    }
-  }, [sendTyping]);
-
-  // Load sessions on mount
-  useEffect(() => {
+  // Refresh sessions
+  const refreshSessions = useCallback(() => {
     loadSessions();
   }, [loadSessions]);
 
-  // Auto-scroll when messages change
+  // Debounced search
+  const debouncedSearch = useCallback((searchTerm) => {
+    const debouncedFn = debounce((term) => {
+      updateFilters({ search: term });
+    }, 300);
+    debouncedFn(searchTerm);
+  }, [updateFilters]);
+
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
-  // Polling fallback for message updates (enhanced without throttling)
-  useEffect(() => {
-    if (!selectedSession?.id) return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await inboxService.getSessionMessages(selectedSession.id, {
-          page: 1,
-          per_page: 50,
-          sort_by: 'created_at',
-          sort_direction: 'desc'
-        });
-
-        if (response?.success && response.data) {
-          const messagesData = response.data || [];
-          const transformedMessages = messagesData.map(msg => ({
-            id: msg.id,
-            session_id: msg.chat_session_id,
-            sender_type: msg.sender_type,
-            sender_name: msg.sender_name,
-            message_text: msg.content,
-            text: msg.content,
-            content: { text: msg.content },
-            message_type: msg.message_type,
-            is_read: msg.is_read,
-            created_at: msg.created_at,
-            sent_at: msg.created_at,
-            delivered_at: msg.delivered_at,
-            media_url: msg.media_url,
-            media_type: msg.media_type,
-            metadata: msg.metadata
-          }));
-
-          const reversedMessages = transformedMessages.reverse();
-
-          setMessages(prev => {
-            // Only update if there are new messages
-            const currentIds = new Set(prev.map(m => m.id));
-            const newMessages = reversedMessages.filter(m => !currentIds.has(m.id) && shouldProcessMessage(m.id));
-
-            if (newMessages.length > 0) {
-              console.log('🔄 Polling found new messages:', newMessages.length);
-              return [...prev, ...newMessages];
-            }
-            return prev;
-          });
-        }
-      } catch (error) {
-        console.error('Polling error:', error);
-      }
-    }, 3000); // Poll every 3 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [selectedSession?.id, shouldProcessMessage]);
-
-
-
-  // Global message handler for all sessions
-  useEffect(() => {
-    const unregisterGlobalMessage = registerMessageHandler('*', (data) => {
-      console.log('🔔 AgentInbox received global message:', data);
-
-      // Handle session updates
-      if (data.event === 'session.updated' || data.event === 'session.assigned') {
-        setSessions(prev => prev.map(s =>
-          s.id === data.session_id
-            ? { ...s, ...data.session_data }
-            : s
-        ));
-      }
-
-      // Handle session status changes
-      if (data.event === 'session.status_changed') {
-        setSessions(prev => prev.map(s =>
-          s.id === data.session_id
-            ? { ...s, status: data.status }
-            : s
-        ));
-      }
-
-      // Handle new messages
-      if (data.event === 'message.new' && data.message) {
-        const message = data.message;
-
-        // Only add message if it belongs to the currently selected session
-        if (selectedSession && message.session_id === selectedSession.id) {
-          if (shouldProcessMessage(message.id)) {
-            console.log('📨 AgentInbox received new message:', message);
-            setMessages(prev => [...prev, message]);
-          }
-        }
-      }
-    });
-
-    return () => {
-      unregisterGlobalMessage();
-    };
-  }, [registerMessageHandler, selectedSession, shouldProcessMessage]);
-
-  // Cleanup timeouts on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      const typingTimeout = typingTimeoutRef.current;
-      const searchTimeout = searchTimeoutRef.current;
-
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
       }
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
+      // Unsubscribe from current session channel
+      if (selectedSessionRef.current?.id && isConnected) {
+        unsubscribeFromConversation(selectedSessionRef.current.id);
       }
     };
-  }, []);
+  }, [isConnected, unsubscribeFromConversation]);
 
-  // Cleanup effect to prevent memory leaks
+  // Load initial sessions
   useEffect(() => {
-    return () => {
-      processedMessageIdsRef.current.clear();
-    };
-  }, []);
+    if (organizationIdRef.current) {
+      loadSessions();
+    }
+  }, [loadSessions]);
 
   return {
     // State
@@ -572,12 +516,12 @@ export const useAgentInbox = () => {
     pagination,
     isConnected,
     filteredSessions,
+    typingUsers,
 
     // Actions
     loadSessions,
     loadActiveSessions,
     loadPendingSessions,
-    loadSessionMessages,
     selectSession,
     sendMessage,
     transferSession,
@@ -588,9 +532,12 @@ export const useAgentInbox = () => {
     handleTyping,
     debouncedSearch,
 
-    // Refs
+    // Refs for component use
     messagesEndRef,
-    typingTimeoutRef
+    typingTimeoutRef,
+
+    // Echo methods
+    markMessageAsRead
   };
 };
 

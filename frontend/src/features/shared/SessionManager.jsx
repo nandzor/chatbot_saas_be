@@ -56,8 +56,6 @@ import {
   Search
 } from 'lucide-react';
 import ConversationDialog from '@/components/inbox/ConversationDialog';
-import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
-import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 
 const SessionManagerComponent = () => {
   const { announce } = useAnnouncement();
@@ -579,7 +577,6 @@ const SessionManagerComponent = () => {
 
 
     return (
-    <RealtimeMessageProvider>
       <SessionManagerWithRealtime
         sessions={sessions}
         pagination={pagination}
@@ -628,13 +625,12 @@ const SessionManagerComponent = () => {
         focusRef={focusRef}
         announce={announce}
       />
-    </RealtimeMessageProvider>
   );
 };
 
-// Component that uses realtime messages hook inside the provider
+// Component that uses Echo for realtime messages
 const SessionManagerWithRealtime = (props) => {
-  const { registerMessageHandler } = useRealtimeMessages();
+  // Note: Real-time functionality now handled by EchoProvider in main.jsx
   const {
     sessions,
     pagination,
@@ -684,31 +680,8 @@ const SessionManagerWithRealtime = (props) => {
     announce
   } = props;
 
-  // Register real-time message handler for session updates
-  useEffect(() => {
-    if (!registerMessageHandler) return;
-
-    const unregisterMessage = registerMessageHandler(null, (data) => {
-      // console.log('🔔 SessionManager received data:', data);
-      // Handle message.processed event to update session list
-      if (data.event === 'message.processed' || data.message_id) {
-        // console.log('📨 SessionManager processing message.processed event');
-        // Refresh session list to show updated last message and activity
-        refresh();
-
-        // Show notification for new messages
-        if (data.sender_type === 'customer') {
-          announce(`New message from ${data.customer_name || 'customer'}`);
-        }
-      }
-    });
-
-    return () => {
-      if (unregisterMessage) {
-        unregisterMessage();
-      }
-    };
-  }, [registerMessageHandler, refresh, announce]);
+  // Note: Real-time message handling now managed by EchoProvider
+  // Session updates will be handled through Echo events
 
   return (
       <div className="space-y-6" ref={_focusRef}>

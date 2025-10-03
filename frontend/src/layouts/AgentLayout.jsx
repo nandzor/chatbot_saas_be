@@ -4,14 +4,13 @@ import Sidebar from '@/components/layout/Sidebar';
 import SidebarProvider from '@/components/layout/SidebarProvider';
 import SidebarToggle from '@/components/layout/SidebarToggle';
 import { useSidebar } from '@/components/layout/SidebarProvider';
-import { 
-  BarChart3, 
-  MessageSquare, 
+import {
+  BarChart3,
+  MessageSquare,
   User,
-  LogOut 
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
 
 const AgentContent = () => {
   const { logout } = useAuth();
@@ -32,8 +31,8 @@ const AgentContent = () => {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <Sidebar 
-        role="agent" 
+      <Sidebar
+        role="agent"
         isCollapsed={isCollapsed}
         onToggle={toggleSidebar}
         isMobile={isMobile}
@@ -63,11 +62,9 @@ const AgentContent = () => {
 
 const AgentLayout = () => {
   return (
-    <RealtimeMessageProvider>
-      <SidebarProvider>
-        <AgentContent />
-      </SidebarProvider>
-    </RealtimeMessageProvider>
+    <SidebarProvider>
+      <AgentContent />
+    </SidebarProvider>
   );
 };
 

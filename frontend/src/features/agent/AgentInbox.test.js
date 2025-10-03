@@ -5,16 +5,9 @@ import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import AgentInbox from './AgentInbox';
 import { useAgentInbox } from '@/hooks/useAgentInbox';
-import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 
 // Mock dependencies
 jest.mock('@/hooks/useAgentInbox');
-jest.mock('@/hooks/useRealtimeMessages');
-jest.mock('@/components/inbox/RealtimeMessageProvider', () => {
-  return function MockRealtimeMessageProvider({ children }) {
-    return <div data-testid="realtime-provider">{children}</div>;
-  };
-});
 
 // Mock components
 jest.mock('@/components/inbox/SessionListSkeleton', () => {
@@ -171,18 +164,11 @@ const defaultUseAgentInboxMock = {
   refreshSessions: jest.fn()
 };
 
-const defaultUseRealtimeMessagesMock = {
-  isConnected: true,
-  registerMessageHandler: jest.fn(),
-  registerTypingHandler: jest.fn(),
-  sendTyping: jest.fn()
-};
 
 describe('AgentInbox Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAgentInbox.mockReturnValue(defaultUseAgentInboxMock);
-    useRealtimeMessages.mockReturnValue(defaultUseRealtimeMessagesMock);
   });
 
   const renderComponent = () => {
@@ -492,7 +478,6 @@ describe('AgentInbox Component', () => {
     it('should register message handler on mount', () => {
       const mockRegisterMessageHandler = jest.fn();
       useRealtimeMessages.mockReturnValue({
-        ...defaultUseRealtimeMessagesMock,
         registerMessageHandler: mockRegisterMessageHandler
       });
 
@@ -504,7 +489,6 @@ describe('AgentInbox Component', () => {
     it('should register typing handler on mount', () => {
       const mockRegisterTypingHandler = jest.fn();
       useRealtimeMessages.mockReturnValue({
-        ...defaultUseRealtimeMessagesMock,
         registerTypingHandler: mockRegisterTypingHandler
       });
 
@@ -515,7 +499,6 @@ describe('AgentInbox Component', () => {
 
     it('should show disconnected status when not connected', () => {
       useRealtimeMessages.mockReturnValue({
-        ...defaultUseRealtimeMessagesMock,
         isConnected: false
       });
 
@@ -622,10 +605,10 @@ describe('AgentInbox Component', () => {
       expect(useAgentInbox).toHaveBeenCalled();
     });
 
-    it('should properly integrate with useRealtimeMessages hook', () => {
+    it('should properly integrate with useAgentInbox hook', () => {
       renderComponent();
 
-      expect(useRealtimeMessages).toHaveBeenCalled();
+      expect(useAgentInbox).toHaveBeenCalled();
     });
 
     it('should handle hook state changes correctly', () => {

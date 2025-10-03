@@ -1,59 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Input, Label, Select, SelectItem, Textarea, Switch, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui';
+import { useState, useEffect } from 'react';
+import {Card, CardContent, CardHeader, CardTitle, Badge, Button, Input, Label, Select, SelectItem, Textarea, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui';
 import {
   MessageSquare,
-  Clock,
-  User,
   Send,
   Paperclip,
   Search,
-  Filter,
-  MoreVertical,
-  ArrowRight,
   AlertCircle,
   CheckCircle,
-  Timer,
-  Flag,
   Star,
   UserPlus,
   Phone,
-  Mail,
   Calendar,
   Building,
-  Tag,
   FileText,
   Zap,
-  ThumbsUp,
-  ThumbsDown,
   Eye,
-  EyeOff,
   ArrowRightLeft,
-  Archive,
-  Ban,
   Plus,
-  Edit,
-  Trash2,
-  Copy,
   BookOpen,
   Info,
   History,
-  Users,
-  MessageCircle,
   X,
   RefreshCw,
   Loader2
 } from 'lucide-react';
 import { useAgentInbox } from '@/hooks/useAgentInbox';
 import { useApi } from '@/hooks/useApi';
-import { inboxService } from '@/services/InboxService';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import EchoStatus from '@/components/EchoStatus';
 import {
   SessionListSkeleton,
   MessagesSkeleton,
-  CustomerInfoSkeleton,
   KnowledgeSkeleton,
   HistorySkeleton,
-  LoadingSpinner,
   EmptySessions,
   EmptyMessages,
   EmptyKnowledge,
@@ -65,16 +44,15 @@ import {
 const AgentInbox = () => {
   // Use custom hook for inbox functionality
   const {
-    sessions,
     selectedSession,
     messages,
     loading,
     sendingMessage,
     error,
     filters,
-    pagination,
     isConnected,
     filteredSessions,
+    typingUsers,
     loadSessions,
     loadActiveSessions,
     loadPendingSessions,
@@ -88,7 +66,8 @@ const AgentInbox = () => {
     handleTyping,
     debouncedSearch,
     messagesEndRef,
-    typingTimeoutRef
+    typingTimeoutRef,
+    markMessageAsRead
   } = useAgentInbox();
 
   // Local state for UI
@@ -163,7 +142,7 @@ const AgentInbox = () => {
       // Stop typing indicator
       handleTypingStop();
     } catch (error) {
-      console.error('Error sending message:', error);
+      // console.error('Error sending message:', error);
       // You could add a toast notification here
     }
   };
@@ -179,7 +158,7 @@ const AgentInbox = () => {
     try {
       await selectSession(session);
     } catch (error) {
-      console.error('Error selecting session:', error);
+      // console.error('Error selecting session:', error);
     }
   };
 
@@ -191,7 +170,7 @@ const AgentInbox = () => {
     setIsTransferDialogOpen(false);
       setTransferData({ agent_id: '', reason: '', notes: '' });
     } catch (error) {
-      console.error('Error transferring session:', error);
+      // console.error('Error transferring session:', error);
     }
   };
 
@@ -203,7 +182,7 @@ const AgentInbox = () => {
     setIsWrapUpDialogOpen(false);
       setEndData({ category: '', summary: '', tags: [] });
     } catch (error) {
-      console.error('Error ending session:', error);
+      // console.error('Error ending session:', error);
     }
   };
 
@@ -211,7 +190,7 @@ const AgentInbox = () => {
     try {
       await assignSession(sessionId);
     } catch (error) {
-      console.error('Error assigning session:', error);
+      // console.error('Error assigning session:', error);
     }
   };
 
@@ -253,13 +232,19 @@ const AgentInbox = () => {
   // Auto-scroll effect is handled in the hook
 
   // Cleanup typing timeout on unmount
+  // Load sessions on component mount
+  useEffect(() => {
+    // Load sessions for the default tab (my-queue)
+    loadSessions();
+  }, [loadSessions]);
+
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
     }
     };
-  }, []);
+  }, [typingTimeoutRef]);
 
   return (
     <ErrorBoundary>
@@ -268,11 +253,13 @@ const AgentInbox = () => {
       <div className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm flex-shrink-0">
         {/* Queue Header */}
         <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-blue-600" />
               <h2 className="text-sm font-semibold text-gray-900">Agent Inbox</h2>
               <ConnectionStatus isConnected={isConnected} isConnecting={loading} />
+              {/* Laravel Echo connection status */}
+              <EchoStatus showUsers={true} />
             </div>
             <div className="flex items-center space-x-2">
             <Badge variant="blue" className="px-2 py-0.5 text-xs">
@@ -471,11 +458,18 @@ const AgentInbox = () => {
                 </p>
                 <div className="flex items-center space-x-1">
                   <div className={`w-2 h-2 rounded-full ${
-                    session.is_active ? 'bg-green-500' :
+                    session.is_active ? 'bg-green-500 animate-pulse' :
                         session.session_type === 'bot' ? 'bg-blue-500' :
                         session.session_type === 'agent' ? 'bg-purple-500' : 'bg-gray-400'
                   }`}></div>
                       <span className="text-xs text-gray-500 capitalize">{session.session_type || 'unknown'}</span>
+                  {/* Real-time unread indicator */}
+                  {session.unread_count > 0 && (
+                    <div className="flex items-center space-x-1">
+                      <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-red-600 font-medium">{session.unread_count}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -513,6 +507,16 @@ const AgentInbox = () => {
                       <div className="flex items-center space-x-1 flex-shrink-0">
                         <Star className="w-3 h-3 text-yellow-500 fill-current" />
                         <span className="text-gray-600">{selectedSession.satisfaction_rating || 'N/A'}</span>
+                      </div>
+                      {/* Real-time session status indicator */}
+                      <div className="w-1 h-1 bg-gray-300 rounded-full flex-shrink-0"></div>
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        <div className={`w-2 h-2 rounded-full ${
+                          selectedSession.status === 'active' ? 'bg-green-500 animate-pulse' :
+                          selectedSession.status === 'pending' ? 'bg-yellow-500' :
+                          selectedSession.status === 'ended' ? 'bg-gray-500' : 'bg-blue-500'
+                        }`}></div>
+                        <span className="text-gray-600 capitalize">{selectedSession.status || 'unknown'}</span>
                       </div>
                     </div>
                   </div>
@@ -813,6 +817,16 @@ const AgentInbox = () => {
                             {message.is_read && (
                               <Eye className="w-3 h-3" />
                             )}
+                            {/* Mark as read on click */}
+                            {!message.is_read && (
+                              <button
+                                onClick={() => markMessageAsRead(selectedSession.id, message.id)}
+                                className="text-blue-300 hover:text-blue-100 transition-colors"
+                                title="Mark as read"
+                              >
+                                <Eye className="w-3 h-3" />
+                              </button>
+                            )}
                         </div>
                       )}
                     </div>
@@ -821,6 +835,25 @@ const AgentInbox = () => {
                   );
                 })
               )}
+
+              {/* Typing Indicators */}
+              {typingUsers.size > 0 && (
+                <div className="flex justify-start">
+                  <div className="max-w-xs lg:max-w-md px-3 py-2 rounded-xl bg-gray-100 border border-gray-200 shadow-sm">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                      <span className="text-xs text-gray-600">
+                        {Array.from(typingUsers.values()).map(user => user.user_name).join(', ')} sedang mengetik...
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -878,8 +911,17 @@ const AgentInbox = () => {
                     <p className="text-xs text-gray-500">
                       💡 Quick replies untuk respon cepat
                     </p>
-                    <div className="text-xs text-gray-500">
-                      Enter untuk kirim
+                    <div className="flex items-center space-x-2">
+                      {/* Real-time typing indicator for current user */}
+                      {selectedSession && (
+                        <div className="flex items-center space-x-1">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-blue-600">Mengetik...</span>
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500">
+                        Enter untuk kirim
+                      </div>
                     </div>
                   </div>
                 </div>
