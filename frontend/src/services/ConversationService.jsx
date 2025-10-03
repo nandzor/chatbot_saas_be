@@ -1,11 +1,13 @@
 /* eslint-disable no-console */
 import { authService } from './AuthService';
 import { handleError } from '@/utils/errorHandler';
+import { webSocketIntegrationService } from './WebSocketIntegrationService';
 
 class ConversationService {
   constructor() {
     this.authService = authService;
     this.initialized = false;
+    this.webSocketService = webSocketIntegrationService;
     this.initializeService();
   }
 
@@ -429,6 +431,124 @@ class ConversationService {
       follow_up_date: options.followUpDate || null,
       escalation_reason: options.escalationReason || null
     };
+  }
+
+  /**
+   * Initialize WebSocket integration for real-time messaging
+   */
+  async initializeWebSocket() {
+    try {
+      const success = await this.webSocketService.initialize();
+      if (success) {
+        console.log('✅ WebSocket integration initialized for conversations');
+      }
+      return success;
+    } catch (error) {
+      console.error('❌ Failed to initialize WebSocket integration:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Subscribe to conversation for real-time updates
+   */
+  subscribeToConversation(sessionId, onMessage, onTyping) {
+    if (!this.webSocketService.isInitialized) {
+      console.warn('⚠️ WebSocket not initialized, falling back to polling');
+      return false;
+    }
+
+    try {
+      return this.webSocketService.subscribeToConversation(sessionId, onMessage, onTyping);
+    } catch (error) {
+      console.error('❌ Failed to subscribe to conversation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Unsubscribe from conversation
+   */
+  unsubscribeFromConversation(sessionId) {
+    try {
+      return this.webSocketService.unsubscribeFromConversation(sessionId);
+    } catch (error) {
+      console.error('❌ Failed to unsubscribe from conversation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send typing indicator
+   */
+  sendTypingIndicator(sessionId, isTyping) {
+    if (!this.webSocketService.isInitialized) {
+      return false;
+    }
+
+    try {
+      return this.webSocketService.sendTypingIndicator(sessionId, isTyping);
+    } catch (error) {
+      console.error('❌ Failed to send typing indicator:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Mark message as read with WebSocket notification
+   */
+  async markMessageAsRead(sessionId, messageId) {
+    try {
+      // Mark as read via API
+      const response = await this.markMessageRead(sessionId, messageId);
+
+      // Send WebSocket notification
+      if (this.webSocketService.isInitialized) {
+        this.webSocketService.markMessageAsRead(sessionId, messageId);
+      }
+
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to mark message as read:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send message with WebSocket integration
+   */
+  async sendMessageWithWebSocket(sessionId, messageData) {
+    try {
+      if (this.webSocketService.isInitialized) {
+        // Use WebSocket service for real-time messaging
+        return await this.webSocketService.sendMessage(sessionId, messageData);
+      } else {
+        // Fallback to regular API call
+        return await this.sendMessage(sessionId, messageData);
+      }
+    } catch (error) {
+      console.error('❌ Failed to send message:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get WebSocket connection status
+   */
+  getWebSocketStatus() {
+    return this.webSocketService.getConnectionStatus();
+  }
+
+  /**
+   * Test WebSocket connection
+   */
+  async testWebSocketConnection() {
+    try {
+      return await this.webSocketService.testConnection();
+    } catch (error) {
+      console.error('❌ WebSocket connection test failed:', error);
+      return { status: 'error', message: error.message };
+    }
   }
 }
 

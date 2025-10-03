@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        #messages { max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="status" class="status info">Connecting...</div>
+    <div id="messages"></div>
+    <button onclick="testConnection()">Test Connection</button>
+    <button onclick="clearMessages()">Clear Messages</button>
+
+    <script>
+        const status = document.getElementById('status');
+        const messages = document.getElementById('messages');
+        let ws = null;
+
+        function addMessage(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            messages.innerHTML += `<div class="status ${type}">[${timestamp}] ${message}</div>`;
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function testConnection() {
+            if (ws) {
+                ws.close();
+            }
+
+            status.textContent = 'Connecting...';
+            status.className = 'status info';
+            addMessage('Attempting WebSocket connection...');
+
+            // Test different WebSocket URLs
+            const urls = [
+                'ws://localhost:8081/app/p8z4t7y2m9x6c1v5?protocol=7&client=js&version=8.4.0&flash=false',
+                'ws://localhost:8081/app/p8z4t7y2m9x6c1v5',
+                'ws://localhost:8081/app',
+                'ws://localhost:8081'
+            ];
+
+            let urlIndex = 0;
+
+            function tryNextUrl() {
+                if (urlIndex >= urls.length) {
+                    status.textContent = '❌ All connection attempts failed';
+                    status.className = 'status error';
+                    addMessage('All WebSocket connection attempts failed', 'error');
+                    return;
+                }
+
+                const url = urls[urlIndex];
+                addMessage(`Trying: ${url}`);
+
+                ws = new WebSocket(url);
+
+                ws.onopen = function() {
+                    status.textContent = '✅ WebSocket Connected';
+                    status.className = 'status success';
+                    addMessage(`WebSocket connected successfully to: ${url}`, 'success');
+                };
+
+                ws.onerror = function(error) {
+                    addMessage(`Connection failed: ${url}`, 'error');
+                    urlIndex++;
+                    setTimeout(tryNextUrl, 1000);
+                };
+
+                ws.onclose = function(event) {
+                    if (event.code !== 1000) {
+                        addMessage(`Connection closed: ${event.code} - ${event.reason}`, 'error');
+                        urlIndex++;
+                        setTimeout(tryNextUrl, 1000);
+                    }
+                };
+
+                ws.onmessage = function(event) {
+                    addMessage(`Message received: ${event.data}`, 'success');
+                };
+            }
+
+            tryNextUrl();
+        }
+
+        function clearMessages() {
+            messages.innerHTML = '';
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            testConnection();
+        };
+    </script>
+</body>
+</html>

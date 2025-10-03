@@ -8,7 +8,7 @@ const configs = {
   development: {
     name: 'Development',
     baseUrl: '/',
-    apiBaseUrl: 'http://localhost:3000',
+    apiBaseUrl: 'http://localhost:9000',
     publicPath: '/',
     buildDir: 'dist',
     sourceMap: true,
@@ -18,7 +18,7 @@ const configs = {
   staging: {
     name: 'Staging',
     baseUrl: '/',
-    apiBaseUrl: 'http://100.81.120.54:3001',
+    apiBaseUrl: 'http://100.81.120.54:9000',
     publicPath: '/',
     buildDir: 'dist',
     sourceMap: true,

@@ -8,9 +8,11 @@ use App\Models\User;
 use App\Observers\PaymentTransactionObserver;
 use App\Observers\BillingInvoiceObserver;
 use App\Observers\UserPermissionObserver;
+use App\Services\WebSocketIntegrationService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->registerObservers();
         $this->configureGlobalHttpTimeout();
+        $this->initializeWebSocket();
 
         // Allow publishing our custom config files via: php artisan vendor:publish --tag="waha-config" or --tag="n8n-config"
         if ($this->app->runningInConsole()) {
@@ -41,6 +44,28 @@ class AppServiceProvider extends ServiceProvider
             $this->publishes([
                 base_path('config/n8n.php') => config_path('n8n.php'),
             ], 'n8n-config');
+        }
+    }
+
+    /**
+     * Initialize WebSocket integration
+     */
+    protected function initializeWebSocket(): void
+    {
+        try {
+            // Register WebSocket integration service
+            $this->app->singleton(WebSocketIntegrationService::class, function ($app) {
+                return new WebSocketIntegrationService();
+            });
+
+            // Initialize broadcasting if not in console
+            if (!$this->app->runningInConsole()) {
+                Broadcast::routes();
+            }
+
+            \Log::info('WebSocket integration initialized successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to initialize WebSocket integration: ' . $e->getMessage());
         }
     }
 

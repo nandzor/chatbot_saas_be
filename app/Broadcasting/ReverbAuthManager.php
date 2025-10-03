@@ -13,18 +13,32 @@ class ReverbAuthManager
     public static function authenticate(Request $request): ?object
     {
         $token = $request->bearerToken();
-        if (!$token) return null;
+        if (!$token) {
+            \Log::warning('No bearer token provided for Reverb authentication');
+            return null;
+        }
 
         try {
             // Try JWT authentication first (faster)
             if (self::isJwtToken($token)) {
                 $user = self::authenticateJwt($token);
-                if ($user) return $user;
+                if ($user) {
+                    \Log::info('JWT authentication successful', ['user_id' => $user->id]);
+                    return $user;
+                }
             }
 
             // Fallback to Sanctum
-            return self::authenticateSanctum($request);
+            $user = self::authenticateSanctum($request);
+            if ($user) {
+                \Log::info('Sanctum authentication successful', ['user_id' => $user->id]);
+            }
+            return $user;
         } catch (\Exception $e) {
+            \Log::error('Authentication failed', [
+                'error' => $e->getMessage(),
+                'token_preview' => substr($token, 0, 20) . '...'
+            ]);
             return null;
         }
     }
@@ -99,8 +113,26 @@ class ReverbAuthManager
      */
     private static function authorizeConversationChannel($user, string $channelName): bool
     {
-        // TODO: Implement conversation-specific authorization
-        return true; // For now, allow all authenticated users
+        $sessionId = substr($channelName, strlen('private-conversation.'));
+
+        // Check if user has access to this conversation session
+        try {
+            $session = \App\Models\InboxSession::find($sessionId);
+            if (!$session) {
+                \Log::warning('Conversation session not found', ['session_id' => $sessionId]);
+                return false;
+            }
+
+            // Check if user belongs to the same organization as the session
+            return (string) $user->organization_id === (string) $session->organization_id;
+        } catch (\Exception $e) {
+            \Log::error('Error authorizing conversation channel', [
+                'error' => $e->getMessage(),
+                'session_id' => $sessionId,
+                'user_id' => $user->id
+            ]);
+            return false;
+        }
     }
 
     /**

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import conversationService from '../services/ConversationService';
 import { handleError } from '../utils/errorHandler';
@@ -14,6 +14,15 @@ export const useConversation = (sessionId) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // WebSocket integration states
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+
+  // Refs for WebSocket management
+  const webSocketInitialized = useRef(false);
+  const typingTimeout = useRef(null);
 
   /**
    * Load conversation details with messages
@@ -241,7 +250,47 @@ export const useConversation = (sessionId) => {
       loadConversation();
       loadSummary();
       loadUnreadCount();
-    }
+    },
+
+    // WebSocket integration states
+    isWebSocketConnected,
+    isTyping,
+    typingUsers,
+
+    // WebSocket integration methods
+    sendTypingIndicator: (isTyping) => {
+      if (!sessionId) return;
+      try {
+        conversationService.sendTypingIndicator(sessionId, isTyping);
+        setIsTyping(isTyping);
+      } catch (error) {
+        console.error('❌ Failed to send typing indicator:', error);
+      }
+    },
+
+    sendMessageWithWebSocket: async (messageData) => {
+      if (!sessionId) return;
+      try {
+        return await conversationService.sendMessageWithWebSocket(sessionId, messageData);
+      } catch (error) {
+        console.error('❌ Failed to send message:', error);
+        throw error;
+      }
+    },
+
+    markMessageAsReadWithWebSocket: async (messageId) => {
+      if (!sessionId || !messageId) return;
+      try {
+        await conversationService.markMessageAsRead(sessionId, messageId);
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch (error) {
+        console.error('❌ Failed to mark message as read:', error);
+        throw error;
+      }
+    },
+
+    getWebSocketStatus: () => conversationService.getWebSocketStatus(),
+    testWebSocketConnection: () => conversationService.testWebSocketConnection()
   };
 };
 

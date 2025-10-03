@@ -11,8 +11,8 @@ return [
     |
     */
 
-    'host' => env('REVERB_HOST', 'localhost'),
-    'port' => env('REVERB_PORT', 9000),
+    'host' => env('REVERB_HOST', '0.0.0.0'),
+    'port' => env('REVERB_PORT', 8081),
     'scheme' => env('REVERB_SCHEME', 'http'),
 
     /*
@@ -55,9 +55,11 @@ return [
     */
 
     'server' => [
-        'max_connections' => env('REVERB_MAX_CONNECTIONS', 1000),
-        'heartbeat_interval' => env('REVERB_HEARTBEAT_INTERVAL', 30),
-        'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 1024 * 1024), // 1MB
+        'max_connections' => env('REVERB_MAX_CONNECTIONS', 2000),
+        'heartbeat_interval' => env('REVERB_HEARTBEAT_INTERVAL', 15),
+        'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 2 * 1024 * 1024), // 2MB
+        'enable_compression' => env('REVERB_ENABLE_COMPRESSION', true),
+        'enable_metrics' => env('REVERB_ENABLE_METRICS', true),
     ],
 
     /*

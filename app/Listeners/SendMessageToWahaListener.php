@@ -17,12 +17,17 @@ class SendMessageToWahaListener implements ShouldQueue
     /**
      * The number of times the job may be attempted.
      */
-    public $tries = 3;
+    public $tries = 1;
 
     /**
      * The maximum number of seconds the job can run.
      */
     public $timeout = 30;
+
+    /**
+     * Determine if the job should be deleted when models are missing.
+     */
+    public $deleteWhenMissingModels = true;
 
     protected WahaService $wahaService;
     protected $messageId;
@@ -40,22 +45,69 @@ class SendMessageToWahaListener implements ShouldQueue
      */
     public function handle(MessageSent $event): void
     {
+        // Initialize variables to avoid undefined variable errors
+        $messageData = [];
+        $sessionId = null;
+        $sessionData = [];
+        $processingKey = '';
+
         try {
-            // Use array data instead of objects to avoid serialization issues
-            $messageData = $event->messageData;
-            $sessionData = $event->sessionData;
-            $this->messageId = $messageData['id'];
+            // Laravel serializes event data when queuing
+            // message can be array, stdClass, or Model object
+            if (is_array($event->message)) {
+                $messageData = $event->message;
+            } elseif ($event->message instanceof \stdClass) {
+                $messageData = json_decode(json_encode($event->message), true);
+            } elseif (method_exists($event->message, 'toArray')) {
+                $messageData = $event->message->toArray();
+            } else {
+                $messageData = (array) $event->message;
+            }
+
+            // sessionId is a string, not an object
+            $sessionId = is_string($event->sessionId) ? $event->sessionId :
+                        (is_object($event->sessionId) ? $event->sessionId->id :
+                        $event->sessionId);
+
+            // Get session from database to get full session data
+            $session = \App\Models\ChatSession::find($sessionId);
+            if (!$session) {
+                Log::warning('Session not found for WAHA listener', [
+                    'session_id' => $sessionId,
+                    'message_id' => $messageData['id'] ?? 'unknown'
+                ]);
+                return;
+            }
+
+            $sessionData = $session->toArray();
+            $this->messageId = $messageData['id'] ?? 'unknown';
+
+            // Check if message already has WAHA metadata (already processed)
+            if (isset($messageData['metadata']['waha_sent_via']) ||
+                isset($messageData['metadata']['waha_message_id'])) {
+                Log::info('Message already sent to WAHA, skipping', [
+                    'message_id' => $messageData['id'] ?? 'unknown',
+                    'waha_sent_via' => $messageData['metadata']['waha_sent_via'] ?? 'unknown'
+                ]);
+                return;
+            }
+
+            Log::info('WAHA listener processing message', [
+                'message_id' => $this->messageId,
+                'session_id' => $sessionId,
+                'organization_id' => $sessionData['organization_id'] ?? 'unknown'
+            ]);
 
             // Generate unique processing key to prevent duplicate processing
-            $processingKey = 'waha_processing_' . $messageData['id'];
+            $processingKey = 'waha_processing_' . ($messageData['id'] ?? 'unknown');
 
-            // Use Redis-based lock instead of file-based lock for better reliability
-            $lockAcquired = \Illuminate\Support\Facades\Redis::set($processingKey, 'processing', 'EX', 60, 'NX');
+            // Use atomic Cache lock for better reliability (prevents race conditions)
+            $lock = Cache::lock($processingKey, 60);
 
-            if (!$lockAcquired) {
+            if (!$lock->get()) {
                 Log::info('Message processing lock could not be acquired, skipping duplicate', [
-                    'session_id' => $sessionData['id'],
-                    'message_id' => $messageData['id'],
+                    'session_id' => $sessionId,
+                    'message_id' => $messageData['id'] ?? 'unknown',
                     'processing_key' => $processingKey
                 ]);
                 return;
@@ -65,18 +117,18 @@ class SendMessageToWahaListener implements ShouldQueue
                 $this->processMessage($messageData, $sessionData, $processingKey);
 
                 // Release lock after successful processing
-                \Illuminate\Support\Facades\Redis::del($processingKey);
+                $lock->release();
 
             } catch (\Exception $e) {
                 // Release lock on error
-                \Illuminate\Support\Facades\Redis::del($processingKey);
+                $lock->release();
                 throw $e;
             }
 
         } catch (\Exception $e) {
             Log::error('WAHA listener failed to process message', [
-                'session_id' => $sessionData['id'],
-                'message_id' => $messageData['id'],
+                'session_id' => isset($sessionId) ? $sessionId : 'unknown',
+                'message_id' => isset($messageData) ? ($messageData['id'] ?? 'unknown') : 'unknown',
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -108,8 +160,8 @@ class SendMessageToWahaListener implements ShouldQueue
             }
 
             // Check if session has WAHA integration
-            $sessionMetadata = $sessionData['session_data'] ?? [];
-            $wahaSessionName = $sessionMetadata['session_name'] ?? null;
+            $sessionMetadata = $sessionData['session_data'] ?? $sessionData;
+            $wahaSessionName = $sessionMetadata['session_name'] ?? $sessionMetadata['name'] ?? null;
 
             if (!$wahaSessionName) {
                 Log::info('No WAHA session name found for session', [
@@ -120,7 +172,7 @@ class SendMessageToWahaListener implements ShouldQueue
             }
 
             // Get customer phone number
-            $customerPhone = $sessionMetadata['phone_number'] ?? null;
+            $customerPhone = $sessionMetadata['phone_number'] ?? $sessionMetadata['customer_phone'] ?? null;
             if (!$customerPhone) {
                 Log::warning('No customer phone number found for WAHA message', [
                     'session_id' => $sessionData['id'],
@@ -205,8 +257,8 @@ class SendMessageToWahaListener implements ShouldQueue
 
         } catch (\Exception $e) {
             Log::error('Exception while processing message in WAHA listener', [
-                'session_id' => $sessionData['id'],
-                'message_id' => $messageData['id'],
+                'session_id' => $sessionData['id'] ?? 'unknown',
+                'message_id' => $messageData['id'] ?? 'unknown',
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

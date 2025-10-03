@@ -47,6 +47,10 @@ import AgentDashboard from '@/features/agent/AgentDashboard';
 import AgentInbox from '@/features/agent/AgentInbox';
 import AgentProfile from '@/features/agent/AgentProfile';
 
+// WebSocket Test Page
+import WebSocketTestPage from '@/pages/WebSocketTestPage';
+import WebSocketIntegrationTest from '@/components/WebSocketIntegrationTest';
+
 // Customer Pages
 import CustomerDashboard from '@/pages/customer/Dashboard';
 
@@ -147,6 +151,14 @@ export const router = createBrowserRouter([
                 <Knowledge />
               </RoleBasedRoute>
             )
+          },
+          {
+            path: 'websocket-test',
+            element: <WebSocketTestPage />
+          },
+          {
+            path: 'websocket-integration-test',
+            element: <WebSocketIntegrationTest />
           },
           {
             path: 'bot-personalities',

@@ -5,6 +5,7 @@ namespace App\Services\Waha;
 use App\Services\Http\BaseHttpClient;
 use App\Services\Waha\Exceptions\WahaException;
 use App\Services\Waha\MockWahaResponses;
+use App\Services\Waha\WahaServiceLog;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -434,7 +435,7 @@ class WahaService extends BaseHttpClient
             'config' => array_merge($defaultSessionConfig, [
                 'webhook' => $config['webhook'] ?? $defaultSessionConfig['webhook'] ?? '',
                 'webhook_by_events' => $config['webhook_by_events'] ?? $defaultSessionConfig['webhook_by_events'] ?? false,
-                'events' => $config['events'] ?? $defaultSessionConfig['events'] ?? ['message', 'session.status'],
+                'events' => $config['events'] ?? $defaultSessionConfig['events'] ?? ['message.any', 'session.status'],
                 'reject_calls' => $config['reject_calls'] ?? $defaultSessionConfig['reject_calls'] ?? false,
                 'mark_online_on_chat' => $config['mark_online_on_chat'] ?? $defaultSessionConfig['mark_online_on_chat'] ?? true,
             ])
@@ -452,7 +453,7 @@ class WahaService extends BaseHttpClient
         return $wahaConfig['sessions']['default_config'] ?? [
             'webhook' => '',
             'webhook_by_events' => false,
-            'events' => ['message', 'session.status'],
+            'events' => ['message.any', 'session.status'],
             'reject_calls' => false,
             'mark_online_on_chat' => true,
         ];
@@ -542,7 +543,9 @@ class WahaService extends BaseHttpClient
     public function sendTextMessage(string $sessionId, string $to, string $text): array
     {
         if ($this->mockResponses) {
-            return $this->mockResponsesHandler->getMessageSent();
+            $result = $this->mockResponsesHandler->getMessageSent();
+            WahaServiceLog::logOutgoingMessage($sessionId, $to, $text, 'text', 'success');
+            return $result;
         }
 
         $this->validatePhoneNumber($to);
@@ -590,6 +593,7 @@ class WahaService extends BaseHttpClient
                             $result['success'] = true;
                         }
 
+                        WahaServiceLog::logOutgoingMessage($sessionId, $to, $text, 'text', 'success');
                         return $result;
                     }
 
@@ -643,6 +647,8 @@ class WahaService extends BaseHttpClient
             'last_error' => $lastError
         ]);
 
+        WahaServiceLog::logOutgoingMessage($sessionId, $to, $text, 'text', 'error', $lastError);
+
         return [
             'success' => true,
             'messageId' => 'mock_' . uniqid(),
@@ -657,16 +663,25 @@ class WahaService extends BaseHttpClient
     public function sendMediaMessage(string $sessionId, string $to, string $mediaUrl, string $caption = ''): array
     {
         if ($this->mockResponses) {
-            return $this->mockResponsesHandler->getMessageSent();
+            $result = $this->mockResponsesHandler->getMessageSent();
+            WahaServiceLog::logMediaUpload($sessionId, $to, 'media', basename($mediaUrl), 'success');
+            return $result;
         }
 
         $this->validatePhoneNumber($to);
 
-        $response = $this->post(
-            self::ENDPOINT_SEND_MEDIA,
-            $this->buildMediaMessageData($sessionId, $to, $mediaUrl, $caption)
-        );
-        return $this->handleResponse($response, 'send media message');
+        try {
+            $response = $this->post(
+                self::ENDPOINT_SEND_MEDIA,
+                $this->buildMediaMessageData($sessionId, $to, $mediaUrl, $caption)
+            );
+            $result = $this->handleResponse($response, 'send media message');
+            WahaServiceLog::logMediaUpload($sessionId, $to, 'media', basename($mediaUrl), 'success');
+            return $result;
+        } catch (\Exception $e) {
+            WahaServiceLog::logMediaUpload($sessionId, $to, 'media', basename($mediaUrl), 'error', $e->getMessage());
+            throw $e;
+        }
     }
 
     /**
@@ -887,7 +902,9 @@ class WahaService extends BaseHttpClient
     public function sendTypingIndicator(string $sessionId, string $to, bool $isTyping = true): array
     {
         if ($this->mockResponses) {
-            return $this->mockResponsesHandler->sendTypingIndicator();
+            $result = $this->mockResponsesHandler->sendTypingIndicator();
+            WahaServiceLog::logTypingIndicator($sessionId, $to, $isTyping, 'success');
+            return $result;
         }
 
         try {
@@ -912,8 +929,11 @@ class WahaService extends BaseHttpClient
                     'to' => $to,
                     'response' => $result
                 ]);
+                WahaServiceLog::logTypingIndicator($sessionId, $to, $isTyping, 'success');
                 return $result;
             } else {
+                $error = 'Failed to send typing indicator: ' . $response->status();
+                WahaServiceLog::logTypingIndicator($sessionId, $to, $isTyping, 'error', $error);
                 throw new WahaException(
                     'Failed to send typing indicator',
                     $response->status(),
@@ -927,6 +947,7 @@ class WahaService extends BaseHttpClient
                 'to' => $to,
                 'error' => $e->getMessage()
             ]);
+            WahaServiceLog::logTypingIndicator($sessionId, $to, $isTyping, 'error', $e->getMessage());
             throw $e;
         }
     }
@@ -1644,7 +1665,13 @@ class WahaService extends BaseHttpClient
     public function configureWebhook(string $sessionName, string $webhookUrl, array $events = ['message'], array $options = []): array
     {
         if ($this->mockResponses) {
-            return $this->mockResponsesHandler->getWebhookConfigured();
+            $result = $this->mockResponsesHandler->getWebhookConfigured();
+            WahaServiceLog::logWebhook('WebhookConfigured', [
+                'session_name' => $sessionName,
+                'webhook_url' => $webhookUrl,
+                'events' => $events
+            ], 'success');
+            return $result;
         }
 
         try {
@@ -1665,6 +1692,12 @@ class WahaService extends BaseHttpClient
 
             $data = $this->handleResponse($response, 'configure webhook');
 
+            WahaServiceLog::logWebhook('WebhookConfigured', [
+                'session_name' => $sessionName,
+                'webhook_url' => $webhookUrl,
+                'events' => $events
+            ], 'success');
+
             return [
                 'success' => true,
                 'data' => $data,
@@ -1678,6 +1711,12 @@ class WahaService extends BaseHttpClient
                 'events' => $events,
                 'error' => $e->getMessage()
             ]);
+
+            WahaServiceLog::logWebhook('WebhookConfigured', [
+                'session_name' => $sessionName,
+                'webhook_url' => $webhookUrl,
+                'events' => $events
+            ], 'error', $e->getMessage());
 
             return [
                 'success' => false,
@@ -1739,7 +1778,7 @@ class WahaService extends BaseHttpClient
             $defaultConfig = [
                 'webhook' => [
                     'url' => $webhookUrl,
-                    'events' => ['message', 'session.status'],
+                    'events' => ['message.any', 'session.status'],
                     'webhook_by_events' => false,
                 ],
                 'noweb' => [

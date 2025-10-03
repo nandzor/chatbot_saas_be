@@ -38,6 +38,7 @@ import {
 } from '@/components/ui';
 import { inboxService } from '@/services/InboxService';
 import { useApi } from '@/hooks/useApi';
+import { useConversation } from '@/hooks/useConversation';
 
 const ConversationDialog = ({
   session,
@@ -47,9 +48,7 @@ const ConversationDialog = ({
   onResolveConversation,
   onTransferSession
 }) => {
-  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [typingUsers] = useState([]);
   const [sending, setSending] = useState(false);
   const [activeTab, setActiveTab] = useState('messages');
   const [showTransferDialog, setShowTransferDialog] = useState(false);
@@ -59,24 +58,23 @@ const ConversationDialog = ({
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // Note: Real-time messaging now handled by EchoProvider in main.jsx
-
-  const { data: messagesData, loading: messagesLoading } = useApi(
-    () => session ? inboxService.getSessionMessages(session.id) : null,
-    [session?.id]
-  );
+  // Use the enhanced conversation hook with WebSocket integration
+  const {
+    messages,
+    loading: messagesLoading,
+    isWebSocketConnected,
+    isTyping,
+    typingUsers,
+    sendTypingIndicator,
+    sendMessageWithWebSocket,
+    markMessageAsReadWithWebSocket,
+    getWebSocketStatus
+  } = useConversation(session?.id);
 
   const { data: sessionAnalytics } = useApi(
     () => session ? inboxService.getSessionAnalytics(session.id) : null,
     [session?.id]
   );
-
-  useEffect(() => {
-    if (messagesData?.success) {
-      const loadedMessages = messagesData.data?.messages?.data || [];
-      setMessages(loadedMessages);
-    }
-  }, [messagesData]);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -95,9 +93,20 @@ const ConversationDialog = ({
 
     setSending(true);
     try {
-      const response = await inboxService.sendMessage(session.id, newMessage);
+      // Send typing indicator
+      sendTypingIndicator(true);
+
+      // Send message with WebSocket integration
+      const response = await sendMessageWithWebSocket({
+        content: newMessage,
+        type: 'text'
+      });
+
       if (response.success) {
         setNewMessage('');
+        // Stop typing indicator
+        sendTypingIndicator(false);
+
         // Refresh messages
         if (onSendMessage) {
           onSendMessage(session, newMessage);

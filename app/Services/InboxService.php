@@ -456,7 +456,7 @@ class InboxService
         ]);
 
         // Trigger MessageSent event for WAHA integration
-        event(new MessageSent($message, $session, $data));
+        event(new MessageSent($message, $session->id, $session->organization_id));
 
         // Update session activity (temporarily disabled due to hang issue)
         // $session->updateActivity();

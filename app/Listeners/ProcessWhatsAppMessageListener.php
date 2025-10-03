@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 
 class ProcessWhatsAppMessageListener implements ShouldQueue
 {
@@ -16,7 +17,7 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
     /**
      * The number of times the listener may be attempted.
      */
-    public int $tries = 3;
+    public int $tries = 1;
 
     /**
      * The maximum number of seconds the listener can run.
@@ -55,12 +56,13 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
             // ENHANCED DUPLICATE PREVENTION FOR JOB DISPATCH
             $messageId = $event->messageData['message_id'] ?? 'unknown';
             $from = $event->messageData['from'] ?? 'unknown';
-            $jobKey = "job_dispatched:{$event->organizationId}:{$messageId}";
-            $processingKey = "job_processing:{$event->organizationId}:{$messageId}";
+            $lockKey = "process_whatsapp_message:{$event->organizationId}:{$messageId}";
 
-            // Check if job already dispatched for this message (expire in 5 minutes)
-            if (Redis::exists($jobKey)) {
-                Log::info('Job already dispatched for this message, skipping duplicate dispatch', [
+            // Use atomic Cache lock to prevent race conditions
+            $lock = Cache::lock($lockKey, 60);
+
+            if (!$lock->get()) {
+                Log::info('Message processing lock could not be acquired, skipping duplicate', [
                     'organization_id' => $event->organizationId,
                     'message_id' => $messageId,
                     'from' => $from
@@ -68,38 +70,30 @@ class ProcessWhatsAppMessageListener implements ShouldQueue
                 return;
             }
 
-            // Check if job is currently being processed (prevent race conditions)
-            if (Redis::exists($processingKey)) {
-                Log::info('Job is currently being processed, skipping duplicate dispatch', [
+            try {
+                Log::info('Proceeding with message processing (lock acquired)', [
+                    'organization_id' => $event->organizationId,
+                    'message_id' => $messageId
+                ]);
+
+                // Dispatch job to process the message asynchronously
+                ProcessWhatsAppMessageJob::dispatch($event->messageData, $event->organizationId)
+                    ->onQueue('whatsapp-messages')
+                    ->delay(now()->addSeconds(1)); // Small delay to prevent overwhelming the system
+
+                Log::info('WhatsApp message processing job dispatched', [
                     'organization_id' => $event->organizationId,
                     'message_id' => $messageId,
-                    'from' => $from
                 ]);
-                return;
+
+                // Release lock after successful dispatch
+                $lock->release();
+
+            } catch (\Exception $e) {
+                // Release lock on error
+                $lock->release();
+                throw $e;
             }
-
-            // Mark job as being processed (expire in 2 minutes)
-            Redis::setex($processingKey, 120, 'processing');
-
-            // Mark job as dispatched (expire in 5 minutes)
-            Redis::setex($jobKey, 300, 'dispatched');
-
-            Log::info('Proceeding with message processing (job dispatch protection enabled)', [
-                'organization_id' => $event->organizationId,
-                'message_id' => $messageId
-            ]);
-
-            // Dispatch job to process the message asynchronously
-            ProcessWhatsAppMessageJob::dispatch($event->messageData, $event->organizationId)
-                ->onQueue('whatsapp-messages')
-                ->delay(now()->addSeconds(1)); // Small delay to prevent overwhelming the system
-
-            // Event processing completed successfully
-
-            Log::info('WhatsApp message processing job dispatched', [
-                'organization_id' => $event->organizationId,
-                'message_id' => $event->messageData['message_id'] ?? 'unknown',
-            ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to handle WhatsApp message received event', [

@@ -1,29 +1,35 @@
 /**
  * Laravel Echo Configuration
- * Configuration for Laravel Echo with Reverb WebSocket server
+ * Configuration for Laravel Echo with Redis Broadcasting
  */
 
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
-// Echo configuration
+// Echo configuration for Laravel Reverb
 const echoConfig = {
-  // Reverb WebSocket configuration
+  // Laravel Reverb configuration
   broadcaster: 'reverb',
   key: import.meta.env.VITE_REVERB_APP_KEY || 'p8z4t7y2m9x6c1v5',
-  wsHost: import.meta.env.VITE_REVERB_HOST || '100.81.120.54',
+  wsHost: import.meta.env.VITE_REVERB_HOST || 'localhost',
   wsPort: import.meta.env.VITE_REVERB_PORT || 8081,
   wssPort: import.meta.env.VITE_REVERB_PORT || 8081,
-  forceTLS: (import.meta.env.VITE_REVERB_SCHEME || 'http') === 'https',
-  encrypted: (import.meta.env.VITE_REVERB_SCHEME || 'http') === 'https',
-  enabledTransports: ['ws', 'wss'],
+  forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https',
+  encrypted: import.meta.env.VITE_REVERB_ENCRYPTED === 'true',
+  enabledTransports: ['ws'],
 
   // Connection settings
   cluster: import.meta.env.VITE_REVERB_APP_CLUSTER || 'mt1',
-  disableStats: true,
+  disableStats: false,
+  enableLogging: import.meta.env.VITE_REVERB_DEBUG === 'true',
+
+  // Performance optimizations
+  activityTimeout: 30000,
+  pongTimeout: 6000,
+  unavailableTimeout: 10000,
 
   // Authentication
-  authEndpoint: `${import.meta.env.VITE_BASE_URL || 'http://100.81.120.54:9000'}/broadcasting/auth`,
+  authEndpoint: `${import.meta.env.VITE_BASE_URL || 'http://localhost:9000'}/broadcasting/auth`,
   auth: {
     headers: {
       Authorization: `Bearer ${localStorage.getItem('jwt_token') || localStorage.getItem('sanctum_token') || ''}`,

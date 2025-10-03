@@ -26,7 +26,7 @@ export const EchoProvider = ({ children }) => {
         const orgId = user?.organization_id || user?.organization?.id;
         setOrganizationId(orgId);
       } catch (error) {
-        // console.error('Failed to get organization ID:', error);
+        console.error('Failed to get organization ID:', error);
         // Don't set organizationId if there's an error
       }
     };

@@ -353,7 +353,7 @@ class WahaSessionService
             foreach ($validatedData['webhooks'] as &$webhook) {
                 if (empty($webhook['url']) || $webhook['url'] === config('waha.webhooks.default_url', '')) {
                     $webhook['url'] = $n8nWebhookUrl;
-                    $webhook['events'] = $webhook['events'] ?? ['message', 'session.status'];
+                    $webhook['events'] = $webhook['events'] ?? ['message.any', 'session.status'];
                     $webhook['hmac'] = $webhook['hmac'] ?? null;
                     $webhook['retries'] = $webhook['retries'] ?? null;
                     $webhook['customHeaders'] = array_merge($webhook['customHeaders'] ?? [], [
@@ -368,7 +368,7 @@ class WahaSessionService
             $validatedData['webhooks'] = [
                 [
                     'url' => $webhookUrls['test'],
-                    'events' => ['message', 'session.status'],
+                    'events' => ['message.any', 'session.status'],
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => [
@@ -380,7 +380,7 @@ class WahaSessionService
                 ],
                 [
                     'url' => $webhookUrls['production'],
-                    'events' => ['message', 'session.status'],
+                    'events' => ['message.any', 'session.status'],
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => [
@@ -392,7 +392,7 @@ class WahaSessionService
                 ],
                 [
                     'url' => $webhookUrls['message_production'],
-                    'events' => ['session.status', 'message', 'message.any'],
+                    'events' => ['session.status', 'message.any'],
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => [
@@ -408,7 +408,7 @@ class WahaSessionService
 
         // Also add single webhook format for backwards compatibility
         $validatedData['webhook'] = $webhookUrls['production']; // Use production as primary
-        $validatedData['events'] = ['message', 'session.status'];
+        $validatedData['events'] = ['message.any', 'session.status'];
         $validatedData['webhookByEvents'] = true;
     }
 
@@ -510,21 +510,21 @@ class WahaSessionService
             $sessionData['config']['webhooks'] = [
                 [
                     'url' => $webhookUrls['test'],
-                    'events' => ['message', 'session.status'],
+                    'events' => ['message.any', 'session.status'],
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => null
                 ],
                 [
                     'url' => $webhookUrls['production'],
-                    'events' => ['message', 'session.status'],
+                    'events' => ['message.any', 'session.status'],
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => null
                 ],
                 [
                     'url' => $webhookUrls['message_production'],
-                    'events' => ['session.status', 'message', 'message.any'],
+                    'events' => ['session.status', 'message.any'],
                     'hmac' => null,
                     'retries' => null,
                     'customHeaders' => [
@@ -544,14 +544,14 @@ class WahaSessionService
                 $sessionData['config']['webhooks'] = [
                     [
                         'url' => $defaultUrl,
-                        'events' => ['message', 'session.status'],
+                        'events' => ['message.any', 'session.status'],
                         'hmac' => null,
                         'retries' => null,
                         'customHeaders' => null
                     ],
                     [
                         'url' => $appBaseUrl . '/api/waha/webhook/' . $sessionName . '/message',
-                        'events' => ['session.status', 'message', 'message.any'],
+                        'events' => ['session.status', 'message.any'],
                         'hmac' => null,
                         'retries' => null,
                         'customHeaders' => [
@@ -653,7 +653,7 @@ class WahaSessionService
                 $webhookConfig = [
                     'enabled' => true,
                     'url' => $wahaResult['session']['config']['webhooks'][0]['url'] ?? null,
-                    'events' => $wahaResult['session']['config']['webhooks'][0]['events'] ?? ['message', 'session.status'],
+                    'events' => $wahaResult['session']['config']['webhooks'][0]['events'] ?? ['message.any', 'session.status'],
                     'secret' => $wahaResult['session']['config']['webhooks'][0]['hmac'] ?? null,
                     'webhooks' => $wahaResult['session']['config']['webhooks'] // Store full webhooks array
                 ];

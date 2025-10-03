@@ -48,7 +48,7 @@ return [
         'secret' => env('WAHA_WEBHOOK_SECRET', ''),
         'url' => env('WAHA_WEBHOOK_URL', ''),
         'events' => [
-            'message',
+            'message.any',  // Use message.any instead of message to avoid duplicates
             'message.reaction',
             'message.ack',
             'message.revoked',

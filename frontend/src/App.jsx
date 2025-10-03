@@ -2,6 +2,7 @@ import { RouterProvider } from 'react-router-dom';
 import router from '@/routes/index.jsx';
 import '@/styles/globals.css';
 import { AuthDebugPanel } from '@/components/debug';
+import EchoProvider from '@/components/EchoProvider';
 
 const App = () => {
   // Check if Auth Debug Panel is enabled - only in development
@@ -17,11 +18,11 @@ const App = () => {
   };
 
   return (
-    <>
+    <EchoProvider>
       <RouterProvider router={router} />
       {/* Auth Debug Panel - Only shows when enabled */}
       {isAuthDebugPanelEnabled() && <AuthDebugPanel />}
-    </>
+    </EchoProvider>
   );
 };
 

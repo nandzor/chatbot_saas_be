@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\V1\AgentController;
 use App\Http\Controllers\Api\V1\AgentDashboardController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmailVerificationController;
+use App\Http\Controllers\WebSocketController;
 
 // Include additional route files
 require_once __DIR__ . '/n8n.php';
@@ -43,6 +44,13 @@ require_once __DIR__ . '/api/conversation.php';
 // WAHA Status routes
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/waha/status', [App\Http\Controllers\Api\V1\WahaStatusController::class, 'getStatus']);
+});
+
+// WebSocket Management routes
+Route::prefix('websocket')->group(function () {
+    Route::get('/health', [WebSocketController::class, 'health']);
+    Route::get('/config', [WebSocketController::class, 'config']);
+    Route::post("/test", [WebSocketController::class, "test"]);
 });
 
 /*

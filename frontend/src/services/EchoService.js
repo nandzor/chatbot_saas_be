@@ -67,11 +67,11 @@ class EchoService {
       await this.subscribeToOrganizationChannels();
 
       this.isConnected = true;
-      // console.log('✅ EchoService initialized successfully');
+      console.log('✅ EchoService initialized successfully');
 
       return true;
     } catch (error) {
-      // console.error('❌ EchoService initialization failed:', error);
+      console.error('❌ EchoService initialization failed:', error);
       this.isConnected = false;
       return false;
     }
@@ -86,28 +86,42 @@ class EchoService {
     const pusher = this.echo.connector.pusher;
 
     pusher.connection.bind('connected', () => {
-      // console.log('🔌 Echo connected');
+      console.log('🔌 Echo connected successfully');
       this.isConnected = true;
       this.reconnectAttempts = 0;
       this.onConnectionChange?.(true);
     });
 
     pusher.connection.bind('disconnected', () => {
-      // console.log('🔌 Echo disconnected');
+      console.log('🔌 Echo disconnected');
       this.isConnected = false;
       this.onConnectionChange?.(false);
       this.handleReconnection();
     });
 
     pusher.connection.bind('error', (error) => {
-      // console.error('❌ Echo connection error:', error);
+      console.error('❌ Echo connection error:', error);
       this.isConnected = false;
       this.onConnectionError?.(error);
+      this.handleReconnection();
     });
 
     pusher.connection.bind('state_change', (states) => {
-      // console.log('🔄 Echo state change:', states.previous, '->', states.current);
+      console.log('🔄 Echo state change:', states.previous, '->', states.current);
       this.onStateChange?.(states);
+    });
+
+    // Add additional error handling
+    pusher.connection.bind('unavailable', () => {
+      console.warn('⚠️ Echo connection unavailable');
+      this.isConnected = false;
+      this.onConnectionError?.('Connection unavailable');
+    });
+
+    pusher.connection.bind('failed', () => {
+      console.error('❌ Echo connection failed');
+      this.isConnected = false;
+      this.onConnectionError?.('Connection failed');
     });
   }
 
@@ -116,16 +130,18 @@ class EchoService {
    */
   handleReconnection() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      // console.error('❌ Max reconnection attempts reached');
+      console.error('❌ Max reconnection attempts reached');
+      this.onConnectionError?.('Max reconnection attempts reached');
       return;
     }
 
     this.reconnectAttempts++;
-    // console.log(`🔄 Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000); // Exponential backoff with max 30s
+    console.log(`🔄 Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`);
 
     this.reconnectTimeout = setTimeout(() => {
       this.reconnect();
-    }, this.reconnectDelay * this.reconnectAttempts);
+    }, delay);
   }
 
   /**

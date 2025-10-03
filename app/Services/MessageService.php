@@ -56,7 +56,7 @@ class MessageService
             $session->updateActivity();
 
             // Fire MessageSent event for WAHA integration
-            event(new \App\Events\MessageSent($message, $session, $data));
+            event(new \App\Events\MessageSent($message, $session->id, $session->organization_id));
 
             Log::info('Message sent successfully', [
                 'message_id' => $message->id,

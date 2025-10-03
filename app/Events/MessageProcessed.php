@@ -98,6 +98,6 @@ class MessageProcessed implements ShouldBroadcast
      */
     public function broadcastAs(): string
     {
-        return 'message.processed';
+        return 'MessageProcessed';
     }
 }

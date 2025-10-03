@@ -2,9 +2,9 @@
 
 namespace App\Events;
 
-use App\Models\Message;
-use App\Models\ChatSession;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -14,79 +14,84 @@ class MessageSent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public string $messageId = '';
-    public string $sessionId = '';
-    public array $data = [];
-
-    // Store message data directly to avoid serialization issues
-    public array $messageData = [];
-    public array $sessionData = [];
+    public $message;
+    public $sessionId;
+    public $organizationId;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(object $message, ChatSession $session, array $data = [])
+    public function __construct($message, $sessionId, $organizationId = null)
     {
-        $this->messageId = $message->id;
-        $this->sessionId = $session->id;
-        $this->data = $data;
-
-        // Store message data as array to avoid serialization issues
-        $this->messageData = [
-            'id' => $message->id,
-            'sender_type' => $message->sender_type,
-            'sender_name' => $message->sender_name,
-            'content' => $message->content,
-            'message_type' => $message->message_type,
-            'is_read' => $message->is_read,
-            'created_at' => $message->created_at,
-        ];
-
-        $this->sessionData = [
-            'id' => $session->id,
-            'organization_id' => $session->organization_id,
-            'session_data' => $session->session_data ?? [],
-            'metadata' => $session->metadata ?? [],
-        ];
+        $this->message = $message;
+        $this->sessionId = $sessionId;
+        $this->organizationId = $organizationId;
     }
 
     /**
      * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('conversation.' . $this->sessionId),
+        $channels = [
+            new PrivateChannel("conversation.{$this->getSessionId()}")
         ];
+
+        // Also broadcast to organization channel for real-time updates
+        if ($this->getOrganizationId()) {
+            $channels[] = new PrivateChannel("organization.{$this->getOrganizationId()}");
+        }
+
+        return $channels;
+    }
+
+    /**
+     * Get session ID as string
+     */
+    private function getSessionId(): string
+    {
+        if (is_string($this->sessionId)) {
+            return $this->sessionId;
+        } elseif (is_object($this->sessionId) && isset($this->sessionId->id)) {
+            return $this->sessionId->id;
+        } else {
+            return 'unknown';
+        }
+    }
+
+    /**
+     * Get organization ID as string
+     */
+    private function getOrganizationId(): ?string
+    {
+        if (is_string($this->organizationId)) {
+            return $this->organizationId;
+        } elseif (is_array($this->organizationId) && isset($this->organizationId['organization_id'])) {
+            return $this->organizationId['organization_id'];
+        } elseif (is_object($this->organizationId) && isset($this->organizationId->organization_id)) {
+            return $this->organizationId->organization_id;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * The event's broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MessageSent';
     }
 
     /**
      * Get the data to broadcast.
-     *
-     * @return array
      */
     public function broadcastWith(): array
     {
         return [
-            'event' => 'MessageSent',
-            'message_id' => $this->messageData['id'],
-            'session_id' => $this->sessionData['id'],
-            'sender_type' => $this->messageData['sender_type'],
-            'sender_name' => $this->messageData['sender_name'],
-            'message_content' => $this->messageData['content'],
-            'content' => $this->messageData['content'],
-            'text' => $this->messageData['content'],
-            'body' => $this->messageData['content'],
-            'message_type' => $this->messageData['message_type'],
-            'type' => $this->messageData['message_type'],
-            'is_read' => $this->messageData['is_read'],
-            'created_at' => $this->messageData['created_at'],
-            'sent_at' => $this->messageData['created_at'],
-            'timestamp' => $this->messageData['created_at'],
-            'from_me' => $this->messageData['sender_type'] === 'agent',
-            'metadata' => $this->data
+            'message' => $this->message,
+            'session_id' => $this->sessionId,
+            'timestamp' => now()->toISOString(),
         ];
     }
 }

@@ -89,7 +89,7 @@ export const useEcho = (options = {}) => {
         setConnectionError('Failed to initialize Echo service');
       }
     } catch (error) {
-      // console.error('Failed to initialize Echo:', error);
+      console.error('Failed to initialize Echo:', error);
       setConnectionError(error.message);
     }
   }, [organizationId]);

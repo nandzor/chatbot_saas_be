@@ -45,7 +45,7 @@ export const useAgentInbox = () => {
       organizationIdRef.current = orgId;
       return orgId;
     } catch (error) {
-      // console.error('Failed to get organization ID:', error);
+      console.error('Failed to get organization ID:', error);
       return null;
     }
   }, []);
@@ -58,7 +58,7 @@ export const useAgentInbox = () => {
   // Echo message handler
   const handleEchoMessage = useCallback((data) => {
     try {
-      // console.log('📨 Echo message received:', data);
+      console.log('📨 Echo message received:', data);
 
       // Validate data
       if (!data || typeof data !== 'object') {
@@ -181,7 +181,7 @@ export const useAgentInbox = () => {
   // Echo typing handler
   const handleEchoTyping = useCallback((data) => {
     try {
-      // console.log('⌨️ Echo typing indicator received:', data);
+      console.log('⌨️ Echo typing indicator received:', data);
 
       // Validate data
       if (!data || typeof data !== 'object') {
