@@ -456,7 +456,8 @@ const AgentInbox = () => {
               {/* Last Message Preview */}
               <div className="mb-1.5">
                 <p className="text-xs text-gray-600 line-clamp-1 leading-relaxed">
-                      {session.ai_summary || 'No messages yet'}
+                  {console.log(session.last_message)}
+                      {session.last_message?.body || 'No messages yet'}
                 </p>
               </div>
 
