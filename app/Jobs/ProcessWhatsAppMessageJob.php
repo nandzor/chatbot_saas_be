@@ -96,16 +96,20 @@ class ProcessWhatsAppMessageJob implements ShouldQueue
                     $message = \App\Models\Message::find($result['message_id']);
 
                     if ($session && $message) {
-                        event(new MessageProcessed($session, $message, [
+                        // Broadcast via BroadcastEventService for frontend realtime
+                        $broadcastService = app(\App\Services\BroadcastEventService::class);
+                        $broadcastResult = $broadcastService->broadcastMessageProcessed($session, $message, [
                             'processing_time' => $processingTime,
                             'response_sent' => $result['response_sent'] ?? false,
                             'bot_response' => $result['bot_response'] ?? null,
-                        ]));
+                            'source' => 'webhook',
+                        ]);
 
-                        Log::info('MessageProcessed event fired successfully', [
+                        Log::info('MessageProcessed broadcasted successfully', [
                             'session_id' => $result['session_id'],
                             'message_id' => $result['message_id'],
-                            'processing_time' => $processingTime
+                            'processing_time' => $processingTime,
+                            'broadcast_result' => $broadcastResult
                         ]);
                     } else {
                         Log::warning('Session or message not found for MessageProcessed event', [
