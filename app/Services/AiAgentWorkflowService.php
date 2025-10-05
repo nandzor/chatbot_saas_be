@@ -521,8 +521,26 @@ class AiAgentWorkflowService extends BaseService
             $workflowId = $workflowMetadata['workflow_id'];
 
             // Get workflow statistics
-            $stats = $this->n8nService->getWorkflowStats($workflowId);
             $executions = $this->n8nService->getWorkflowExecutions($workflowId, 50);
+            $totalExecutions = $executions['meta']['total'] ?? 0;
+
+            $successful = 0;
+            $failed = 0;
+
+            foreach ($executions['data'] ?? [] as $execution) {
+                if ($execution['status'] === 'success') {
+                    $successful++;
+                } else {
+                    $failed++;
+                }
+            }
+
+            $stats = [
+                'total_executions' => $totalExecutions,
+                'successful' => $successful,
+                'failed' => $failed,
+                'success_rate' => $totalExecutions > 0 ? round(($successful / $totalExecutions) * 100, 2) : 0,
+            ];
 
             return [
                 'success' => true,

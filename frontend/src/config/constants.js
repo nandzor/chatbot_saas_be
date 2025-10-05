@@ -31,6 +31,7 @@ export const PERMISSIONS = {
   VIEW_ANALYTICS: 'view_analytics',
   MANAGE_BILLING: 'manage_billing',
   MANAGE_N8N_AUTOMATIONS: 'manage_n8n_automations',
+  MANAGE_AUTOMATIONS: 'automations.manage',
   MANAGE_KNOWLEDGE_BASE: 'manage_knowledge_base',
 
   // Agent Permissions

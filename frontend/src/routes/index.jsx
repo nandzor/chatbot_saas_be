@@ -16,6 +16,9 @@ import ForgotPassword from '@/pages/auth/ForgotPassword';
 import ResetPassword from '@/pages/auth/ResetPassword';
 import SuperAdminLogin from '@/pages/auth/SuperAdminLogin';
 
+// OAuth Pages
+import OAuthCallback from '@/pages/oauth/OAuthCallback';
+
 // Dashboard Pages
 import Dashboard from '@/pages/dashboard/Dashboard';
 import OrganizationDashboard from '@/features/dashboard/organization/OrganizationDashboard';
@@ -28,6 +31,7 @@ import ProfileSettings from '@/features/shared/ProfileSettings';
 import WhatsAppIntegration from '@/pages/WhatsAppIntegration';
 import UserList from '@/pages/org-user-management/UserList';
 import BotPersonalityList from '@/pages/bot-personalities/BotPersonalityList';
+import GoogleDriveIntegration from '@/pages/google-drive/GoogleDriveIntegration';
 
 // Role Management Pages
 import RoleList from '@/pages/roles/RoleList';
@@ -114,6 +118,12 @@ export const router = createBrowserRouter([
         element: <SuperAdminLogin />,
       },
 
+      // OAuth Callback Route
+      {
+        path: '/oauth/callback',
+        element: <OAuthCallback />,
+      },
+
       // Dashboard Routes (Organization Admin/Manager)
       {
         path: '/dashboard',
@@ -182,6 +192,14 @@ export const router = createBrowserRouter([
             element: (
               <RoleBasedRoute requiredPermission="users.view">
                 <UserList />
+              </RoleBasedRoute>
+            )
+          },
+          {
+            path: 'google-drive',
+            element: (
+              <RoleBasedRoute requiredPermission="automations.manage">
+                <GoogleDriveIntegration />
               </RoleBasedRoute>
             )
           },

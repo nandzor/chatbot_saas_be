@@ -49,8 +49,10 @@ class SendMessageToWahaListener implements ShouldQueue
             // Generate unique processing key to prevent duplicate processing
             $processingKey = 'waha_processing_' . $messageData['id'];
 
-            // Use Redis-based lock instead of file-based lock for better reliability
-            $lockAcquired = \Illuminate\Support\Facades\Redis::set($processingKey, 'processing', 'EX', 60, 'NX');
+            // Use atomic cache operation to prevent race conditions
+            $lockAcquired = Cache::lock($processingKey, 60)->get(function () use ($messageData, $sessionData, $processingKey) {
+                return $this->processMessage($messageData, $sessionData, $processingKey);
+            });
 
             if (!$lockAcquired) {
                 Log::info('Message processing lock could not be acquired, skipping duplicate', [
@@ -59,18 +61,6 @@ class SendMessageToWahaListener implements ShouldQueue
                     'processing_key' => $processingKey
                 ]);
                 return;
-            }
-
-            try {
-                $this->processMessage($messageData, $sessionData, $processingKey);
-
-                // Release lock after successful processing
-                \Illuminate\Support\Facades\Redis::del($processingKey);
-
-            } catch (\Exception $e) {
-                // Release lock on error
-                \Illuminate\Support\Facades\Redis::del($processingKey);
-                throw $e;
             }
 
         } catch (\Exception $e) {

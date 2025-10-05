@@ -34,16 +34,21 @@ import {
   Database,
   Plus,
   Settings,
+  HardDrive,
+  FileText,
+  Table,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@/utils/errorHandler';
 import { sanitizeInput } from '@/utils/securityUtils';
 import BotPersonalityService from '@/services/BotPersonalityService';
+import GoogleDriveFileSelector from '@/components/bot-personalities/GoogleDriveFileSelector';
 
 const botPersonalityService = new BotPersonalityService();
 
 const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }) => {
   const [loading, setLoading] = useState(false);
+  const [showGoogleDriveSelector, setShowGoogleDriveSelector] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
@@ -63,7 +68,9 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
     status: 'active',
     // Assignment fields
     waha_session_id: null,
-    knowledge_base_item_id: null
+    knowledge_base_item_id: null,
+    // Google Drive fields
+    google_drive_files: [],
   });
 
   // Related data states
@@ -141,7 +148,8 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
         learning_enabled: true,
         status: 'active',
         waha_session_id: null,
-        knowledge_base_item_id: null
+        knowledge_base_item_id: null,
+        google_drive_files: [],
       });
       setErrors({});
       setWahaSessionSearch('');
@@ -210,7 +218,22 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // Handle form submission
+  // Handle Google Drive file selection
+  const handleGoogleDriveFileSelected = useCallback((files) => {
+    setFormData(prev => ({
+      ...prev,
+      google_drive_files: files
+    }));
+    setShowGoogleDriveSelector(false);
+  }, []);
+
+  // Handle Google Drive file removal
+  const handleGoogleDriveFileRemove = useCallback((index) => {
+    setFormData(prev => ({
+      ...prev,
+      google_drive_files: prev.google_drive_files.filter((_, i) => i !== index)
+    }));
+  }, []);
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -669,6 +692,61 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
                 </div>
               </div>
 
+              {/* Google Drive Integration */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-blue-600" />
+                  Google Drive Integration
+                  <span className="text-xs text-gray-500 font-normal">(Optional)</span>
+                </Label>
+                <div className="space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowGoogleDriveSelector(true)}
+                    className="w-full justify-start"
+                  >
+                    <HardDrive className="w-4 h-4 mr-2" />
+                    {formData.google_drive_files?.length > 0
+                      ? `Change Google Drive Files (${formData.google_drive_files.length})`
+                      : 'Select Google Drive Files'}
+                  </Button>
+
+                  {formData.google_drive_files?.length > 0 && (
+                    <div className="space-y-2">
+                      {formData.google_drive_files.map((file, index) => (
+                        <div key={file.id} className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {file.type === 'sheets' ? (
+                              <Table className="w-4 h-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-blue-900 truncate">
+                                {file.name}
+                              </p>
+                              <p className="text-xs text-blue-600">
+                                {file.type === 'sheets' ? 'Google Sheets' : 'Google Docs'}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleGoogleDriveFileRemove(index)}
+                            className="h-8 w-8 p-0 hover:bg-blue-100"
+                          >
+                            <X className="w-4 h-4 text-blue-600" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
             </CardContent>
           </Card>
 
@@ -736,6 +814,158 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
             </CardContent>
           </Card>
 
+          {/* RAG Integration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Database className="w-5 h-5 text-purple-600" />
+                Knowledge Sources (RAG)
+              </CardTitle>
+              <CardDescription>
+                Connect Google Drive files to enhance bot responses with real-time data
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* File Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Select Files</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors">
+                  {formData.rag_files && formData.rag_files.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-center">
+                        <CheckCircle className="w-8 h-8 text-green-500" />
+                      </div>
+                      <div className="space-y-2">
+                        {formData.rag_files.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                            <div className="flex items-center">
+                              {file.mimeType?.includes('spreadsheet') ? (
+                                <Table className="w-5 h-5 text-green-600 mr-3" />
+                              ) : file.mimeType?.includes('document') ? (
+                                <FileText className="w-5 h-5 text-blue-600 mr-3" />
+                              ) : (
+                                <FileText className="w-5 h-5 text-gray-600 mr-3" />
+                              )}
+                              <div>
+                                <p className="font-medium">{file.name}</p>
+                                <p className="text-sm text-gray-500">
+                                  {file.mimeType?.includes('spreadsheet') ? 'Google Sheets' :
+                                   file.mimeType?.includes('document') ? 'Google Docs' : 'PDF'}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const newFiles = formData.rag_files.filter((_, i) => i !== index);
+                                handleInputChange('rag_files', newFiles);
+                              }}
+                            >
+                              <X className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowGoogleDriveSelector(true)}
+                        className="w-full"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add More Files
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-center">
+                        <Database className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-medium text-gray-900">No files selected</p>
+                        <p className="text-sm text-gray-500">
+                          Connect Google Drive files to give your bot access to real-time data
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowGoogleDriveSelector(true)}
+                        className="w-full"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Select Files from Google Drive
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* RAG Settings */}
+              {formData.rag_files && formData.rag_files.length > 0 && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">RAG Settings</Label>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <Label className="text-xs text-gray-500">Chunk Size</Label>
+                      <Input
+                        type="number"
+                        value={formData.rag_settings?.chunkSize || 1000}
+                        onChange={(e) => handleInputChange('rag_settings', {
+                          ...formData.rag_settings,
+                          chunkSize: parseInt(e.target.value)
+                        })}
+                        className="h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">Similarity Threshold</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="1"
+                        value={formData.rag_settings?.similarityThreshold || 0.7}
+                        onChange={(e) => handleInputChange('rag_settings', {
+                          ...formData.rag_settings,
+                          similarityThreshold: parseFloat(e.target.value)
+                        })}
+                        className="h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">Max Results</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={formData.rag_settings?.maxResults || 5}
+                        onChange={(e) => handleInputChange('rag_settings', {
+                          ...formData.rag_settings,
+                          maxResults: parseInt(e.target.value)
+                        })}
+                        className="h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">Embedding Model</Label>
+                      <Select
+                        value={formData.rag_settings?.embeddingModel || 'text-embedding-ada-002'}
+                        onValueChange={(value) => handleInputChange('rag_settings', {
+                          ...formData.rag_settings,
+                          embeddingModel: value
+                        })}
+                      >
+                        <SelectItem value="text-embedding-ada-002">text-embedding-ada-002</SelectItem>
+                        <SelectItem value="text-embedding-3-small">text-embedding-3-small</SelectItem>
+                        <SelectItem value="text-embedding-3-large">text-embedding-3-large</SelectItem>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <DialogFooter>
             <Button
               type="button"
@@ -760,6 +990,14 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
             </Button>
           </DialogFooter>
         </form>
+
+        {/* Google Drive File Selector */}
+        <GoogleDriveFileSelector
+          open={showGoogleDriveSelector}
+          onOpenChange={setShowGoogleDriveSelector}
+          onFileSelected={handleGoogleDriveFileSelected}
+          selectedFiles={formData.google_drive_files || []}
+        />
       </DialogContent>
     </Dialog>
   );

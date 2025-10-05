@@ -65,6 +65,19 @@ class UpdateBotPersonalityRequest extends BaseRequest
             'n8n_workflow_id' => ['nullable', 'uuid', 'exists:n8n_workflows,id'],
             'waha_session_id' => ['nullable', 'uuid', 'exists:waha_sessions,id'],
             'knowledge_base_item_id' => ['nullable', 'uuid', 'exists:knowledge_base_items,id'],
+            // Google Drive integration fields
+            'google_drive_files' => ['nullable', 'array'],
+            'google_drive_files.*.id' => ['nullable', 'string'],
+            'google_drive_files.*.name' => ['nullable', 'string'],
+            'google_drive_files.*.mimeType' => ['nullable', 'string'],
+            'google_drive_files.*.webViewLink' => ['nullable', 'string'],
+            'google_drive_files.*.createdTime' => ['nullable', 'string'],
+            'google_drive_files.*.modifiedTime' => ['nullable', 'string'],
+            'google_drive_files.*.size' => ['nullable', 'string'],
+            'google_drive_files.*.type' => ['nullable', 'string'],
+            // RAG workflow fields
+            'rag_files' => ['nullable', 'array'],
+            'rag_settings' => ['nullable', 'array'],
         ];
     }
 

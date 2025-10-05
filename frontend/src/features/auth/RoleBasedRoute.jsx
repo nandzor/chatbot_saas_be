@@ -81,7 +81,7 @@ const RoleBasedRoute = ({
     }
 
     // Fallback: Org admin can access org_admin specific routes
-    if (user?.role === 'org_admin' && (requiredPermission === 'manage_settings' || requiredPermission === 'users.view')) {
+    if (user?.role === 'org_admin' && (requiredPermission === 'manage_settings' || requiredPermission === 'users.view' || requiredPermission === 'automations.manage')) {
       return children;
     }
 
@@ -97,6 +97,13 @@ const RoleBasedRoute = ({
 
     // Additional fallback: Check role-based permissions
     const orgAdminRoles = ['org_admin', 'organization_admin', 'admin'];
+    const customerRoles = ['customer', 'user'];
+
+    // Allow customers to access automations.manage for Google Drive integration
+    if (customerRoles.includes(user?.role) && requiredPermission === 'automations.manage') {
+      return children;
+    }
+
     if (orgAdminRoles.includes(user?.role)) {
       const orgAdminPermissions = [
         'manage_organization',
@@ -106,6 +113,7 @@ const RoleBasedRoute = ({
         'view_analytics',
         'manage_billing',
         'manage_n8n_automations',
+        'automations.manage',
         'manage_knowledge_base',
         'manage_settings',
         'roles.view',

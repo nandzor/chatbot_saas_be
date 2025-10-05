@@ -25,7 +25,7 @@ class MessageSent implements ShouldBroadcast
     /**
      * Create a new event instance.
      */
-    public function __construct(object $message, ChatSession $session, array $data = [])
+    public function __construct(Message $message, ChatSession $session, array $data = [])
     {
         $this->messageId = $message->id;
         $this->sessionId = $session->id;
@@ -45,8 +45,6 @@ class MessageSent implements ShouldBroadcast
         $this->sessionData = [
             'id' => $session->id,
             'organization_id' => $session->organization_id,
-            'session_data' => $session->session_data ?? [],
-            'metadata' => $session->metadata ?? [],
         ];
     }
 

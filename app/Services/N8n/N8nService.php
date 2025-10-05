@@ -809,61 +809,6 @@ class N8nService extends BaseHttpClient
     }
 
     /**
-     * Get workflows with database integration
-     */
-    public function getWorkflowsWithDatabase(): array
-    {
-        // Get workflows from N8N
-        $n8nWorkflows = $this->getWorkflows();
-
-        $response = [
-            'n8n_workflows' => $n8nWorkflows,
-            'database_workflows' => [],
-            'total_n8n_workflows' => count($n8nWorkflows['data'] ?? []),
-            'total_database_workflows' => 0,
-            'database_status' => 'failed',
-            'database_error' => null
-        ];
-
-        // Try to get workflows from database
-        try {
-            $dbWorkflows = \App\Models\N8nWorkflow::latest()->get();
-            $response['database_workflows'] = $dbWorkflows->map(fn($workflow) => $workflow->summary);
-            $response['total_database_workflows'] = $dbWorkflows->count();
-            $response['database_status'] = 'success';
-        } catch (Exception $dbException) {
-            $response['database_status'] = 'failed';
-            $response['database_error'] = $dbException->getMessage();
-            Log::warning('Failed to retrieve workflows from database', [
-                'error' => $dbException->getMessage()
-            ]);
-        }
-
-        return $response;
-    }
-
-    /**
-     * Delete workflow with database cleanup
-     */
-    public function deleteWorkflowWithDatabase(string $workflowId): array
-    {
-        // Delete workflow from N8N
-        $result = $this->deleteWorkflow($workflowId);
-
-        // Also delete from database
-        $dbWorkflow = \App\Models\N8nWorkflow::where('workflow_id', $workflowId)->first();
-        if ($dbWorkflow) {
-            $dbWorkflow->delete();
-            Log::info('Workflow deleted from database', [
-                'workflow_id' => $workflowId,
-                'database_id' => $dbWorkflow->id
-            ]);
-        }
-
-        return $result;
-    }
-
-    /**
      * Update system message in workflow
      */
     public function updateSystemMessage(string $workflowId, string $systemMessage, ?string $nodeId = null): array
@@ -938,53 +883,6 @@ class N8nService extends BaseHttpClient
     }
 
     /**
-     * Extract webhook URLs from workflow data
-     */
-    public function extractWebhookUrls(array $workflowData, string $workflowId, string $workflowName, bool $isActive): array
-    {
-        $webhookUrls = [];
-        $nodes = $workflowData['nodes'] ?? [];
-
-        foreach ($nodes as $node) {
-            if (isset($node['webhookId']) && !empty($node['webhookId'])) {
-                $webhookId = $node['webhookId'];
-                $nodeName = $node['name'] ?? 'Unknown Node';
-                $nodeType = $node['type'] ?? 'Unknown Type';
-
-                // Get N8N base URL from config
-                $n8nBaseUrl = config('n8n.base_url', 'http://localhost:5678');
-
-                // Generate webhook URLs with different base URLs
-                $webhookUrls[] = [
-                    'node_id' => $node['id'],
-                    'node_name' => $nodeName,
-                    'node_type' => $nodeType,
-                    'webhook_id' => $webhookId,
-                    'urls' => [
-                        'test' => [
-                            'localhost' => "{$n8nBaseUrl}/webhook-test/{$webhookId}/waha",
-                            'production_ip' => "http://100.81.120.54:5678/webhook-test/{$webhookId}/waha"
-                        ],
-                        'production' => [
-                            'localhost' => "{$n8nBaseUrl}/webhook/{$webhookId}/waha",
-                            'production_ip' => "http://100.81.120.54:5678/webhook/{$webhookId}/waha"
-                        ]
-                    ],
-                    'is_active' => $isActive
-                ];
-            }
-        }
-
-        return [
-            'workflow_id' => $workflowId,
-            'workflow_name' => $workflowName,
-            'workflow_status' => $isActive ? 'active' : 'inactive',
-            'webhook_urls' => $webhookUrls,
-            'total_webhooks' => count($webhookUrls)
-        ];
-    }
-
-    /**
      * Clean workflow payload for N8N API
      */
     public function cleanWorkflowPayloadForN8n(array $workflowData): array
@@ -1035,84 +933,6 @@ class N8nService extends BaseHttpClient
 
         if (isset($workflowData['connections']) && !is_array($workflowData['connections']) && !is_object($workflowData['connections'])) {
             throw N8nException::invalidWorkflowData('connections must be an array or object');
-        }
-    }
-
-    /**
-     * Check if workflow is active
-     */
-    public function isWorkflowActive(string $workflowId): bool
-    {
-        try {
-            $workflow = $this->getWorkflow($workflowId);
-            return isset($workflow['active']) && $workflow['active'] === true;
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * Get workflow execution statistics
-     */
-    public function getWorkflowStats(string $workflowId): array
-    {
-        try {
-            $executions = $this->getWorkflowExecutions($workflowId, 100, 1);
-            $totalExecutions = $executions['meta']['total'] ?? 0;
-
-            $successful = 0;
-            $failed = 0;
-
-            foreach ($executions['data'] ?? [] as $execution) {
-                if ($execution['status'] === 'success') {
-                    $successful++;
-                } else {
-                    $failed++;
-                }
-            }
-
-            return [
-                'total_executions' => $totalExecutions,
-                'successful' => $successful,
-                'failed' => $failed,
-                'success_rate' => $totalExecutions > 0 ? round(($successful / $totalExecutions) * 100, 2) : 0,
-            ];
-        } catch (Exception $e) {
-            return [
-                'total_executions' => 0,
-                'successful' => 0,
-                'failed' => 0,
-                'success_rate' => 0,
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Test webhook connectivity
-     */
-    public function testWebhookConnectivity(string $workflowId, string $nodeId): array
-    {
-        try {
-            $testData = [
-                'test' => true,
-                'timestamp' => now()->toISOString(),
-                'source' => 'connectivity_test',
-            ];
-
-            $result = $this->sendWebhook($workflowId, $nodeId, $testData);
-
-            return [
-                'success' => true,
-                'message' => 'Webhook connectivity test successful',
-                'execution_id' => $result['executionId'] ?? null,
-            ];
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Webhook connectivity test failed: ' . $e->getMessage(),
-                'error' => $e->getMessage(),
-            ];
         }
     }
 
@@ -1305,6 +1125,1272 @@ class N8nService extends BaseHttpClient
                 return "N8N server unavailable. Please try again later. Operation: {$operation}";
             default:
                 return "N8N API error ({$statusCode}): {$message}. Operation: {$operation}";
+        }
+    }
+
+    /**
+     * Update workflow staticData with Google Drive files
+     */
+    public function updateWorkflowStaticData(string $workflowId, array $staticData): array
+    {
+        try {
+            Log::info('Updating workflow staticData', [
+                'workflow_id' => $workflowId,
+                'static_data_keys' => array_keys($staticData)
+            ]);
+
+            // Get current workflow data
+            $workflow = $this->getWorkflow($workflowId);
+            if (empty($workflow) || !isset($workflow['id'])) {
+                return [
+                    'success' => false,
+                    'error' => 'Workflow not found or invalid response'
+                ];
+            }
+
+            $currentData = $workflow;
+            $currentStaticData = $currentData['staticData'] ?? [];
+
+            // Merge new staticData with existing
+            $mergedStaticData = array_merge($currentStaticData, $staticData);
+
+            // Fix nodes parameters structure
+            $fixedNodes = [];
+            foreach ($currentData['nodes'] as $node) {
+                $fixedNode = $node;
+                // Ensure parameters is object, not array
+                if (isset($node['parameters']) && is_array($node['parameters'])) {
+                    $fixedNode['parameters'] = (object)$node['parameters'];
+                }
+                $fixedNodes[] = $fixedNode;
+            }
+
+            // Update workflow with merged staticData
+            $updateData = [
+                'name' => $currentData['name'],
+                'nodes' => $fixedNodes,
+                'connections' => empty($currentData['connections']) ? (object)[] : $currentData['connections'],
+                'staticData' => $mergedStaticData,
+                'settings' => empty($currentData['settings']) ? (object)[] : $currentData['settings'],
+            ];
+
+            $response = $this->put("/api/v1/workflows/{$workflowId}", $updateData);
+
+            if ($response->successful()) {
+                Log::info('Workflow staticData updated successfully', [
+                    'workflow_id' => $workflowId,
+                    'updated_keys' => array_keys($staticData)
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Workflow staticData updated successfully',
+                    'data' => $response->json()
+                ];
+            } else {
+                Log::error('Failed to update workflow staticData', [
+                    'workflow_id' => $workflowId,
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Failed to update workflow: ' . $response->body()
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception updating workflow staticData', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception updating workflow staticData: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get workflow staticData
+     */
+    public function getWorkflowStaticData(string $workflowId): array
+    {
+        try {
+            $workflow = $this->getWorkflow($workflowId);
+            if (empty($workflow) || !isset($workflow['id'])) {
+                return [
+                    'success' => false,
+                    'error' => 'Workflow not found or invalid response'
+                ];
+            }
+
+            $staticData = $workflow['staticData'] ?? [];
+
+            return [
+                'success' => true,
+                'data' => $staticData
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Exception getting workflow staticData', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception getting workflow staticData: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Enhance workflow with Google Drive integration tools
+     */
+    public function enhanceWorkflowWithGoogleDrive(string $workflowId, array $googleDriveData): array
+    {
+        try {
+            Log::info('Enhancing workflow with Google Drive integration', [
+                'workflow_id' => $workflowId,
+                'files_count' => count($googleDriveData['files'] ?? [])
+            ]);
+
+            // Get current workflow data
+            $workflow = $this->getWorkflow($workflowId);
+            if (!$workflow['success']) {
+                return [
+                    'success' => false,
+                    'error' => 'Workflow not found: ' . $workflow['error']
+                ];
+            }
+
+            $currentData = $workflow['data'];
+            $nodes = $currentData['nodes'] ?? [];
+            $connections = $currentData['connections'] ?? [];
+
+            // Add Google Drive tools if files are provided
+            if (!empty($googleDriveData['files'])) {
+                $googleDriveTools = $this->createGoogleDriveTools($googleDriveData);
+
+                // Add new nodes
+                foreach ($googleDriveTools['nodes'] as $nodeId => $node) {
+                    $nodes[$nodeId] = $node;
+                }
+
+                // Add new connections
+                foreach ($googleDriveTools['connections'] as $sourceNode => $targetConnections) {
+                    if (!isset($connections[$sourceNode])) {
+                        $connections[$sourceNode] = ['main' => []];
+                    }
+                    foreach ($targetConnections as $connection) {
+                        $connections[$sourceNode]['main'][0][] = $connection;
+                    }
+                }
+            }
+
+            // Update staticData with Google Drive data
+            $currentStaticData = $currentData['staticData'] ?? [];
+            $currentStaticData['googleDrive'] = $googleDriveData;
+
+            // Update workflow
+            $updateData = [
+                'name' => $currentData['name'],
+                'nodes' => $nodes,
+                'connections' => empty($connections) ? (object)[] : $connections,
+                'staticData' => $currentStaticData,
+                'settings' => empty($currentData['settings']) ? (object)[] : $currentData['settings'],
+            ];
+
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $updateData);
+
+            if ($response->successful()) {
+                Log::info('Workflow enhanced with Google Drive integration', [
+                    'workflow_id' => $workflowId,
+                    'tools_added' => count($googleDriveTools['nodes'] ?? [])
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Workflow enhanced with Google Drive integration',
+                    'data' => $response->json()
+                ];
+            } else {
+                Log::error('Failed to enhance workflow with Google Drive', [
+                    'workflow_id' => $workflowId,
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Failed to enhance workflow: ' . $response->body()
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception enhancing workflow with Google Drive', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Create Google Drive tools for n8n workflow
+     */
+    private function createGoogleDriveTools(array $googleDriveData): array
+    {
+        $nodes = [];
+        $connections = [];
+
+        // Start Typing Node
+        $startTypingId = 'start-typing-' . uniqid();
+        $nodes[$startTypingId] = [
+            'parameters' => [
+                'resource' => 'Chatting',
+                'operation' => 'Start Typing',
+                'requestOptions' => []
+            ],
+            'type' => '@devlikeapro/n8n-nodes-waha.WAHA',
+            'typeVersion' => 202502,
+            'position' => [288, 48],
+            'id' => $startTypingId,
+            'name' => 'Start Typing',
+            'credentials' => [
+                'wahaApi' => [
+                    'id' => '{{waha_credential_id}}',
+                    'name' => 'WAHA account'
+                ]
+            ]
+        ];
+
+        // Stop Typing Node
+        $stopTypingId = 'stop-typing-' . uniqid();
+        $nodes[$stopTypingId] = [
+            'parameters' => [
+                'resource' => 'Chatting',
+                'operation' => 'Stop Typing',
+                'session' => '={{ $(\'WAHA Trigger\').item.json.session }}',
+                'chatId' => '={{ $(\'WAHA Trigger\').item.json.payload.from }}',
+                'requestOptions' => []
+            ],
+            'type' => '@devlikeapro/n8n-nodes-waha.WAHA',
+            'typeVersion' => 202502,
+            'position' => [768, 48],
+            'id' => $stopTypingId,
+            'name' => 'Stop Typing',
+            'credentials' => [
+                'wahaApi' => [
+                    'id' => '{{waha_credential_id}}',
+                    'name' => 'WAHA account'
+                ]
+            ]
+        ];
+
+        // Google Sheets Tool
+        $sheetsToolId = 'google-sheets-tool-' . uniqid();
+        $nodes[$sheetsToolId] = [
+            'parameters' => [
+                'authentication' => 'oAuth2',
+                'documentId' => '={{ $json.googleDrive.files[0].file_id }}',
+                'sheetName' => 'Sheet1',
+                'options' => []
+            ],
+            'type' => 'n8n-nodes-base.googleSheetsTool',
+            'typeVersion' => 4.6,
+            'position' => [1072, 320],
+            'id' => $sheetsToolId,
+            'name' => 'Google Sheets Tool',
+            'credentials' => [
+                'googleApi' => [
+                    'id' => '{{google_drive_credential_id}}',
+                    'name' => 'Google Drive OAuth account'
+                ]
+            ]
+        ];
+
+        // Google Drive API Tool
+        $driveToolId = 'google-drive-tool-' . uniqid();
+        $nodes[$driveToolId] = [
+            'parameters' => [
+                'toolDescription' => 'Access Google Drive files and sheets data',
+                'method' => 'GET',
+                'url' => 'https://www.googleapis.com/drive/v3/files/{{ $json.googleDrive.files[0].file_id }}',
+                'sendHeaders' => true,
+                'headerParameters' => [
+                    'parameters' => [
+                        [
+                            'name' => 'Authorization',
+                            'value' => 'Bearer {{ $json.googleDrive.credentials.access_token }}'
+                        ],
+                        [
+                            'name' => 'Accept',
+                            'value' => 'application/json'
+                        ]
+                    ]
+                ],
+                'options' => []
+            ],
+            'type' => 'n8n-nodes-base.httpRequestTool',
+            'typeVersion' => 4.2,
+            'position' => [1232, 320],
+            'id' => $driveToolId,
+            'name' => 'Google Drive Tool'
+        ];
+
+        // Sheets Reader Tool
+        $sheetsReaderId = 'sheets-reader-tool-' . uniqid();
+        $nodes[$sheetsReaderId] = [
+            'parameters' => [
+                'toolDescription' => 'Read Google Sheets data',
+                'method' => 'GET',
+                'url' => 'https://sheets.googleapis.com/v4/spreadsheets/{{ $json.googleDrive.files[0].file_id }}/values/Sheet1',
+                'sendHeaders' => true,
+                'headerParameters' => [
+                    'parameters' => [
+                        [
+                            'name' => 'Authorization',
+                            'value' => 'Bearer {{ $json.googleDrive.credentials.access_token }}'
+                        ],
+                        [
+                            'name' => 'Accept',
+                            'value' => 'application/json'
+                        ]
+                    ]
+                ],
+                'options' => []
+            ],
+            'type' => 'n8n-nodes-base.httpRequestTool',
+            'typeVersion' => 4.2,
+            'position' => [1392, 320],
+            'id' => $sheetsReaderId,
+            'name' => 'Sheets Reader Tool'
+        ];
+
+        // Connect tools to AI Agent
+        $aiAgentId = 'ai-agent'; // Assuming AI Agent exists
+
+        // Typing indicator connections
+        $connections[$startTypingId] = [
+            [
+                [
+                    'node' => $aiAgentId,
+                    'type' => 'main',
+                    'index' => 0
+                ]
+            ]
+        ];
+
+        $connections[$stopTypingId] = [
+            [
+                [
+                    'node' => 'send-message', // Assuming send message node exists
+                    'type' => 'main',
+                    'index' => 0
+                ]
+            ]
+        ];
+
+        // Google Drive tools connections
+        $connections[$sheetsToolId] = [
+            [
+                [
+                    'node' => $aiAgentId,
+                    'type' => 'ai_tool',
+                    'index' => 0
+                ]
+            ]
+        ];
+        $connections[$driveToolId] = [
+            [
+                [
+                    'node' => $aiAgentId,
+                    'type' => 'ai_tool',
+                    'index' => 0
+                ]
+            ]
+        ];
+        $connections[$sheetsReaderId] = [
+            [
+                [
+                    'node' => $aiAgentId,
+                    'type' => 'ai_tool',
+                    'index' => 0
+                ]
+            ]
+        ];
+
+        return [
+            'nodes' => $nodes,
+            'connections' => $connections
+        ];
+    }
+
+    /**
+     * Enhance existing workflow with RAG capabilities for Google Drive files
+     */
+    public function enhanceWorkflowWithRag(string $workflowId, array $googleDriveData): array
+    {
+        try {
+            Log::info('Enhancing workflow with RAG capabilities', [
+                'workflow_id' => $workflowId,
+                'files_count' => count($googleDriveData['files'] ?? [])
+            ]);
+
+            // Get current workflow
+            $workflow = $this->getWorkflow($workflowId);
+            if (empty($workflow) || !isset($workflow['id'])) {
+                return [
+                    'success' => false,
+                    'error' => 'Workflow not found or invalid response'
+                ];
+            }
+
+            $currentData = $workflow;
+            $nodes = $currentData['nodes'] ?? [];
+            $connections = $currentData['connections'] ?? [];
+
+            // Add RAG nodes for each Google Drive file
+            $ragNodes = $this->createRagNodesForGoogleDrive($googleDriveData);
+
+            // Merge existing nodes with new RAG nodes
+            $nodes = array_merge($nodes, $ragNodes['nodes']);
+
+            // Fix nodes parameters structure
+            $fixedNodes = [];
+            foreach ($nodes as $node) {
+                $fixedNode = $node;
+                // Ensure parameters is object, not array
+                if (isset($node['parameters']) && is_array($node['parameters'])) {
+                    $fixedNode['parameters'] = (object)$node['parameters'];
+                }
+                $fixedNodes[] = $fixedNode;
+            }
+
+            // Merge existing connections with new RAG connections
+            foreach ($ragNodes['connections'] as $sourceNode => $targetConnections) {
+                if (!isset($connections[$sourceNode])) {
+                    $connections[$sourceNode] = ['main' => []];
+                }
+                foreach ($targetConnections as $connection) {
+                    $connections[$sourceNode]['main'][0][] = $connection;
+                }
+            }
+
+            // Update staticData with RAG data
+            $currentStaticData = $currentData['staticData'] ?? [];
+            $currentStaticData['rag'] = [
+                'googleDriveFiles' => $googleDriveData['files'] ?? [],
+                'credentials' => $googleDriveData['credentials'] ?? [],
+                'organization_id' => $googleDriveData['organization_id'] ?? '',
+                'personality_id' => $googleDriveData['personality_id'] ?? '',
+                'enabled' => true,
+                'lastUpdated' => now()->toISOString()
+            ];
+
+            // Update credential references in nodes
+            $credentialId = $googleDriveData['credentials']['n8n_credential_id'] ?? null;
+            if ($credentialId) {
+                foreach ($fixedNodes as $nodeId => &$node) {
+                    if (isset($node['credentials']['googleApi'])) {
+                        $node['credentials']['googleApi']['id'] = $credentialId;
+                    }
+                }
+                unset($node); // Break reference
+            }
+
+            // Update workflow
+            $updateData = [
+                'name' => $currentData['name'],
+                'nodes' => $fixedNodes,
+                'connections' => empty($connections) ? (object)[] : $connections,
+                'staticData' => $currentStaticData,
+                'settings' => empty($currentData['settings']) ? (object)[] : $currentData['settings'],
+            ];
+
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $updateData);
+
+            if ($response->successful()) {
+                Log::info('Workflow enhanced with RAG capabilities', [
+                    'workflow_id' => $workflowId,
+                    'rag_nodes_added' => count($ragNodes['nodes'] ?? [])
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Workflow enhanced with RAG capabilities',
+                    'data' => $response->json(),
+                    'rag_nodes' => array_keys($ragNodes['nodes'] ?? [])
+                ];
+            } else {
+                Log::error('Failed to enhance workflow with RAG', [
+                    'workflow_id' => $workflowId,
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Failed to enhance workflow: ' . $response->body()
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception enhancing workflow with RAG', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Create RAG nodes for Google Drive files
+     */
+    private function createRagNodesForGoogleDrive(array $googleDriveData): array
+    {
+        $nodes = [];
+        $connections = [];
+        $files = $googleDriveData['files'] ?? [];
+
+        foreach ($files as $index => $file) {
+            $fileId = $file['file_id'];
+            $fileName = $file['file_name'];
+            $mimeType = $file['mime_type'];
+
+            // File Processor Node
+            $processorId = "file-processor-{$index}-" . uniqid();
+            $nodes[$processorId] = [
+                'parameters' => [
+                    'functionCode' => "// Process Google Drive file for RAG\nconst file = \$input.first().json;\nconst fileId = '{$fileId}';\nconst fileName = '{$fileName}';\nconst mimeType = '{$mimeType}';\n\n// Determine processing method based on file type\nlet processingMethod = 'text';\nif (mimeType.includes('spreadsheet')) {\n  processingMethod = 'sheets';\n} else if (mimeType.includes('document')) {\n  processingMethod = 'docs';\n} else if (mimeType.includes('pdf')) {\n  processingMethod = 'pdf';\n}\n\nreturn {\n  json: {\n    fileId,\n    fileName,\n    mimeType,\n    processingMethod,\n    webViewLink: file.web_view_link || '',\n    size: file.size || 0,\n    processedAt: new Date().toISOString()\n  }\n};"
+                ],
+                'type' => 'n8n-nodes-base.function',
+                'typeVersion' => 1,
+                'position' => [800 + ($index * 200), 400],
+                'id' => $processorId,
+                'name' => "Process {$fileName}"
+            ];
+
+            // Content Extractor Node (based on file type)
+            $extractorId = "content-extractor-{$index}-" . uniqid();
+            if (str_contains($mimeType, 'spreadsheet')) {
+                // Google Sheets Extractor
+                $nodes[$extractorId] = [
+                    'parameters' => [
+                        'authentication' => 'oAuth2',
+                        'operation' => 'getValues',
+                        'documentId' => $fileId,
+                        'range' => 'A:Z',
+                        'options' => [
+                            'valueRenderOption' => 'FORMATTED_VALUE',
+                            'dateTimeRenderOption' => 'FORMATTED_STRING'
+                        ]
+                    ],
+                    'type' => 'n8n-nodes-base.googleSheets',
+                    'typeVersion' => 4,
+                    'position' => [1000 + ($index * 200), 400],
+                    'id' => $extractorId,
+                    'name' => "Extract Sheets Data",
+                    'credentials' => [
+                        'googleApi' => [
+                            'id' => $googleDriveData['credentials']['n8n_credential_id'] ?? '{{google_drive_credential_id}}',
+                            'name' => 'Google Drive OAuth account'
+                        ]
+                    ]
+                ];
+            } elseif (str_contains($mimeType, 'document')) {
+                // Google Docs Extractor
+                $nodes[$extractorId] = [
+                    'parameters' => [
+                        'method' => 'GET',
+                        'url' => "https://docs.googleapis.com/v1/documents/{$fileId}",
+                        'sendHeaders' => true,
+                        'headerParameters' => [
+                            'parameters' => [
+                                [
+                                    'name' => 'Authorization',
+                                    'value' => 'Bearer {{ $json.rag.credentials.access_token }}'
+                                ],
+                                [
+                                    'name' => 'Accept',
+                                    'value' => 'application/json'
+                                ]
+                            ]
+                        ]
+                    ],
+                    'type' => 'n8n-nodes-base.httpRequest',
+                    'typeVersion' => 4.2,
+                    'position' => [1000 + ($index * 200), 400],
+                    'id' => $extractorId,
+                    'name' => "Extract Docs Content"
+                ];
+            } elseif (str_contains($mimeType, 'pdf')) {
+                // PDF Extractor
+                $nodes[$extractorId] = [
+                    'parameters' => [
+                        'method' => 'GET',
+                        'url' => "https://www.googleapis.com/drive/v3/files/{$fileId}?alt=media",
+                        'sendHeaders' => true,
+                        'headerParameters' => [
+                            'parameters' => [
+                                [
+                                    'name' => 'Authorization',
+                                    'value' => 'Bearer {{ $json.rag.credentials.access_token }}'
+                                ],
+                                [
+                                    'name' => 'Accept',
+                                    'value' => 'application/pdf'
+                                ]
+                            ]
+                        ],
+                        'options' => [
+                            'response' => [
+                                'responseFormat' => 'file'
+                            ]
+                        ]
+                    ],
+                    'type' => 'n8n-nodes-base.httpRequest',
+                    'typeVersion' => 4.2,
+                    'position' => [1000 + ($index * 200), 400],
+                    'id' => $extractorId,
+                    'name' => "Extract PDF Content"
+                ];
+            } else {
+                // Generic text extractor
+                $nodes[$extractorId] = [
+                    'parameters' => [
+                        'method' => 'GET',
+                        'url' => "https://www.googleapis.com/drive/v3/files/{$fileId}?alt=media",
+                        'sendHeaders' => true,
+                        'headerParameters' => [
+                            'parameters' => [
+                                [
+                                    'name' => 'Authorization',
+                                    'value' => 'Bearer {{ $json.rag.credentials.access_token }}'
+                                ],
+                                [
+                                    'name' => 'Accept',
+                                    'value' => 'text/plain'
+                                ]
+                            ]
+                        ]
+                    ],
+                    'type' => 'n8n-nodes-base.httpRequest',
+                    'typeVersion' => 4.2,
+                    'position' => [1000 + ($index * 200), 400],
+                    'id' => $extractorId,
+                    'name' => "Extract Text Content"
+                ];
+            }
+
+            // Text Chunker Node
+            $chunkerId = "text-chunker-{$index}-" . uniqid();
+            $nodes[$chunkerId] = [
+                'parameters' => [
+                    'functionCode' => "// Chunk text for RAG\nconst input = \$input.first().json;\nlet content = '';\n\n// Extract content based on file type\nif (input.values && Array.isArray(input.values)) {\n  // Google Sheets data\n  content = input.values.map(row => row.join(' | ')).join('\\n');\n} else if (input.body && input.body.content) {\n  // Google Docs data\n  content = input.body.content.paragraphs?.map(p => p.textRun?.content || '').join('') || '';\n} else if (input.data) {\n  // PDF or other text data\n  content = input.data.toString();\n} else {\n  content = JSON.stringify(input);\n}\n\n// Clean and chunk content\nconst cleanContent = content.replace(/\\s+/g, ' ').trim();\nconst chunkSize = 1000;\nconst chunks = [];\n\nfor (let i = 0; i < cleanContent.length; i += chunkSize) {\n  chunks.push({\n    id: `chunk_\${i}`,\n    content: cleanContent.slice(i, i + chunkSize),\n    source: '{$fileName}',\n    fileId: '{$fileId}',\n    chunkIndex: Math.floor(i / chunkSize),\n    metadata: {\n      fileName: '{$fileName}',\n      fileId: '{$fileId}',\n      mimeType: '{$mimeType}',\n      processedAt: new Date().toISOString()\n    }\n  });\n}\n\nreturn chunks.map(chunk => ({ json: chunk }));"
+                ],
+                'type' => 'n8n-nodes-base.function',
+                'typeVersion' => 1,
+                'position' => [1200 + ($index * 200), 400],
+                'id' => $chunkerId,
+                'name' => "Chunk {$fileName}"
+            ];
+
+            // Vector Store Node (Chroma/Weaviate)
+            $vectorStoreId = "vector-store-{$index}-" . uniqid();
+            $nodes[$vectorStoreId] = [
+                'parameters' => [
+                    'method' => 'POST',
+                    'url' => 'http://chroma:8000/api/v1/collections/rag-documents/embeddings',
+                    'sendHeaders' => true,
+                    'headerParameters' => [
+                        'parameters' => [
+                            [
+                                'name' => 'Content-Type',
+                                'value' => 'application/json'
+                            ]
+                        ]
+                    ],
+                    'bodyParameters' => [
+                        'parameters' => [
+                            [
+                                'name' => 'embeddings',
+                                'value' => '={{ $json.content }}'
+                            ],
+                            [
+                                'name' => 'metadatas',
+                                'value' => '={{ $json.metadata }}'
+                            ],
+                            [
+                                'name' => 'ids',
+                                'value' => '={{ $json.id }}'
+                            ]
+                        ]
+                    ]
+                ],
+                'type' => 'n8n-nodes-base.httpRequest',
+                'typeVersion' => 4.2,
+                'position' => [1400 + ($index * 200), 400],
+                'id' => $vectorStoreId,
+                'name' => "Store {$fileName} Vectors"
+            ];
+
+            // Connect nodes
+            $connections[$processorId] = [
+                [
+                    [
+                        'node' => $extractorId,
+                        'type' => 'main',
+                        'index' => 0
+                    ]
+                ]
+            ];
+
+            $connections[$extractorId] = [
+                [
+                    [
+                        'node' => $chunkerId,
+                        'type' => 'main',
+                        'index' => 0
+                    ]
+                ]
+            ];
+
+            $connections[$chunkerId] = [
+                [
+                    [
+                        'node' => $vectorStoreId,
+                        'type' => 'main',
+                        'index' => 0
+                    ]
+                ]
+            ];
+
+            // Connect to AI Agent for RAG
+            $aiAgentId = 'ai-agent'; // Assuming AI Agent exists
+            $connections[$vectorStoreId] = [
+                [
+                    [
+                        'node' => $aiAgentId,
+                        'type' => 'ai_memory',
+                        'index' => 0
+                    ]
+                ]
+            ];
+        }
+
+        return [
+            'nodes' => $nodes,
+            'connections' => $connections
+        ];
+    }
+
+    /**
+     * Create Google Drive OAuth credentials in n8n
+     */
+    public function createGoogleDriveCredentials(array $oauthData): array
+    {
+        try {
+            Log::info('Creating Google Drive OAuth credentials in n8n', [
+                'organization_id' => $oauthData['organization_id'] ?? 'unknown'
+            ]);
+
+            $credentialData = [
+                'name' => 'Google Drive OAuth - ' . ($oauthData['organization_id'] ?? 'Unknown'),
+                'type' => 'googleDriveOAuth2Api',
+                'data' => [
+                    'clientId' => config('services.google.client_id'),
+                    'clientSecret' => config('services.google.client_secret'),
+                    'accessToken' => $oauthData['access_token'],
+                    'refreshToken' => $oauthData['refresh_token'],
+                    'scope' => $oauthData['scope'] ?? 'https://www.googleapis.com/auth/drive',
+                    'expiresAt' => $oauthData['expires_at'],
+                    'tokenType' => 'Bearer'
+                ],
+                'nodesAccess' => [
+                    [
+                        'nodeType' => 'n8n-nodes-base.googleSheets',
+                        'date' => now()->toISOString()
+                    ],
+                    [
+                        'nodeType' => 'n8n-nodes-base.googleDrive',
+                        'date' => now()->toISOString()
+                    ],
+                    [
+                        'nodeType' => 'n8n-nodes-base.httpRequest',
+                        'date' => now()->toISOString()
+                    ]
+                ]
+            ];
+
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/credentials", $credentialData);
+
+            if ($response->successful()) {
+                $credential = $response->json();
+                Log::info('Google Drive OAuth credentials created successfully', [
+                    'credential_id' => $credential['id'] ?? 'unknown'
+                ]);
+
+                return [
+                    'success' => true,
+                    'credential_id' => $credential['id'],
+                    'data' => $credential
+                ];
+            } else {
+                Log::error('Failed to create Google Drive OAuth credentials', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Failed to create credentials: ' . $response->body()
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception creating Google Drive OAuth credentials', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Create WAHA credentials in n8n
+     */
+    public function createWahaCredentials(array $wahaData): array
+    {
+        try {
+            Log::info('Creating WAHA credentials in n8n', [
+                'organization_id' => $wahaData['organization_id'] ?? 'unknown'
+            ]);
+
+            $credentialData = [
+                'name' => 'WAHA API - ' . ($wahaData['organization_id'] ?? 'Unknown'),
+                'type' => 'wahaApi',
+                'data' => [
+                    'apiUrl' => $wahaData['api_url'] ?? config('services.waha.api_url'),
+                    'apiKey' => $wahaData['api_key'] ?? config('services.waha.api_key'),
+                    'sessionId' => $wahaData['session_id'] ?? 'default-session'
+                ],
+                'nodesAccess' => [
+                    [
+                        'nodeType' => '@devlikeapro/n8n-nodes-waha.WAHA',
+                        'date' => now()->toISOString()
+                    ],
+                    [
+                        'nodeType' => '@devlikeapro/n8n-nodes-waha.wahaTrigger',
+                        'date' => now()->toISOString()
+                    ]
+                ]
+            ];
+
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/credentials", $credentialData);
+
+            if ($response->successful()) {
+                $credential = $response->json();
+                Log::info('WAHA credentials created successfully', [
+                    'credential_id' => $credential['id'] ?? 'unknown'
+                ]);
+
+                return [
+                    'success' => true,
+                    'credential_id' => $credential['id'],
+                    'data' => $credential
+                ];
+            } else {
+                Log::error('Failed to create WAHA credentials', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Failed to create WAHA credentials: ' . $response->body()
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception creating WAHA credentials', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Create Google Gemini credentials in n8n
+     */
+    public function createGeminiCredentials(array $geminiData): array
+    {
+        try {
+            Log::info('Creating Google Gemini credentials in n8n', [
+                'organization_id' => $geminiData['organization_id'] ?? 'unknown'
+            ]);
+
+            $credentialData = [
+                'name' => 'Google Gemini API - ' . ($geminiData['organization_id'] ?? 'Unknown'),
+                'type' => 'googlePalmApi',
+                'data' => [
+                    'apiKey' => $geminiData['api_key'] ?? config('services.google.gemini_api_key'),
+                    'model' => $geminiData['model'] ?? 'models/gemini-2.0-flash'
+                ],
+                'nodesAccess' => [
+                    [
+                        'nodeType' => '@n8n/n8n-nodes-langchain.lmChatGoogleGemini',
+                        'date' => now()->toISOString()
+                    ],
+                    [
+                        'nodeType' => '@n8n/n8n-nodes-langchain.agent',
+                        'date' => now()->toISOString()
+                    ]
+                ]
+            ];
+
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/credentials", $credentialData);
+
+            if ($response->successful()) {
+                $credential = $response->json();
+                Log::info('Google Gemini credentials created successfully', [
+                    'credential_id' => $credential['id'] ?? 'unknown'
+                ]);
+
+                return [
+                    'success' => true,
+                    'credential_id' => $credential['id'],
+                    'data' => $credential
+                ];
+            } else {
+                Log::error('Failed to create Google Gemini credentials', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Failed to create Google Gemini credentials: ' . $response->body()
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception creating Google Gemini credentials', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Create all required credentials for a bot personality workflow
+     */
+    public function createAllCredentialsForWorkflow(array $workflowData): array
+    {
+        try {
+            Log::info('Creating all credentials for workflow', [
+                'organization_id' => $workflowData['organization_id'] ?? 'unknown'
+            ]);
+
+            $credentials = [];
+            $errors = [];
+
+            // Create Google Drive credentials if OAuth data provided
+            if (isset($workflowData['google_drive_oauth'])) {
+                $googleDriveResult = $this->createGoogleDriveCredentials($workflowData['google_drive_oauth']);
+                if ($googleDriveResult['success']) {
+                    $credentials['google_drive'] = $googleDriveResult['credential_id'];
+                } else {
+                    $errors['google_drive'] = $googleDriveResult['error'];
+                }
+            }
+
+            // Create WAHA credentials if WAHA data provided
+            if (isset($workflowData['waha_data'])) {
+                $wahaResult = $this->createWahaCredentials($workflowData['waha_data']);
+                if ($wahaResult['success']) {
+                    $credentials['waha'] = $wahaResult['credential_id'];
+                } else {
+                    $errors['waha'] = $wahaResult['error'];
+                }
+            }
+
+            // Create Google Gemini credentials if Gemini data provided
+            if (isset($workflowData['gemini_data'])) {
+                $geminiResult = $this->createGeminiCredentials($workflowData['gemini_data']);
+                if ($geminiResult['success']) {
+                    $credentials['gemini'] = $geminiResult['credential_id'];
+                } else {
+                    $errors['gemini'] = $geminiResult['error'];
+                }
+            }
+
+            if (empty($errors)) {
+                Log::info('All credentials created successfully', [
+                    'credentials' => $credentials
+                ]);
+
+                return [
+                    'success' => true,
+                    'credentials' => $credentials,
+                    'message' => 'All credentials created successfully'
+                ];
+            } else {
+                Log::error('Some credentials failed to create', [
+                    'errors' => $errors,
+                    'successful_credentials' => $credentials
+                ]);
+
+                return [
+                    'success' => false,
+                    'credentials' => $credentials,
+                    'errors' => $errors,
+                    'message' => 'Some credentials failed to create'
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception creating all credentials', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Create workflow from template with Google Drive integration
+     */
+    public function createWorkflowFromTemplate(array $templateData, array $googleDriveData): array
+    {
+        try {
+            Log::info('Creating workflow from template with Google Drive integration', [
+                'template_name' => $templateData['name'] ?? 'unknown',
+                'files_count' => count($googleDriveData['files'] ?? [])
+            ]);
+
+            // Load template
+            $templatePath = base_path('ai-agent-workflow-enhanced-with-google-drive.json');
+            if (!file_exists($templatePath)) {
+                return [
+                    'success' => false,
+                    'error' => 'Template file not found'
+                ];
+            }
+
+            $template = json_decode(file_get_contents($templatePath), true);
+
+            // Replace template variables
+            $workflowData = $this->replaceTemplateVariables($template, $templateData, $googleDriveData);
+
+            // Create workflow
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/workflows", $workflowData);
+
+            if ($response->successful()) {
+                $workflow = $response->json();
+                Log::info('Workflow created successfully from template', [
+                    'workflow_id' => $workflow['id'] ?? 'unknown'
+                ]);
+
+                return [
+                    'success' => true,
+                    'workflow_id' => $workflow['id'],
+                    'data' => $workflow
+                ];
+            } else {
+                Log::error('Failed to create workflow from template', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Failed to create workflow: ' . $response->body()
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception creating workflow from template', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Replace template variables with actual data
+     */
+    private function replaceTemplateVariables(array $template, array $templateData, array $googleDriveData): array
+    {
+        $workflow = json_encode($template);
+
+        // Replace template variables
+        $replacements = [
+            '{{webhook_id}}' => $templateData['webhook_id'] ?? 'webhook-' . uniqid(),
+            '{{system_message}}' => $templateData['system_message'] ?? 'You are a helpful AI assistant.',
+            '{{waha_credential_id}}' => $templateData['waha_credential_id'] ?? 'waha-credential',
+            '{{gemini_credential_id}}' => $templateData['gemini_credential_id'] ?? 'gemini-credential',
+            '{{google_drive_credential_id}}' => $templateData['google_drive_credential_id'] ?? 'google-drive-credential',
+            '{{instance_id}}' => $templateData['instance_id'] ?? 'instance-' . uniqid(),
+        ];
+
+        foreach ($replacements as $placeholder => $value) {
+            $workflow = str_replace($placeholder, $value, $workflow);
+        }
+
+        // Update staticData with Google Drive data
+        $workflowArray = json_decode($workflow, true);
+        $workflowArray['staticData']['googleDrive'] = $googleDriveData;
+
+        return $workflowArray;
+    }
+
+    /**
+     * Test Google Drive integration
+     */
+    public function testGoogleDriveIntegration(string $workflowId): array
+    {
+        try {
+            Log::info('Testing Google Drive integration', [
+                'workflow_id' => $workflowId
+            ]);
+
+            // Get workflow staticData
+            $staticData = $this->getWorkflowStaticData($workflowId);
+            if (!$staticData['success']) {
+                return [
+                    'success' => false,
+                    'error' => 'Failed to get workflow staticData: ' . $staticData['error']
+                ];
+            }
+
+            $googleDriveData = $staticData['data']['googleDrive'] ?? null;
+            if (!$googleDriveData) {
+                return [
+                    'success' => false,
+                    'error' => 'No Google Drive data found in workflow'
+                ];
+            }
+
+            // Test credentials
+            $credentials = $googleDriveData['credentials'] ?? null;
+            if (!$credentials || !$credentials['access_token']) {
+                return [
+                    'success' => false,
+                    'error' => 'No valid Google Drive credentials found'
+                ];
+            }
+
+            // Test file access
+            $files = $googleDriveData['files'] ?? [];
+            if (empty($files)) {
+                return [
+                    'success' => false,
+                    'error' => 'No Google Drive files configured'
+                ];
+            }
+
+            // Test first file access
+            $firstFile = $files[0];
+            $testUrl = "https://www.googleapis.com/drive/v3/files/{$firstFile['file_id']}";
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $credentials['access_token'],
+                'Accept' => 'application/json'
+            ])->get($testUrl);
+
+            if ($response->successful()) {
+                Log::info('Google Drive integration test successful', [
+                    'workflow_id' => $workflowId,
+                    'file_id' => $firstFile['file_id']
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Google Drive integration is working correctly',
+                    'tested_file' => $firstFile['file_name'],
+                    'file_id' => $firstFile['file_id']
+                ];
+            } else {
+                Log::error('Google Drive integration test failed', [
+                    'workflow_id' => $workflowId,
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Failed to access Google Drive file: ' . $response->body()
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('Exception testing Google Drive integration', [
+                'workflow_id' => $workflowId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage()
+            ];
         }
     }
 }

@@ -7,10 +7,10 @@ import {
   Plus,
   RefreshCw
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Button from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Separator } from '@/components/ui/Separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import ProfessionalConversationList from './ProfessionalConversationList';
 import ProfessionalChatWindow from './ProfessionalChatWindow';
 import { cn } from '@/lib/utils';

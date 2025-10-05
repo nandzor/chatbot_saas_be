@@ -38,7 +38,9 @@ use App\Http\Controllers\Api\EmailVerificationController;
 // Include additional route files
 require_once __DIR__ . '/n8n.php';
 require_once __DIR__ . '/waha.php';
-require_once __DIR__ . '/api/conversation.php';
+require_once __DIR__ . '/conversation.php';
+require_once __DIR__ . '/google-oauth.php';
+require_once __DIR__ . '/google-drive.php';
 
 // WAHA Status routes
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -201,9 +203,6 @@ Route::prefix('v1')->group(function () {
             // Routes requiring additional permissions
             Route::middleware(['permission:conversations.create'])->post('/', [ConversationController::class, 'store']);
             Route::middleware(['permission:conversations.send_message'])->post('/{id}/messages', [ConversationController::class, 'sendMessage']);
-
-            // Get conversation with recent messages
-            Route::middleware(['permission:conversations.create'])->get('/{id}/recent', [ConversationController::class, 'getConversationWithRecent']);
         });
 
         // ====================================================================
@@ -919,6 +918,14 @@ Route::prefix('v1')->group(function () {
                 Route::put('/{id}', [BotPersonalityController::class, 'update']);
                 Route::patch('/{id}', [BotPersonalityController::class, 'update']);
                 Route::delete('/{id}', [BotPersonalityController::class, 'destroy']);
+                Route::get('/{id}/drive-files', [BotPersonalityController::class, 'getDriveFiles']);
+
+                // Google Drive Integration Testing
+                Route::post('/{id}/test-google-drive', [BotPersonalityController::class, 'testGoogleDriveIntegration']);
+                Route::post('/{id}/create-workflow', [BotPersonalityController::class, 'createWorkflowFromTemplate']);
+                Route::post('/{id}/enhance-rag', [BotPersonalityController::class, 'enhanceWorkflowWithRag']);
+                Route::post('/{id}/ensure-google-drive-credentials', [BotPersonalityController::class, 'ensureGoogleDriveCredentials']);
+                Route::post('/{id}/create-credentials', [BotPersonalityController::class, 'createCredentialsForWorkflow']);
 
                 // Workflow endpoints
                 Route::post('/workflow/execute', [BotPersonalityWorkflowController::class, 'executeWorkflow']);
@@ -952,6 +959,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/process-message', [AiAgentWorkflowController::class, 'processMessage']);
             Route::post('/test', [AiAgentWorkflowController::class, 'test']);
         });
+
 
         // ====================================================================
         // TEST ROUTES FOR MIDDLEWARE PERMISSION SYSTEM

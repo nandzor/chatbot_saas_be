@@ -12,6 +12,7 @@
         "laravel/reverb": "^1.6",
         "laravel/sail": "^1.29",
         "laravel/sanctum": "^4.2",
+        "laravel/socialite": "*",
         "laravel/tinker": "^2.10",
         "league/flysystem-aws-s3-v3": "^3.0",
         "nunomaduro/collision": "*",

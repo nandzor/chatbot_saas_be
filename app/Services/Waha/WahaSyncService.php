@@ -979,7 +979,7 @@ class WahaSyncService
             $n8nService = app(\App\Services\N8n\N8nService::class);
 
             // Delete workflow from N8N using the correct workflow_id
-            $result = $n8nService->deleteWorkflowWithDatabase($workflow->workflow_id);
+            $result = $n8nService->deleteWorkflow($workflow->workflow_id);
 
             if ($result['success']) {
                 Log::info('N8N workflow deleted successfully for session', [

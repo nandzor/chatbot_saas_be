@@ -69,7 +69,6 @@ const AgentInbox = () => {
     selectedSession,
     messages,
     loading,
-    sendingMessage,
     error,
     filters,
     pagination,
@@ -457,7 +456,7 @@ const AgentInbox = () => {
               {/* Last Message Preview */}
               <div className="mb-1.5">
                 <p className="text-xs text-gray-600 line-clamp-1 leading-relaxed">
-                      {session.last_message?.body || session.last_message || 'No messages yet'}
+                      {session.ai_summary || 'No messages yet'}
                 </p>
               </div>
 
@@ -808,11 +807,17 @@ const AgentInbox = () => {
                           {isAgent && (
                         <div className="flex items-center space-x-1">
                             {message.delivered_at && (
+                            <div className="flex items-center space-x-1">
                               <CheckCircle className="w-3 h-3" />
-                            )}
+                              <span className="text-xs">✓</span>
+                            </div>
+                          )}
                             {message.is_read && (
+                            <div className="flex items-center space-x-1">
                               <Eye className="w-3 h-3" />
-                            )}
+                              <span className="text-xs">👁</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -836,7 +841,7 @@ const AgentInbox = () => {
                     key={index}
                     variant="outline"
                     size="sm"
-                    disabled={sendingMessage}
+                    disabled={loading}
                     className="whitespace-nowrap text-xs px-2 py-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 disabled:opacity-50"
                     onClick={() => setMessageText(reply)}
                   >
@@ -871,7 +876,7 @@ const AgentInbox = () => {
                     onKeyPress={handleKeyPress}
                     placeholder="Ketik pesan..."
                     rows={2}
-                    disabled={sendingMessage}
+                    disabled={loading}
                     className="resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm disabled:opacity-50"
                   />
                   <div className="flex items-center justify-between mt-1">
@@ -895,11 +900,11 @@ const AgentInbox = () => {
                   </Button>
                   <Button
                     onClick={handleSendMessage}
-                    disabled={!messageText.trim() || sendingMessage}
+                    disabled={!messageText.trim() || loading}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed p-2"
                     title="Send message"
                   >
-                    {sendingMessage ? (
+                    {loading ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
                     ) : (
                     <Send className="w-3 h-3" />

@@ -127,6 +127,19 @@ class BotPersonalityService {
   }
 
   /**
+   * Get Google Drive files for bot personality
+   */
+  async getDriveFiles(id) {
+    try {
+      const response = await this._makeApiCall('GET', `/bot-personalities/${id}/drive-files`);
+      return response;
+    } catch (error) {
+      console.error('❌ Error fetching Google Drive files:', error);
+      throw handleError(error, 'Failed to fetch Google Drive files');
+    }
+  }
+
+  /**
    * Get waha sessions for selection (only working sessions)
    */
   async getWahaSessions(params = {}) {

@@ -1,5 +1,5 @@
-  import React from 'react';
-  import { cn } from '@/lib/utils';
+import React from 'react';
+import { cn } from '@/lib/utils';
 
 const Badge = React.forwardRef(({ className, variant = "default", children, ...props }, ref) => {
   const variants = {
@@ -30,4 +30,5 @@ const Badge = React.forwardRef(({ className, variant = "default", children, ...p
 
 Badge.displayName = "Badge";
 
+export { Badge };
 export default Badge;

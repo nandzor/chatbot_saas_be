@@ -10,7 +10,6 @@ use App\Http\Requests\EndSessionRequest;
 use App\Http\Requests\SendMessageRequest;
 use App\Http\Resources\ChatSessionResource;
 use App\Http\Resources\MessageResource;
-use App\Http\Resources\TemporaryMessageResource;
 use App\Http\Resources\InboxStatsResource;
 use App\Http\Resources\BotPersonalityResource;
 use App\Services\InboxService;
@@ -510,7 +509,7 @@ class InboxController extends BaseApiController
                 'message_sent',
                 'Message sent successfully',
                 [
-                    'message' => new TemporaryMessageResource($result['message']),
+                    'message' => new MessageResource($result['message']),
                     'session' => new ChatSessionResource($result['session'])
                 ]
             );

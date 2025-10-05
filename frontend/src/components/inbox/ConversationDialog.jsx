@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Send,
   Paperclip,
@@ -99,81 +99,6 @@ const ConversationDialog = ({
       setMessages(loadedMessages);
     }
   }, [messagesData]);
-
-  // Duplicate prevention refs
-  const processedMessageIdsRef = useRef(new Set());
-
-  const shouldProcessMessage = useCallback((messageId) => {
-    if (processedMessageIdsRef.current.has(messageId)) {
-      return false;
-    }
-    processedMessageIdsRef.current.add(messageId);
-    return true;
-  }, []);
-
-  // Polling fallback for message updates (enhanced duplicate prevention)
-  useEffect(() => {
-    if (!session?.id) return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await inboxService.getSessionMessages(session.id, {
-          page: 1,
-          per_page: 50,
-          sort_by: 'created_at',
-          sort_direction: 'desc'
-        });
-
-        if (response?.success && response.data) {
-          const messagesData = response.data || [];
-          const transformedMessages = messagesData.map(msg => ({
-            id: msg.id,
-            session_id: msg.chat_session_id,
-            sender_type: msg.sender_type,
-            sender_name: msg.sender_name,
-            message_text: msg.content,
-            text: msg.content,
-            content: { text: msg.content },
-            message_type: msg.message_type,
-            is_read: msg.is_read,
-            created_at: msg.created_at,
-            sent_at: msg.created_at,
-            delivered_at: msg.delivered_at,
-            media_url: msg.media_url,
-            media_type: msg.media_type,
-            metadata: msg.metadata
-          }));
-
-          const reversedMessages = transformedMessages.reverse();
-
-          setMessages(prev => {
-            // Only update if there are new messages AND they haven't been processed
-            const currentIds = new Set(prev.map(m => m.id));
-            const newMessages = reversedMessages.filter(m =>
-              !currentIds.has(m.id) && shouldProcessMessage(m.id)
-            );
-
-            if (newMessages.length > 0) {
-              // Polling found new messages
-              return [...prev, ...newMessages];
-            }
-            return prev;
-          });
-        }
-      } catch (error) {
-        // Polling error in ConversationDialog - silently handle
-      }
-    }, 2000); // Poll every 2 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [session?.id, shouldProcessMessage]);
-
-  // Cleanup effect to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      processedMessageIdsRef.current.clear();
-    };
-  }, []);
 
   useEffect(() => {
     // Auto-scroll to bottom when messages change

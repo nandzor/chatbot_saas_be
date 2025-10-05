@@ -55,8 +55,8 @@ class MessageService
             // Update session activity
             $session->updateActivity();
 
-            // Fire MessageSent event for WAHA integration
-            event(new \App\Events\MessageSent($message, $session, $data));
+            // Fire message processed event for real-time updates
+            event(new MessageProcessed($session, $message, ['status' => 'sent']));
 
             Log::info('Message sent successfully', [
                 'message_id' => $message->id,
@@ -89,7 +89,7 @@ class MessageService
 
         // Set first response time if this is the first non-customer message
         if (!$session->first_response_at && $senderType !== 'customer') {
-            $firstResponseTime = (int) $session->started_at->diffInSeconds(now());
+            $firstResponseTime = $session->started_at->diffInSeconds(now());
             $session->update([
                 'first_response_at' => now(),
                 'response_time_avg' => $firstResponseTime
@@ -291,7 +291,7 @@ class MessageService
     {
         try {
             // Get session information
-            $session = \App\Models\ChatSession::with(['customer', 'channelConfig'])->find($sessionId);
+            $session = ChatSession::with(['customer', 'channelConfig'])->find($sessionId);
             if (!$session) {
                 Log::warning('Session not found for typing indicator', ['session_id' => $sessionId]);
                 return;

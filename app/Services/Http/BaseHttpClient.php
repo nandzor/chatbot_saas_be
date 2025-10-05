@@ -12,7 +12,7 @@ abstract class BaseHttpClient
 {
     protected string $baseUrl;
     protected array $defaultHeaders = [];
-    protected int $timeout = 600;
+    protected int $timeout = 30;
     protected int $retryAttempts = 3;
     protected int $retryDelay = 1000; // milliseconds
     protected int $maxRetryDelay = 10000; // milliseconds
@@ -76,7 +76,7 @@ abstract class BaseHttpClient
 
                 if ($attempt < $this->retryAttempts) {
                     $delay = $this->calculateRetryDelay($attempt);
-
+                    
                     Log::warning("HTTP Request failed, retrying...", [
                         'attempt' => $attempt,
                         'error' => $e->getMessage(),
@@ -135,7 +135,7 @@ abstract class BaseHttpClient
 
         // Exponential backoff: delay * (2 ^ attempt)
         $delay = $this->retryDelay * pow(2, $attempt - 1);
-
+        
         // Cap at maximum delay
         return min($delay, $this->maxRetryDelay);
     }

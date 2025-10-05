@@ -29,7 +29,15 @@ return Application::configure(basePath: dirname(__DIR__))
 
             Route::middleware('api')
                 ->prefix('api')
-                ->group(base_path('routes/api/conversation.php'));
+                ->group(base_path('routes/conversation.php'));
+
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/google-drive-integration.php'));
+
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/google-drive.php'));
         },
     )
     ->withProviders([

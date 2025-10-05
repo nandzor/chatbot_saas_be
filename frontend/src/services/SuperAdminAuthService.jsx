@@ -9,7 +9,7 @@ class SuperAdminAuthService {
         // Initialize axios instance
         this.api = axios.create({
             baseURL: this.baseURL,
-            timeout: 120000, // 120 seconds timeout
+            timeout: 10000,
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',

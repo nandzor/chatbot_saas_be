@@ -258,7 +258,7 @@ class AgentDashboardController extends BaseApiController
             $activeSessions = \App\Models\ChatSession::where('organization_id', $organizationId)
                 ->where('agent_id', $agentId)
                 ->where('is_active', true)
-                ->with(['customer:id,name,email,first_name,last_name'])
+                ->with(['customer:id,name,email,avatar'])
                 ->get();
 
             $recentMessages = \App\Models\Message::whereHas('chatSession', function($query) use ($organizationId, $agentId) {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\N8nController;
+use App\Http\Controllers\Api\V1\RagController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,9 +50,6 @@ Route::prefix('n8n')->group(function () {
     Route::get('/workflows/{workflowId}/webhook-urls', [N8nController::class, 'getWebhookUrls']);
     Route::get('/workflows/{workflowId}/webhook/{nodeId}/url', [N8nController::class, 'getWebhookUrl']);
     Route::post('/workflows/{workflowId}/webhook/{nodeId}', [N8nController::class, 'sendWebhook']);
-    Route::post('/workflows/{workflowId}/webhook/{nodeId}/test', [N8nController::class, 'testWebhookConnectivity']);
-
-    // Statistics and monitoring routes
-    Route::get('/workflows/{workflowId}/active', [N8nController::class, 'isWorkflowActive']);
-    Route::get('/workflows/{workflowId}/stats', [N8nController::class, 'getWorkflowStats']);
 });
+
+// OAuth Integration Routes - REMOVED (using GoogleDriveController instead)

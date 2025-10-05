@@ -25,7 +25,7 @@ class N8nController extends BaseApiController
     public function getWorkflows(): JsonResponse
     {
         try {
-            $response = $this->n8nService->getWorkflowsWithDatabase();
+            $response = $this->n8nService->getWorkflows();
             return $this->successResponse('Workflows retrieved successfully', $response);
         } catch (Exception $e) {
             Log::error('Failed to get N8N workflows', ['error' => $e->getMessage()]);
@@ -161,26 +161,48 @@ class N8nController extends BaseApiController
     public function getWebhookUrls(string $workflowId): JsonResponse
     {
         try {
-            // Get workflow from database
-            $workflow = \App\Models\N8nWorkflow::where('workflow_id', $workflowId)->first();
+            // Get workflow from N8N
+            $workflow = $this->n8nService->getWorkflow($workflowId);
 
-            if (!$workflow) {
-                return $this->errorResponse('Workflow not found', 404);
+            if (!isset($workflow['data']['nodes'])) {
+                return $this->errorResponse('Workflow not found or has no nodes', 404);
             }
 
-            // Use service to extract webhook URLs
-            $webhookData = $this->n8nService->extractWebhookUrls(
-                $workflow->workflow_data,
-                $workflow->workflow_id,
-                $workflow->name,
-                $workflow->is_enabled
-            );
+            $webhookUrls = [];
+            $nodes = $workflow['data']['nodes'];
 
-            if (empty($webhookData['webhook_urls'])) {
+            foreach ($nodes as $node) {
+                if (isset($node['webhookId']) && !empty($node['webhookId'])) {
+                    $webhookId = $node['webhookId'];
+                    $nodeName = $node['name'] ?? 'Unknown Node';
+                    $nodeType = $node['type'] ?? 'Unknown Type';
+
+                    // Get N8N base URL from config
+                    $n8nBaseUrl = config('n8n.base_url', 'http://localhost:5678');
+
+                    // Generate webhook URLs
+                    $webhookUrls[] = [
+                        'node_id' => $node['id'],
+                        'node_name' => $nodeName,
+                        'node_type' => $nodeType,
+                        'webhook_id' => $webhookId,
+                        'url' => "{$n8nBaseUrl}/webhook/{$webhookId}",
+                        'is_active' => $workflow['data']['active'] ?? false
+                    ];
+                }
+            }
+
+            if (empty($webhookUrls)) {
                 return $this->errorResponse('No webhook nodes found in this workflow', 404);
             }
 
-            return $this->successResponse('Webhook URLs retrieved successfully', $webhookData);
+            return $this->successResponse('Webhook URLs retrieved successfully', [
+                'workflow_id' => $workflowId,
+                'workflow_name' => $workflow['data']['name'] ?? 'Unknown',
+                'workflow_status' => ($workflow['data']['active'] ?? false) ? 'active' : 'inactive',
+                'webhook_urls' => $webhookUrls,
+                'total_webhooks' => count($webhookUrls)
+            ]);
 
         } catch (Exception $e) {
             Log::error('Failed to get webhook URLs', [
@@ -197,7 +219,7 @@ class N8nController extends BaseApiController
     public function deleteWorkflow(string $workflowId): JsonResponse
     {
         try {
-            $result = $this->n8nService->deleteWorkflowWithDatabase($workflowId);
+            $result = $this->n8nService->deleteWorkflow($workflowId);
             return $this->successResponse('Workflow deleted successfully', $result);
         } catch (Exception $e) {
             Log::error('Failed to delete N8N workflow', [
@@ -516,58 +538,6 @@ class N8nController extends BaseApiController
                 'error' => $e->getMessage()
             ]);
             return $this->errorResponse('Failed to send webhook', 500);
-        }
-    }
-
-    /**
-     * Check if workflow is active
-     */
-    public function isWorkflowActive(string $workflowId): JsonResponse
-    {
-        try {
-            $active = $this->n8nService->isWorkflowActive($workflowId);
-            return $this->successResponse('Workflow active status retrieved successfully', ['active' => $active]);
-        } catch (Exception $e) {
-            Log::error('Failed to check N8N workflow active status', [
-                'workflow_id' => $workflowId,
-                'error' => $e->getMessage()
-            ]);
-            return $this->errorResponse('Failed to check workflow active status', 500);
-        }
-    }
-
-    /**
-     * Get workflow execution statistics
-     */
-    public function getWorkflowStats(string $workflowId): JsonResponse
-    {
-        try {
-            $stats = $this->n8nService->getWorkflowStats($workflowId);
-            return $this->successResponse('Workflow statistics retrieved successfully', $stats);
-        } catch (Exception $e) {
-            Log::error('Failed to get N8N workflow statistics', [
-                'workflow_id' => $workflowId,
-                'error' => $e->getMessage()
-            ]);
-            return $this->errorResponse('Failed to retrieve workflow statistics', 500);
-        }
-    }
-
-    /**
-     * Test webhook connectivity
-     */
-    public function testWebhookConnectivity(string $workflowId, string $nodeId): JsonResponse
-    {
-        try {
-            $result = $this->n8nService->testWebhookConnectivity($workflowId, $nodeId);
-            return $this->successResponse('Webhook connectivity test completed', $result);
-        } catch (Exception $e) {
-            Log::error('Failed to test N8N webhook connectivity', [
-                'workflow_id' => $workflowId,
-                'node_id' => $nodeId,
-                'error' => $e->getMessage()
-            ]);
-            return $this->errorResponse('Failed to test webhook connectivity', 500);
         }
     }
 }

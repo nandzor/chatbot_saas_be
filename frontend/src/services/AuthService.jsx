@@ -7,7 +7,7 @@ class AuthService {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 120000, // 120 seconds timeout
+      timeout: 10000, // 10 seconds timeout
     });
 
     this.refreshPromise = null;

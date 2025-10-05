@@ -108,18 +108,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | HTTP Client Configuration
+    | Google Services
     |--------------------------------------------------------------------------
     |
-    | Default configuration for HTTP client timeouts and retries.
+    | Configuration for Google services integration.
     |
     */
 
-    'http' => [
-        'timeout' => env('HTTP_TIMEOUT', 60), // seconds
-        'connect_timeout' => env('HTTP_CONNECT_TIMEOUT', 10), // seconds
-        'retry_attempts' => env('HTTP_RETRY_ATTEMPTS', 3),
-        'retry_delay' => env('HTTP_RETRY_DELAY', 1000), // milliseconds
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
+        'redirect_uri' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
+        'auth_uri' => 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_uri' => 'https://oauth2.googleapis.com/token',
+        'revoke_uri' => 'https://oauth2.googleapis.com/revoke',
+        'access_type' => 'offline',
+        'prompt' => 'consent',
+        'response_type' => 'code',
+        'state' => true, // Enable state parameter for security
     ],
 
 ];

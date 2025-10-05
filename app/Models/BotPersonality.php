@@ -95,6 +95,14 @@ class BotPersonality extends Model
     }
 
     /**
+     * Google Drive files associated with this personality.
+     */
+    public function driveFiles(): HasMany
+    {
+        return $this->hasMany(BotPersonalityDriveFile::class, 'bot_personality_id');
+    }
+
+    /**
      * Get the n8n workflow associated with this personality.
      */
     public function n8nWorkflow(): BelongsTo
@@ -164,6 +172,14 @@ class BotPersonality extends Model
     public function getKnowledgeBaseItemTitleAttribute(): ?string
     {
         return $this->knowledgeBaseItem?->title;
+    }
+
+    /**
+     * Check if Google Drive integration is enabled based on associated files.
+     */
+    public function getGoogleDriveIntegrationEnabledAttribute(): bool
+    {
+        return $this->driveFiles()->exists();
     }
 
 

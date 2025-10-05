@@ -182,9 +182,22 @@ export const AuthProvider = ({ children }) => {
       if (response.success) {
         const userData = response.data.user;
 
-                // Add session metadata
+        // Normalize user data to ensure consistency
+        const normalizedUserData = {
+          id: userData.id,
+          email: userData.email,
+          name: userData.full_name || userData.name,
+          username: userData.username,
+          avatar: userData.avatar,
+          role: userData.role,
+          roles: userData.roles || [userData.role],
+          permissions: userData.permissions || ['automations.manage'],
+          organization_id: userData.organization_id
+        };
+
+        // Add session metadata
         const userWithSession = {
-          ...userData,
+          ...normalizedUserData,
           lastLogin: new Date().toISOString(),
           authMethod: response.data.auth_method || 'jwt',
           tokens: {
@@ -302,9 +315,22 @@ export const AuthProvider = ({ children }) => {
         const userData = await authService.getCurrentUser();
 
         if (userData) {
+          // Normalize user data to ensure consistency
+          const normalizedUserData = {
+            id: userData.id,
+            email: userData.email,
+            name: userData.full_name || userData.name,
+            username: userData.username,
+            avatar: userData.avatar,
+            role: userData.role,
+            roles: userData.roles || [userData.role],
+            permissions: userData.permissions || ['automations.manage'],
+            organization_id: userData.organization_id
+          };
+
           // Update user data with latest info
           const updatedUser = {
-            ...userData,
+            ...normalizedUserData,
             lastLogin: new Date().toISOString(),
             authMethod: localStorage.getItem('auth_method') || 'jwt',
           };
@@ -487,7 +513,7 @@ export const AuthProvider = ({ children }) => {
   // Development logging
   if (import.meta.env.DEV) {
     console.log('Auth context state:', {
-      user: user?.username,
+      user: user?.username || user?.name,
       userRole: user?.role,
       userRoles: user?.roles,
       isAuthenticated,
