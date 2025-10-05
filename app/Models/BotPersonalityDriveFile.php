@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class BotPersonalityDriveFile extends Model
 {
@@ -27,6 +28,17 @@ class BotPersonalityDriveFile extends Model
     protected $casts = [
         'metadata' => 'array',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = Str::uuid();
+            }
+        });
+    }
 
     public function personality(): BelongsTo
     {

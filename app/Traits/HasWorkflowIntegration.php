@@ -367,7 +367,8 @@ trait HasWorkflowIntegration
 
             // Use existing N8nService
             $n8nService = $this->getN8nService();
-            return $n8nService->isWorkflowActive($actualWorkflowId);
+            $workflow = $n8nService->getWorkflow($actualWorkflowId);
+            return isset($workflow['active']) && $workflow['active'] === true;
 
         } catch (Exception $e) {
             Log::error('Failed to check N8N workflow status', [

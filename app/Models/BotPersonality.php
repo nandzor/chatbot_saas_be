@@ -56,10 +56,6 @@ class BotPersonality extends Model
         'n8n_workflow_id',
         'waha_session_id',
         'knowledge_base_item_id',
-        'google_drive_file_id',
-        'google_drive_file_type',
-        'google_drive_file_name',
-        'google_drive_integration_enabled',
     ];
 
     protected $casts = [
@@ -176,6 +172,14 @@ class BotPersonality extends Model
     public function getKnowledgeBaseItemTitleAttribute(): ?string
     {
         return $this->knowledgeBaseItem?->title;
+    }
+
+    /**
+     * Check if Google Drive integration is enabled based on associated files.
+     */
+    public function getGoogleDriveIntegrationEnabledAttribute(): bool
+    {
+        return $this->driveFiles()->exists();
     }
 
 

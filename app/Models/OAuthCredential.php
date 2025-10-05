@@ -21,6 +21,7 @@ class OAuthCredential extends Model
         'refresh_token',
         'expires_at',
         'scope',
+        'status',
     ];
 
     protected $casts = [

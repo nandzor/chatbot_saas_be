@@ -693,23 +693,8 @@ class BotPersonalityService
                     ];
                 })->toArray();
 
-                // Get user's Google Drive credentials for n8n integration
-                $googleCredentials = $this->getUserGoogleDriveCredentials($personality->organization_id);
-
-                // Create credentials in n8n if not exists
-                if ($googleCredentials) {
-                    $credentialResult = $this->n8nService->createGoogleDriveCredentials([
-                        'organization_id' => $personality->organization_id,
-                        'access_token' => $googleCredentials['access_token'],
-                        'refresh_token' => $googleCredentials['refresh_token'],
-                        'expires_at' => $googleCredentials['expires_at'],
-                        'scope' => $googleCredentials['scope'],
-                    ]);
-
-                    if ($credentialResult['success']) {
-                        $googleCredentials['n8n_credential_id'] = $credentialResult['credential_id'];
-                    }
-                }
+                // Ensure Google Drive credentials are created in N8N for RAG integration
+                $googleCredentials = $this->ensureGoogleDriveCredentialsForRag($personality->organization_id);
 
                 // Use RAG enhancement method if available, otherwise fallback to Google Drive tools
                 if (method_exists($this->n8nService, 'enhanceWorkflowWithRag')) {
@@ -745,6 +730,94 @@ class BotPersonalityService
                     'error' => $e->getMessage(),
                 ]);
             }
+        }
+    }
+
+    /**
+     * Ensure Google Drive credentials are created in N8N for RAG integration
+     */
+    public function ensureGoogleDriveCredentialsForRag(string $organizationId): ?array
+    {
+        try {
+            // Get OAuth credentials from database
+            $oauthCredential = \App\Models\OAuthCredential::where('organization_id', $organizationId)
+                ->where('service', 'google-drive')
+                ->where('status', 'active')
+                ->first();
+
+            if (!$oauthCredential) {
+                Log::warning('No active Google Drive credentials found for RAG integration', [
+                    'organization_id' => $organizationId
+                ]);
+                return null;
+            }
+
+            // Check if N8N credential already exists
+            if ($oauthCredential->n8n_credential_id) {
+                Log::info('N8N credential already exists for Google Drive', [
+                    'credential_id' => $oauthCredential->n8n_credential_id,
+                    'organization_id' => $organizationId
+                ]);
+
+                return [
+                    'access_token' => $oauthCredential->access_token,
+                    'refresh_token' => $oauthCredential->refresh_token,
+                    'expires_at' => $oauthCredential->expires_at,
+                    'scope' => $oauthCredential->scope,
+                    'credential_id' => $oauthCredential->id,
+                    'n8n_credential_id' => $oauthCredential->n8n_credential_id,
+                ];
+            }
+
+            // Create new N8N credential
+            Log::info('Creating new Google Drive credentials in N8N for RAG', [
+                'organization_id' => $organizationId,
+                'oauth_credential_id' => $oauthCredential->id
+            ]);
+
+            $credentialResult = $this->n8nService->createGoogleDriveCredentials([
+                'organization_id' => $organizationId,
+                'access_token' => $oauthCredential->access_token,
+                'refresh_token' => $oauthCredential->refresh_token,
+                'expires_at' => $oauthCredential->expires_at,
+                'scope' => $oauthCredential->scope,
+            ]);
+
+            if ($credentialResult['success']) {
+                // Update OAuth credential with N8N credential ID
+                $oauthCredential->update([
+                    'n8n_credential_id' => $credentialResult['credential_id']
+                ]);
+
+                Log::info('Google Drive credentials created and linked successfully', [
+                    'credential_id' => $credentialResult['credential_id'],
+                    'organization_id' => $organizationId,
+                    'oauth_credential_id' => $oauthCredential->id
+                ]);
+
+                return [
+                    'access_token' => $oauthCredential->access_token,
+                    'refresh_token' => $oauthCredential->refresh_token,
+                    'expires_at' => $oauthCredential->expires_at,
+                    'scope' => $oauthCredential->scope,
+                    'credential_id' => $oauthCredential->id,
+                    'n8n_credential_id' => $credentialResult['credential_id'],
+                ];
+            } else {
+                Log::error('Failed to create Google Drive credentials in N8N', [
+                    'error' => $credentialResult['error'] ?? 'Unknown error',
+                    'organization_id' => $organizationId
+                ]);
+                return null;
+            }
+
+        } catch (\Throwable $e) {
+            Log::error('Exception ensuring Google Drive credentials for RAG', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return null;
         }
     }
 

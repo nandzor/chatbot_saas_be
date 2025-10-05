@@ -924,6 +924,7 @@ Route::prefix('v1')->group(function () {
                 Route::post('/{id}/test-google-drive', [BotPersonalityController::class, 'testGoogleDriveIntegration']);
                 Route::post('/{id}/create-workflow', [BotPersonalityController::class, 'createWorkflowFromTemplate']);
                 Route::post('/{id}/enhance-rag', [BotPersonalityController::class, 'enhanceWorkflowWithRag']);
+                Route::post('/{id}/ensure-google-drive-credentials', [BotPersonalityController::class, 'ensureGoogleDriveCredentials']);
                 Route::post('/{id}/create-credentials', [BotPersonalityController::class, 'createCredentialsForWorkflow']);
 
                 // Workflow endpoints

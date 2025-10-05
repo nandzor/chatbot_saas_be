@@ -432,6 +432,49 @@ class BotPersonalityController extends BaseApiController
     }
 
     /**
+     * Ensure Google Drive credentials are created for RAG integration
+     */
+    public function ensureGoogleDriveCredentials(string $id): JsonResponse
+    {
+        $user = $this->getCurrentUser();
+        if (!$user) {
+            return $this->unauthorizedResponse('Authentication required');
+        }
+
+        $personality = $this->service->getForOrganization($id, $user->organization_id);
+        if (!$personality) {
+            return $this->handleResourceNotFound('BotPersonality', $id);
+        }
+
+        try {
+            $credentials = $this->service->ensureGoogleDriveCredentialsForRag($personality->organization_id);
+
+            if ($credentials) {
+                return $this->successResponse('Google Drive credentials ensured successfully', [
+                    'credential_id' => $credentials['credential_id'],
+                    'n8n_credential_id' => $credentials['n8n_credential_id'],
+                    'has_access_token' => !empty($credentials['access_token']),
+                    'has_refresh_token' => !empty($credentials['refresh_token']),
+                    'scope' => $credentials['scope'],
+                    'expires_at' => $credentials['expires_at']
+                ]);
+            } else {
+                return $this->errorResponse('No Google Drive credentials found for this organization', 404);
+            }
+
+        } catch (Exception $e) {
+            Log::error('Failed to ensure Google Drive credentials', [
+                'bot_personality_id' => $id,
+                'organization_id' => $personality->organization_id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse('Failed to ensure Google Drive credentials: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Create credentials for workflow
      */
     public function createCredentialsForWorkflow(string $id): JsonResponse

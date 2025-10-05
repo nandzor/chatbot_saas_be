@@ -70,10 +70,7 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
     waha_session_id: null,
     knowledge_base_item_id: null,
     // Google Drive fields
-    google_drive_file_id: null,
-    google_drive_file_type: null,
-    google_drive_file_name: null,
-    google_drive_integration_enabled: false
+    google_drive_files: [],
   });
 
   // Related data states
@@ -201,10 +198,7 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
   const handleGoogleDriveFileSelect = useCallback((file) => {
     setFormData(prev => ({
       ...prev,
-      google_drive_file_id: file.id,
-      google_drive_file_type: file.type,
-      google_drive_file_name: file.name,
-      google_drive_integration_enabled: true
+      google_drive_files: [...prev.google_drive_files, file],
     }));
   }, []);
 

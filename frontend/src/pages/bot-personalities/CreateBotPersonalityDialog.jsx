@@ -70,10 +70,7 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
     waha_session_id: null,
     knowledge_base_item_id: null,
     // Google Drive fields
-    google_drive_file_id: null,
-    google_drive_file_type: null,
-    google_drive_file_name: null,
-    google_drive_integration_enabled: false
+    google_drive_files: [],
   });
 
   // Related data states
@@ -152,10 +149,7 @@ const CreateBotPersonalityDialog = ({ open, onOpenChange, onPersonalityCreated }
         status: 'active',
         waha_session_id: null,
         knowledge_base_item_id: null,
-        google_drive_file_id: null,
-        google_drive_file_type: null,
-        google_drive_file_name: null,
-        google_drive_integration_enabled: false
+        google_drive_files: [],
       });
       setErrors({});
       setWahaSessionSearch('');

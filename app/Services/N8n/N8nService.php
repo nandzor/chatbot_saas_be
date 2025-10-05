@@ -809,61 +809,6 @@ class N8nService extends BaseHttpClient
     }
 
     /**
-     * Get workflows with database integration
-     */
-    public function getWorkflowsWithDatabase(): array
-    {
-        // Get workflows from N8N
-        $n8nWorkflows = $this->getWorkflows();
-
-        $response = [
-            'n8n_workflows' => $n8nWorkflows,
-            'database_workflows' => [],
-            'total_n8n_workflows' => count($n8nWorkflows['data'] ?? []),
-            'total_database_workflows' => 0,
-            'database_status' => 'failed',
-            'database_error' => null
-        ];
-
-        // Try to get workflows from database
-        try {
-            $dbWorkflows = \App\Models\N8nWorkflow::latest()->get();
-            $response['database_workflows'] = $dbWorkflows->map(fn($workflow) => $workflow->summary);
-            $response['total_database_workflows'] = $dbWorkflows->count();
-            $response['database_status'] = 'success';
-        } catch (Exception $dbException) {
-            $response['database_status'] = 'failed';
-            $response['database_error'] = $dbException->getMessage();
-            Log::warning('Failed to retrieve workflows from database', [
-                'error' => $dbException->getMessage()
-            ]);
-        }
-
-        return $response;
-    }
-
-    /**
-     * Delete workflow with database cleanup
-     */
-    public function deleteWorkflowWithDatabase(string $workflowId): array
-    {
-        // Delete workflow from N8N
-        $result = $this->deleteWorkflow($workflowId);
-
-        // Also delete from database
-        $dbWorkflow = \App\Models\N8nWorkflow::where('workflow_id', $workflowId)->first();
-        if ($dbWorkflow) {
-            $dbWorkflow->delete();
-            Log::info('Workflow deleted from database', [
-                'workflow_id' => $workflowId,
-                'database_id' => $dbWorkflow->id
-            ]);
-        }
-
-        return $result;
-    }
-
-    /**
      * Update system message in workflow
      */
     public function updateSystemMessage(string $workflowId, string $systemMessage, ?string $nodeId = null): array
@@ -938,53 +883,6 @@ class N8nService extends BaseHttpClient
     }
 
     /**
-     * Extract webhook URLs from workflow data
-     */
-    public function extractWebhookUrls(array $workflowData, string $workflowId, string $workflowName, bool $isActive): array
-    {
-        $webhookUrls = [];
-        $nodes = $workflowData['nodes'] ?? [];
-
-        foreach ($nodes as $node) {
-            if (isset($node['webhookId']) && !empty($node['webhookId'])) {
-                $webhookId = $node['webhookId'];
-                $nodeName = $node['name'] ?? 'Unknown Node';
-                $nodeType = $node['type'] ?? 'Unknown Type';
-
-                // Get N8N base URL from config
-                $n8nBaseUrl = config('n8n.base_url', 'http://localhost:5678');
-
-                // Generate webhook URLs with different base URLs
-                $webhookUrls[] = [
-                    'node_id' => $node['id'],
-                    'node_name' => $nodeName,
-                    'node_type' => $nodeType,
-                    'webhook_id' => $webhookId,
-                    'urls' => [
-                        'test' => [
-                            'localhost' => "{$n8nBaseUrl}/webhook-test/{$webhookId}/waha",
-                            'production_ip' => "http://100.81.120.54:5678/webhook-test/{$webhookId}/waha"
-                        ],
-                        'production' => [
-                            'localhost' => "{$n8nBaseUrl}/webhook/{$webhookId}/waha",
-                            'production_ip' => "http://100.81.120.54:5678/webhook/{$webhookId}/waha"
-                        ]
-                    ],
-                    'is_active' => $isActive
-                ];
-            }
-        }
-
-        return [
-            'workflow_id' => $workflowId,
-            'workflow_name' => $workflowName,
-            'workflow_status' => $isActive ? 'active' : 'inactive',
-            'webhook_urls' => $webhookUrls,
-            'total_webhooks' => count($webhookUrls)
-        ];
-    }
-
-    /**
      * Clean workflow payload for N8N API
      */
     public function cleanWorkflowPayloadForN8n(array $workflowData): array
@@ -1035,84 +933,6 @@ class N8nService extends BaseHttpClient
 
         if (isset($workflowData['connections']) && !is_array($workflowData['connections']) && !is_object($workflowData['connections'])) {
             throw N8nException::invalidWorkflowData('connections must be an array or object');
-        }
-    }
-
-    /**
-     * Check if workflow is active
-     */
-    public function isWorkflowActive(string $workflowId): bool
-    {
-        try {
-            $workflow = $this->getWorkflow($workflowId);
-            return isset($workflow['active']) && $workflow['active'] === true;
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * Get workflow execution statistics
-     */
-    public function getWorkflowStats(string $workflowId): array
-    {
-        try {
-            $executions = $this->getWorkflowExecutions($workflowId, 100, 1);
-            $totalExecutions = $executions['meta']['total'] ?? 0;
-
-            $successful = 0;
-            $failed = 0;
-
-            foreach ($executions['data'] ?? [] as $execution) {
-                if ($execution['status'] === 'success') {
-                    $successful++;
-                } else {
-                    $failed++;
-                }
-            }
-
-            return [
-                'total_executions' => $totalExecutions,
-                'successful' => $successful,
-                'failed' => $failed,
-                'success_rate' => $totalExecutions > 0 ? round(($successful / $totalExecutions) * 100, 2) : 0,
-            ];
-        } catch (Exception $e) {
-            return [
-                'total_executions' => 0,
-                'successful' => 0,
-                'failed' => 0,
-                'success_rate' => 0,
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Test webhook connectivity
-     */
-    public function testWebhookConnectivity(string $workflowId, string $nodeId): array
-    {
-        try {
-            $testData = [
-                'test' => true,
-                'timestamp' => now()->toISOString(),
-                'source' => 'connectivity_test',
-            ];
-
-            $result = $this->sendWebhook($workflowId, $nodeId, $testData);
-
-            return [
-                'success' => true,
-                'message' => 'Webhook connectivity test successful',
-                'execution_id' => $result['executionId'] ?? null,
-            ];
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Webhook connectivity test failed: ' . $e->getMessage(),
-                'error' => $e->getMessage(),
-            ];
         }
     }
 
@@ -1321,30 +1141,40 @@ class N8nService extends BaseHttpClient
 
             // Get current workflow data
             $workflow = $this->getWorkflow($workflowId);
-            if (!$workflow['success']) {
+            if (empty($workflow) || !isset($workflow['id'])) {
                 return [
                     'success' => false,
-                    'error' => 'Workflow not found: ' . $workflow['error']
+                    'error' => 'Workflow not found or invalid response'
                 ];
             }
 
-            $currentData = $workflow['data'];
+            $currentData = $workflow;
             $currentStaticData = $currentData['staticData'] ?? [];
 
             // Merge new staticData with existing
             $mergedStaticData = array_merge($currentStaticData, $staticData);
 
+            // Fix nodes parameters structure
+            $fixedNodes = [];
+            foreach ($currentData['nodes'] as $node) {
+                $fixedNode = $node;
+                // Ensure parameters is object, not array
+                if (isset($node['parameters']) && is_array($node['parameters'])) {
+                    $fixedNode['parameters'] = (object)$node['parameters'];
+                }
+                $fixedNodes[] = $fixedNode;
+            }
+
             // Update workflow with merged staticData
             $updateData = [
                 'name' => $currentData['name'],
-                'nodes' => $currentData['nodes'],
-                'connections' => $currentData['connections'],
+                'nodes' => $fixedNodes,
+                'connections' => empty($currentData['connections']) ? (object)[] : $currentData['connections'],
                 'staticData' => $mergedStaticData,
-                'settings' => $currentData['settings'] ?? [],
-                'meta' => $currentData['meta'] ?? []
+                'settings' => empty($currentData['settings']) ? (object)[] : $currentData['settings'],
             ];
 
-            $response = $this->put("/workflows/{$workflowId}", $updateData);
+            $response = $this->put("/api/v1/workflows/{$workflowId}", $updateData);
 
             if ($response->successful()) {
                 Log::info('Workflow staticData updated successfully', [
@@ -1391,14 +1221,14 @@ class N8nService extends BaseHttpClient
     {
         try {
             $workflow = $this->getWorkflow($workflowId);
-            if (!$workflow['success']) {
+            if (empty($workflow) || !isset($workflow['id'])) {
                 return [
                     'success' => false,
-                    'error' => 'Workflow not found: ' . $workflow['error']
+                    'error' => 'Workflow not found or invalid response'
                 ];
             }
 
-            $staticData = $workflow['data']['staticData'] ?? [];
+            $staticData = $workflow['staticData'] ?? [];
 
             return [
                 'success' => true,
@@ -1470,16 +1300,15 @@ class N8nService extends BaseHttpClient
             $updateData = [
                 'name' => $currentData['name'],
                 'nodes' => $nodes,
-                'connections' => $connections,
+                'connections' => empty($connections) ? (object)[] : $connections,
                 'staticData' => $currentStaticData,
-                'settings' => $currentData['settings'] ?? [],
-                'meta' => $currentData['meta'] ?? []
+                'settings' => empty($currentData['settings']) ? (object)[] : $currentData['settings'],
             ];
 
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Content-Type' => 'application/json'
-            ])->put("{$this->baseUrl}/workflows/{$workflowId}", $updateData);
+            ])->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $updateData);
 
             if ($response->successful()) {
                 Log::info('Workflow enhanced with Google Drive integration', [
@@ -1723,26 +1552,35 @@ class N8nService extends BaseHttpClient
 
             // Get current workflow
             $workflow = $this->getWorkflow($workflowId);
-            if (!$workflow['success']) {
+            if (empty($workflow) || !isset($workflow['id'])) {
                 return [
                     'success' => false,
-                    'error' => 'Workflow not found: ' . $workflow['error']
+                    'error' => 'Workflow not found or invalid response'
                 ];
             }
 
-            $currentData = $workflow['data'];
+            $currentData = $workflow;
             $nodes = $currentData['nodes'] ?? [];
             $connections = $currentData['connections'] ?? [];
 
             // Add RAG nodes for each Google Drive file
             $ragNodes = $this->createRagNodesForGoogleDrive($googleDriveData);
 
-            // Add new nodes
-            foreach ($ragNodes['nodes'] as $nodeId => $node) {
-                $nodes[$nodeId] = $node;
+            // Merge existing nodes with new RAG nodes
+            $nodes = array_merge($nodes, $ragNodes['nodes']);
+
+            // Fix nodes parameters structure
+            $fixedNodes = [];
+            foreach ($nodes as $node) {
+                $fixedNode = $node;
+                // Ensure parameters is object, not array
+                if (isset($node['parameters']) && is_array($node['parameters'])) {
+                    $fixedNode['parameters'] = (object)$node['parameters'];
+                }
+                $fixedNodes[] = $fixedNode;
             }
 
-            // Add new connections
+            // Merge existing connections with new RAG connections
             foreach ($ragNodes['connections'] as $sourceNode => $targetConnections) {
                 if (!isset($connections[$sourceNode])) {
                     $connections[$sourceNode] = ['main' => []];
@@ -1763,20 +1601,30 @@ class N8nService extends BaseHttpClient
                 'lastUpdated' => now()->toISOString()
             ];
 
+            // Update credential references in nodes
+            $credentialId = $googleDriveData['credentials']['n8n_credential_id'] ?? null;
+            if ($credentialId) {
+                foreach ($fixedNodes as $nodeId => &$node) {
+                    if (isset($node['credentials']['googleApi'])) {
+                        $node['credentials']['googleApi']['id'] = $credentialId;
+                    }
+                }
+                unset($node); // Break reference
+            }
+
             // Update workflow
             $updateData = [
                 'name' => $currentData['name'],
-                'nodes' => $nodes,
-                'connections' => $connections,
+                'nodes' => $fixedNodes,
+                'connections' => empty($connections) ? (object)[] : $connections,
                 'staticData' => $currentStaticData,
-                'settings' => $currentData['settings'] ?? [],
-                'meta' => $currentData['meta'] ?? []
+                'settings' => empty($currentData['settings']) ? (object)[] : $currentData['settings'],
             ];
 
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Content-Type' => 'application/json'
-            ])->put("{$this->baseUrl}/workflows/{$workflowId}", $updateData);
+            ])->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $updateData);
 
             if ($response->successful()) {
                 Log::info('Workflow enhanced with RAG capabilities', [
@@ -1866,7 +1714,7 @@ class N8nService extends BaseHttpClient
                     'name' => "Extract Sheets Data",
                     'credentials' => [
                         'googleApi' => [
-                            'id' => '{{google_drive_credential_id}}',
+                            'id' => $googleDriveData['credentials']['n8n_credential_id'] ?? '{{google_drive_credential_id}}',
                             'name' => 'Google Drive OAuth account'
                         ]
                     ]

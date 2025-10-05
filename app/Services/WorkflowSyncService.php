@@ -607,7 +607,8 @@ class WorkflowSyncService
 
             // Use existing N8nService
             $n8nService = $this->getN8nService();
-            return $n8nService->isWorkflowActive($actualWorkflowId);
+            $workflow = $n8nService->getWorkflow($actualWorkflowId);
+            return isset($workflow['active']) && $workflow['active'] === true;
 
         } catch (Exception $e) {
             Log::error('Failed to check N8N workflow active status', [
@@ -634,7 +635,26 @@ class WorkflowSyncService
 
             // Use existing N8nService
             $n8nService = $this->getN8nService();
-            $result = $n8nService->getWorkflowStats($actualWorkflowId);
+            $executions = $n8nService->getWorkflowExecutions($actualWorkflowId, 100, 1);
+            $totalExecutions = $executions['meta']['total'] ?? 0;
+
+            $successful = 0;
+            $failed = 0;
+
+            foreach ($executions['data'] ?? [] as $execution) {
+                if ($execution['status'] === 'success') {
+                    $successful++;
+                } else {
+                    $failed++;
+                }
+            }
+
+            $result = [
+                'total_executions' => $totalExecutions,
+                'successful' => $successful,
+                'failed' => $failed,
+                'success_rate' => $totalExecutions > 0 ? round(($successful / $totalExecutions) * 100, 2) : 0,
+            ];
 
             Log::info('N8N workflow statistics retrieved successfully', [
                 'n8n_workflow_id' => $n8nWorkflowId,
