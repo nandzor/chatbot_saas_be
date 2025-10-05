@@ -16,6 +16,9 @@ import ForgotPassword from '@/pages/auth/ForgotPassword';
 import ResetPassword from '@/pages/auth/ResetPassword';
 import SuperAdminLogin from '@/pages/auth/SuperAdminLogin';
 
+// OAuth Pages
+import OAuthCallback from '@/pages/oauth/OAuthCallback';
+
 // Dashboard Pages
 import Dashboard from '@/pages/dashboard/Dashboard';
 import OrganizationDashboard from '@/features/dashboard/organization/OrganizationDashboard';
@@ -113,6 +116,12 @@ export const router = createBrowserRouter([
       {
         path: '/superadmin/login',
         element: <SuperAdminLogin />,
+      },
+
+      // OAuth Callback Route
+      {
+        path: '/oauth/callback',
+        element: <OAuthCallback />,
       },
 
       // Dashboard Routes (Organization Admin/Manager)

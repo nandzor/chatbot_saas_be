@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\V1\N8nController;
-use App\Http\Controllers\Api\V1\OAuthController;
 use App\Http\Controllers\Api\V1\RagController;
 use Illuminate\Support\Facades\Route;
 
@@ -58,24 +57,4 @@ Route::prefix('n8n')->group(function () {
     Route::get('/workflows/{workflowId}/stats', [N8nController::class, 'getWorkflowStats']);
 });
 
-// OAuth Integration Routes
-Route::prefix('oauth')
-    ->middleware(['unified.auth', 'permission:automations.manage', 'organization'])
-    ->group(function () {
-        // OAuth Flow Management
-        Route::post('/generate-auth-url', [OAuthController::class, 'generateAuthUrl']);
-        Route::post('/callback', [OAuthController::class, 'handleCallback']);
-        Route::post('/test-connection', [OAuthController::class, 'testConnection']);
-        Route::post('/revoke-credential', [OAuthController::class, 'revokeCredential']);
-
-        // File Management with OAuth
-        Route::get('/files', [OAuthController::class, 'getFiles']);
-        Route::get('/file-details', [OAuthController::class, 'getFileDetails']);
-
-        // Workflow Creation with OAuth
-        Route::post('/create-workflow', [OAuthController::class, 'createWorkflow']);
-
-        // Error Statistics
-            Route::get('/error-statistics', [OAuthController::class, 'getErrorStatistics']);
-            Route::delete('/error-statistics', [OAuthController::class, 'clearErrorStatistics']);
-        });
+// OAuth Integration Routes - REMOVED (using GoogleDriveController instead)

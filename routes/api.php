@@ -38,7 +38,9 @@ use App\Http\Controllers\Api\EmailVerificationController;
 // Include additional route files
 require_once __DIR__ . '/n8n.php';
 require_once __DIR__ . '/waha.php';
-require_once __DIR__ . '/api/conversation.php';
+require_once __DIR__ . '/conversation.php';
+require_once __DIR__ . '/google-oauth.php';
+require_once __DIR__ . '/google-drive.php';
 
 // WAHA Status routes
 Route::middleware(['auth:sanctum'])->group(function () {

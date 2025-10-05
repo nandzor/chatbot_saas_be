@@ -4,10 +4,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useOAuth, useOAuthFiles, useOAuthWorkflow } from '@/hooks/useOAuth';
+import { useGoogleDrive, useGoogleDriveFiles } from '@/hooks/useGoogleDrive';
+import { useOrganizationIdFromToken } from '@/hooks/useOrganizationIdFromToken';
 import FileBrowser from '@/components/ui/FileBrowser';
 import FilePreview from '@/components/ui/FilePreview';
 import WorkflowConfig from '@/components/ui/WorkflowConfig';
+import CreateFileDialog from '@/components/ui/CreateFileDialog';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -21,17 +23,20 @@ import {
   Table,
   CheckCircle,
   Plus,
-  Zap
+  Zap,
+  Upload,
+  Download,
+  Trash2,
+  Copy,
+  Edit
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const GoogleDriveIntegration = () => {
-  const { oauthStatus, initiateOAuth, testOAuthConnection, revokeCredential, loading: oauthLoading } = useOAuth();
-  const { createWorkflow } = useOAuthWorkflow();
+  // Get organizationId from JWT token (no OrganizationProvider required)
+  const { organizationId } = useOrganizationIdFromToken();
 
-  const [selectedService] = useState('google-drive');
-  const [organizationId] = useState('6a9f9f22-ef84-4375-a793-dd1af45ccdc0'); // admin@test.com organization
-
+  const { oauthStatus, initiateOAuth, revokeOAuthCredential, loading: oauthLoading, isConnected } = useGoogleDrive();
   const {
     files,
     loading: filesLoading,
@@ -39,8 +44,13 @@ const GoogleDriveIntegration = () => {
     getFiles,
     searchFiles,
     loadMoreFiles,
-    refreshFiles
-  } = useOAuthFiles(selectedService, organizationId);
+    refreshFiles,
+    createFile,
+    updateFile,
+    deleteFile,
+    downloadFile,
+    getStorageInfo
+  } = useGoogleDriveFiles();
 
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [viewMode, setViewMode] = useState('grid');
@@ -49,6 +59,8 @@ const GoogleDriveIntegration = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
   const [showWorkflowConfig, setShowWorkflowConfig] = useState(false);
+  const [showCreateFile, setShowCreateFile] = useState(false);
+  const [storageInfo, setStorageInfo] = useState(null);
   const [workflowConfig, setWorkflowConfig] = useState({
     syncInterval: 300,
     includeMetadata: true,
@@ -58,12 +70,33 @@ const GoogleDriveIntegration = () => {
     retryDelay: 1000
   });
 
-  // Load files when service changes
+  // Utility function to format bytes
+  const formatBytes = (bytes, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  // Load files when connected
   useEffect(() => {
-    if (oauthStatus[selectedService]?.status === 'connected') {
+    if (isConnected) {
       getFiles();
+      loadStorageInfo();
     }
-  }, [selectedService, oauthStatus, getFiles]);
+  }, [isConnected, getFiles]);
+
+  // Load storage info
+  const loadStorageInfo = useCallback(async () => {
+    try {
+      const info = await getStorageInfo();
+      setStorageInfo(info);
+    } catch (error) {
+      // Error is handled in the hook
+    }
+  }, [getStorageInfo]);
 
   // Handle file selection
   const handleFileSelect = useCallback((file) => {
@@ -86,32 +119,54 @@ const GoogleDriveIntegration = () => {
   // Handle Google Drive connection
   const handleConnectGoogleDrive = useCallback(async () => {
     try {
-      await initiateOAuth('google-drive', organizationId);
+      // Get user ID from localStorage or context
+      const userData = JSON.parse(localStorage.getItem('chatbot_user') || '{}');
+      const userId = userData.id;
+
+      if (!userId) {
+        toast.error('User ID is required for Google Drive integration');
+        return;
+      }
+
+      await initiateOAuth(organizationId, userId);
     } catch (error) {
       // Error handling is done in the hook
     }
   }, [initiateOAuth, organizationId]);
 
-  // Handle workflow creation
-  const handleCreateWorkflow = useCallback(async () => {
+  // Handle file operations
+  const handleCreateFile = useCallback(async (fileName, content, mimeType) => {
     try {
-      const result = await createWorkflow(
-        selectedService,
-        organizationId,
-        selectedFiles,
-        workflowConfig
-      );
-
-      if (result.success) {
-        toast.success(`Successfully created ${result.totalCreated} workflows!`);
-        setSelectedFiles([]);
-        setShowWorkflowConfig(false);
-        await refreshFiles();
-      }
+      await createFile(fileName, content, mimeType);
+      setShowCreateFile(false);
     } catch (error) {
       // Error handling is done in the hook
     }
-  }, [createWorkflow, selectedService, organizationId, selectedFiles, workflowConfig, refreshFiles]);
+  }, [createFile]);
+
+  const handleUpdateFile = useCallback(async (fileId, content, mimeType) => {
+    try {
+      await updateFile(fileId, content, mimeType);
+    } catch (error) {
+      // Error handling is done in the hook
+    }
+  }, [updateFile]);
+
+  const handleDeleteFile = useCallback(async (fileId) => {
+    try {
+      await deleteFile(fileId);
+    } catch (error) {
+      // Error handling is done in the hook
+    }
+  }, [deleteFile]);
+
+  const handleDownloadFile = useCallback(async (file) => {
+    try {
+      await downloadFile(file.id, file.name);
+    } catch (error) {
+      // Error handling is done in the hook
+    }
+  }, [downloadFile]);
 
   // Handle search
   const handleSearch = useCallback(async (query) => {
@@ -134,7 +189,7 @@ const GoogleDriveIntegration = () => {
   }, []);
 
   // Check if Google Drive is connected
-  const isGoogleDriveConnected = oauthStatus['google-drive']?.status === 'connected';
+  const isGoogleDriveConnected = isConnected;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -158,6 +213,16 @@ const GoogleDriveIntegration = () => {
               <Badge variant="default" className="ml-3">
                 {selectedFiles.length} selected
               </Badge>
+              {isGoogleDriveConnected && (
+                <Button
+                  onClick={() => setShowCreateFile(true)}
+                  variant="outline"
+                  className="mr-2"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create File
+                </Button>
+              )}
               {selectedFiles.length > 0 && (
                 <Button
                   onClick={() => setShowWorkflowConfig(true)}
@@ -204,7 +269,7 @@ const GoogleDriveIntegration = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => testOAuthConnection('google-drive', organizationId)}
+                          onClick={refreshFiles}
                           disabled={oauthLoading}
                         >
                           <RefreshCw className="w-3 h-3" />
@@ -212,7 +277,7 @@ const GoogleDriveIntegration = () => {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => revokeCredential('google-drive', organizationId)}
+                          onClick={revokeOAuthCredential}
                           disabled={oauthLoading}
                         >
                           Disconnect
@@ -245,6 +310,27 @@ const GoogleDriveIntegration = () => {
                         {selectedFiles.length}
                       </div>
                       <div className="text-xs text-green-600">Selected</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Storage Info */}
+                {isGoogleDriveConnected && storageInfo && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Storage Usage</h4>
+                    <div className="text-xs text-gray-600">
+                      <div>Used: {formatBytes(storageInfo.storageQuota?.usage || 0)}</div>
+                      <div>Total: {formatBytes(storageInfo.storageQuota?.limit || 0)}</div>
+                      <div className="mt-1">
+                        <div className="w-full bg-gray-200 rounded-full h-1">
+                          <div
+                            className="bg-blue-600 h-1 rounded-full"
+                            style={{
+                              width: `${((storageInfo.storageQuota?.usage || 0) / (storageInfo.storageQuota?.limit || 1)) * 100}%`
+                            }}
+                          ></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -383,13 +469,24 @@ const GoogleDriveIntegration = () => {
         />
       )}
 
+      {/* Create File Dialog */}
+      {showCreateFile && (
+        <CreateFileDialog
+          onCreateFile={handleCreateFile}
+          onCancel={() => setShowCreateFile(false)}
+        />
+      )}
+
       {/* Workflow Configuration Dialog */}
       {showWorkflowConfig && (
         <WorkflowConfig
           selectedFiles={selectedFiles}
           config={workflowConfig}
           onConfigChange={setWorkflowConfig}
-          onSave={handleCreateWorkflow}
+          onSave={() => {
+            toast.success('Workflow configuration saved!');
+            setShowWorkflowConfig(false);
+          }}
           onCancel={() => setShowWorkflowConfig(false)}
         />
       )}

@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useOAuth, useOAuthFiles, useOAuthWorkflow } from '@/hooks/useOAuth';
+import { useGoogleDrive, useGoogleDriveFiles } from '@/hooks/useGoogleDrive';
+import { useOrganizationIdFromToken } from '@/hooks/useOrganizationIdFromToken';
 import FileBrowser from '@/components/ui/FileBrowser';
 import FilePreview from '@/components/ui/FilePreview';
 import WorkflowConfig from '@/components/ui/WorkflowConfig';
@@ -15,22 +16,19 @@ import { Alert } from '@/components/ui/Alert';
 import { Search, Grid, List, Settings, RefreshCw, AlertCircle, ExternalLink } from 'lucide-react';
 
 const OAuthFileSelectionPage = () => {
-  const { oauthStatus, initiateOAuth, testOAuthConnection, revokeCredential, loading: oauthLoading, error: oauthError } = useOAuth();
-  const { createWorkflow, loading: workflowLoading, error: workflowError } = useOAuthWorkflow();
+  // Get organizationId from JWT token (no OrganizationProvider required)
+  const { organizationId } = useOrganizationIdFromToken();
 
-  const [selectedService] = useState('google-sheets');
-  const [organizationId] = useState('org_123'); // This should come from context
-
+  const { oauthStatus, initiateOAuth, revokeOAuthCredential, loading: oauthLoading, isConnected } = useGoogleDrive();
   const {
     files,
     loading: filesLoading,
-    error: filesError,
     pagination,
     getFiles,
     searchFiles,
     loadMoreFiles,
     refreshFiles
-  } = useOAuthFiles(selectedService, organizationId);
+  } = useGoogleDriveFiles();
 
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
@@ -48,12 +46,12 @@ const OAuthFileSelectionPage = () => {
     retryDelay: 1000
   });
 
-  // Load files when service changes
+  // Load files when connected
   useEffect(() => {
-    if (oauthStatus[selectedService]?.status === 'connected') {
+    if (isConnected) {
       getFiles();
     }
-  }, [selectedService, oauthStatus, getFiles]);
+  }, [isConnected, getFiles]);
 
   // Handle file selection
   const handleFileSelect = useCallback((file) => {
@@ -74,48 +72,34 @@ const OAuthFileSelectionPage = () => {
   }, []);
 
   // Handle service connection
-  const handleConnectService = useCallback(async (service) => {
+  // Handle Google Drive connection
+  const handleConnectGoogleDrive = useCallback(async () => {
     try {
-      await initiateOAuth(service, organizationId);
+      await initiateOAuth(organizationId);
     } catch (error) {
       // Error handling is done in the hook
     }
   }, [initiateOAuth, organizationId]);
 
   // Handle service disconnection
-  const handleDisconnectService = useCallback(async (service) => {
+  const handleDisconnectService = useCallback(async () => {
     try {
-      await revokeCredential(service, organizationId);
+      await revokeOAuthCredential();
     } catch (error) {
       // Error handling is done in the hook
     }
-  }, [revokeCredential, organizationId]);
+  }, [revokeOAuthCredential]);
 
   // Handle workflow creation
   const handleCreateWorkflow = useCallback(async () => {
     try {
-      const result = await createWorkflow(
-        selectedService,
-        organizationId,
-        selectedFiles,
-        workflowConfig
-      );
-
-      if (result.success) {
-        // Show success message
-        alert(`Successfully created ${result.totalCreated} workflows!`);
-
-        // Clear selected files
-        setSelectedFiles([]);
-        setShowWorkflowConfig(false);
-
-        // Refresh files
-        await refreshFiles();
-      }
+      // TODO: Implement workflow creation with Google Drive files
+      console.log('Creating workflow for files:', selectedFiles);
+      setShowWorkflowConfig(false);
     } catch (error) {
-      // Error handling is done in the hook
+      console.error('Failed to create workflow:', error);
     }
-  }, [createWorkflow, selectedService, organizationId, selectedFiles, workflowConfig, refreshFiles]);
+  }, [selectedFiles]);
 
   // Handle search
   const handleSearch = useCallback(async (query) => {

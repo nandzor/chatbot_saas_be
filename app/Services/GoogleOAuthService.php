@@ -2,380 +2,167 @@
 
 namespace App\Services;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Config;
+use Exception;
 
 /**
  * Google OAuth Service
- * Service untuk mengelola Google OAuth flow dan token management
+ * Service untuk mengelola Google OAuth 2.0 authentication flow
  */
 class GoogleOAuthService
 {
-    protected $clientId;
-    protected $clientSecret;
-    protected $redirectUri;
-    protected $httpClient;
+    private string $clientId;
+    private string $clientSecret;
+    private string $redirectUri;
 
     public function __construct()
     {
-        $this->clientId = Config::get('services.google.client_id');
-        $this->clientSecret = Config::get('services.google.client_secret');
-        $this->redirectUri = Config::get('services.google.redirect_uri');
-        $this->httpClient = new Client(['timeout' => 30]);
-    }
-
-    /**
-     * Generate OAuth authorization URL
-     */
-    public function generateAuthUrl($service, $organizationId, $state = null)
-    {
-        $scopes = $this->getScopesForService($service);
-
-        $params = [
-            'client_id' => $this->clientId,
-            'redirect_uri' => $this->redirectUri,
-            'response_type' => 'code',
-            'scope' => implode(' ', $scopes),
-            'state' => $state ?: json_encode([
-                'service' => $service,
-                'organization_id' => $organizationId,
-                'timestamp' => time()
-            ]),
-            'access_type' => 'offline',
-            'prompt' => 'consent'
-        ];
-
-        return 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params);
+        $this->clientId = config('services.google.client_id');
+        $this->clientSecret = config('services.google.client_secret');
+        $this->redirectUri = config('services.google.redirect');
     }
 
     /**
      * Exchange authorization code for access token
      */
-    public function exchangeCodeForToken($code)
+    public function exchangeCodeForToken(string $code): array
     {
         try {
-            $response = $this->httpClient->post('https://oauth2.googleapis.com/token', [
-                'form_params' => [
-                    'client_id' => $this->clientId,
-                    'client_secret' => $this->clientSecret,
-                    'code' => $code,
-                    'grant_type' => 'authorization_code',
-                    'redirect_uri' => $this->redirectUri
-                ]
+            $response = Http::post('https://oauth2.googleapis.com/token', [
+                'client_id' => $this->clientId,
+                'client_secret' => $this->clientSecret,
+                'code' => $code,
+                'grant_type' => 'authorization_code',
+                'redirect_uri' => $this->redirectUri,
             ]);
 
-            $tokenData = json_decode($response->getBody(), true);
-
-            if (isset($tokenData['error'])) {
-                throw new \Exception('Token exchange failed: ' . $tokenData['error_description']);
+            if (!$response->successful()) {
+                throw new Exception('Failed to exchange code for token: ' . $response->body());
             }
 
-            return $tokenData;
+            return $response->json();
 
-        } catch (RequestException $e) {
-            Log::error('OAuth token exchange failed', [
+        } catch (Exception $e) {
+            Log::error('Failed to exchange code for token', [
                 'error' => $e->getMessage(),
-                'response' => $e->getResponse() ? $e->getResponse()->getBody()->getContents() : null
+                'code' => substr($code, 0, 10) . '...' // Log partial code for debugging
             ]);
-
-            throw new \Exception('Token exchange failed: ' . $e->getMessage());
+            throw $e;
         }
     }
 
     /**
-     * Refresh access token using refresh token
+     * Get user information from Google API
      */
-    public function refreshAccessToken($refreshToken)
+    public function getUserInfo(string $accessToken): array
     {
         try {
-            $response = $this->httpClient->post('https://oauth2.googleapis.com/token', [
-                'form_params' => [
-                    'client_id' => $this->clientId,
-                    'client_secret' => $this->clientSecret,
-                    'refresh_token' => $refreshToken,
-                    'grant_type' => 'refresh_token'
-                ]
-            ]);
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $accessToken,
+            ])->get('https://www.googleapis.com/oauth2/v2/userinfo');
 
-            $tokenData = json_decode($response->getBody(), true);
-
-            if (isset($tokenData['error'])) {
-                throw new \Exception('Token refresh failed: ' . $tokenData['error_description']);
+            if (!$response->successful()) {
+                throw new Exception('Failed to get user info: ' . $response->body());
             }
 
-            return $tokenData;
+            return $response->json();
 
-        } catch (RequestException $e) {
-            Log::error('OAuth token refresh failed', [
+        } catch (Exception $e) {
+            Log::error('Failed to get user info from Google', [
                 'error' => $e->getMessage(),
-                'response' => $e->getResponse() ? $e->getResponse()->getBody()->getContents() : null
+                'access_token' => substr($accessToken, 0, 10) . '...'
             ]);
-
-            throw new \Exception('Token refresh failed: ' . $e->getMessage());
+            throw $e;
         }
     }
 
     /**
-     * Test OAuth connection with access token
+     * Create Google OAuth user object compatible with Socialite
      */
-    public function testOAuthConnection($service, $accessToken)
+    public function createGoogleUser(array $userData, array $tokenData): GoogleOAuthUserService
     {
-        try {
-            switch ($service) {
-                case 'google-sheets':
-                    return $this->testGoogleSheetsConnection($accessToken);
-                case 'google-docs':
-                    return $this->testGoogleDocsConnection($accessToken);
-                case 'google-drive':
-                    return $this->testGoogleDriveConnection($accessToken);
-                default:
-                    throw new \Exception('Unsupported service: ' . $service);
-            }
-        } catch (\Exception $e) {
-            Log::error('OAuth connection test failed', [
-                'service' => $service,
-                'error' => $e->getMessage()
-            ]);
-
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
+        return new GoogleOAuthUserService($userData, $tokenData);
     }
 
     /**
-     * Test Google Sheets connection
+     * Generate OAuth authorization URL
      */
-    private function testGoogleSheetsConnection($accessToken)
+    public function generateAuthUrl(string $organizationId, string $redirectUrl = 'http://localhost:3001/oauth/callback', ?string $userId = null): array
     {
-        try {
-            $response = $this->httpClient->get('https://sheets.googleapis.com/v4/spreadsheets', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $accessToken
-                ],
-                'query' => ['pageSize' => 1]
-            ]);
+        $state = $this->generateState($organizationId, $redirectUrl, $userId);
 
-            $data = json_decode($response->getBody(), true);
+        $scopes = 'openid profile email https://www.googleapis.com/auth/drive';
 
-            return [
-                'success' => true,
-                'data' => [
-                    'service' => 'google-sheets',
-                    'status' => 'connected',
-                    'filesCount' => count($data['files'] ?? []),
-                    'message' => 'Google Sheets connection successful'
-                ]
-            ];
+        $authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
+            'client_id' => $this->clientId,
+            'redirect_uri' => $this->redirectUri,
+            'scope' => $scopes,
+            'response_type' => 'code',
+            'state' => $state,
+            'access_type' => 'offline',
+            'prompt' => 'consent',
+            'include_granted_scopes' => 'true',
+        ]);
 
-        } catch (RequestException $e) {
-            return [
-                'success' => false,
-                'error' => 'Google Sheets connection failed: ' . $e->getMessage()
-            ];
-        }
+        return [
+            'auth_url' => $authUrl,
+            'state' => $state,
+            'organization_id' => $organizationId,
+            'redirect_url' => $redirectUrl,
+            'user_id' => $userId
+        ];
     }
 
     /**
-     * Test Google Docs connection
+     * Generate secure state parameter
      */
-    private function testGoogleDocsConnection($accessToken)
+    private function generateState(string $organizationId, string $redirectUrl, ?string $userId = null): string
     {
-        try {
-            $response = $this->httpClient->get('https://docs.googleapis.com/v1/documents', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $accessToken
-                ],
-                'query' => ['pageSize' => 1]
-            ]);
+        $stateData = [
+            'organization_id' => $organizationId,
+            'redirect_url' => $redirectUrl,
+            'timestamp' => time(),
+            'nonce' => bin2hex(random_bytes(16))
+        ];
 
-            $data = json_decode($response->getBody(), true);
-
-            return [
-                'success' => true,
-                'data' => [
-                    'service' => 'google-docs',
-                    'status' => 'connected',
-                    'filesCount' => count($data['documents'] ?? []),
-                    'message' => 'Google Docs connection successful'
-                ]
-            ];
-
-        } catch (RequestException $e) {
-            return [
-                'success' => false,
-                'error' => 'Google Docs connection failed: ' . $e->getMessage()
-            ];
+        // Add user_id if provided (for Google Drive integration)
+        if ($userId) {
+            $stateData['user_id'] = $userId;
         }
+
+        return base64_encode(json_encode($stateData));
     }
 
     /**
-     * Test Google Drive connection
+     * Validate and decode state parameter
      */
-    private function testGoogleDriveConnection($accessToken)
+    public function validateState(string $state): ?array
     {
         try {
-            $response = $this->httpClient->get('https://www.googleapis.com/drive/v3/files', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $accessToken
-                ],
-                'query' => ['pageSize' => 1]
-            ]);
+            $decoded = json_decode(base64_decode($state), true);
 
-            $data = json_decode($response->getBody(), true);
-
-            return [
-                'success' => true,
-                'data' => [
-                    'service' => 'google-drive',
-                    'status' => 'connected',
-                    'filesCount' => count($data['files'] ?? []),
-                    'message' => 'Google Drive connection successful'
-                ]
-            ];
-
-        } catch (RequestException $e) {
-            return [
-                'success' => false,
-                'error' => 'Google Drive connection failed: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Get files from Google Drive
-     */
-    public function getFiles($accessToken, $service, $pageSize = 100, $pageToken = null)
-    {
-        try {
-            $endpoint = $this->getEndpointForService($service);
-            $query = ['pageSize' => $pageSize];
-
-            if ($pageToken) {
-                $query['pageToken'] = $pageToken;
+            if (!$decoded || !isset($decoded['organization_id'])) {
+                return null;
             }
 
-            // Add service-specific filters
-            if ($service === 'google-sheets') {
-                $query['q'] = "mimeType='application/vnd.google-apps.spreadsheet'";
-            } elseif ($service === 'google-docs') {
-                $query['q'] = "mimeType='application/vnd.google-apps.document'";
+            // Check if state is not too old (10 minutes)
+            if (time() - $decoded['timestamp'] > 600) {
+                Log::warning('State validation failed: expired', [
+                    'age_seconds' => time() - $decoded['timestamp'],
+                    'max_age_seconds' => 600
+                ]);
+                return null;
             }
 
-            $response = $this->httpClient->get($endpoint, [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $accessToken
-                ],
-                'query' => $query
-            ]);
+            return $decoded;
 
-            $data = json_decode($response->getBody(), true);
-
-            return [
-                'success' => true,
-                'data' => [
-                    'files' => $data['files'] ?? $data['documents'] ?? [],
-                    'nextPageToken' => $data['nextPageToken'] ?? null,
-                    'totalCount' => count($data['files'] ?? $data['documents'] ?? [])
-                ]
-            ];
-
-        } catch (RequestException $e) {
-            Log::error('Failed to get files from Google', [
-                'service' => $service,
+        } catch (Exception $e) {
+            Log::warning('Invalid state parameter', [
+                'state' => substr($state, 0, 20) . '...',
                 'error' => $e->getMessage()
             ]);
-
-            return [
-                'success' => false,
-                'error' => 'Failed to get files: ' . $e->getMessage()
-            ];
+            return null;
         }
-    }
-
-    /**
-     * Get file details
-     */
-    public function getFileDetails($accessToken, $fileId, $service)
-    {
-        try {
-            $endpoint = $this->getFileEndpointForService($service, $fileId);
-
-            $response = $this->httpClient->get($endpoint, [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $accessToken
-                ]
-            ]);
-
-            $data = json_decode($response->getBody(), true);
-
-            return [
-                'success' => true,
-                'data' => $data
-            ];
-
-        } catch (RequestException $e) {
-            Log::error('Failed to get file details', [
-                'fileId' => $fileId,
-                'service' => $service,
-                'error' => $e->getMessage()
-            ]);
-
-            return [
-                'success' => false,
-                'error' => 'Failed to get file details: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Get scopes for service
-     */
-    private function getScopesForService($service)
-    {
-        return match($service) {
-            'google-sheets' => [
-                'https://www.googleapis.com/auth/spreadsheets.readonly',
-                'https://www.googleapis.com/auth/drive.readonly'
-            ],
-            'google-docs' => [
-                'https://www.googleapis.com/auth/documents.readonly',
-                'https://www.googleapis.com/auth/drive.readonly'
-            ],
-            'google-drive' => [
-                'https://www.googleapis.com/auth/drive.readonly',
-                'https://www.googleapis.com/auth/drive.metadata.readonly'
-            ],
-            default => []
-        };
-    }
-
-    /**
-     * Get API endpoint for service
-     */
-    private function getEndpointForService($service)
-    {
-        return match($service) {
-            'google-sheets' => 'https://sheets.googleapis.com/v4/spreadsheets',
-            'google-docs' => 'https://docs.googleapis.com/v1/documents',
-            'google-drive' => 'https://www.googleapis.com/drive/v3/files',
-            default => 'https://www.googleapis.com/drive/v3/files'
-        };
-    }
-
-    /**
-     * Get file endpoint for service
-     */
-    private function getFileEndpointForService($service, $fileId)
-    {
-        return match($service) {
-            'google-sheets' => "https://sheets.googleapis.com/v4/spreadsheets/{$fileId}",
-            'google-docs' => "https://docs.googleapis.com/v1/documents/{$fileId}",
-            'google-drive' => "https://www.googleapis.com/drive/v3/files/{$fileId}",
-            default => "https://www.googleapis.com/drive/v3/files/{$fileId}"
-        };
     }
 }

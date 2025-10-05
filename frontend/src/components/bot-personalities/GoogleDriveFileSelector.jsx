@@ -19,18 +19,15 @@ import {
   Search,
   FileText,
   Table,
-  CheckCircle,
-  AlertCircle,
   Loader2,
   ExternalLink,
   RefreshCw,
   HardDrive,
-  X,
-  Plus,
   Zap
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useOAuth } from '@/hooks/useOAuth';
+import { useGoogleDrive, useGoogleDriveFiles } from '@/hooks/useGoogleDrive';
+import { useOrganizationIdFromToken } from '@/hooks/useOrganizationIdFromToken';
 
 const GoogleDriveFileSelector = ({
   open,
@@ -39,7 +36,16 @@ const GoogleDriveFileSelector = ({
   selectedFiles = [],
   fileType = 'all'
 }) => {
-  const { oauthStatus, initiateOAuth, testOAuthConnection } = useOAuth();
+  // Get organizationId from JWT token (no OrganizationProvider required)
+  const { organizationId } = useOrganizationIdFromToken();
+
+  const { initiateOAuth, loading: oauthLoading, isConnected } = useGoogleDrive();
+  const {
+    files,
+    loading: filesLoading,
+    getFiles,
+    refreshFiles
+  } = useGoogleDriveFiles();
 
   // Local state
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,74 +53,34 @@ const GoogleDriveFileSelector = ({
   const [selectedFileIds, setSelectedFileIds] = useState(
     selectedFiles.map(file => file.id) || []
   );
-  const [loading, setLoading] = useState(false);
-  const [files, setFiles] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
 
-  // Mock data untuk development
-  const mockFiles = [
-    {
-      id: '1ABC123def456GHI789jkl012MNO345pqr678STU901vwx234YZA567bcd890EFG123hij456KLM789nop012PQR345stu678VWX901yz',
-      name: 'Sales Data Q4 2024',
-      type: 'sheets',
-      mimeType: 'application/vnd.google-apps.spreadsheet',
-      webViewLink: 'https://docs.google.com/spreadsheets/d/1ABC123.../edit',
-      modifiedTime: '2024-01-02T10:30:00.000Z',
-      size: '245KB'
-    },
-    {
-      id: '2DEF456ghi789JKL012mno345PQR678stu901VWX234yza567BCD890efg123HIJ456klm789NOP012pqr345STU678vwx901YZA234bcd567EFG890hij123KLM456nop789PQR012stu345VWX678yz',
-      name: 'Product Catalog 2024',
-      type: 'docs',
-      mimeType: 'application/vnd.google-apps.document',
-      webViewLink: 'https://docs.google.com/document/d/2DEF456.../edit',
-      modifiedTime: '2024-01-01T15:45:00.000Z',
-      size: '1.2MB'
-    },
-    {
-      id: '3GHI789jkl012MNO345pqr678STU901vwx234YZA567bcd890EFG123hij456KLM789nop012PQR345stu678VWX901yz',
-      name: 'Company Policies',
-      type: 'pdf',
-      mimeType: 'application/pdf',
-      webViewLink: 'https://drive.google.com/file/d/3GHI789.../view',
-      modifiedTime: '2023-12-15T09:20:00.000Z',
-      size: '856KB'
+  // Load files when connected
+  useEffect(() => {
+    if (isConnected && organizationId) {
+      getFiles();
     }
-  ];
+  }, [isConnected, organizationId, getFiles]);
 
-  // Load files function
-  const loadFiles = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setFiles(mockFiles);
-      setIsConnected(true);
-    } catch (error) {
-      toast.error('Failed to load files');
-    } finally {
-      setLoading(false);
+  // Load files when dialog opens
+  useEffect(() => {
+    if (open && isConnected && organizationId) {
+      getFiles();
     }
-  }, []);
+  }, [open, isConnected, organizationId, getFiles]);
 
   // Filtered files based on search and type
   const filteredFiles = files.filter(file => {
     const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedFileType === 'all' || file.type === selectedFileType;
+    const matchesType = selectedFileType === 'all' ||
+      (selectedFileType === 'sheets' && file.mimeType === 'application/vnd.google-apps.spreadsheet') ||
+      (selectedFileType === 'docs' && file.mimeType === 'application/vnd.google-apps.document') ||
+      (selectedFileType === 'pdf' && file.mimeType === 'application/pdf');
     return matchesSearch && matchesType;
   });
-
-  // Load files when dialog opens
-  useEffect(() => {
-    if (open) {
-      loadFiles();
-    }
-  }, [open, loadFiles]);
 
   // Handle file selection (multiple files)
   const handleFileSelect = (file) => {
     const isSelected = selectedFileIds.includes(file.id);
-
     if (isSelected) {
       setSelectedFileIds(prev => prev.filter(id => id !== file.id));
     } else {
@@ -123,13 +89,26 @@ const GoogleDriveFileSelector = ({
   };
 
   // Handle Google Drive connection
-  const handleConnectGoogleDrive = async () => {
-    try {
-      await initiateOAuth('google-drive', '6a9f9f22-ef84-4375-a793-dd1af45ccdc0');
-    } catch (error) {
-      toast.error('Failed to connect to Google Drive');
+  const handleConnectGoogleDrive = useCallback(async () => {
+    if (!organizationId) {
+      toast.error('Organization ID is required');
+      return;
     }
-  };
+    try {
+      // Get user ID from localStorage or context
+      const userData = JSON.parse(localStorage.getItem('chatbot_user') || '{}');
+      const userId = userData.id;
+
+      if (!userId) {
+        toast.error('User ID is required for Google Drive integration');
+        return;
+      }
+
+      await initiateOAuth(organizationId, userId);
+    } catch (error) {
+      // Error handling is done in the hook
+    }
+  }, [initiateOAuth, organizationId]);
 
   // Handle file selection confirmation
   const handleConfirmSelection = () => {
@@ -140,7 +119,7 @@ const GoogleDriveFileSelector = ({
   };
 
   // Check if Google Drive is connected
-  const isGoogleDriveConnected = oauthStatus['google-drive']?.status === 'connected' || isConnected;
+  const isGoogleDriveConnected = isConnected;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,7 +159,8 @@ const GoogleDriveFileSelector = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => testOAuthConnection('google-drive', '6a9f9f22-ef84-4375-a793-dd1af45ccdc0')}
+                      onClick={refreshFiles}
+                      disabled={filesLoading}
                     >
                       <RefreshCw className="w-3 h-3" />
                     </Button>
@@ -189,6 +169,7 @@ const GoogleDriveFileSelector = ({
                       variant="default"
                       size="sm"
                       onClick={handleConnectGoogleDrive}
+                      disabled={oauthLoading}
                     >
                       Connect
                     </Button>
@@ -206,10 +187,11 @@ const GoogleDriveFileSelector = ({
                   Connect to Google Drive
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Connect your Google Drive account to start selecting files for your bot personality
+                  Connect your Google Drive account to start selecting files
                 </p>
                 <Button
                   onClick={handleConnectGoogleDrive}
+                  disabled={oauthLoading}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <HardDrive className="w-4 h-4 mr-2" />
@@ -221,7 +203,10 @@ const GoogleDriveFileSelector = ({
             <>
               {/* Search and Filters */}
               <Card>
-                <CardContent className="p-4">
+                <CardHeader>
+                  <CardTitle className="text-lg">Search & Filter</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <div className="flex items-center space-x-4">
                     <div className="flex-1">
                       <div className="relative">
@@ -254,15 +239,13 @@ const GoogleDriveFileSelector = ({
               {/* File List */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">
-                    Files ({filteredFiles.length})
-                  </CardTitle>
+                  <CardTitle className="text-lg">Select Files</CardTitle>
                   <CardDescription>
                     Select files to integrate with your bot personality
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {loading ? (
+                  {filesLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                       <span className="ml-3 text-gray-600">Loading files...</span>
@@ -271,96 +254,96 @@ const GoogleDriveFileSelector = ({
                     <div className="text-center py-8">
                       <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No files found</h3>
-                      <p className="text-gray-500">
-                        {searchQuery ? 'Try adjusting your search terms' : 'No files available'}
+                      <p className="text-gray-600">
+                        {searchQuery ? 'Try adjusting your search terms' : 'No files available in your Google Drive'}
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {filteredFiles.map((file) => (
-                        <div
-                          key={file.id}
-                          className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                            selectedFileIds.includes(file.id)
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => handleFileSelect(file)}
-                        >
-                          {/* Selection Checkbox */}
-                          <div className="mr-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedFileIds.includes(file.id)}
-                              onChange={() => handleFileSelect(file)}
-                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                          </div>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {filteredFiles.map((file) => {
+                        const isSelected = selectedFileIds.includes(file.id);
+                        const isSheet = file.mimeType === 'application/vnd.google-apps.spreadsheet';
+                        const isDoc = file.mimeType === 'application/vnd.google-apps.document';
 
-                          {/* File Icon */}
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${
-                            file.type === 'sheets' ? 'bg-green-100' :
-                            file.type === 'docs' ? 'bg-blue-100' :
-                            'bg-gray-100'
-                          }`}>
-                            {file.type === 'sheets' ? (
-                              <Table className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <FileText className="w-4 h-4 text-blue-600" />
-                            )}
-                          </div>
-
-                          {/* File Info */}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-gray-900 truncate">{file.name}</h4>
-                            <div className="flex items-center space-x-4 text-sm text-gray-500">
-                              <span>
-                                {file.type === 'sheets' ? 'Google Sheets' :
-                                 file.type === 'docs' ? 'Google Docs' :
-                                 'PDF File'}
-                              </span>
-                              <span>{file.size}</span>
-                              <span>{new Date(file.modifiedTime).toLocaleDateString()}</span>
+                        return (
+                          <div
+                            key={file.id}
+                            className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-blue-50 border-blue-200'
+                                : 'hover:bg-gray-50 border-gray-200'
+                            }`}
+                            onClick={() => handleFileSelect(file)}
+                          >
+                            <div className="flex items-center flex-1">
+                              {isSheet ? (
+                                <Table className="w-5 h-5 text-green-600 mr-3" />
+                              ) : isDoc ? (
+                                <FileText className="w-5 h-5 text-blue-600 mr-3" />
+                              ) : (
+                                <FileText className="w-5 h-5 text-gray-600 mr-3" />
+                              )}
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900">{file.name}</h4>
+                                <p className="text-sm text-gray-500">
+                                  {isSheet ? 'Google Sheets' : isDoc ? 'Google Docs' : 'PDF File'}
+                                  {file.modifiedTime && (
+                                    <span className="ml-2">
+                                      • Modified {new Date(file.modifiedTime).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {file.webViewLink && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(file.webViewLink, '_blank');
+                                  }}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <div className={`w-4 h-4 rounded border-2 ${
+                                isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                              }`}>
+                                {isSelected && (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-
-                          {/* External Link */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(file.webViewLink, '_blank');
-                            }}
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
               </Card>
-            </>
-          )}
-        </div>
 
-        {/* Dialog Footer */}
-        <div className="flex items-center justify-end space-x-3 pt-6 border-t">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          {isGoogleDriveConnected && selectedFileIds.length > 0 && (
-            <Button
-              onClick={handleConfirmSelection}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Zap className="w-4 h-4 mr-2" />
-              Select {selectedFileIds.length} Files
-            </Button>
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmSelection}
+                  disabled={selectedFileIds.length === 0}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Select {selectedFileIds.length} Files
+                </Button>
+              </div>
+            </>
           )}
         </div>
       </DialogContent>

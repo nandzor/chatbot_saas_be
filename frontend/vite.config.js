@@ -49,6 +49,13 @@ export default defineConfig(({ command, mode }) => {
       open: true,
       host: true,
       cors: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:9000',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     build: {
       outDir: 'dist',

@@ -118,14 +118,8 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect_uri' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/oauth/callback'),
-        'scopes' => [
-            'sheets' => 'https://www.googleapis.com/auth/spreadsheets.readonly',
-            'docs' => 'https://www.googleapis.com/auth/documents.readonly',
-            'drive' => 'https://www.googleapis.com/auth/drive.readonly',
-            'drive_metadata' => 'https://www.googleapis.com/auth/drive.metadata.readonly',
-            'drive_file' => 'https://www.googleapis.com/auth/drive.file',
-        ],
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
+        'redirect_uri' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
         'auth_uri' => 'https://accounts.google.com/o/oauth2/v2/auth',
         'token_uri' => 'https://oauth2.googleapis.com/token',
         'revoke_uri' => 'https://oauth2.googleapis.com/revoke',
