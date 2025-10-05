@@ -240,9 +240,10 @@ export const useGoogleDriveFiles = () => {
     }
   }, [getFiles, pagination.hasMore, pagination.nextPageToken, loading]);
 
-  // Refresh files
+  // Refresh files - force reload from beginning
   const refreshFiles = useCallback(async () => {
     try {
+      // Always call with pageToken=null to replace existing files
       await getFiles(10, null);
     } catch (error) {
       // Error is already handled in getFiles

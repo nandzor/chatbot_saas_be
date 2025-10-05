@@ -126,11 +126,8 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
         // Assignment fields
         waha_session_id: personality.waha_session_id || null,
         knowledge_base_item_id: personality.knowledge_base_item_id || null,
-        // Google Drive fields
-        google_drive_file_id: personality.google_drive_file_id || null,
-        google_drive_file_type: personality.google_drive_file_type || null,
-        google_drive_file_name: personality.google_drive_file_name || null,
-        google_drive_integration_enabled: personality.google_drive_integration_enabled || false
+        // Google Drive files (new array format)
+        google_drive_files: personality.google_drive_files || []
       });
       setErrors({});
       setWahaSessionSearch('');
@@ -144,9 +141,10 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
       setLoadingRelatedData(true);
 
       // Load all related data in parallel
-      const [wahaResponse, kbResponse] = await Promise.all([
+      const [wahaResponse, kbResponse, driveFilesResponse] = await Promise.all([
         botPersonalityService.getWahaSessions({ per_page: 100 }),
-        botPersonalityService.getKnowledgeBaseItems({ per_page: 100 })
+        botPersonalityService.getKnowledgeBaseItems({ per_page: 100 }),
+        personality?.id ? botPersonalityService.getDriveFiles(personality.id) : Promise.resolve({ success: false })
       ]);
 
       if (wahaResponse.success) {
@@ -158,6 +156,22 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
         // Handle both nested and direct data structure
         const kbData = Array.isArray(kbResponse.data) ? kbResponse.data : (kbResponse.data.data || []);
         setKnowledgeBaseItems(kbData);
+      }
+      if (driveFilesResponse.success) {
+        // Load existing Google Drive files
+        const driveFiles = driveFilesResponse.data.files || [];
+        setFormData(prev => ({
+          ...prev,
+          google_drive_files: driveFiles.map(file => ({
+            id: file.file_id,
+            name: file.file_name,
+            mimeType: file.mime_type,
+            webViewLink: file.web_view_link,
+            iconLink: file.icon_link,
+            size: file.size,
+            ...file.metadata
+          }))
+        }));
       }
     } catch (error) {
       // Error loading related data
@@ -861,17 +875,6 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
           </DialogFooter>
         </form>
 
-        {/* Google Drive File Selector */}
-        <GoogleDriveFileSelector
-          open={showGoogleDriveSelector}
-          onOpenChange={setShowGoogleDriveSelector}
-          onFileSelected={handleGoogleDriveFileSelect}
-          selectedFile={formData.google_drive_file_id ? {
-            id: formData.google_drive_file_id,
-            name: formData.google_drive_file_name,
-            type: formData.google_drive_file_type
-          } : null}
-        />
       </DialogContent>
 
       {/* Google Drive File Selector */}

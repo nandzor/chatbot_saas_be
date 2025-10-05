@@ -23,7 +23,8 @@ import {
   ExternalLink,
   RefreshCw,
   HardDrive,
-  Zap
+  Zap,
+  File
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useGoogleDrive, useGoogleDriveFiles } from '@/hooks/useGoogleDrive';
@@ -53,6 +54,7 @@ const GoogleDriveFileSelector = ({
   const [selectedFileIds, setSelectedFileIds] = useState(
     selectedFiles.map(file => file.id) || []
   );
+  const [lastRefreshTime, setLastRefreshTime] = useState(null);
 
   // Load files when connected
   useEffect(() => {
@@ -61,20 +63,40 @@ const GoogleDriveFileSelector = ({
     }
   }, [isConnected, organizationId, getFiles]);
 
-  // Load files when dialog opens
+  // Load files when dialog opens - force refresh to get latest files
   useEffect(() => {
     if (open && isConnected && organizationId) {
-      getFiles();
+      // Force refresh by calling getFiles with pageToken=null to replace existing files
+      getFiles(10, null).then(() => {
+        setLastRefreshTime(new Date());
+      });
     }
   }, [open, isConnected, organizationId, getFiles]);
 
-  // Filtered files based on search and type
+  // Filtered files based on search and type - Only show relevant files for bot personalities
   const filteredFiles = files.filter(file => {
     const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedFileType === 'all' ||
-      (selectedFileType === 'sheets' && file.mimeType === 'application/vnd.google-apps.spreadsheet') ||
-      (selectedFileType === 'docs' && file.mimeType === 'application/vnd.google-apps.document') ||
-      (selectedFileType === 'pdf' && file.mimeType === 'application/pdf');
+
+    // Only show files that are relevant for bot personalities: Sheets, Docs, PDF, and Text files
+    const isRelevantFile =
+      file.mimeType === 'application/vnd.google-apps.spreadsheet' ||  // Google Sheets
+      file.mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || // Excel Files
+      file.mimeType === 'application/vnd.google-apps.document' ||    // Google Docs
+      file.mimeType === 'application/pdf' ||                         // PDF Files
+      file.mimeType === 'text/plain';                                // Text Files
+
+    // If 'all' is selected, show only relevant files
+    if (selectedFileType === 'all') {
+      return matchesSearch && isRelevantFile;
+    }
+
+    // Filter by specific file types
+    const matchesType =
+      (selectedFileType === 'sheet' && (file.mimeType === 'application/vnd.google-apps.spreadsheet' || file.mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) ||
+      (selectedFileType === 'doc' && file.mimeType === 'application/vnd.google-apps.document') ||
+      (selectedFileType === 'pdf' && file.mimeType === 'application/pdf') ||
+      (selectedFileType === 'text' && file.mimeType === 'text/plain');
+
     return matchesSearch && matchesType;
   });
 
@@ -118,6 +140,46 @@ const GoogleDriveFileSelector = ({
     toast.success(`${selectedFilesData.length} files selected`);
   };
 
+  // Handle refresh with timestamp
+  const handleRefresh = async () => {
+    try {
+      await refreshFiles();
+      setLastRefreshTime(new Date());
+      toast.success('Files refreshed successfully');
+    } catch (error) {
+      toast.error('Failed to refresh files');
+    }
+  };
+
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // Get file icon and label based on mimeType - Only for bot personality relevant files
+  const getFileIconAndLabel = (mimeType) => {
+    if (mimeType === 'application/vnd.google-apps.spreadsheet') {
+      return { icon: Table, label: 'Google Sheets', color: 'text-green-600' };
+    }
+    if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      return { icon: Table, label: 'Excel File', color: 'text-green-700' };
+    }
+    if (mimeType === 'application/vnd.google-apps.document') {
+      return { icon: FileText, label: 'Google Docs', color: 'text-blue-600' };
+    }
+    if (mimeType === 'application/pdf') {
+      return { icon: FileText, label: 'PDF File', color: 'text-red-600' };
+    }
+    if (mimeType === 'text/plain') {
+      return { icon: FileText, label: 'Text File', color: 'text-gray-600' };
+    }
+    // Default for unknown file types (should not happen with our filtering)
+    return { icon: File, label: 'File', color: 'text-gray-600' };
+  };
+
   // Check if Google Drive is connected
   const isGoogleDriveConnected = isConnected;
 
@@ -133,7 +195,7 @@ const GoogleDriveFileSelector = ({
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Connect to Google Drive and select files to integrate with your bot personality
+            Connect to Google Drive and select files to integrate with your bot personality. Only Google Sheets, Excel, Docs, PDF, and Text files are shown.
           </DialogDescription>
         </DialogHeader>
 
@@ -156,14 +218,21 @@ const GoogleDriveFileSelector = ({
                 </div>
                 <div className="flex items-center space-x-2">
                   {isGoogleDriveConnected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={refreshFiles}
-                      disabled={filesLoading}
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefresh}
+                        disabled={filesLoading}
+                      >
+                        <RefreshCw className={`w-3 h-3 ${filesLoading ? 'animate-spin' : ''}`} />
+                      </Button>
+                      {lastRefreshTime && (
+                        <span className="text-xs text-gray-500">
+                          Last updated: {lastRefreshTime.toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <Button
                       variant="default"
@@ -227,9 +296,10 @@ const GoogleDriveFileSelector = ({
                         className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="all">All Files</option>
-                        <option value="sheets">Google Sheets</option>
-                        <option value="docs">Google Docs</option>
+                        <option value="sheet">Sheets & Excel</option>
+                        <option value="doc">Google Docs</option>
                         <option value="pdf">PDF Files</option>
+                        <option value="text">Text Files</option>
                       </select>
                     </div>
                   </div>
@@ -241,7 +311,9 @@ const GoogleDriveFileSelector = ({
                 <CardHeader>
                   <CardTitle className="text-lg">Select Files</CardTitle>
                   <CardDescription>
-                    Select files to integrate with your bot personality
+                    Select files to integrate with your bot personality. Only Google Sheets, Excel, Docs, PDF, and Text files are available.
+                    <br />
+                    Showing {filteredFiles.length} of {files.length} files
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -262,8 +334,7 @@ const GoogleDriveFileSelector = ({
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {filteredFiles.map((file) => {
                         const isSelected = selectedFileIds.includes(file.id);
-                        const isSheet = file.mimeType === 'application/vnd.google-apps.spreadsheet';
-                        const isDoc = file.mimeType === 'application/vnd.google-apps.document';
+                        const { icon: FileIcon, label, color } = getFileIconAndLabel(file.mimeType);
 
                         return (
                           <div
@@ -276,20 +347,19 @@ const GoogleDriveFileSelector = ({
                             onClick={() => handleFileSelect(file)}
                           >
                             <div className="flex items-center flex-1">
-                              {isSheet ? (
-                                <Table className="w-5 h-5 text-green-600 mr-3" />
-                              ) : isDoc ? (
-                                <FileText className="w-5 h-5 text-blue-600 mr-3" />
-                              ) : (
-                                <FileText className="w-5 h-5 text-gray-600 mr-3" />
-                              )}
+                              <FileIcon className={`w-5 h-5 ${color} mr-3`} />
                               <div className="flex-1">
                                 <h4 className="font-medium text-gray-900">{file.name}</h4>
                                 <p className="text-sm text-gray-500">
-                                  {isSheet ? 'Google Sheets' : isDoc ? 'Google Docs' : 'PDF File'}
+                                  {label}
                                   {file.modifiedTime && (
                                     <span className="ml-2">
                                       • Modified {new Date(file.modifiedTime).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                  {file.size && (
+                                    <span className="ml-2">
+                                      • {formatFileSize(file.size)}
                                     </span>
                                   )}
                                 </p>

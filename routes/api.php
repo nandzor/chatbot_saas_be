@@ -918,6 +918,13 @@ Route::prefix('v1')->group(function () {
                 Route::put('/{id}', [BotPersonalityController::class, 'update']);
                 Route::patch('/{id}', [BotPersonalityController::class, 'update']);
                 Route::delete('/{id}', [BotPersonalityController::class, 'destroy']);
+                Route::get('/{id}/drive-files', [BotPersonalityController::class, 'getDriveFiles']);
+
+                // Google Drive Integration Testing
+                Route::post('/{id}/test-google-drive', [BotPersonalityController::class, 'testGoogleDriveIntegration']);
+                Route::post('/{id}/create-workflow', [BotPersonalityController::class, 'createWorkflowFromTemplate']);
+                Route::post('/{id}/enhance-rag', [BotPersonalityController::class, 'enhanceWorkflowWithRag']);
+                Route::post('/{id}/create-credentials', [BotPersonalityController::class, 'createCredentialsForWorkflow']);
 
                 // Workflow endpoints
                 Route::post('/workflow/execute', [BotPersonalityWorkflowController::class, 'executeWorkflow']);

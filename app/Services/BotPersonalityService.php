@@ -510,6 +510,11 @@ class BotPersonalityService
         // Create the bot personality first
         $botPersonality = BotPersonality::create($data);
 
+        // Persist Google Drive files if provided
+        if (!empty($data['google_drive_files']) && is_array($data['google_drive_files'])) {
+            $this->syncDriveFiles($botPersonality, $data['google_drive_files']);
+        }
+
         // Activate N8N workflow if it exists
         if ($botPersonality->n8n_workflow_id) {
             $this->activateN8nWorkflow($botPersonality->n8n_workflow_id);
@@ -592,6 +597,12 @@ class BotPersonalityService
         // Update the bot personality
         $personality->update($data);
 
+        // Sync Google Drive files if provided
+        if (array_key_exists('google_drive_files', $data)) {
+            $files = is_array($data['google_drive_files']) ? $data['google_drive_files'] : [];
+            $this->syncDriveFiles($personality, $files);
+        }
+
         // Activate N8N workflow if it exists
         if ($personality->n8n_workflow_id) {
             $this->activateN8nWorkflow($personality->n8n_workflow_id);
@@ -635,6 +646,140 @@ class BotPersonalityService
         }
 
         return $personality->fresh(); // Return fresh instance with updated data
+    }
+
+    /**
+     * Sync Google Drive files to relation table and update n8n workflow staticData.
+     */
+    protected function syncDriveFiles(BotPersonality $personality, array $files): void
+    {
+        // Map and validate
+        $mapped = collect($files)->map(function ($file) use ($personality) {
+            return [
+                'organization_id' => $personality->organization_id,
+                'bot_personality_id' => $personality->id,
+                'file_id' => $file['id'] ?? $file['file_id'] ?? null,
+                'file_name' => $file['name'] ?? $file['file_name'] ?? null,
+                'mime_type' => $file['mimeType'] ?? $file['mime_type'] ?? null,
+                'web_view_link' => $file['webViewLink'] ?? $file['web_view_link'] ?? null,
+                'icon_link' => $file['iconLink'] ?? $file['icon_link'] ?? null,
+                'size' => isset($file['size']) ? (int) $file['size'] : (isset($file['fileSize']) ? (int) $file['fileSize'] : 0),
+                // Ensure JSON string for bulk insert (casts won't run on insert())
+                'metadata' => is_string($file) ? $file : json_encode($file, JSON_UNESCAPED_SLASHES),
+            ];
+        })->filter(fn($row) => !empty($row['file_id']) && !empty($row['file_name']))->values();
+
+        // Replace existing rows
+        $personality->driveFiles()->delete();
+        if ($mapped->isNotEmpty()) {
+            \App\Models\BotPersonalityDriveFile::insert($mapped->map(function ($row) {
+                $row['id'] = (string) \Illuminate\Support\Str::uuid();
+                $row['created_at'] = now();
+                $row['updated_at'] = now();
+                return $row;
+            })->toArray());
+        }
+
+        // Update n8n staticData if workflow exists
+        if ($personality->n8n_workflow_id) {
+            try {
+                $filesForWorkflow = $mapped->map(function ($row) {
+                    return [
+                        'file_id' => $row['file_id'],
+                        'file_name' => $row['file_name'],
+                        'mime_type' => $row['mime_type'],
+                        'web_view_link' => $row['web_view_link'],
+                        'size' => $row['size'],
+                    ];
+                })->toArray();
+
+                // Get user's Google Drive credentials for n8n integration
+                $googleCredentials = $this->getUserGoogleDriveCredentials($personality->organization_id);
+
+                // Create credentials in n8n if not exists
+                if ($googleCredentials) {
+                    $credentialResult = $this->n8nService->createGoogleDriveCredentials([
+                        'organization_id' => $personality->organization_id,
+                        'access_token' => $googleCredentials['access_token'],
+                        'refresh_token' => $googleCredentials['refresh_token'],
+                        'expires_at' => $googleCredentials['expires_at'],
+                        'scope' => $googleCredentials['scope'],
+                    ]);
+
+                    if ($credentialResult['success']) {
+                        $googleCredentials['n8n_credential_id'] = $credentialResult['credential_id'];
+                    }
+                }
+
+                // Use RAG enhancement method if available, otherwise fallback to Google Drive tools
+                if (method_exists($this->n8nService, 'enhanceWorkflowWithRag')) {
+                    $this->n8nService->enhanceWorkflowWithRag($personality->n8n_workflow_id, [
+                        'files' => $filesForWorkflow,
+                        'organization_id' => $personality->organization_id,
+                        'personality_id' => $personality->id,
+                        'credentials' => $googleCredentials,
+                    ]);
+                } elseif (method_exists($this->n8nService, 'enhanceWorkflowWithGoogleDrive')) {
+                    $this->n8nService->enhanceWorkflowWithGoogleDrive($personality->n8n_workflow_id, [
+                        'files' => $filesForWorkflow,
+                        'organization_id' => $personality->organization_id,
+                        'personality_id' => $personality->id,
+                        'credentials' => $googleCredentials,
+                    ]);
+                } elseif (method_exists($this->n8nService, 'updateWorkflowStaticData')) {
+                    \call_user_func([
+                        $this->n8nService,
+                        'updateWorkflowStaticData'
+                    ], $personality->n8n_workflow_id, [
+                        'googleDrive' => [
+                            'files' => $filesForWorkflow,
+                            'organization_id' => $personality->organization_id,
+                            'personality_id' => $personality->id,
+                            'credentials' => $googleCredentials,
+                        ]
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to update n8n staticData with drive files', [
+                    'workflow_id' => $personality->n8n_workflow_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Get user's Google Drive credentials for n8n integration
+     */
+    private function getUserGoogleDriveCredentials(string $organizationId): ?array
+    {
+        try {
+            $oauthCredential = \App\Models\OAuthCredential::where('organization_id', $organizationId)
+                ->where('service', 'google-drive')
+                ->where('status', 'active')
+                ->first();
+
+            if (!$oauthCredential) {
+                Log::warning('No active Google Drive credentials found for organization', [
+                    'organization_id' => $organizationId
+                ]);
+                return null;
+            }
+
+            return [
+                'access_token' => $oauthCredential->access_token,
+                'refresh_token' => $oauthCredential->refresh_token,
+                'expires_at' => $oauthCredential->expires_at,
+                'scope' => $oauthCredential->scope,
+                'credential_id' => $oauthCredential->id,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('Failed to get Google Drive credentials', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 
     /**
@@ -1122,13 +1267,14 @@ class BotPersonalityService
                 'color_scheme' => $data['color_scheme'] ?? ['primary' => '#3B82F6', 'secondary' => '#10B981'],
                 'status' => $data['status'] ?? 'active',
                 'rag_settings' => $data['rag_settings'] ?? null,
-                'google_drive_file_id' => $data['google_drive_file_id'] ?? null,
-                'google_drive_file_name' => $data['google_drive_file_name'] ?? null,
-                'google_drive_file_type' => $data['google_drive_file_type'] ?? null,
-                'google_drive_web_view_link' => $data['google_drive_web_view_link'] ?? null,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id()
             ]);
+
+            // Sync Google Drive files if provided
+            if (!empty($data['google_drive_files']) && is_array($data['google_drive_files'])) {
+                $this->syncDriveFiles($personality, $data['google_drive_files']);
+            }
 
             // Create RAG workflow jika ada selected files
             if (!empty($data['rag_files']) && is_array($data['rag_files'])) {
@@ -1209,12 +1355,14 @@ class BotPersonalityService
                 'confidence_threshold' => $data['confidence_threshold'] ?? $personality->confidence_threshold,
                 'color_scheme' => $data['color_scheme'] ?? $personality->color_scheme,
                 'status' => $data['status'] ?? $personality->status,
-                'google_drive_file_id' => $data['google_drive_file_id'] ?? $personality->google_drive_file_id,
-                'google_drive_file_name' => $data['google_drive_file_name'] ?? $personality->google_drive_file_name,
-                'google_drive_file_type' => $data['google_drive_file_type'] ?? $personality->google_drive_file_type,
-                'google_drive_web_view_link' => $data['google_drive_web_view_link'] ?? $personality->google_drive_web_view_link,
                 'updated_by' => Auth::id()
             ]);
+
+            // Sync Google Drive files if provided
+            if (array_key_exists('google_drive_files', $data)) {
+                $files = is_array($data['google_drive_files']) ? $data['google_drive_files'] : [];
+                $this->syncDriveFiles($personality, $files);
+            }
 
             // Handle RAG files update
             if (isset($data['rag_files'])) {

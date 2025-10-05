@@ -99,6 +99,14 @@ class BotPersonality extends Model
     }
 
     /**
+     * Google Drive files associated with this personality.
+     */
+    public function driveFiles(): HasMany
+    {
+        return $this->hasMany(BotPersonalityDriveFile::class, 'bot_personality_id');
+    }
+
+    /**
      * Get the n8n workflow associated with this personality.
      */
     public function n8nWorkflow(): BelongsTo
