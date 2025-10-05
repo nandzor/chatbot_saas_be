@@ -93,47 +93,25 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
     item.description?.toLowerCase().includes(knowledgeBaseSearch.toLowerCase())
   );
 
-
-  // Load related data when dialog opens
-  useEffect(() => {
-    if (open) {
-      loadRelatedData();
+  // Get file type from mimeType for bot personality integration
+  const getFileTypeFromMimeType = (mimeType) => {
+    if (mimeType === 'application/vnd.google-apps.spreadsheet' ||
+        mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      return 'sheets';
     }
-  }, [open]);
-
-  // Populate form data when personality changes
-  useEffect(() => {
-    if (personality && open) {
-      setFormData({
-        name: personality.name || '',
-        code: personality.code || '',
-        display_name: personality.display_name || '',
-        description: personality.description || '',
-        language: personality.language || 'english',
-        formality_level: personality.formality_level || 'formal',
-        color_scheme: personality.color_scheme || { primary: '#3B82F6' },
-        personality_traits: personality.personality_traits || [],
-        response_delay_ms: personality.response_delay_ms || 1000,
-        typing_indicator: personality.typing_indicator ?? true,
-        max_response_length: personality.max_response_length || 1000,
-        enable_small_talk: personality.enable_small_talk ?? true,
-        confidence_threshold: personality.confidence_threshold || 0.8,
-        learning_enabled: personality.learning_enabled ?? true,
-        status: personality.status || 'active',
-        // Assignment fields
-        waha_session_id: personality.waha_session_id || null,
-        knowledge_base_item_id: personality.knowledge_base_item_id || null,
-        // Google Drive files (new array format)
-        google_drive_files: personality.google_drive_files || []
-      });
-      setErrors({});
-      setWahaSessionSearch('');
-      setKnowledgeBaseSearch('');
+    if (mimeType === 'application/vnd.google-apps.document') {
+      return 'doc';
     }
-  }, [personality, open]);
+    if (mimeType === 'application/pdf') {
+      return 'pdf';
+    }
+    if (mimeType === 'text/plain') {
+      return 'text';
+    }
+    return 'unknown';
+  };
 
-
-  const loadRelatedData = async () => {
+  const loadRelatedData = useCallback(async () => {
     try {
       setLoadingRelatedData(true);
 
@@ -166,6 +144,7 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
             webViewLink: file.web_view_link,
             iconLink: file.icon_link,
             size: file.size,
+            type: getFileTypeFromMimeType(file.mime_type),
             ...file.metadata
           }))
         }));
@@ -176,7 +155,45 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
     } finally {
       setLoadingRelatedData(false);
     }
-  };
+  }, [personality?.id]);
+
+  // Load related data when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadRelatedData();
+    }
+  }, [open, loadRelatedData]);
+
+  // Populate form data when personality changes
+  useEffect(() => {
+    if (personality && open) {
+      setFormData({
+        name: personality.name || '',
+        code: personality.code || '',
+        display_name: personality.display_name || '',
+        description: personality.description || '',
+        language: personality.language || 'english',
+        formality_level: personality.formality_level || 'formal',
+        color_scheme: personality.color_scheme || { primary: '#3B82F6' },
+        personality_traits: personality.personality_traits || [],
+        response_delay_ms: personality.response_delay_ms || 1000,
+        typing_indicator: personality.typing_indicator ?? true,
+        max_response_length: personality.max_response_length || 1000,
+        enable_small_talk: personality.enable_small_talk ?? true,
+        confidence_threshold: personality.confidence_threshold || 0.8,
+        learning_enabled: personality.learning_enabled ?? true,
+        status: personality.status || 'active',
+        // Assignment fields
+        waha_session_id: personality.waha_session_id || null,
+        knowledge_base_item_id: personality.knowledge_base_item_id || null,
+        // Google Drive files (new array format)
+        google_drive_files: personality.google_drive_files || []
+      });
+      setErrors({});
+      setWahaSessionSearch('');
+      setKnowledgeBaseSearch('');
+    }
+  }, [personality, open]);
 
   // Handle form input changes
   const handleInputChange = useCallback((field, value) => {
@@ -192,14 +209,6 @@ const EditBotPersonalityDialog = ({ open, onOpenChange, personality, onPersonali
   // Handle assignment changes
   const handleAssignmentChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  // Handle Google Drive file selection
-  const handleGoogleDriveFileSelect = useCallback((file) => {
-    setFormData(prev => ({
-      ...prev,
-      google_drive_files: [...prev.google_drive_files, file],
-    }));
   }, []);
 
   // Validate form

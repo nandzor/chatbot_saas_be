@@ -134,7 +134,10 @@ const GoogleDriveFileSelector = ({
 
   // Handle file selection confirmation
   const handleConfirmSelection = () => {
-    const selectedFilesData = files.filter(file => selectedFileIds.includes(file.id));
+    const selectedFilesData = files.filter(file => selectedFileIds.includes(file.id)).map(file => ({
+      ...file,
+      type: getFileTypeFromMimeType(file.mimeType)
+    }));
     onFileSelected(selectedFilesData);
     onOpenChange(false);
     toast.success(`${selectedFilesData.length} files selected`);
@@ -178,6 +181,24 @@ const GoogleDriveFileSelector = ({
     }
     // Default for unknown file types (should not happen with our filtering)
     return { icon: File, label: 'File', color: 'text-gray-600' };
+  };
+
+  // Get file type from mimeType for bot personality integration
+  const getFileTypeFromMimeType = (mimeType) => {
+    if (mimeType === 'application/vnd.google-apps.spreadsheet' ||
+        mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      return 'sheets';
+    }
+    if (mimeType === 'application/vnd.google-apps.document') {
+      return 'doc';
+    }
+    if (mimeType === 'application/pdf') {
+      return 'pdf';
+    }
+    if (mimeType === 'text/plain') {
+      return 'text';
+    }
+    return 'unknown';
   };
 
   // Check if Google Drive is connected
