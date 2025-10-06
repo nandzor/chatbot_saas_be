@@ -4,7 +4,8 @@ namespace App\Services;
 
 use App\Models\Message;
 use App\Models\ChatSession;
-use App\Events\MessageProcessed;
+// Realtime messaging disabled
+// use App\Events\MessageProcessed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -55,8 +56,8 @@ class MessageService
             // Update session activity
             $session->updateActivity();
 
-            // Fire message processed event for real-time updates
-            event(new MessageProcessed($session, $message, ['status' => 'sent']));
+            // Realtime messaging disabled
+            // event(new MessageProcessed($session, $message, ['status' => 'sent']));
 
             Log::info('Message sent successfully', [
                 'message_id' => $message->id,
@@ -113,8 +114,8 @@ class MessageService
         if (!$message->is_read) {
             $message->markAsRead();
 
-            // Fire read event for real-time updates
-            event(new \App\Events\MessageReadEvent($message, $message->chatSession));
+            // Realtime messaging disabled
+            // event(new \App\Events\MessageReadEvent($message, $message->chatSession));
         }
 
         return $message;
@@ -263,14 +264,8 @@ class MessageService
             // Store in cache for 1 minute
             cache()->put($typingKey, $typingUsers, 60);
 
-            // Broadcast typing indicator event
-            broadcast(new \App\Events\TypingIndicatorEvent(
-                $sessionId,
-                $organizationId,
-                $userId,
-                $userName,
-                $isTyping
-            ));
+            // Realtime messaging disabled
+            // broadcast(new \App\Events\TypingIndicatorEvent($sessionId, $organizationId, $userId, $userName, $isTyping));
 
             // Send typing indicator to WAHA if session is WhatsApp
             $this->sendTypingIndicatorToWaha($sessionId, $isTyping);

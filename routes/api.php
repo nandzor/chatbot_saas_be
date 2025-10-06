@@ -18,7 +18,8 @@ use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationAuditController;
 use App\Http\Controllers\Api\V1\OrganizationNotificationController;
 use App\Http\Controllers\Api\V1\SettingsController;
-use App\Http\Controllers\BroadcastingController;
+// Broadcasting disabled
+// use App\Http\Controllers\BroadcastingController;
 use App\Http\Controllers\Api\V1\BotPersonalityController;
 use App\Http\Controllers\Api\V1\BotPersonalityWorkflowController;
 use App\Http\Controllers\Api\V1\AiAgentWorkflowController;
@@ -26,7 +27,8 @@ use App\Http\Controllers\Api\V1\WebhookEventController;
 use App\Http\Controllers\Api\V1\WhatsAppWebhookController;
 use App\Http\Controllers\Api\V1\SystemConfigurationController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
-use App\Http\Controllers\Api\V1\QueueController;
+// Queue system disabled
+// use App\Http\Controllers\Api\V1\QueueController;
 use App\Http\Controllers\Api\V1\PermissionSyncController;
 use App\Http\Controllers\Api\V1\OrganizationApprovalController;
 use App\Http\Controllers\Api\V1\EscalationController;
@@ -88,12 +90,13 @@ Route::get('/health', function () {
 
 
 
-/**
- * Broadcasting Authentication Endpoint (API Route)
- * Custom endpoint that uses unified auth middleware for WebSocket authentication
- */
-Route::post('/broadcasting/auth', [BroadcastingController::class, 'authenticate'])
-    ->middleware(['unified.auth']);
+// Broadcasting disabled
+// /**
+//  * Broadcasting Authentication Endpoint (API Route)
+//  * Custom endpoint that uses unified auth middleware for WebSocket authentication
+//  */
+// Route::post('/broadcasting/auth', [BroadcastingController::class, 'authenticate'])
+//     ->middleware(['unified.auth']);
 
 /**
  * Organization Self-Registration Endpoint
@@ -275,7 +278,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/performance-metrics', [AgentDashboardController::class, 'performanceMetrics']);
                 Route::get('/conversation-analytics', [AgentDashboardController::class, 'conversationAnalytics']);
                 Route::get('/workload', [AgentDashboardController::class, 'workload']);
-                Route::get('/realtime-activity', [AgentDashboardController::class, 'realtimeActivity']);
+                // Route::get('/realtime-activity', [AgentDashboardController::class, 'realtimeActivity']); // Disabled - realtime removed
                 Route::get('/conversation-insights', [AgentDashboardController::class, 'conversationInsights']);
             });
 
@@ -312,7 +315,7 @@ Route::prefix('v1')->group(function () {
 
             // Dashboard and overview analytics
             Route::get('/dashboard', [AnalyticsController::class, 'dashboard']);
-            Route::get('/realtime', [AnalyticsController::class, 'realtime']);
+            // Route::get('/realtime', [AnalyticsController::class, 'realtime']); // Disabled - realtime removed
 
             // Specific analytics endpoints
             Route::get('/usage', [AnalyticsController::class, 'usage']);
@@ -343,7 +346,7 @@ Route::prefix('v1')->group(function () {
 
             // Dashboard overview
             Route::get('/overview', [\App\Http\Controllers\Api\V1\OrganizationDashboardController::class, 'overview']);
-            Route::get('/realtime', [\App\Http\Controllers\Api\V1\OrganizationDashboardController::class, 'realtime']);
+            // Route::get('/realtime', [\App\Http\Controllers\Api\V1\OrganizationDashboardController::class, 'realtime']); // Disabled - realtime removed
             Route::get('/session-distribution', [\App\Http\Controllers\Api\V1\OrganizationDashboardController::class, 'sessionDistribution']);
 
             // Export functionality
@@ -1139,23 +1142,24 @@ Route::middleware(['unified.auth', 'organization'])->group(function () {
 });
 
 // ============================================================================
-// QUEUE MANAGEMENT
+// QUEUE MANAGEMENT (DISABLED)
 // ============================================================================
 
-Route::middleware(['unified.auth', 'organization'])->group(function () {
-    // Queue Management Routes
-    Route::prefix('queue')->name('queue.')->group(function () {
-        Route::get('/status', [QueueController::class, 'status'])->name('status');
-        Route::get('/statistics', [QueueController::class, 'statistics'])->name('statistics');
-        Route::get('/health', [QueueController::class, 'health'])->name('health');
-        Route::get('/failed-jobs', [QueueController::class, 'failedJobs'])->name('failed-jobs');
-        Route::post('/failed-jobs/{id}/retry', [QueueController::class, 'retryJob'])->name('retry-job');
-        Route::delete('/failed-jobs/{id}', [QueueController::class, 'deleteFailedJob'])->name('delete-failed-job');
-        Route::post('/failed-jobs/retry-all', [QueueController::class, 'retryAllFailed'])->name('retry-all-failed');
-        Route::post('/failed-jobs/clear-all', [QueueController::class, 'clearAllFailed'])->name('clear-all-failed');
-        Route::post('/workers/restart', [QueueController::class, 'restartWorkers'])->name('restart-workers');
-    });
-});
+// Queue Management Routes - Disabled
+// Route::middleware(['unified.auth', 'organization'])->group(function () {
+//     // Queue Management Routes
+//     Route::prefix('queue')->name('queue.')->group(function () {
+//         Route::get('/status', [QueueController::class, 'status'])->name('status');
+//         Route::get('/statistics', [QueueController::class, 'statistics'])->name('statistics');
+//         Route::get('/health', [QueueController::class, 'health'])->name('health');
+//         Route::get('/failed-jobs', [QueueController::class, 'failedJobs'])->name('failed-jobs');
+//         Route::post('/failed-jobs/{id}/retry', [QueueController::class, 'retryJob'])->name('retry-job');
+//         Route::delete('/failed-jobs/{id}', [QueueController::class, 'deleteFailedJob'])->name('delete-failed-job');
+//         Route::post('/failed-jobs/retry-all', [QueueController::class, 'retryAllFailed'])->name('retry-all-failed');
+//         Route::post('/failed-jobs/clear-all', [QueueController::class, 'clearAllFailed'])->name('clear-all-failed');
+//         Route::post('/workers/restart', [QueueController::class, 'restartWorkers'])->name('restart-workers');
+//     });
+// });
 
 // ============================================================================
 // FALLBACK ROUTE

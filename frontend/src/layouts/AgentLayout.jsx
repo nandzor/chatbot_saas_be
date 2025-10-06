@@ -11,7 +11,8 @@ import {
   LogOut 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
+// Realtime messaging disabled
+// import RealtimeMessageProvider from '@/components/inbox/RealtimeMessageProvider';
 
 const AgentContent = () => {
   const { logout } = useAuth();
@@ -63,11 +64,12 @@ const AgentContent = () => {
 
 const AgentLayout = () => {
   return (
-    <RealtimeMessageProvider>
+    // Realtime messaging disabled
+    // <RealtimeMessageProvider>
       <SidebarProvider>
         <AgentContent />
       </SidebarProvider>
-    </RealtimeMessageProvider>
+    // </RealtimeMessageProvider>
   );
 };
 

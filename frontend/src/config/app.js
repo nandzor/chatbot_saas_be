@@ -49,7 +49,6 @@ export const APP_CONFIG = {
 
   // Feature Flags
   features: {
-    realtimeUpdates: true,
     advancedFiltering: true,
     dataExport: true,
     dataImport: true,

@@ -189,19 +189,10 @@ class AgentDashboardService {
   /**
    * Get agent's real-time activity
    */
-  async getRealtimeActivity() {
-    try {
-      const url = '/v1/inbox/agent-dashboard/realtime-activity';
-
-      return await this._makeApiCall(
-        this.authService.api.get,
-        url
-      );
-    } catch (error) {
-      console.error('Error fetching real-time activity:', error);
-      throw error;
-    }
-  }
+  // Realtime activity disabled
+  // async getRealtimeActivity() {
+  //   // Realtime messaging disabled
+  // }
 
   /**
    * Get agent's conversation insights
@@ -236,14 +227,14 @@ class AgentDashboardService {
         recentSessions,
         performanceMetrics,
         workload,
-        realtimeActivity,
+        // realtimeActivity, // Disabled - realtime removed
         conversationInsights
       ] = await Promise.allSettled([
         this.getDashboardStats(params),
         this.getRecentSessions({ per_page: 10 }),
         this.getPerformanceMetrics({ days: 7 }),
         this.getWorkload(),
-        this.getRealtimeActivity(),
+        // this.getRealtimeActivity(), // Disabled - realtime removed
         this.getConversationInsights({ limit: 5 })
       ]);
 
@@ -252,14 +243,14 @@ class AgentDashboardService {
         recentSessions: recentSessions.status === 'fulfilled' ? recentSessions.value : null,
         performanceMetrics: performanceMetrics.status === 'fulfilled' ? performanceMetrics.value : null,
         workload: workload.status === 'fulfilled' ? workload.value : null,
-        realtimeActivity: realtimeActivity.status === 'fulfilled' ? realtimeActivity.value : null,
+        // realtimeActivity: realtimeActivity.status === 'fulfilled' ? realtimeActivity.value : null, // Disabled - realtime removed
         conversationInsights: conversationInsights.status === 'fulfilled' ? conversationInsights.value : null,
         errors: {
           stats: stats.status === 'rejected' ? stats.reason : null,
           recentSessions: recentSessions.status === 'rejected' ? recentSessions.reason : null,
           performanceMetrics: performanceMetrics.status === 'rejected' ? performanceMetrics.reason : null,
           workload: workload.status === 'rejected' ? workload.reason : null,
-          realtimeActivity: realtimeActivity.status === 'rejected' ? realtimeActivity.reason : null,
+          // realtimeActivity: realtimeActivity.status === 'rejected' ? realtimeActivity.reason : null, // Disabled - realtime removed
           conversationInsights: conversationInsights.status === 'rejected' ? conversationInsights.reason : null,
         }
       };

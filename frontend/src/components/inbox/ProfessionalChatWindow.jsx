@@ -48,10 +48,10 @@ const ProfessionalChatWindow = ({ sessionId, onClose: _onClose }) => {
     markAsRead,
     loadSummary,
     searchMessages,
-    sendTypingIndicator,
+    // sendTypingIndicator, // Disabled - realtime messaging removed
     clearError,
-    isConnected,
-    typingUsers
+    // isConnected, // Disabled - realtime messaging removed
+    // typingUsers // Disabled - realtime messaging removed
   } = useConversation(sessionId);
 
   // Auto scroll to bottom
@@ -82,7 +82,7 @@ const ProfessionalChatWindow = ({ sessionId, onClose: _onClose }) => {
 
     if (!isTyping && text.length > 0) {
       setIsTyping(true);
-      sendTypingIndicator(true);
+      // sendTypingIndicator(true); // Disabled - realtime messaging removed
     }
 
     // Clear existing timeout
@@ -93,7 +93,7 @@ const ProfessionalChatWindow = ({ sessionId, onClose: _onClose }) => {
     // Set new timeout to stop typing indicator
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      sendTypingIndicator(false);
+      // sendTypingIndicator(false); // Disabled - realtime messaging removed
     }, 1000);
   };
 
@@ -104,7 +104,7 @@ const ProfessionalChatWindow = ({ sessionId, onClose: _onClose }) => {
     const text = messageText.trim();
     setMessageText('');
     setIsTyping(false);
-    sendTypingIndicator(false);
+    // sendTypingIndicator(false); // Disabled - realtime messaging removed
 
     try {
       const messageData = {
@@ -233,10 +233,12 @@ const ProfessionalChatWindow = ({ sessionId, onClose: _onClose }) => {
             <div className="flex items-center space-x-2">
               <div className={cn(
                 "w-2 h-2 rounded-full",
-                isConnected ? "bg-green-500" : "bg-red-500"
+                // isConnected ? "bg-green-500" : "bg-red-500" // Disabled - realtime messaging removed
+                "bg-gray-500" // Default status
               )} />
               <span className="text-sm text-gray-500">
-                {isConnected ? 'Online' : 'Offline'}
+                {/* {isConnected ? 'Online' : 'Offline'} */} {/* Disabled - realtime messaging removed */}
+                Status Unknown
               </span>
               {conversation?.session_info?.is_active && (
                 <Badge variant="secondary" className="text-xs">

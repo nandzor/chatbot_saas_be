@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Services\InboxService;
 use App\Services\WhatsAppMessageProcessor;
-use App\Events\WhatsAppMessageReceived;
+// Realtime messaging disabled
+// use App\Events\WhatsAppMessageReceived;
 use App\Models\ChatSession;
 use App\Models\Customer;
 use App\Models\Organization;
@@ -80,10 +81,10 @@ class WhatsAppWebhookController extends Controller
             // Mark webhook as processed (expire in 1 hour)
             Redis::setex($webhookKey, 3600, 'processed');
 
-            // Fire event for asynchronous processing
-            event(new WhatsAppMessageReceived($messageData, $organizationId));
+            // Realtime messaging disabled
+            // event(new WhatsAppMessageReceived($messageData, $organizationId));
 
-            Log::info('WhatsApp message event fired', [
+            Log::info('WhatsApp message processed', [
                 'organization_id' => $organizationId,
                 'message_id' => $messageData['message_id'] ?? 'unknown',
                 'from' => $messageData['from'] ?? 'unknown',

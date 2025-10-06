@@ -5,7 +5,8 @@ namespace App\Services;
 use App\Models\Agent;
 use App\Models\ChatSession;
 use App\Models\Message;
-use App\Events\SessionEscalated;
+// Realtime messaging disabled
+// use App\Events\SessionEscalated;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -169,8 +170,8 @@ class EscalationService
             // Create escalation message
             $this->createEscalationMessage($session, $agent, $reason);
 
-            // Fire escalation event for real-time updates
-            event(new SessionEscalated($session, $agent, $reason, $context['triggers'] ?? [], $context['priority'] ?? 'normal'));
+            // Realtime messaging disabled
+            // event(new SessionEscalated($session, $agent, $reason, $context['triggers'] ?? [], $context['priority'] ?? 'normal'));
 
             DB::commit();
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { inboxService } from '@/services/InboxService';
-import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 
 /**
  * Custom hook for Agent Inbox functionality
@@ -26,8 +25,8 @@ export const useAgentInbox = () => {
     last_page: 1
   });
 
-  // Real-time messaging
-  const { isConnected, registerMessageHandler, sendTyping } = useRealtimeMessages();
+  // Real-time messaging (disabled)
+  // const { isConnected, registerMessageHandler, sendTyping } = useRealtimeMessages();
 
   // Refs
   const messagesEndRef = useRef(null);
@@ -454,13 +453,14 @@ export const useAgentInbox = () => {
   }, []);
 
   /**
-   * Handle typing indicator
+   * Handle typing indicator (disabled - realtime messaging removed)
    */
-  const handleTyping = useCallback((sessionId, isTyping) => {
-    if (sessionId) {
-      sendTyping(sessionId, isTyping);
-    }
-  }, [sendTyping]);
+  const handleTyping = useCallback((_sessionId, _isTyping) => {
+    // Realtime messaging disabled
+    // if (sessionId) {
+    //   sendTyping(sessionId, isTyping);
+    // }
+  }, []);
 
   // Load sessions on mount
   useEffect(() => {
@@ -531,100 +531,16 @@ export const useAgentInbox = () => {
     return () => clearInterval(pollInterval);
   }, [selectedSession?.id, throttledApiCall]);
 
-  // Real-time message handling
-  useEffect(() => {
-    if (!selectedSession?.id) return;
+  // Real-time message handling (disabled - realtime messaging removed)
+  // useEffect(() => {
+  //   if (!selectedSession?.id) return;
+  //   // All realtime messaging functionality removed
+  // }, [selectedSession?.id]);
 
-    const unregisterMessage = registerMessageHandler(selectedSession.id, (data) => {
-      console.log('🔔 AgentInbox received message:', data);
-
-      // Handle incoming messages
-      if (data.type === 'message' ||
-          data.event === 'message.processed' ||
-          data.event === 'message.sent' ||
-          data.event === 'MessageSent' ||
-          data.event === 'MessageProcessed' ||
-          data.message_id) {
-
-        const newMessage = {
-          id: data.message_id || data.id || `msg-${Date.now()}`,
-          session_id: selectedSession.id,
-          sender_type: data.sender_type || (data.from_me ? 'agent' : 'customer'),
-          sender_name: data.sender_name || (data.from_me ? 'You' : 'Customer'),
-          message_text: data.message_content || data.content || data.text || data.body,
-          text: data.message_content || data.content || data.text || data.body,
-          content: { text: data.message_content || data.content || data.text || data.body },
-          message_type: data.message_type || data.type || 'text',
-          is_read: data.is_read || false,
-          created_at: data.sent_at || data.timestamp || data.created_at || new Date().toISOString(),
-          sent_at: data.sent_at || data.timestamp || data.created_at || new Date().toISOString(),
-          delivered_at: data.delivered_at,
-          media_url: data.media_url,
-          media_type: data.media_type,
-          metadata: data.metadata
-        };
-
-        // Add message if it's for the current session
-        if (data.session_id === selectedSession.id) {
-          setMessages(prev => {
-            const exists = prev.some(msg => msg.id === newMessage.id);
-            if (exists) return prev;
-            return [...prev, newMessage];
-          });
-
-          // Update session last message
-          setSessions(prev => prev.map(s =>
-            s.id === selectedSession.id
-              ? {
-                  ...s,
-                  last_message_at: newMessage.created_at,
-                  last_message: newMessage.message_text,
-                  unread_count: (newMessage.sender_type !== 'agent' && newMessage.sender_type !== 'bot') ? (s.unread_count || 0) + 1 : s.unread_count
-                }
-              : s
-          ));
-
-          // Auto-scroll to bottom when new message arrives
-          setTimeout(() => {
-            scrollToBottom();
-          }, 100);
-        }
-      }
-    });
-
-    return () => {
-      unregisterMessage();
-    };
-  }, [selectedSession?.id, registerMessageHandler]);
-
-  // Global message handler for all sessions
-  useEffect(() => {
-    const unregisterGlobalMessage = registerMessageHandler('*', (data) => {
-      console.log('🔔 AgentInbox received global message:', data);
-
-      // Handle session updates
-      if (data.event === 'session.updated' || data.event === 'session.assigned') {
-        setSessions(prev => prev.map(s =>
-          s.id === data.session_id
-            ? { ...s, ...data.session_data }
-            : s
-        ));
-      }
-
-      // Handle session status changes
-      if (data.event === 'session.status_changed') {
-        setSessions(prev => prev.map(s =>
-          s.id === data.session_id
-            ? { ...s, status: data.status }
-            : s
-        ));
-      }
-    });
-
-    return () => {
-      unregisterGlobalMessage();
-    };
-  }, [registerMessageHandler]);
+  // Global message handler (disabled - realtime messaging removed)
+  // useEffect(() => {
+  //   // All realtime messaging functionality removed
+  // }, []);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -650,7 +566,7 @@ export const useAgentInbox = () => {
     error,
     filters,
     pagination,
-    isConnected,
+    // isConnected, // Disabled - realtime messaging removed
     filteredSessions,
 
     // Actions

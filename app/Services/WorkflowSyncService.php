@@ -10,7 +10,8 @@ use App\Services\AiInstructionService;
 use App\Traits\HasWorkflowIntegration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Queue;
+// Queue system disabled
+// use Illuminate\Support\Facades\Queue;
 use Exception;
 
 /**

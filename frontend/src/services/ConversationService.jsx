@@ -282,23 +282,13 @@ class ConversationService {
     }
   }
 
-  /**
-   * Send typing indicator
-   */
-  async sendTypingIndicator(sessionId, isTyping = true) {
-    try {
-      const url = `/v1/conversations/${sessionId}/typing`;
-
-      return await this._makeApiCall(
-        this.authService.api.post,
-        url,
-        { is_typing: isTyping }
-      );
-    } catch (error) {
-      console.error('❌ Error sending typing indicator:', error);
-      throw handleError(error, 'Failed to send typing indicator');
-    }
-  }
+  // Realtime messaging disabled
+  // /**
+  //  * Send typing indicator
+  //  */
+  // async sendTypingIndicator(sessionId, isTyping = true) {
+  //   // Realtime messaging disabled
+  // }
 
   /**
    * Get conversation summary

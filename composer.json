@@ -8,18 +8,14 @@
         "php": "^8.3",
         "guzzlehttp/guzzle": "^7.8",
         "laravel/framework": "^12.0",
-        "laravel/horizon": "^5.25",
-        "laravel/reverb": "^1.6",
         "laravel/sail": "^1.29",
         "laravel/sanctum": "^4.2",
         "laravel/socialite": "*",
         "laravel/tinker": "^2.10",
         "league/flysystem-aws-s3-v3": "^3.0",
         "nunomaduro/collision": "*",
-        "predis/predis": "^2.2",
         "rap2hpoutre/laravel-log-viewer": "*",
         "tymon/jwt-auth": "^2.2",
-        "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",

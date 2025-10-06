@@ -186,28 +186,13 @@ export const useAgentDashboard = (options = {}) => {
     }
   }, [updateLoading, updateError, updateData]);
 
-  /**
-   * Fetch real-time activity
-   */
-  const fetchRealtimeActivity = useCallback(async () => {
-    try {
-      updateLoading('realtimeActivity', true);
-      updateError('realtimeActivity', null);
-
-      const response = await agentDashboardService.getRealtimeActivity();
-
-      if (response?.success) {
-        updateData('realtimeActivity', response.data);
-      } else {
-        throw new Error(response?.message || 'Failed to fetch real-time activity');
-      }
-    } catch (error) {
-      console.error('Error fetching real-time activity:', error);
-      updateError('realtimeActivity', error);
-    } finally {
-      updateLoading('realtimeActivity', false);
-    }
-  }, [updateLoading, updateError, updateData]);
+  // Realtime activity disabled
+  // /**
+  //  * Fetch real-time activity
+  //  */
+  // const fetchRealtimeActivity = useCallback(async () => {
+  //   // Realtime messaging disabled
+  // }, []);
 
   /**
    * Fetch conversation insights
@@ -251,7 +236,7 @@ export const useAgentDashboard = (options = {}) => {
         if (response.recentSessions) updateData('recentSessions', response.recentSessions.data);
         if (response.performanceMetrics) updateData('performanceMetrics', response.performanceMetrics.data);
         if (response.workload) updateData('workload', response.workload.data);
-        if (response.realtimeActivity) updateData('realtimeActivity', response.realtimeActivity.data);
+        // if (response.realtimeActivity) updateData('realtimeActivity', response.realtimeActivity.data); // Disabled - realtime removed
         if (response.conversationInsights) updateData('conversationInsights', response.conversationInsights.data);
 
         // Update individual error states
@@ -290,9 +275,9 @@ export const useAgentDashboard = (options = {}) => {
       case 'workload':
         await fetchWorkload();
         break;
-      case 'realtimeActivity':
-        await fetchRealtimeActivity();
-        break;
+      // case 'realtimeActivity': // Disabled - realtime removed
+      //   await fetchRealtimeActivity();
+      //   break;
       case 'conversationInsights':
         await fetchConversationInsights(params);
         break;
@@ -301,7 +286,7 @@ export const useAgentDashboard = (options = {}) => {
         await fetchAllData(params);
         break;
     }
-  }, [fetchStats, fetchRecentSessions, fetchPerformanceMetrics, fetchWorkload, fetchRealtimeActivity, fetchConversationInsights, fetchAllData]);
+  }, [fetchStats, fetchRecentSessions, fetchPerformanceMetrics, fetchWorkload, /* fetchRealtimeActivity, */ fetchConversationInsights, fetchAllData]);
 
   /**
    * Set up auto-refresh
@@ -311,7 +296,7 @@ export const useAgentDashboard = (options = {}) => {
 
     refreshTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
-        refresh('realtimeActivity');
+        // refresh('realtimeActivity'); // Disabled - realtime removed
         setupAutoRefresh();
       }
     }, refreshInterval);
@@ -401,7 +386,7 @@ export const useAgentDashboard = (options = {}) => {
     recentSessions: data.recentSessions,
     performanceMetrics: data.performanceMetrics,
     workload: data.workload,
-    realtimeActivity: data.realtimeActivity,
+    // realtimeActivity: data.realtimeActivity, // Disabled - realtime removed
     conversationInsights: data.conversationInsights,
 
     // Loading states
@@ -421,7 +406,7 @@ export const useAgentDashboard = (options = {}) => {
     fetchRecentSessions,
     fetchPerformanceMetrics,
     fetchWorkload,
-    fetchRealtimeActivity,
+    // fetchRealtimeActivity, // Disabled - realtime removed
     fetchConversationInsights,
     fetchAllData,
 

@@ -165,7 +165,7 @@ export const API_ENDPOINTS = {
   // Analytics
   ANALYTICS: {
     DASHBOARD: '/analytics/dashboard',
-    REALTIME: '/analytics/realtime',
+    // REALTIME: '/analytics/realtime', // Disabled - realtime removed
     USAGE: '/analytics/usage',
     PERFORMANCE: '/analytics/performance',
     CONVERSATIONS: '/analytics/conversations',
@@ -177,7 +177,7 @@ export const API_ENDPOINTS = {
   ORGANIZATION_DASHBOARD: {
     BASE: '/v1/organization-dashboard',
     OVERVIEW: '/v1/organization-dashboard/overview',
-    REALTIME: '/v1/organization-dashboard/realtime',
+    // REALTIME: '/v1/organization-dashboard/realtime', // Disabled - realtime removed
     SESSION_DISTRIBUTION: '/v1/organization-dashboard/session-distribution',
     EXPORT: '/v1/organization-dashboard/export'
   },

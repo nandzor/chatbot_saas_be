@@ -10,7 +10,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        channels: __DIR__.'/../routes/channels.php',
+        // channels: __DIR__.'/../routes/channels.php', // Disabled - broadcasting removed
         health: '/up',
         then: function () {
             Route::middleware('api')
@@ -42,10 +42,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withProviders([
         \App\Providers\EventServiceProvider::class,
-        \App\Providers\BroadcastServiceProvider::class,
+        // \App\Providers\BroadcastServiceProvider::class, // Disabled - broadcasting removed
         \App\Providers\NotificationServiceProvider::class,
         \App\Providers\N8nServiceProvider::class,
-        \Laravel\Horizon\HorizonServiceProvider::class,
+        // \Laravel\Horizon\HorizonServiceProvider::class, // Disabled - horizon removed
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         // Register middleware aliases
