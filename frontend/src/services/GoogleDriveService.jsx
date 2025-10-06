@@ -3,7 +3,7 @@
  * Service untuk mengelola Google Drive API dengan backend yang baru
  */
 
-import api from './api';
+import { api } from '@/api';
 
 class GoogleDriveService {
   constructor() {
@@ -83,20 +83,6 @@ class GoogleDriveService {
     }
   }
 
-  /**
-   * Get file details by ID
-   */
-  async getFileDetails(fileId) {
-    try {
-      const response = await api.get(`${this.baseUrl}/files/${fileId}`);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to get file details');
-    }
-  }
 
   /**
    * Create a new file in Google Drive
@@ -117,55 +103,8 @@ class GoogleDriveService {
     }
   }
 
-  /**
-   * Update file content
-   */
-  async updateFile(fileId, content, mimeType = 'text/plain') {
-    try {
-      const response = await api.put(`${this.baseUrl}/files/${fileId}`, {
-        content: content,
-        mime_type: mimeType
-      });
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to update file');
-    }
-  }
 
-  /**
-   * Delete file from Google Drive
-   */
-  async deleteFile(fileId) {
-    try {
-      const response = await api.delete(`${this.baseUrl}/files/${fileId}`);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to delete file');
-    }
-  }
 
-  /**
-   * Download file content
-   */
-  async downloadFile(fileId) {
-    try {
-      const response = await api.get(`${this.baseUrl}/files/${fileId}/download`, {
-        responseType: 'blob'
-      });
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to download file');
-    }
-  }
 
   /**
    * Search files by name
@@ -204,215 +143,11 @@ class GoogleDriveService {
   }
 
   /**
-   * Copy file
-   */
-  async copyFile(fileId, newName = null) {
-    try {
-      const response = await api.post(`${this.baseUrl}/files/${fileId}/copy`, {
-        name: newName
-      });
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to copy file');
-    }
-  }
-
-  /**
-   * Export file to different format
-   */
-  async exportFile(fileId, mimeType) {
-    try {
-      const response = await api.get(`${this.baseUrl}/files/${fileId}/export`, {
-        params: { mime_type: mimeType },
-        responseType: 'blob'
-      });
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to export file');
-    }
-  }
-
-  /**
-   * Generate file IDs
-   */
-  async generateFileIds(count = 1) {
-    try {
-      const response = await api.get(`${this.baseUrl}/files/generateIds`, {
-        params: { count: count }
-      });
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to generate file IDs');
-    }
-  }
-
-  /**
-   * Empty trash
-   */
-  async emptyTrash() {
-    try {
-      const response = await api.delete(`${this.baseUrl}/files/trash`);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to empty trash');
-    }
-  }
-
-  /**
-   * Get file permissions
-   */
-  async getFilePermissions(fileId) {
-    try {
-      const response = await api.get(`${this.baseUrl}/files/${fileId}/permissions`);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to get file permissions');
-    }
-  }
-
-  /**
-   * Create file permission
-   */
-  async createFilePermission(fileId, permission) {
-    try {
-      const response = await api.post(`${this.baseUrl}/files/${fileId}/permissions`, permission);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to create file permission');
-    }
-  }
-
-  /**
-   * Update file permission
-   */
-  async updateFilePermission(fileId, permissionId, permission) {
-    try {
-      const response = await api.put(`${this.baseUrl}/files/${fileId}/permissions/${permissionId}`, permission);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to update file permission');
-    }
-  }
-
-  /**
-   * Delete file permission
-   */
-  async deleteFilePermission(fileId, permissionId) {
-    try {
-      const response = await api.delete(`${this.baseUrl}/files/${fileId}/permissions/${permissionId}`);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to delete file permission');
-    }
-  }
-
-  /**
-   * Get file comments
-   */
-  async getFileComments(fileId) {
-    try {
-      const response = await api.get(`${this.baseUrl}/files/${fileId}/comments`);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to get file comments');
-    }
-  }
-
-  /**
-   * Create file comment
-   */
-  async createFileComment(fileId, comment) {
-    try {
-      const response = await api.post(`${this.baseUrl}/files/${fileId}/comments`, comment);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to create file comment');
-    }
-  }
-
-  /**
-   * Get file revisions
-   */
-  async getFileRevisions(fileId) {
-    try {
-      const response = await api.get(`${this.baseUrl}/files/${fileId}/revisions`);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to get file revisions');
-    }
-  }
-
-  /**
-   * Get shared drives
-   */
-  async getSharedDrives() {
-    try {
-      const response = await api.get(`${this.baseUrl}/drives`);
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to get shared drives');
-    }
-  }
-
-  /**
-   * Create shared drive
-   */
-  async createSharedDrive(name, description = '') {
-    try {
-      const response = await api.post(`${this.baseUrl}/drives`, {
-        name: name,
-        description: description
-      });
-      return {
-        success: true,
-        data: response.data.data
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to create shared drive');
-    }
-  }
-
-  /**
    * Error handler
    */
   handleError(error, defaultMessage) {
-    console.error('Google Drive Service Error:', error);
+    // Log error for debugging (can be removed in production)
+    // console.error('Google Drive Service Error:', error);
 
     let message = defaultMessage;
     let statusCode = 500;

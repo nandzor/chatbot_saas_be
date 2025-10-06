@@ -23,20 +23,15 @@ import {
   Table,
   CheckCircle,
   Plus,
-  Zap,
-  Upload,
-  Download,
-  Trash2,
-  Copy,
-  Edit
+  Zap
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const GoogleDriveIntegration = () => {
   // Get organizationId from JWT token (no OrganizationProvider required)
-  const { organizationId } = useOrganizationIdFromToken();
+  const { organizationId, loading: orgLoading } = useOrganizationIdFromToken();
 
-  const { oauthStatus, initiateOAuth, revokeOAuthCredential, loading: oauthLoading, isConnected } = useGoogleDrive();
+  const { initiateOAuth, revokeOAuthCredential, loading: oauthLoading, isConnected } = useGoogleDrive();
   const {
     files,
     loading: filesLoading,
@@ -46,9 +41,6 @@ const GoogleDriveIntegration = () => {
     loadMoreFiles,
     refreshFiles,
     createFile,
-    updateFile,
-    deleteFile,
-    downloadFile,
     getStorageInfo
   } = useGoogleDriveFiles();
 
@@ -80,14 +72,6 @@ const GoogleDriveIntegration = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  // Load files when connected
-  useEffect(() => {
-    if (isConnected) {
-      getFiles();
-      loadStorageInfo();
-    }
-  }, [isConnected, getFiles]);
-
   // Load storage info
   const loadStorageInfo = useCallback(async () => {
     try {
@@ -97,6 +81,14 @@ const GoogleDriveIntegration = () => {
       // Error is handled in the hook
     }
   }, [getStorageInfo]);
+
+  // Load files when connected
+  useEffect(() => {
+    if (isConnected) {
+      getFiles();
+      loadStorageInfo();
+    }
+  }, [isConnected, getFiles, loadStorageInfo]);
 
   // Handle file selection
   const handleFileSelect = useCallback((file) => {
@@ -119,12 +111,39 @@ const GoogleDriveIntegration = () => {
   // Handle Google Drive connection
   const handleConnectGoogleDrive = useCallback(async () => {
     try {
-      // Get user ID from localStorage or context
-      const userData = JSON.parse(localStorage.getItem('chatbot_user') || '{}');
-      const userId = userData.id;
+      // Check if organizationId is still loading
+      if (orgLoading) {
+        toast.error('Loading organization information...');
+        return;
+      }
+
+      // Check if organizationId is available
+      if (!organizationId) {
+        toast.error('Organization ID is required for Google Drive integration');
+        return;
+      }
+
+      // Priority 1: Get userId from JWT token first (most reliable)
+      const token = localStorage.getItem('jwt_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+      let userId = null;
+
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          userId = payload.user_id; // Use user_id from JWT token (confirmed from login response)
+        } catch (jwtError) {
+          // Silent fail for JWT decode
+        }
+      }
+
+      // Priority 2: Fallback to localStorage if JWT token doesn't have userId
+      if (!userId) {
+        const userData = JSON.parse(localStorage.getItem('chatbot_user') || '{}');
+        userId = userData.id;
+      }
 
       if (!userId) {
-        toast.error('User ID is required for Google Drive integration');
+        toast.error('User ID is required for Google Drive integration. Please login again.');
         return;
       }
 
@@ -132,7 +151,7 @@ const GoogleDriveIntegration = () => {
     } catch (error) {
       // Error handling is done in the hook
     }
-  }, [initiateOAuth, organizationId]);
+  }, [initiateOAuth, organizationId, orgLoading]);
 
   // Handle file operations
   const handleCreateFile = useCallback(async (fileName, content, mimeType) => {
@@ -144,29 +163,6 @@ const GoogleDriveIntegration = () => {
     }
   }, [createFile]);
 
-  const handleUpdateFile = useCallback(async (fileId, content, mimeType) => {
-    try {
-      await updateFile(fileId, content, mimeType);
-    } catch (error) {
-      // Error handling is done in the hook
-    }
-  }, [updateFile]);
-
-  const handleDeleteFile = useCallback(async (fileId) => {
-    try {
-      await deleteFile(fileId);
-    } catch (error) {
-      // Error handling is done in the hook
-    }
-  }, [deleteFile]);
-
-  const handleDownloadFile = useCallback(async (file) => {
-    try {
-      await downloadFile(file.id, file.name);
-    } catch (error) {
-      // Error handling is done in the hook
-    }
-  }, [downloadFile]);
 
   // Handle search
   const handleSearch = useCallback(async (query) => {

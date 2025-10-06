@@ -177,28 +177,6 @@ export const useGoogleDriveFiles = () => {
     }
   }, []);
 
-  // Get file details
-  const getFileDetails = useCallback(async (fileId) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await googleDriveService.getFileDetails(fileId);
-
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Failed to get file details';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   // Search files
   const searchFiles = useCallback(async (query, pageSize = 10) => {
@@ -275,89 +253,8 @@ export const useGoogleDriveFiles = () => {
     }
   }, [refreshFiles]);
 
-  // Update file
-  const updateFile = useCallback(async (fileId, content, mimeType = 'text/plain') => {
-    try {
-      setLoading(true);
-      setError(null);
 
-      const result = await googleDriveService.updateFile(fileId, content, mimeType);
 
-      if (result.success) {
-        toast.success('File updated successfully');
-        await refreshFiles(); // Refresh the file list
-        return result.data;
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Failed to update file';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [refreshFiles]);
-
-  // Delete file
-  const deleteFile = useCallback(async (fileId) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await googleDriveService.deleteFile(fileId);
-
-      if (result.success) {
-        toast.success('File deleted successfully');
-        await refreshFiles(); // Refresh the file list
-        return result.data;
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Failed to delete file';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [refreshFiles]);
-
-  // Download file
-  const downloadFile = useCallback(async (fileId, fileName) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await googleDriveService.downloadFile(fileId);
-
-      if (result.success) {
-        // Create download link
-        const url = window.URL.createObjectURL(result.data);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName || 'download';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-
-        toast.success('File downloaded successfully');
-        return result.data;
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Failed to download file';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   // Get storage info
   const getStorageInfo = useCallback(async () => {
@@ -391,14 +288,10 @@ export const useGoogleDriveFiles = () => {
 
     // Actions
     getFiles,
-    getFileDetails,
     searchFiles,
     loadMoreFiles,
     refreshFiles,
     createFile,
-    updateFile,
-    deleteFile,
-    downloadFile,
     getStorageInfo,
 
     // Utilities

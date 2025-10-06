@@ -4,6 +4,7 @@
  */
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '@/api';
 
 const OrganizationContext = createContext();
 
@@ -19,36 +20,57 @@ export const OrganizationProvider = ({ children }) => {
   const [organization, setOrganization] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load organization data from localStorage or API
+  // Load organization data from API
   useEffect(() => {
     const loadOrganization = async () => {
       try {
-        // Try to get from localStorage first
+        setLoading(true);
+
+        // Check if user is authenticated
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+          setOrganization(null);
+          setLoading(false);
+          return;
+        }
+
+        // Try to get from localStorage first (cached data)
         const savedOrg = localStorage.getItem('currentOrganization');
         if (savedOrg) {
           const orgData = JSON.parse(savedOrg);
           setOrganization(orgData);
-        } else {
-          // Fallback to default organization for development
-          const defaultOrg = {
-            id: '6a9f9f22-ef84-4375-a793-dd1af45ccdc0',
-            name: 'Test Organization',
-            email: 'admin@test.com',
-            status: 'active'
-          };
-          setOrganization(defaultOrg);
-          localStorage.setItem('currentOrganization', JSON.stringify(defaultOrg));
+          setLoading(false);
+        }
+
+        // Always fetch fresh data from API
+        try {
+          const response = await api.get('/auth/me');
+          if (response.data.success && response.data.data.organization) {
+            const orgData = response.data.data.organization;
+            const organizationInfo = {
+              id: orgData.id,
+              name: orgData.name,
+              org_code: orgData.org_code,
+              display_name: orgData.display_name,
+              subscription_status: orgData.subscription_status,
+              timezone: orgData.timezone,
+              locale: orgData.locale,
+              currency: orgData.currency
+            };
+
+            setOrganization(organizationInfo);
+            localStorage.setItem('currentOrganization', JSON.stringify(organizationInfo));
+          }
+        } catch (apiError) {
+          console.warn('Failed to fetch organization from API:', apiError);
+          // Keep using cached data if API fails
+          if (!savedOrg) {
+            setOrganization(null);
+          }
         }
       } catch (error) {
         console.error('Failed to load organization:', error);
-        // Fallback to default organization
-        const defaultOrg = {
-          id: '6a9f9f22-ef84-4375-a793-dd1af45ccdc0',
-          name: 'Test Organization',
-          email: 'admin@test.com',
-          status: 'active'
-        };
-        setOrganization(defaultOrg);
+        setOrganization(null);
       } finally {
         setLoading(false);
       }

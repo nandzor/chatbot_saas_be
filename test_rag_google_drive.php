@@ -27,7 +27,7 @@ class RagGoogleDriveTest
 
         try {
             // Test dengan organization ID yang ada
-            $organizationId = '6a9f9f22-ef84-4375-a793-dd1af45ccdc0'; // Admin organization
+            $organizationId = '901da1cf-a621-412f-8b89-d079815265e4'; // TechCorp Indonesia organization
 
             $credentials = $this->botPersonalityService->ensureGoogleDriveCredentialsForRag($organizationId);
 
@@ -54,7 +54,7 @@ class RagGoogleDriveTest
 
         try {
             // Test dengan bot personality yang ada
-            $personality = BotPersonality::where('organization_id', '6a9f9f22-ef84-4375-a793-dd1af45ccdc0')->first();
+            $personality = BotPersonality::where('organization_id', '901da1cf-a621-412f-8b89-d079815265e4')->first();
 
             if (!$personality) {
                 echo "❌ No bot personality found for testing\n";
@@ -119,7 +119,7 @@ class RagGoogleDriveTest
         echo "\n=== Testing OAuth Credentials ===\n";
 
         try {
-            $oauthCredentials = OAuthCredential::where('organization_id', '6a9f9f22-ef84-4375-a793-dd1af45ccdc0')
+            $oauthCredentials = OAuthCredential::where('organization_id', '901da1cf-a621-412f-8b89-d079815265e4')
                 ->where('service', 'google-drive')
                 ->where('status', 'active')
                 ->get();

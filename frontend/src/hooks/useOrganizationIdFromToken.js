@@ -1,49 +1,48 @@
 /**
- * Hook untuk mendapatkan organizationId dari JWT token
+ * Hook untuk mendapatkan organizationId dari API atau JWT token
  * Tidak memerlukan OrganizationProvider
  */
 
 import { useState, useEffect } from 'react';
+import { api } from '@/api';
 
 export const useOrganizationIdFromToken = () => {
   const [organizationId, setOrganizationId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getOrganizationId = () => {
+    const getOrganizationId = async () => {
       try {
-        // Coba ambil dari localStorage terlebih dahulu
-        const savedOrg = localStorage.getItem('currentOrganization');
-        if (savedOrg) {
-          const orgData = JSON.parse(savedOrg);
-          setOrganizationId(orgData.id);
+        setLoading(true);
+
+        // Check if user is authenticated
+        const token = localStorage.getItem('jwt_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+
+        if (!token) {
+          setOrganizationId(null);
           setLoading(false);
           return;
         }
 
-        // Ambil dari JWT token
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        if (token) {
-          try {
-            // Decode JWT token (base64 decode payload)
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            if (payload.organization_id) {
-              setOrganizationId(payload.organization_id);
-              setLoading(false);
-              return;
-            }
-          } catch (error) {
-            // Silent fail for JWT decode
+        // Priority 1: Try to get from JWT token first (fastest)
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const orgId = payload.organization_id;
+
+          if (orgId) {
+            setOrganizationId(orgId);
+            setLoading(false);
+            return;
           }
+        } catch (jwtError) {
+          // Silent fail for JWT decode
         }
 
-        // Final fallback: gunakan default organization untuk development
-        const defaultOrgId = '6a9f9f22-ef84-4375-a793-dd1af45ccdc0';
-        setOrganizationId(defaultOrgId);
-        setLoading(false);
+        // If JWT token doesn't have organization_id, set to null
+        setOrganizationId(null);
       } catch (error) {
-        // Fallback ke default organization
-        setOrganizationId('6a9f9f22-ef84-4375-a793-dd1af45ccdc0');
+        setOrganizationId(null);
+      } finally {
         setLoading(false);
       }
     };

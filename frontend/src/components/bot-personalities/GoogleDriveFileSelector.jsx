@@ -38,7 +38,7 @@ const GoogleDriveFileSelector = ({
   fileType = 'all'
 }) => {
   // Get organizationId from JWT token (no OrganizationProvider required)
-  const { organizationId } = useOrganizationIdFromToken();
+  const { organizationId, loading: orgLoading } = useOrganizationIdFromToken();
 
   const { initiateOAuth, loading: oauthLoading, isConnected } = useGoogleDrive();
   const {
@@ -112,17 +112,40 @@ const GoogleDriveFileSelector = ({
 
   // Handle Google Drive connection
   const handleConnectGoogleDrive = useCallback(async () => {
-    if (!organizationId) {
-      toast.error('Organization ID is required');
-      return;
-    }
     try {
-      // Get user ID from localStorage or context
-      const userData = JSON.parse(localStorage.getItem('chatbot_user') || '{}');
-      const userId = userData.id;
+      // Check if organizationId is still loading
+      if (orgLoading) {
+        toast.error('Loading organization information...');
+        return;
+      }
+
+      // Check if organizationId is available
+      if (!organizationId) {
+        toast.error('Organization ID is required for Google Drive integration');
+        return;
+      }
+
+      // Priority 1: Get userId from JWT token first (most reliable)
+      const token = localStorage.getItem('jwt_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+      let userId = null;
+
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          userId = payload.user_id; // Use user_id from JWT token (confirmed from login response)
+        } catch (jwtError) {
+          // Silent fail for JWT decode
+        }
+      }
+
+      // Priority 2: Fallback to localStorage if JWT token doesn't have userId
+      if (!userId) {
+        const userData = JSON.parse(localStorage.getItem('chatbot_user') || '{}');
+        userId = userData.id;
+      }
 
       if (!userId) {
-        toast.error('User ID is required for Google Drive integration');
+        toast.error('User ID is required for Google Drive integration. Please login again.');
         return;
       }
 
@@ -130,7 +153,7 @@ const GoogleDriveFileSelector = ({
     } catch (error) {
       // Error handling is done in the hook
     }
-  }, [initiateOAuth, organizationId]);
+  }, [initiateOAuth, organizationId, orgLoading]);
 
   // Handle file selection confirmation
   const handleConfirmSelection = () => {
