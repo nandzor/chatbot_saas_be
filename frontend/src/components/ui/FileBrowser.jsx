@@ -2,12 +2,79 @@
  * File Browser Component
  * Component untuk browse dan select files dengan OAuth
  */
-
-import React from 'react';
 import { Card } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { FileText, Grid, Calendar, User, Eye, Check, ExternalLink, Loader } from 'lucide-react';
+
+// Utility functions for file type detection
+const getFileTypeInfo = (file) => {
+  const isSheet = file.mimeType.includes('sheet');
+  const isDoc = file.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    file.mimeType === 'application/msword' ||
+    file.name.toLowerCase().endsWith('.docx') ||
+    file.name.toLowerCase().endsWith('.doc');
+  const isDrive = file.mimeType.includes('drive') || file.mimeType.includes('folder');
+
+  return { isSheet, isDoc, isDrive };
+};
+
+const getFileIcon = (fileTypeInfo, size = 'w-6 h-6') => {
+  const { isSheet, isDoc, isDrive } = fileTypeInfo;
+  if (isSheet) return <Grid className={`${size} text-green-600`} />;
+  if (isDoc) return <FileText className={`${size} text-blue-600`} />;
+  if (isDrive) return <ExternalLink className={`${size} text-purple-600`} />;
+  return <FileText className={`${size} text-gray-600`} />;
+};
+
+const getFileTypeColor = (fileTypeInfo) => {
+  const { isSheet, isDoc, isDrive } = fileTypeInfo;
+  if (isSheet) return 'bg-green-100';
+  if (isDoc) return 'bg-blue-100';
+  if (isDrive) return 'bg-purple-100';
+  return 'bg-gray-100';
+};
+
+const getFileTypeName = (fileTypeInfo) => {
+  const { isSheet, isDoc, isDrive } = fileTypeInfo;
+  if (isSheet) return 'Google Sheets';
+  if (isDoc) return 'Microsoft Word';
+  if (isDrive) return 'Google Drive';
+  return 'File';
+};
+
+// Shared action buttons component
+const FileActionButtons = ({ _file, isSelected, onSelect, onPreview, variant = 'grid' }) => {
+  const isGridVariant = variant === 'grid';
+
+  return (
+    <div className={isGridVariant ? "mt-3 flex space-x-2" : "flex items-center space-x-2"}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          onPreview();
+        }}
+        className={isGridVariant ? "flex-1" : ""}
+      >
+        <Eye className="w-3 h-3 mr-1" />
+        Preview
+      </Button>
+      <Button
+        variant={isSelected ? "destructive" : "default"}
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect();
+        }}
+        className={isGridVariant ? "flex-1" : ""}
+      >
+        {isSelected ? 'Remove' : 'Select'}
+      </Button>
+    </div>
+  );
+};
 
 const FileBrowser = ({
   files,
@@ -22,9 +89,10 @@ const FileBrowser = ({
   // Filter files based on search and type
   const filteredFiles = files.filter(file => {
     const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const { isSheet, isDoc } = getFileTypeInfo(file);
     const matchesType = fileTypeFilter === 'all' ||
-      (fileTypeFilter === 'sheets' && file.mimeType.includes('sheet')) ||
-      (fileTypeFilter === 'docs' && file.mimeType.includes('document'));
+      (fileTypeFilter === 'sheets' && isSheet) ||
+      (fileTypeFilter === 'docs' && isDoc);
 
     return matchesSearch && matchesType;
   });
@@ -66,7 +134,7 @@ const FileBrowser = ({
           </Badge>
           {searchQuery && (
             <Badge variant="default">
-              Search: "{searchQuery}"
+              Search: &ldquo;{searchQuery}&rdquo;
             </Badge>
           )}
         </div>
@@ -103,30 +171,7 @@ const FileBrowser = ({
 
 // File Card Component (Grid View)
 const FileCard = ({ file, isSelected, onSelect, onPreview }) => {
-  const isSheet = file.mimeType.includes('sheet');
-  const isDoc = file.mimeType.includes('document');
-  const isDrive = file.mimeType.includes('drive') || file.mimeType.includes('folder');
-
-  const getFileIcon = () => {
-    if (isSheet) return <Grid className="w-6 h-6 text-green-600" />;
-    if (isDoc) return <FileText className="w-6 h-6 text-blue-600" />;
-    if (isDrive) return <ExternalLink className="w-6 h-6 text-purple-600" />;
-    return <FileText className="w-6 h-6 text-gray-600" />;
-  };
-
-  const getFileTypeColor = () => {
-    if (isSheet) return 'bg-green-100';
-    if (isDoc) return 'bg-blue-100';
-    if (isDrive) return 'bg-purple-100';
-    return 'bg-gray-100';
-  };
-
-  const getFileTypeName = () => {
-    if (isSheet) return 'Google Sheets';
-    if (isDoc) return 'Google Docs';
-    if (isDrive) return 'Google Drive';
-    return 'File';
-  };
+  const fileTypeInfo = getFileTypeInfo(file);
 
   return (
     <div className={`relative p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
@@ -143,8 +188,8 @@ const FileCard = ({ file, isSelected, onSelect, onPreview }) => {
 
       {/* File Icon */}
       <div className="flex items-center justify-center mb-3">
-        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getFileTypeColor()}`}>
-          {getFileIcon()}
+        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getFileTypeColor(fileTypeInfo)}`}>
+          {getFileIcon(fileTypeInfo)}
         </div>
       </div>
 
@@ -154,7 +199,7 @@ const FileCard = ({ file, isSelected, onSelect, onPreview }) => {
           {file.name}
         </h4>
         <p className="text-sm text-gray-500 mb-2">
-          {getFileTypeName()}
+          {getFileTypeName(fileTypeInfo)}
         </p>
         <p className="text-xs text-gray-400">
           Modified: {new Date(file.modifiedTime).toLocaleDateString()}
@@ -162,61 +207,20 @@ const FileCard = ({ file, isSelected, onSelect, onPreview }) => {
       </div>
 
       {/* Actions */}
-      <div className="mt-3 flex space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPreview();
-          }}
-          className="flex-1"
-        >
-          <Eye className="w-3 h-3 mr-1" />
-          Preview
-        </Button>
-        <Button
-          variant={isSelected ? "destructive" : "default"}
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect();
-          }}
-          className="flex-1"
-        >
-          {isSelected ? 'Remove' : 'Select'}
-        </Button>
-      </div>
+      <FileActionButtons
+        _file={file}
+        isSelected={isSelected}
+        onSelect={onSelect}
+        onPreview={onPreview}
+        variant="grid"
+      />
     </div>
   );
 };
 
 // File List Item Component (List View)
 const FileListItem = ({ file, isSelected, onSelect, onPreview }) => {
-  const isSheet = file.mimeType.includes('sheet');
-  const isDoc = file.mimeType.includes('document');
-  const isDrive = file.mimeType.includes('drive') || file.mimeType.includes('folder');
-
-  const getFileIcon = () => {
-    if (isSheet) return <Grid className="w-4 h-4 text-green-600" />;
-    if (isDoc) return <FileText className="w-4 h-4 text-blue-600" />;
-    if (isDrive) return <ExternalLink className="w-4 h-4 text-purple-600" />;
-    return <FileText className="w-4 h-4 text-gray-600" />;
-  };
-
-  const getFileTypeColor = () => {
-    if (isSheet) return 'bg-green-100';
-    if (isDoc) return 'bg-blue-100';
-    if (isDrive) return 'bg-purple-100';
-    return 'bg-gray-100';
-  };
-
-  const getFileTypeName = () => {
-    if (isSheet) return 'Google Sheets';
-    if (isDoc) return 'Google Docs';
-    if (isDrive) return 'Google Drive';
-    return 'File';
-  };
+  const fileTypeInfo = getFileTypeInfo(file);
 
   return (
     <div className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
@@ -233,15 +237,15 @@ const FileListItem = ({ file, isSelected, onSelect, onPreview }) => {
       </div>
 
       {/* File Icon */}
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${getFileTypeColor()}`}>
-        {getFileIcon()}
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${getFileTypeColor(fileTypeInfo)}`}>
+        {getFileIcon(fileTypeInfo, 'w-4 h-4')}
       </div>
 
       {/* File Info */}
       <div className="flex-1 min-w-0">
         <h4 className="font-medium text-gray-900 truncate">{file.name}</h4>
         <div className="flex items-center space-x-4 text-sm text-gray-500">
-          <span>{getFileTypeName()}</span>
+          <span>{getFileTypeName(fileTypeInfo)}</span>
           <span className="flex items-center">
             <Calendar className="w-3 h-3 mr-1" />
             {new Date(file.modifiedTime).toLocaleDateString()}
@@ -256,29 +260,13 @@ const FileListItem = ({ file, isSelected, onSelect, onPreview }) => {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPreview();
-          }}
-        >
-          <Eye className="w-3 h-3 mr-1" />
-          Preview
-        </Button>
-        <Button
-          variant={isSelected ? "destructive" : "default"}
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect();
-          }}
-        >
-          {isSelected ? 'Remove' : 'Select'}
-        </Button>
-      </div>
+      <FileActionButtons
+        _file={file}
+        isSelected={isSelected}
+        onSelect={onSelect}
+        onPreview={onPreview}
+        variant="list"
+      />
     </div>
   );
 };

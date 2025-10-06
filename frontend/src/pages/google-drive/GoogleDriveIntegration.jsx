@@ -344,7 +344,7 @@ const GoogleDriveIntegration = () => {
                     {[
                       { id: 'all', label: 'All Files', icon: FileText },
                       { id: 'sheets', label: 'Google Sheets', icon: Table },
-                      { id: 'docs', label: 'Google Docs', icon: FileText }
+                      { id: 'docs', label: 'Microsoft Word (.doc/.docx)', icon: FileText }
                     ].map((type) => (
                       <button
                         key={type.id}
