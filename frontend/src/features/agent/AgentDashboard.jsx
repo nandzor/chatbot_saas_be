@@ -701,32 +701,6 @@ const AgentDashboard = () => {
                   <Skeleton className="h-3 w-1/2" />
                 </div>
               ))
-            ) : false ? ( // Realtime activity disabled
-              // realtimeActivity.recent_messages.slice(0, 5).map((message) => (
-              //   <div key={message.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              //     <div className="flex items-start space-x-3">
-              //       <div className={`w-2 h-2 rounded-full mt-2 ${
-              //         message.sender_type === 'agent' ? 'bg-blue-500' : 'bg-gray-400'
-              //       }`}></div>
-              //       <div className="flex-1 min-w-0">
-              //         <div className="flex items-center space-x-2 mb-1">
-              //           <span className="text-sm font-medium text-gray-900">
-              //             {message.sender_name || 'Unknown'}
-              //           </span>
-              //           <Badge variant="gray" className="text-xs">
-              //             {message.sender_type}
-              //           </Badge>
-              //         </div>
-              //         <p className="text-sm text-gray-600 truncate">
-              //           {message.content || message.message_content || 'No content'}
-              //         </p>
-              //         <p className="text-xs text-gray-400 mt-1">
-              //           {new Date(message.created_at).toLocaleTimeString('id-ID')}
-              //         </p>
-              //       </div>
-              //     </div>
-              //   </div>
-              // ))
             ) : (
               <div className="text-center py-6 text-gray-500">
                 <Activity className="w-8 h-8 mx-auto mb-2 text-gray-300" />

@@ -565,8 +565,7 @@ const SessionManagerComponent = () => {
 
 
     return (
-    {/* Realtime messaging disabled */}
-    <SessionManagerWithRealtime
+    <SessionManagerComponent
         sessions={sessions}
         pagination={pagination}
         sessionsLoading={sessionsLoading}
@@ -614,11 +613,11 @@ const SessionManagerComponent = () => {
         focusRef={focusRef}
         announce={announce}
       />
-    {/* Realtime messaging disabled */}
   );
 };
 
 // Component that uses realtime messages hook inside the provider (disabled)
+// eslint-disable-next-line no-unused-vars
 const SessionManagerWithRealtime = (props) => {
   // Realtime messaging disabled
   // const { registerMessageHandler } = useRealtimeMessages();
@@ -667,8 +666,8 @@ const SessionManagerWithRealtime = (props) => {
     setTransferData,
     setAiResponseData,
     setSearchQuery,
-    focusRef: _focusRef,
-    announce
+    focusRef: _focusRef
+    // announce: _announce // Not used in this component
   } = props;
 
   // Register real-time message handler for session updates (disabled - realtime messaging removed)
