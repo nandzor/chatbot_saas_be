@@ -23,6 +23,8 @@
 
 **Screenshot:** `superadmin_dashboard.png`
 
+![Super Admin Dashboard](./superadmin/superadmin_dashboard.png)
+
 ### Fitur Utama
 - **Platform Metrics Overview**
   - Total clients/organizations
@@ -61,6 +63,8 @@
 ### 2.1 Financial Overview & Reports
 
 **Screenshot:** `superadmin_financial.png`
+
+![Financial Overview](./superadmin/superadmin_financial.png)
 
 #### Fitur
 - **Revenue Dashboard**
@@ -112,6 +116,8 @@
 
 **Screenshot:** `superadmin_financial_create.png`
 
+![Create Financial Record](./superadmin/superadmin_financial_create.png)
+
 #### Fitur
 - **Manual Transaction Entry Form**
   - Organization/Client selector (dropdown)
@@ -154,6 +160,8 @@
 
 **Screenshot:** `superadmin_financial_edit.png`
 
+![Edit Financial Record](./superadmin/superadmin_financial_edit.png)
+
 #### Fitur
 - **Pre-filled Edit Form** (same fields as create, with current values)
 - **Edit Restrictions**
@@ -183,6 +191,8 @@
 ### 3.1 Transaction History
 
 **Screenshot:** `superadmin_transaction_history.png`
+
+![Transaction History](./superadmin/superadmin_transaction_history.png)
 
 #### Fitur
 - **Transaction List Table**
@@ -231,6 +241,8 @@
 ### 3.2 Transaction Detail
 
 **Screenshot:** `superadmin_transaction_detail.png`
+
+![Transaction Detail](./superadmin/superadmin_transaction_detail.png)
 
 #### Fitur
 - **Comprehensive Transaction Information**
@@ -299,6 +311,8 @@
 
 **Screenshot:** `superadmin_client_overview.png`
 
+![Client Overview](./superadmin/superadmin_client_overview.png)
+
 #### Fitur
 - **Client Dashboard Cards**
   - Total clients
@@ -350,6 +364,8 @@
 ### 4.2 Client Table/List
 
 **Screenshot:** `superadmin_client_table.png`
+
+![Client Table](./superadmin/superadmin_client_table.png)
 
 #### Fitur
 - **Comprehensive Client Table**
@@ -406,6 +422,8 @@
 ### 4.3 Client Detail
 
 **Screenshot:** `superadmin_client_detail.png`
+
+![Client Detail](./superadmin/superadmin_client_detail.png)
 
 #### Fitur
 - **Organization Profile**
@@ -499,6 +517,8 @@
 
 **Screenshot:** `superadmin_client_create.png`
 
+![Client Create](./superadmin/superadmin_client_create.png)
+
 #### Fitur
 - **Organization Creation Form**
   - **Basic Information**
@@ -581,6 +601,8 @@
 
 **Screenshot:** `superadmin_client_update.png`
 
+![Client Update](./superadmin/superadmin_client_update.png)
+
 #### Fitur
 - **Edit Organization Form** (pre-filled dengan current data)
 - **Editable Fields** (same as create, dengan current values)
@@ -622,6 +644,8 @@
 ### 4.6 Client Manage Users
 
 **Screenshot:** `superadmin_client_manage_users.png`
+
+![Client Manage Users](./superadmin/superadmin_client_manage_users.png)
 
 #### Fitur
 - **User List** (within selected organization)
@@ -669,6 +693,8 @@
 ## 5. System Admin
 
 **Screenshot:** `superadmin_sysadmin.png`
+
+![System Admin](./superadmin/superadmin_sysadmin.png)
 
 ### Fitur
 - **System-wide User Management**
@@ -729,6 +755,8 @@
 
 **Screenshot:** `superadmin_role_index.png`
 
+![Role Index](./superadmin/superadmin_role_index.png)
+
 #### Fitur
 - **Role List** (System-wide & Per-Organization)
   - Role name
@@ -777,6 +805,8 @@
 ### 6.2 Role Create
 
 **Screenshot:** `superadmin_role_create.png`
+
+![Role Create](./superadmin/superadmin_role_create.png)
 
 #### Fitur
 - **Role Creation Form**
@@ -834,6 +864,8 @@
 ### 6.3 Role Detail
 
 **Screenshot:** `superadmin_role_detail.png`
+
+![Role Detail](./superadmin/superadmin_role_detail.png)
 
 #### Fitur
 - **Comprehensive Role Information**
@@ -895,6 +927,8 @@
 
 **Screenshot:** `superadmin_role_edit.png`
 
+![Role Edit](./superadmin/superadmin_role_edit.png)
+
 #### Fitur
 - **Edit Role Form** (pre-filled dengan current data)
 - **Editable Fields** (same as create)
@@ -924,6 +958,8 @@
 ### 6.5 Role Assign
 
 **Screenshot:** `superadmin_role_assign.png`
+
+![Role Assign](./superadmin/superadmin_role_assign.png)
 
 #### Fitur
 - **Role Assignment Interface**
@@ -975,6 +1011,8 @@
 ### 6.6 Role Manage Permissions
 
 **Screenshot:** `superadmin_manage_permission.png`
+
+![Role Manage Permissions](./superadmin/superadmin_manage_permission.png)
 
 #### Fitur
 - **Permission Management Interface** untuk specific role
@@ -1044,6 +1082,8 @@
 
 **Screenshot:** `superadmin_permission_index.png`
 
+![Permission Index](./superadmin/superadmin_permission_index.png)
+
 #### Fitur
 - **Permission List** (all permissions in system)
   - Permission name
@@ -1091,6 +1131,8 @@
 ### 7.2 Permission Create
 
 **Screenshot:** `superadmin_permission_create.png`
+
+![Permission Create](./superadmin/superadmin_permission_create.png)
 
 #### Fitur
 - **Permission Creation Form**
@@ -1159,6 +1201,8 @@
 
 **Screenshot:** `superadmin_permission_detail.png`
 
+![Permission Detail](./superadmin/superadmin_permission_detail.png)
+
 #### Fitur
 - **Comprehensive Permission Information**
   - **Overview**
@@ -1214,6 +1258,8 @@
 
 **Screenshot:** `superadmin_permission_update.png`
 
+![Permission Update](./superadmin/superadmin_permission_update.png)
+
 #### Fitur
 - **Edit Permission Form** (pre-filled dengan current data)
 - **Editable Fields** (same as create)
@@ -1250,6 +1296,8 @@
 ## 8. Platform Configuration
 
 **Screenshot:** `superadmin_platform_configuration.png`
+
+![Platform Configuration](./superadmin/superadmin_platform_configuration.png)
 
 ### Fitur
 - **System-wide Settings**

@@ -21,6 +21,8 @@
 
 **Screenshot:** `agent_dashboard.png`
 
+![Agent Dashboard](./agent/agent_dashboard.png)
+
 ### Fitur:
 - **Personal Performance Metrics**: Statistik performa personal agent
   - Total conversations handled today/this week
@@ -117,6 +119,8 @@
 ## 2. Inbox Management
 
 **Screenshot:** `agent_inbox_list.png`
+
+![Agent Inbox List](./agent/agent_inbox_list.png)
 
 ### Fitur:
 - **Conversation List**: Daftar semua conversations assigned ke agent atau dalam queue
@@ -256,6 +260,8 @@
 ## 3. Conversation Chat
 
 **Screenshot:** `agent_conversation_chat.png`
+
+![Agent Conversation Chat](./agent/agent_conversation_chat.png)
 
 ### Fitur:
 - **Chat Interface**: Full-screen atau split-view chat interface
@@ -551,6 +557,8 @@
 
 **Screenshot:** `agent_profile_setting.png`
 
+![Agent Profile Settings](./agent/agent_profile_setting.png)
+
 ### Fitur:
 - **Personal Information**:
   - Profile photo upload
@@ -777,6 +785,8 @@
 ## 5. Availability Settings
 
 **Screenshot:** `agent_setting_availability.png`
+
+![Agent Availability Settings](./agent/agent_setting_availability.png)
 
 ### Fitur:
 - **Current Status Selector**:
@@ -1035,6 +1045,8 @@
 ## 6. Notification Settings
 
 **Screenshot:** `agent_notification_setting.png`
+
+![Agent Notification Settings](./agent/agent_notification_setting.png)
 
 ### Fitur:
 - **Notification Channels**:
