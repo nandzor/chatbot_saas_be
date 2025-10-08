@@ -44,7 +44,7 @@
   - Set Availability
   - Access Settings
 
-### Flow End User:
+### Alur Penggunaan:
 
 1. **Login sebagai Agent**
    - Agent login menggunakan credentials yang diberikan org admin
@@ -155,7 +155,7 @@
 - **Bulk Selection**: Select multiple conversations untuk bulk actions
 - **Pagination**: Navigate through conversation pages
 
-### Flow End User:
+### Alur Penggunaan:
 
 1. **Akses Inbox**
    - Agent click "Inbox" dari navigation menu atau dashboard
@@ -308,7 +308,7 @@
 - **Search in Conversation**: Search specific message dalam conversation
 - **Customer Sentiment Indicator**: Visual indicator of customer mood (jika ada AI sentiment analysis)
 
-### Flow End User:
+### Alur Penggunaan:
 
 1. **Open Conversation**
    - Agent click conversation dari inbox list
@@ -582,7 +582,7 @@
 - **Signature**: Auto-signature untuk messages (jika applicable)
 - **Working Hours Display**: Display working schedule on profile
 
-### Flow End User:
+### Alur Penggunaan:
 
 1. **Access Profile Settings**
    - Agent click profile icon/avatar di top-right corner
@@ -816,7 +816,7 @@
   - Auto-reply message untuk OOO period
 - **Calendar Integration**: Sync dengan Google Calendar atau Outlook (jika available)
 
-### Flow End User:
+### Alur Penggunaan:
 
 1. **Access Availability Settings**
    - Agent click "Settings" atau profile dropdown
@@ -1085,7 +1085,7 @@
   - Browser tab title notifications
 - **Notification Preview**: Test notifications before saving
 
-### Flow End User:
+### Alur Penggunaan:
 
 1. **Access Notification Settings**
    - Agent click "Settings" dari navigation atau profile menu

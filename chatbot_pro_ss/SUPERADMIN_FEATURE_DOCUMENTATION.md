@@ -48,13 +48,13 @@
 - **Recent Activities Timeline**
 - **Quick Actions** (Create Client, View Finances, System Settings)
 
-### Flow End User
-1. **Login** → Super Admin credentials (highest privilege)
-2. **Dashboard Landing** → Overview platform-wide metrics dan KPIs
-3. **Monitor Real-time Data** → Active users, ongoing conversations, system load
-4. **Analyze Trends** → Revenue growth, client retention, usage patterns via charts
-5. **Quick Navigation** → Click cards atau quick action buttons untuk deep-dive ke specific areas
-6. **Alerts & Notifications** → Review critical alerts (payment failures, system issues, high usage)
+### Alur Penggunaan
+1. **Masuk** → Pakai kredensial Super Admin (hak akses tertinggi)
+2. **Halaman Dasbor** → Lihat metrik dan KPI di seluruh platform
+3. **Pantau Data Real-time** → Pengguna aktif, percakapan berjalan, beban sistem
+4. **Analisa Tren** → Pertumbuhan revenue, retensi klien, pola penggunaan via grafik
+5. **Navigasi Cepat** → Klik kartu atau tombol aksi cepat buat masuk ke area tertentu
+6. **Alert & Notifikasi** → Review alert penting (gagal bayar, masalah sistem, penggunaan tinggi)
 
 ---
 
@@ -101,14 +101,14 @@
   - Filter by organization
   - Filter by payment status
 
-#### Flow End User
-1. **Access Financial Section** → Navigate dari dashboard atau sidebar
-2. **View Financial Overview** → Review high-level metrics (MRR, total revenue, payment status)
-3. **Analyze Revenue Trends** → Explore charts untuk identify growth patterns atau anomalies
-4. **Drill Down** → Click specific metrics untuk detailed breakdown
-5. **Filter Data** → Apply filters (date range, plan type, organization) untuk focused analysis
-6. **Generate Reports** → Export financial data untuk accounting atau investor reporting
-7. **Action Items** → Identify unpaid invoices, follow up on failed payments, review refund requests
+#### Alur Penggunaan
+1. **Akses Bagian Keuangan** → Buka dari dasbor atau sidebar
+2. **Lihat Ringkasan Keuangan** → Review metrik utama (MRR, total revenue, status pembayaran)
+3. **Analisa Tren Revenue** → Explore grafik buat identifikasi pola pertumbuhan atau anomali
+4. **Drill Down** → Klik metrik tertentu buat lihat detail lengkap
+5. **Filter Data** → Terapkan filter (rentang tanggal, tipe paket, organisasi) buat analisa fokus
+6. **Generate Laporan** → Export data keuangan buat accounting atau laporan investor
+7. **Action Items** → Identifikasi invoice yang belum dibayar, follow up gagal bayar, review permintaan refund
 
 ---
 
@@ -139,20 +139,20 @@
   - Amount validation
   - Duplicate transaction check
 
-#### Flow End User
-1. **Click "Create Transaction"** → From financial dashboard
-2. **Select Organization** → Choose client dari dropdown (autocomplete search)
-3. **Enter Transaction Details**:
-   - Select transaction type (e.g., Payment)
-   - Enter amount: Rp 500,000
-   - Select currency: IDR
-   - Select payment method: Bank Transfer
-   - Enter reference: INV-2025-001
-   - Add description: "Payment for Pro Plan - January 2025"
-4. **Upload Invoice** (optional) → Attach PDF invoice
-5. **Review & Validate** → System validates input, shows calculated totals
-6. **Submit** → Transaction recorded, client balance updated, notification sent
-7. **Confirmation** → Success message, redirect to transaction detail atau financial list
+#### Alur Penggunaan
+1. **Klik "Buat Transaksi"** → Dari dasbor keuangan
+2. **Pilih Organisasi** → Pilih klien dari dropdown (autocomplete search)
+3. **Masukkan Detail Transaksi**:
+   - Pilih tipe transaksi (misalnya, Payment)
+   - Masukkan jumlah: Rp 500,000
+   - Pilih mata uang: IDR
+   - Pilih metode pembayaran: Bank Transfer
+   - Masukkan referensi: INV-2025-001
+   - Tambah deskripsi: "Pembayaran Paket Pro - Januari 2025"
+4. **Upload Invoice** (opsional) → Lampirkan PDF invoice
+5. **Review & Validasi** → Sistem validasi input, tampilkan total perhitungan
+6. **Submit** → Transaksi tercatat, saldo klien terupdate, notifikasi terkirim
+7. **Konfirmasi** → Pesan sukses, redirect ke detail transaksi atau daftar keuangan
 
 ---
 
@@ -174,13 +174,13 @@
   - Audit log automatically generated
 - **Void/Cancel Transaction** option (instead of delete)
 
-#### Flow End User
-1. **Access Transaction** → Click "Edit" dari financial list atau detail page
-2. **Modify Fields** → Update necessary information (e.g., correct reference number, add notes)
-3. **System Validation** → Real-time validation, prevent invalid changes
-4. **Review Changes** → Compare original vs modified values
-5. **Submit Update** → Changes saved dengan audit trail
-6. **Confirmation** → Success message, email notification (jika configured)
+#### Alur Penggunaan
+1. **Akses Transaksi** → Klik "Edit" dari daftar keuangan atau halaman detail
+2. **Ubah Field** → Update informasi yang perlu (misalnya, perbaiki nomor referensi, tambah catatan)
+3. **Validasi Sistem** → Validasi real-time, cegah perubahan yang invalid
+4. **Review Perubahan** → Bandingkan nilai asli vs yang dimodifikasi
+5. **Submit Update** → Perubahan disimpan dengan audit trail
+6. **Konfirmasi** → Pesan sukses, notifikasi email (jika dikonfigurasi)
 
 **Note:** Critical fields (amount, organization) may require creating adjustment entry instead of direct edit untuk maintain audit integrity.
 
@@ -223,7 +223,7 @@
 - **Sort Options** (by date, amount, status, organization)
 - **Quick Stats** di top (Total transactions, Total amount, Success rate)
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Transaction History** → Navigate dari Financial atau sidebar menu
 2. **View All Transactions** → Paginated list dengan default sort (latest first)
 3. **Search Specific Transaction** → Use search bar (e.g., search by invoice number "INV-2025-001")
@@ -289,7 +289,7 @@
   - Contact organization
   - View organization detail
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Open Transaction Detail** → Click dari transaction list
 2. **Review Complete Information** → All data in organized sections
 3. **Check Status History** → Understand transaction lifecycle via timeline
@@ -346,7 +346,7 @@
   - Growth trend line chart
   - Subscription status breakdown
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Client Overview** → From dashboard atau sidebar "Clients"
 2. **Review Key Metrics** → Quick glance at total clients, active, trial, growth
 3. **Analyze Segments** → Understand client distribution by plan, industry, size
@@ -398,7 +398,7 @@
 - **Quick View** (hover untuk preview tanpa full navigate)
 - **Column Customization** (Show/hide columns)
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Client List** → Navigate dari overview atau sidebar
 2. **View All Clients** → Table format dengan key information
 3. **Search Client** → Type nama atau email di search bar untuk quick find
@@ -492,7 +492,7 @@
   - Send notification
   - Delete organization (dengan confirmation)
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Open Client Detail** → Click client dari table list
 2. **Review Complete Profile** → All sections organized dalam tabs atau accordion
 3. **Monitor Usage** → Check if client approaching quota limits → Upsell opportunity
@@ -559,7 +559,7 @@
   - Email uniqueness check
   - Required fields indicator
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Click "Create New Client"** → From client overview atau list page
 2. **Fill Organization Details**:
    - Enter name: "PT Contoh Digital"
@@ -619,7 +619,7 @@
   - Suspend organization
   - Delete organization (permanent, dengan confirmation)
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Edit Page** → Click "Edit" dari client detail atau list
 2. **Modify Information** → Update necessary fields (e.g., phone number change, new logo)
 3. **Adjust Subscription**:
@@ -668,7 +668,7 @@
   - Conversations handled (for agents)
 - **Search & Filter** (within org users)
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access User Management** → From client detail, click "Manage Users"
 2. **View All Users** → List of users belonging to this organization
 3. **Add New User**:
@@ -726,7 +726,7 @@
   - All system admin actions logged
   - Audit trail untuk compliance
 
-### Flow End User
+### Alur Penggunaan
 1. **Access System Admin Panel** → High-privilege section
 2. **View All Users** → Aggregated list dari all organizations
 3. **Search Cross-Organization** → Find user by email across entire platform
@@ -780,7 +780,7 @@
   - Search by role name
 - **Create New Role** button
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Role Management** → From sidebar atau settings
 2. **View All Roles** → System roles + custom roles dari all organizations
 3. **Understand Role Hierarchy**:
@@ -832,7 +832,7 @@
   - **Metadata** (custom JSON)
 - **Template Selection** → Start with existing role template
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Click "Create Role"** → From role index
 2. **Choose Template** (optional):
    - Start from scratch
@@ -908,7 +908,7 @@
   - Activate/Deactivate
   - Delete role (jika not system role)
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Open Role Detail** → Click role dari index
 2. **Review Complete Configuration** → All settings displayed
 3. **Understand Permissions** → Expand permission categories untuk see what this role can do
@@ -941,7 +941,7 @@
   - Warn jika breaking changes
 - **Version Control** → Save as new version vs update existing
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Edit Page** → Click "Edit" dari role detail
 2. **Modify Configuration** → Update necessary fields (e.g., increase max users dari 5 to 10)
 3. **Review Impact** → System shows "This change affects 15 users across 3 organizations"
@@ -983,7 +983,7 @@
 - **Bulk Assignment** → Assign role to multiple users at once
 - **Role Removal** → Remove role dari users
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Open Role Assignment** → From role detail, click "Assign to Users"
 2. **Select Organization** → Filter users by organization (e.g., "PT Contoh Digital")
 3. **Select Users**:
@@ -1045,7 +1045,7 @@
     - Revoke selected
   - **Permission Preview** → Show example of what permission allows
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Permission Management** → From role detail, click "Manage Permissions"
 2. **View Current Permissions** → See what's already assigned (checkboxes checked)
 3. **Review Inherited Permissions** → Grayed out permissions inherited dari parent role
@@ -1108,7 +1108,7 @@
 - **Create New Permission** button
 - **Permission Statistics** → Total permissions, by resource, by category
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Permission Management** → From system admin atau settings
 2. **View All Permissions** → Comprehensive list of all permissions (100+ permissions)
 3. **Understand Permission Structure**:
@@ -1159,7 +1159,7 @@
     - Sort order (display order in lists)
     - Is visible (show in UI atau hidden)
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Click "Create Permission"** → From permission index
 2. **Fill Basic Info**:
    - Name: "Export Client Data"
@@ -1239,7 +1239,7 @@
   - Activate/Deactivate
   - Delete permission (jika not system permission)
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Open Permission Detail** → Click permission dari index
 2. **Review Complete Configuration** → Understand exactly what this permission allows
 3. **Check Usage** → See which roles dan how many users have this permission
@@ -1273,7 +1273,7 @@
   - Warn jika breaking changes
 - **Validation** → Prevent invalid configurations
 
-#### Flow End User
+#### Alur Penggunaan
 1. **Access Edit Page** → Click "Edit" dari permission detail
 2. **Modify Fields**:
    - Update description untuk clarity
@@ -1373,7 +1373,7 @@
     - GDPR compliance settings
     - Data retention policies
 
-### Flow End User
+### Alur Penggunaan
 1. **Access Platform Configuration** → Super Admin only, high-security section
 2. **Review Current Settings** → All settings organized in tabs atau accordion
 3. **Configure by Section**:

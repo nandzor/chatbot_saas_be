@@ -33,7 +33,7 @@
 - **Recent Activities**: Aktivitas terbaru dalam organisasi
 - **Status Monitoring**: Status koneksi dan integrasi aktif
 
-### Flow End User:
+### Alur Penggunaan:
 1. **Login** → Org Admin credentials
 2. **Dashboard Landing** → Overview metrics (total conversations, active users, response rate)
 3. **Monitor Real-time** → Active status, ongoing conversations
@@ -55,7 +55,7 @@
 - **Export Data**: Export laporan dalam format CSV/PDF
 - **Trend Analysis**: Identify patterns dan peak hours
 
-### Flow End User:
+### Alur Penggunaan:
 1. **Access Analytics** → Click "Analytics" dari sidebar atau dashboard
 2. **View Visualizations** → Charts showing performance data
 3. **Filter Data** → Select time range (today, this week, this month, custom)
@@ -78,7 +78,7 @@
 - **Bulk Actions**: Mark as read, assign multiple, close conversations
 - **Status Indicators**: Visual badges (unread, assigned, resolved)
 
-### Flow End User:
+### Alur Penggunaan:
 1. **Access Inbox** → Navigate dari dashboard atau sidebar
 2. **View All Conversations** → List dengan preview dan status
 3. **Search & Filter** → Find specific conversations atau filter by criteria
@@ -102,7 +102,7 @@
 - **Internal Notes**: Add notes visible only to team
 - **Bot/Human Toggle**: Switch between automated dan manual responses
 
-### Flow End User:
+### Alur Penggunaan:
 1. **Open Conversation** → Click dari inbox list
 2. **Review History** → See full conversation context
 3. **Check Customer Info** → View profile, tags, previous interactions
@@ -127,7 +127,7 @@
 - **SLA Configuration**: Define Service Level Agreement targets
 - **Notification Settings**: Email, push, sound notifications
 
-### Flow End User:
+### Alur Penggunaan:
 1. **Access Settings** → Click settings icon di inbox
 2. **Configure Auto-Assignment**:
    - Enable/disable auto-assignment
@@ -163,7 +163,7 @@
 - **Quick Actions**: Edit, delete, duplicate, activate/deactivate
 - **Categories & Tags**: Organization dengan labels
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Access KB Section** → From navigation menu
 2. **View All Entries** → List of knowledge base items
 3. **Search KB** → Find specific entries
@@ -186,7 +186,7 @@
 - **Chunking Settings**: Configure content processing
 - **Preview**: Test how bot will use the KB
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Create New** → Click "Create KB" button
 2. **Choose Input Method**:
    - Upload file (PDF, DOCX, TXT, CSV)
@@ -223,7 +223,7 @@
 - **Clone Feature**: Duplicate untuk customization
 - **Version History**: Track changes over time
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Access Personalities** → From sidebar menu
 2. **View All Personalities** → List dengan status (active/inactive)
 3. **Identify Active** → See which personality currently in use
@@ -245,7 +245,7 @@
 - **System Prompts**: Custom prompts untuk guide behavior
 - **Template Selection**: Start with pre-built templates
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Click Create** → "Create New Personality" button
 2. **Choose Template atau Start from Scratch**:
    - Select template (Customer Service, Sales, Technical)
@@ -284,7 +284,7 @@
 - **A/B Test Results**: Comparison data jika tested
 - **Version History**: Track changes over time
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Open Detail** → Click personality dari list
 2. **Review Configuration** → All settings organized dalam sections
 3. **Check Performance**:
@@ -310,7 +310,7 @@
 - **Preview Changes**: See impact before saving
 - **Version Control**: Create new version atau update existing
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Access Edit** → Click "Edit" dari detail page
 2. **Modify Settings**:
    - Update traits, behavior, prompts
@@ -338,7 +338,7 @@
 - **Message Statistics**: Stats per account
 - **Add New Account**: Connect additional WhatsApp numbers
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Access Integration** → From sidebar "Integrations" > "WhatsApp"
 2. **View Connected Accounts** → List dengan status
 3. **Monitor Health** → Check connection status, last active
@@ -361,7 +361,7 @@
 - **Real-time Status**: Connection progress indicator
 - **Alternative Methods**: Link ke WhatsApp Business API setup
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Start Connection** → Click "Add WhatsApp Account"
 2. **Choose Method**:
    - WhatsApp Web (QR Code) - quick setup
@@ -403,7 +403,7 @@
 - **User Statistics**: Total, active, inactive, pending invitations
 - **Quick Actions**: Edit, view detail, deactivate, resend invitation
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Access User Management** → From sidebar "Users"
 2. **View All Users** → Table dengan user information
 3. **Overview Stats** → Total users, active, inactive, pending
@@ -430,7 +430,7 @@
 - **Session Information**: Active sessions dan devices
 - **Action Buttons**: Edit, deactivate, reset password, delete
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Open Detail** → Click user dari list
 2. **View Profile** → Complete user information
 3. **Review Role & Permissions**:
@@ -472,7 +472,7 @@
 - **Invitation Settings**: Send immediately atau later, custom message
 - **Bulk Import**: Import multiple users via CSV
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Click Create** → "Create User" atau "Invite User" button
 2. **Fill Basic Info**:
    - Full name (required)
@@ -523,7 +523,7 @@
 - **Change Tracking**: Track modifications untuk audit
 - **Validation**: Real-time input validation
 
-#### Flow End User:
+#### Alur Penggunaan:
 1. **Access Edit** → Click "Edit" dari detail atau list page
 2. **Modify Information**:
    - Update name, email, phone
@@ -560,7 +560,7 @@
 - **Integration Settings**: Third-party integrations (CRM, Help Desk, Analytics)
 - **Data & Privacy**: Data retention, GDPR compliance, export options
 
-### Flow End User:
+### Alur Penggunaan:
 
 1. **Access Settings** → Click "Settings" dari profile menu atau sidebar
 
